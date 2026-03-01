@@ -1,0 +1,139 @@
+name: docker-publish
+
+on:
+  # 1. 发布 GitHub Release 时触发
+  release:
+    types: [published]
+
+  # 2. 手动触发（可自定义 tag）
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Docker image tag (e.g., v1.2.3, staging, dev-20260104)'
+        required: true
+        default: 'latest'
+      reason:
+        description: 'Reason for manual publish'
+        required: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      docker_tag: ${{ steps.set_tag.outputs.docker_tag }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6.0.1
+        with:
+          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || '' }}
+
+      - name: Determine Docker tag
+        id: set_tag
+        run: |
+          case "${{ github.event_name }}" in
+            release)
+              TAG="${{ github.event.release.tag_name }}"
+              ;;
+            pull_request)
+              TAG="latest"
+              ;;
+            workflow_dispatch)
+              TAG="${{ github.event.inputs.tag }}"
+              ;;
+            *)
+              echo "Unsupported event: ${{ github.event_name }}"
+              exit 1
+              ;;
+          esac
+          echo "docker_tag=$TAG" >> $GITHUB_OUTPUT
+          echo "Will build and push tag: $TAG"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3.7.0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3.12.0
+
+      - name: Build and export image as tar
+        uses: docker/build-push-action@v6.18.0
+        with:
+          context: ./src/Web/abcsxl
+          tags: temp-image:${{ steps.set_tag.outputs.docker_tag }}
+          outputs: type=docker,dest=/tmp/image.tar
+
+      - name: Upload image artifact
+        uses: actions/upload-artifact@v6.0.0
+        with:
+          name: docker-image
+          path: /tmp/image.tar
+
+  # --- Push to Docker Hub ---
+  push-dockerhub:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v7.0.0
+        with:
+          name: docker-image
+          path: /tmp
+      - run: docker load < /tmp/image.tar
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3.6.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Push to Docker Hub
+        run: |
+          TAG=${{ needs.build.outputs.docker_tag }}
+          IMAGE=${{ secrets.DOCKERHUB_USERNAME }}/abcsxl:$TAG
+          docker tag temp-image:$TAG $IMAGE
+          docker push $IMAGE
+
+  # --- Push to Quay.io ---
+  push-quay:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v7.0.0
+        with:
+          name: docker-image
+          path: /tmp
+      - run: docker load < /tmp/image.tar
+      - name: Login to Quay.io
+        uses: docker/login-action@v3.6.0
+        with:
+          registry: quay.io
+          username: ${{ secrets.QUAY_ROBOT_USERNAME }}
+          password: ${{ secrets.QUAY_ROBOT_TOKEN }}
+      - name: Push to Quay.io
+        run: |
+          TAG=${{ needs.build.outputs.docker_tag }}
+          IMAGE=quay.io/${{ secrets.QUAY_ROBOT_USERNAME }}/../abcsxl:$TAG
+          # 提取组织名（去掉 +robot 部分）
+          ORG=$(echo "${{ secrets.QUAY_ROBOT_USERNAME }}" | cut -d'+' -f1)
+          IMAGE=quay.io/$ORG/abcsxl:$TAG
+          docker tag temp-image:$TAG $IMAGE
+          docker push $IMAGE
+
+  # --- Push to GitHub GHCR ---
+  push-ghcr:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v7.0.0
+        with:
+          name: docker-image
+          path: /tmp
+      - run: docker load < /tmp/image.tar
+      - name: Login to GHCR
+        uses: docker/login-action@v3.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Push to GHCR
+        run: |
+          TAG=${{ needs.build.outputs.docker_tag }}
+          IMAGE=ghcr.io/${{ github.repository_owner }}/abcsxl:$TAG
+          docker tag temp-image:$TAG $IMAGE
+          docker push $IMAGE
