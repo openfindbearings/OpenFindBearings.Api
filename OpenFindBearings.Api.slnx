@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="LICENSE" />
+    <File Path="README.md" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/OpenFindBearings.Api/OpenFindBearings.Api.csproj" />
+    <Project Path="src/OpenFindBearings.Application/OpenFindBearings.Application.csproj" />
+    <Project Path="src/OpenFindBearings.Domain/OpenFindBearings.Domain.csproj" />
+    <Project Path="src/OpenFindBearings.Infrastructure/OpenFindBearings.Infrastructure.csproj" />
+  </Folder>
+</Solution>

@@ -1,4 +1,4 @@
-﻿namespace FindBearings.Api.Infrastructure
+﻿namespace OpenFindBearings.Api.Infrastructure
 {
     public class DependencyInjection
     {

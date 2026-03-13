@@ -17,7 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\FindBearings.Domain\FindBearings.Domain.csproj" />
+    <ProjectReference Include="..\OpenFindBearings.Domain\OpenFindBearings.Domain.csproj" />
   </ItemGroup>
 
 </Project>
