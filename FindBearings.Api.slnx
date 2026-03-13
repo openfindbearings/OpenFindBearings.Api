@@ -1,8 +1,0 @@
-<Solution>
-  <Folder Name="/src/">
-    <Project Path="src/FindBearings.Api/FindBearings.Api.csproj" />
-    <Project Path="src/FindBearings.Application/FindBearings.Application.csproj" />
-    <Project Path="src/FindBearings.Domain/FindBearings.Domain.csproj" />
-    <Project Path="src/FindBearings.Infrastructure/FindBearings.Infrastructure.csproj" />
-  </Folder>
-</Solution>

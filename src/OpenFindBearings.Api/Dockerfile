@@ -12,22 +12,22 @@ EXPOSE 8081
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["src/FindBearings.Api/FindBearings.Api.csproj", "src/FindBearings.Api/"]
-COPY ["src/FindBearings.Application/FindBearings.Application.csproj", "src/FindBearings.Application/"]
-COPY ["src/FindBearings.Domain/FindBearings.Domain.csproj", "src/FindBearings.Domain/"]
-COPY ["src/FindBearings.Infrastructure/FindBearings.Infrastructure.csproj", "src/FindBearings.Infrastructure/"]
-RUN dotnet restore "./src/FindBearings.Api/FindBearings.Api.csproj"
+COPY ["src/OpenFindBearings.Api/OpenFindBearings.Api.csproj", "src/OpenFindBearings.Api/"]
+COPY ["src/OpenFindBearings.Application/OpenFindBearings.Application.csproj", "src/OpenFindBearings.Application/"]
+COPY ["src/OpenFindBearings.Domain/OpenFindBearings.Domain.csproj", "src/OpenFindBearings.Domain/"]
+COPY ["src/OpenFindBearings.Infrastructure/OpenFindBearings.Infrastructure.csproj", "src/OpenFindBearings.Infrastructure/"]
+RUN dotnet restore "./src/OpenFindBearings.Api/OpenFindBearings.Api.csproj"
 COPY . .
-WORKDIR "/src/src/FindBearings.Api"
-RUN dotnet build "./FindBearings.Api.csproj" -c $BUILD_CONFIGURATION -o /app/build
+WORKDIR "/src/src/OpenFindBearings.Api"
+RUN dotnet build "./OpenFindBearings.Api.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # This stage is used to publish the service project to be copied to the final stage
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./FindBearings.Api.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "./OpenFindBearings.Api.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 # This stage is used in production or when running from VS in regular mode (Default when not using the Debug configuration)
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "FindBearings.Api.dll"]
+ENTRYPOINT ["dotnet", "OpenFindBearings.Api.dll"]
