@@ -23,13 +23,13 @@ namespace OpenFindBearings.Domain.Entities
 
         // 导航属性
 
-        ///// <summary>
-        ///// 所属商家Id
-        ///// </summary>
-        //public Guid? MerchantId { get; set; }
-        ///// <summary>
-        ///// 所属商家
-        ///// </summary>
-        //public Merchant? Merchant { get; set; }
+        /// <summary>
+        /// 所属商家Id
+        /// </summary>
+        public Guid? MerchantId { get; set; }
+        /// <summary>
+        /// 所属商家
+        /// </summary>
+        public Merchant? Merchant { get; set; }
     }
 }
