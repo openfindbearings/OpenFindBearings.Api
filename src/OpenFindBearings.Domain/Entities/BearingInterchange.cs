@@ -6,6 +6,7 @@ namespace OpenFindBearings.Domain.Entities
     /// 轴承替代品关系实体
     /// 表示不同轴承型号之间的替代关系，如 SKF 6205 可以被 NSK 6205 替代
     /// 用于为用户提供替代品推荐功能
+    /// 对应接口：GET /api/bearings/{id}/interchanges
     /// </summary>
     public class BearingInterchange : BaseEntity
     {

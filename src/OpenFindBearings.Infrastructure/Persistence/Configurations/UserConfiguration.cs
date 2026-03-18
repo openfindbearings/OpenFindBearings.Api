@@ -31,26 +31,60 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             builder.Property(u => u.Phone)
                 .HasMaxLength(20);
 
-            // 用户类型枚举存为字符串（更可读）
+            // 用户类型枚举存为字符串
             builder.Property(u => u.UserType)
                 .HasConversion<string>()
                 .HasMaxLength(20);
 
-            builder.HasOne(u => u.Merchant)
-                .WithMany(m => m.Staff)  // 需要在 Merchant 类中添加 Staff 集合
-                .HasForeignKey(u => u.MerchantId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            // 移除 Customer 相关配置
-
-            // 游客会话ID（可选）
             builder.Property(u => u.GuestSessionId)
                 .HasMaxLength(100);
 
-            builder.Property(u => u.CreatedAt)
-                .IsRequired();
+            builder.HasOne(u => u.Merchant)
+                .WithMany(m => m.Staff)
+                .HasForeignKey(u => u.MerchantId)
+                .OnDelete(DeleteBehavior.Restrict);
 
-            builder.Property(u => u.LastLoginAt);
+            // 导航属性 - 角色关联
+            builder.HasMany(u => u.UserRoles)
+                .WithOne(ur => ur.User)
+                .HasForeignKey(ur => ur.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // 导航属性 - 收藏的轴承
+            builder.HasMany(u => u.FavoriteBearings)
+                .WithOne(uf => uf.User)
+                .HasForeignKey(uf => uf.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // 导航属性 - 关注的商家
+            builder.HasMany(u => u.FollowedMerchants)
+                .WithOne(uf => uf.User)
+                .HasForeignKey(uf => uf.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // 导航属性 - 轴承浏览历史
+            builder.HasMany(u => u.BearingHistory)
+                .WithOne(ubh => ubh.User)
+                .HasForeignKey(ubh => ubh.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // 导航属性 - 商家浏览历史
+            builder.HasMany(u => u.MerchantHistory)
+                .WithOne(umh => umh.User)
+                .HasForeignKey(umh => umh.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // 导航属性 - 提交的纠错
+            builder.HasMany(u => u.SubmittedCorrections)
+                .WithOne(c => c.Submitter)
+                .HasForeignKey(c => c.SubmittedBy)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // 索引
+            builder.HasIndex(u => u.Email);
+            builder.HasIndex(u => u.UserType);
+            builder.HasIndex(u => u.MerchantId);
+            builder.HasIndex(u => u.GuestSessionId);
         }
     }
 }

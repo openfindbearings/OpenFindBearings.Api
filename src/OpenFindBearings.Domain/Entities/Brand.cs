@@ -6,16 +6,19 @@ namespace OpenFindBearings.Domain.Entities
     /// <summary>
     /// 品牌实体
     /// 代表轴承品牌，如 SKF、FAG、NSK 等
+    /// 对应接口：GET /api/brands
     /// </summary>
     public class Brand : BaseEntity
     {
         /// <summary>
         /// 品牌代码（如 SKF、FAG、NSK、HRB）
+        /// 通常使用品牌的官方缩写
         /// </summary>
         public string Code { get; private set; }
 
         /// <summary>
         /// 品牌名称
+        /// 品牌的完整名称
         /// </summary>
         public string Name { get; private set; }
 
@@ -31,6 +34,7 @@ namespace OpenFindBearings.Domain.Entities
 
         /// <summary>
         /// 品牌档次（国际一线、国际标准、国产一线等）
+        /// 用于价格参考和筛选
         /// </summary>
         public BrandLevel Level { get; private set; }
 
@@ -42,9 +46,10 @@ namespace OpenFindBearings.Domain.Entities
         /// <summary>
         /// 创建新品牌
         /// </summary>
-        /// <param name="code">品牌代码</param>
-        /// <param name="name">品牌名称</param>
+        /// <param name="code">品牌代码，如 "SKF"</param>
+        /// <param name="name">品牌名称，如 "SKF"</param>
         /// <param name="level">品牌档次</param>
+        /// <exception cref="ArgumentException">当code或name为空时抛出</exception>
         public Brand(string code, string name, BrandLevel level)
         {
             if (string.IsNullOrWhiteSpace(code))

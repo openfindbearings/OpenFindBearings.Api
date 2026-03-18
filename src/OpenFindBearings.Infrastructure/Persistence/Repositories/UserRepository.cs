@@ -1,10 +1,14 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using OpenFindBearings.Domain.Entities;
-using OpenFindBearings.Domain.Repositories;
+using OpenFindBearings.Domain.Enums;
+using OpenFindBearings.Domain.Interfaces;
 using OpenFindBearings.Infrastructure.Persistence.Data;
 
 namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 {
+    /// <summary>
+    /// 用户仓储实现
+    /// </summary>
     public class UserRepository : IUserRepository
     {
         private readonly AppDbContext _context;
@@ -18,14 +22,54 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         {
             return await _context.Users
                 .Include(u => u.Merchant)
-                .FirstOrDefaultAsync(u => u.AuthUserId == authUserId, cancellationToken);
+                .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.AuthUserId == authUserId && u.IsActive, cancellationToken);
         }
 
         public async Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
         {
             return await _context.Users
                 .Include(u => u.Merchant)
-                .FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
+                .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.Id == id && u.IsActive, cancellationToken);
+        }
+
+        /// <summary>
+        /// 根据邮箱获取用户
+        /// </summary>
+        public async Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
+        {
+            return await _context.Users
+                .Include(u => u.Merchant)
+                .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.Email == email && u.IsActive, cancellationToken);
+        }
+
+        /// <summary>
+        /// 获取商家的所有员工
+        /// </summary>
+        public async Task<IEnumerable<User>> GetByMerchantIdAsync(Guid merchantId, CancellationToken cancellationToken = default)
+        {
+            return await _context.Users
+                .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.Role)
+                .Where(u => u.MerchantId == merchantId && u.IsActive)
+                .ToListAsync(cancellationToken);
+        }
+
+        /// <summary>
+        /// 获取所有管理员
+        /// </summary>
+        public async Task<IEnumerable<User>> GetAdminsAsync(CancellationToken cancellationToken = default)
+        {
+            return await _context.Users
+                .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.Role)
+                .Where(u => u.UserType == UserType.Admin && u.IsActive)
+                .ToListAsync(cancellationToken);
         }
 
         public async Task AddAsync(User user, CancellationToken cancellationToken = default)

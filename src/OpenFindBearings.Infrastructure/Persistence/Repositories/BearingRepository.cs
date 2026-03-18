@@ -1,6 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using OpenFindBearings.Domain.Entities;
-using OpenFindBearings.Domain.Repositories;
+using OpenFindBearings.Domain.Interfaces;
 using OpenFindBearings.Domain.Specifications;
 using OpenFindBearings.Infrastructure.Persistence.Data;
 

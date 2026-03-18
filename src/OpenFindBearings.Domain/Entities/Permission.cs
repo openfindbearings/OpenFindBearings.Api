@@ -21,7 +21,7 @@ namespace OpenFindBearings.Domain.Entities
         /// <summary>
         /// 角色-权限关联导航属性
         /// </summary>
-        public ICollection<RolePermission> RolePermissions { get; private set; } = new List<RolePermission>();
+        public List<RolePermission> RolePermissions { get; set; } = [];
 
         /// <summary>
         /// 无参构造函数，仅供EF Core使用

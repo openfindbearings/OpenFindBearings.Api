@@ -1,11 +1,14 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Enums;
-using OpenFindBearings.Domain.Repositories;
+using OpenFindBearings.Domain.Interfaces;
 using OpenFindBearings.Infrastructure.Persistence.Data;
 
 namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 {
+    /// <summary>
+    /// 纠错请求仓储实现
+    /// </summary>
     public class CorrectionRequestRepository : ICorrectionRequestRepository
     {
         private readonly AppDbContext _context;
@@ -18,20 +21,35 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         public async Task<CorrectionRequest?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
         {
             return await _context.CorrectionRequests
+                .Include(c => c.Submitter)
+                .Include(c => c.Reviewer)
                 .FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
         }
 
-        public async Task<List<CorrectionRequest>> GetPendingAsync(string? entityType = null, CancellationToken cancellationToken = default)
+        /// <summary>
+        /// 获取所有待审核纠错
+        /// </summary>
+        public async Task<List<CorrectionRequest>> GetPendingAsync(CancellationToken cancellationToken = default)
         {
-            var query = _context.CorrectionRequests
-                .Where(c => c.Status == CorrectionStatus.Pending);
+            return await _context.CorrectionRequests
+                .Include(c => c.Submitter)
+                .Where(c => c.Status == CorrectionStatus.Pending)
+                .OrderBy(c => c.SubmittedAt)
+                .ToListAsync(cancellationToken);
+        }
 
-            if (!string.IsNullOrEmpty(entityType))
-            {
-                query = query.Where(c => c.EntityType == entityType);
-            }
-
-            return await query
+        /// <summary>
+        /// 根据目标类型和目标ID获取纠错列表
+        /// </summary>
+        public async Task<List<CorrectionRequest>> GetByTargetAsync(
+            string targetType,
+            Guid targetId,
+            CancellationToken cancellationToken = default)
+        {
+            return await _context.CorrectionRequests
+                .Include(c => c.Submitter)
+                .Include(c => c.Reviewer)
+                .Where(c => c.TargetType == targetType && c.TargetId == targetId)
                 .OrderByDescending(c => c.SubmittedAt)
                 .ToListAsync(cancellationToken);
         }
@@ -39,6 +57,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         public async Task<List<CorrectionRequest>> GetByUserAsync(Guid userId, CancellationToken cancellationToken = default)
         {
             return await _context.CorrectionRequests
+                .Include(c => c.Reviewer)
                 .Where(c => c.SubmittedBy == userId)
                 .OrderByDescending(c => c.SubmittedAt)
                 .ToListAsync(cancellationToken);

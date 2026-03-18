@@ -7,20 +7,31 @@ namespace OpenFindBearings.Domain.Entities
     /// 纠错请求实体
     /// 用户发现产品信息或商家信息有误时提交的纠错申请
     /// 需要管理员审核后才能生效
+    /// 对应接口：POST /api/bearings/{id}/corrections、POST /api/merchants/{id}/corrections
     /// </summary>
     public class CorrectionRequest : BaseEntity
     {
         /// <summary>
-        /// 实体类型
-        /// 指定要纠错的实体类型，如 "Bearing"（产品）、"Merchant"（商家）
+        /// 纠错目标类型
+        /// Bearing: 轴承纠错
+        /// Merchant: 商家纠错
         /// </summary>
-        public string EntityType { get; private set; } = string.Empty;
+        public string TargetType { get; private set; } = string.Empty;
 
         /// <summary>
-        /// 实体ID
-        /// 要纠错的具体实体在数据库中的唯一标识
+        /// 目标ID（可以是轴承ID或商家ID）
         /// </summary>
-        public Guid EntityId { get; private set; }
+        public Guid TargetId { get; private set; }
+
+        /// <summary>
+        /// 轴承导航属性（当TargetType为Bearing时）
+        /// </summary>
+        public Bearing? Bearing { get; private set; }
+
+        /// <summary>
+        /// 商家导航属性（当TargetType为Merchant时）
+        /// </summary>
+        public Merchant? Merchant { get; private set; }
 
         /// <summary>
         /// 字段名称
@@ -53,6 +64,11 @@ namespace OpenFindBearings.Domain.Entities
         public Guid SubmittedBy { get; private set; }
 
         /// <summary>
+        /// 提交人导航属性
+        /// </summary>
+        public User? Submitter { get; private set; }
+
+        /// <summary>
         /// 提交时间（UTC）
         /// </summary>
         public DateTime SubmittedAt { get; private set; }
@@ -70,6 +86,11 @@ namespace OpenFindBearings.Domain.Entities
         /// 处理此纠错请求的管理员ID
         /// </summary>
         public Guid? ReviewedBy { get; private set; }
+
+        /// <summary>
+        /// 审核人导航属性
+        /// </summary>
+        public User? Reviewer { get; private set; }
 
         /// <summary>
         /// 审核时间（UTC）
@@ -90,8 +111,8 @@ namespace OpenFindBearings.Domain.Entities
         /// <summary>
         /// 创建纠错请求
         /// </summary>
-        /// <param name="entityType">实体类型（Bearing/Merchant）</param>
-        /// <param name="entityId">实体ID</param>
+        /// <param name="targetType">目标类型 "Bearing" 或 "Merchant"</param>
+        /// <param name="targetId">目标ID</param>
         /// <param name="fieldName">字段名称</param>
         /// <param name="suggestedValue">建议值</param>
         /// <param name="submittedBy">提交人ID</param>
@@ -99,18 +120,20 @@ namespace OpenFindBearings.Domain.Entities
         /// <param name="reason">纠错理由（可选）</param>
         /// <exception cref="ArgumentException">参数验证异常</exception>
         public CorrectionRequest(
-            string entityType,
-            Guid entityId,
+            string targetType,
+            Guid targetId,
             string fieldName,
             string suggestedValue,
             Guid submittedBy,
             string? originalValue = null,
             string? reason = null)
         {
-            if (string.IsNullOrWhiteSpace(entityType))
-                throw new ArgumentException("实体类型不能为空", nameof(entityType));
-            if (entityId == Guid.Empty)
-                throw new ArgumentException("实体ID不能为空", nameof(entityId));
+            if (string.IsNullOrWhiteSpace(targetType))
+                throw new ArgumentException("目标类型不能为空", nameof(targetType));
+            if (targetType != "Bearing" && targetType != "Merchant")
+                throw new ArgumentException("目标类型必须是 Bearing 或 Merchant", nameof(targetType));
+            if (targetId == Guid.Empty)
+                throw new ArgumentException("目标ID不能为空", nameof(targetId));
             if (string.IsNullOrWhiteSpace(fieldName))
                 throw new ArgumentException("字段名称不能为空", nameof(fieldName));
             if (string.IsNullOrWhiteSpace(suggestedValue))
@@ -118,12 +141,11 @@ namespace OpenFindBearings.Domain.Entities
             if (submittedBy == Guid.Empty)
                 throw new ArgumentException("提交人ID不能为空", nameof(submittedBy));
 
-            Id = Guid.NewGuid();
-            EntityType = entityType;
-            EntityId = entityId;
+            TargetType = targetType;
+            TargetId = targetId;
             FieldName = fieldName;
-            OriginalValue = originalValue;
             SuggestedValue = suggestedValue;
+            OriginalValue = originalValue;
             Reason = reason;
             SubmittedBy = submittedBy;
             SubmittedAt = DateTime.UtcNow;
@@ -131,12 +153,38 @@ namespace OpenFindBearings.Domain.Entities
         }
 
         /// <summary>
-        /// 审核通过
-        /// 管理员确认纠错有效，系统将执行更新操作
+        /// 创建轴承纠错（便捷方法）
         /// </summary>
-        /// <param name="reviewedBy">审核人ID</param>
-        /// <param name="comment">审核意见（可选）</param>
-        /// <exception cref="ArgumentException">参数验证异常</exception>
+        public static CorrectionRequest ForBearing(
+            Guid bearingId,
+            string fieldName,
+            string suggestedValue,
+            Guid submittedBy,
+            string? originalValue = null,
+            string? reason = null)
+        {
+            return new CorrectionRequest("Bearing", bearingId, fieldName, suggestedValue,
+                submittedBy, originalValue, reason);
+        }
+
+        /// <summary>
+        /// 创建商家纠错（便捷方法）
+        /// </summary>
+        public static CorrectionRequest ForMerchant(
+            Guid merchantId,
+            string fieldName,
+            string suggestedValue,
+            Guid submittedBy,
+            string? originalValue = null,
+            string? reason = null)
+        {
+            return new CorrectionRequest("Merchant", merchantId, fieldName, suggestedValue,
+                submittedBy, originalValue, reason);
+        }
+
+        /// <summary>
+        /// 审核通过
+        /// </summary>
         public void Approve(Guid reviewedBy, string? comment = null)
         {
             if (reviewedBy == Guid.Empty)
@@ -153,11 +201,7 @@ namespace OpenFindBearings.Domain.Entities
 
         /// <summary>
         /// 审核拒绝
-        /// 管理员认为纠错无效，拒绝修改
         /// </summary>
-        /// <param name="reviewedBy">审核人ID</param>
-        /// <param name="comment">拒绝理由（必填）</param>
-        /// <exception cref="ArgumentException">参数验证异常</exception>
         public void Reject(Guid reviewedBy, string comment)
         {
             if (reviewedBy == Guid.Empty)
@@ -175,7 +219,7 @@ namespace OpenFindBearings.Domain.Entities
         }
 
         /// <summary>
-        /// 判断当前请求是否已处理（通过或拒绝）
+        /// 判断当前请求是否已处理
         /// </summary>
         public bool IsProcessed => Status != CorrectionStatus.Pending;
 
@@ -184,22 +228,20 @@ namespace OpenFindBearings.Domain.Entities
         /// </summary>
         public string GetEntityTypeDisplayName()
         {
-            return EntityType switch
+            return TargetType switch
             {
                 "Bearing" => "轴承产品",
                 "Merchant" => "商家信息",
-                _ => EntityType
+                _ => "未知"
             };
         }
 
         /// <summary>
         /// 获取字段的显示名称
-        /// 可以根据实际业务需求扩展
         /// </summary>
         public string GetFieldDisplayName()
         {
-            // 可以根据 EntityType 和 FieldName 返回友好的字段名
-            if (EntityType == "Bearing")
+            if (TargetType == "Bearing")
             {
                 return FieldName switch
                 {
@@ -212,7 +254,7 @@ namespace OpenFindBearings.Domain.Entities
                     _ => FieldName
                 };
             }
-            else if (EntityType == "Merchant")
+            else if (TargetType == "Merchant")
             {
                 return FieldName switch
                 {

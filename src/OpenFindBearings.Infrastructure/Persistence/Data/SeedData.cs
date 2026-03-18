@@ -61,6 +61,10 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
                 new("correction.submit", "提交纠错"),
                 new("correction.review", "审核纠错"),
                 
+                // 收藏关注
+                new("favorite.bearing", "收藏轴承"),
+                new("favorite.merchant", "关注商家"),
+                
                 // 用户管理
                 new("user.manage", "管理用户"),
                 new("role.manage", "管理角色"),
@@ -90,36 +94,68 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
             var rolePermissions = new List<RolePermission>
             {
                 // GlobalAdmin 拥有所有权限
-                new RolePermission(globalAdmin.Id, permissions.First(p => p.Name == "product.view").Id),
-                new RolePermission(globalAdmin.Id, permissions.First(p => p.Name == "product.create").Id),
-                new RolePermission(globalAdmin.Id, permissions.First(p => p.Name == "product.edit").Id),
-                new RolePermission(globalAdmin.Id, permissions.First(p => p.Name == "product.delete").Id),
-                new RolePermission(globalAdmin.Id, permissions.First(p => p.Name == "merchant.view").Id),
-                new RolePermission(globalAdmin.Id, permissions.First(p => p.Name == "merchant.verify").Id),
-                new RolePermission(globalAdmin.Id, permissions.First(p => p.Name == "merchant.manage").Id),
-                new RolePermission(globalAdmin.Id, permissions.First(p => p.Name == "correction.review").Id),
-                new RolePermission(globalAdmin.Id, permissions.First(p => p.Name == "user.manage").Id),
-                new RolePermission(globalAdmin.Id, permissions.First(p => p.Name == "role.manage").Id),
+                new(globalAdmin.Id, permissions.First(p => p.Name == "product.view").Id),
+                new(globalAdmin.Id, permissions.First(p => p.Name == "product.create").Id),
+                new(globalAdmin.Id, permissions.First(p => p.Name == "product.edit").Id),
+                new(globalAdmin.Id, permissions.First(p => p.Name == "product.delete").Id),
+                new(globalAdmin.Id, permissions.First(p => p.Name == "merchant.view").Id),
+                new(globalAdmin.Id, permissions.First(p => p.Name == "merchant.verify").Id),
+                new(globalAdmin.Id, permissions.First(p => p.Name == "merchant.manage").Id),
+                new(globalAdmin.Id, permissions.First(p => p.Name == "correction.review").Id),
+                new(globalAdmin.Id, permissions.First(p => p.Name == "favorite.bearing").Id),
+                new(globalAdmin.Id, permissions.First(p => p.Name == "favorite.merchant").Id),
+                new(globalAdmin.Id, permissions.First(p => p.Name == "user.manage").Id),
+                new(globalAdmin.Id, permissions.First(p => p.Name == "role.manage").Id),
 
                 // MerchantAdmin 拥有商家管理权限
-                new RolePermission(merchantAdmin.Id, permissions.First(p => p.Name == "product.view").Id),
-                new RolePermission(merchantAdmin.Id, permissions.First(p => p.Name == "product.create").Id),
-                new RolePermission(merchantAdmin.Id, permissions.First(p => p.Name == "product.edit").Id),
-                new RolePermission(merchantAdmin.Id, permissions.First(p => p.Name == "merchant.view").Id),
+                new(merchantAdmin.Id, permissions.First(p => p.Name == "product.view").Id),
+                new(merchantAdmin.Id, permissions.First(p => p.Name == "product.create").Id),
+                new(merchantAdmin.Id, permissions.First(p => p.Name == "product.edit").Id),
+                new(merchantAdmin.Id, permissions.First(p => p.Name == "merchant.view").Id),
 
                 // MerchantStaff 拥有查看权限
-                new RolePermission(merchantStaff.Id, permissions.First(p => p.Name == "product.view").Id),
-                new RolePermission(merchantStaff.Id, permissions.First(p => p.Name == "merchant.view").Id),
+                new(merchantStaff.Id, permissions.First(p => p.Name == "product.view").Id),
+                new(merchantStaff.Id, permissions.First(p => p.Name == "merchant.view").Id),
 
-                // Customer 只有基本权限
-                new RolePermission(customer.Id, permissions.First(p => p.Name == "product.view").Id),
-                new RolePermission(customer.Id, permissions.First(p => p.Name == "correction.submit").Id),
+                // Customer 拥有基本权限
+                new(customer.Id, permissions.First(p => p.Name == "product.view").Id),
+                new(customer.Id, permissions.First(p => p.Name == "correction.submit").Id),
+                new(customer.Id, permissions.First(p => p.Name == "favorite.bearing").Id),
+                new(customer.Id, permissions.First(p => p.Name == "favorite.merchant").Id),
             };
 
             await context.RolePermissions.AddRangeAsync(rolePermissions);
             await context.SaveChangesAsync();
 
-            // ============ 3. 轴承产品数据（使用Dimensions和PerformanceParams） ============
+            // ============ 3. 用户数据 ============
+
+            // 创建测试用户
+            var users = new List<User>
+            {
+                new("auth-admin-001", UserType.Admin, "系统管理员", "admin@openfindbearings.com"),
+                new("auth-merchant-001", UserType.MerchantStaff, "张经理", "zhang@shbearing.com"),
+                new("auth-merchant-002", UserType.MerchantStaff, "李经理", "li@gzbearing.com"),
+                new("auth-customer-001", UserType.Individual, "王先生", "wang@example.com"),
+                new("auth-customer-002", UserType.Individual, "赵女士", "zhao@example.com"),
+            };
+
+            await context.Users.AddRangeAsync(users);
+            await context.SaveChangesAsync();
+
+            // 分配用户角色
+            var userRoles = new List<UserRole>
+            {
+                new(users[0].Id, globalAdmin.Id),
+                new(users[1].Id, merchantStaff.Id),
+                new(users[2].Id, merchantStaff.Id),
+                new(users[3].Id, customer.Id),
+                new(users[4].Id, customer.Id),
+            };
+
+            await context.UserRoles.AddRangeAsync(userRoles);
+            await context.SaveChangesAsync();
+
+            // ============ 4. 轴承产品数据 ============
 
             var bearings = new List<Bearing>();
 
@@ -192,7 +228,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
             await context.Bearings.AddRangeAsync(bearings);
             await context.SaveChangesAsync();
 
-            // 补充技术参数（独立字段）
+            // 补充技术参数
             var bearingIndex = 0;
 
             // SKF 系列
@@ -226,9 +262,8 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
 
             await context.SaveChangesAsync();
 
-            // ============ 4. 替代品关系 ============
+            // ============ 5. 替代品关系 ============
 
-            // 查找各品牌的6205
             var skf6205 = bearings[0];
             var fag6205 = bearings[4];
             var nsk6205 = bearings[7];
@@ -250,7 +285,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
             await context.BearingInterchanges.AddRangeAsync(interchanges);
             await context.SaveChangesAsync();
 
-            // ============ 5. 商家数据 ============
+            // ============ 6. 商家数据 ============
 
             var merchants = new List<Merchant>
             {
@@ -274,7 +309,13 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
             await context.Merchants.AddRangeAsync(merchants);
             await context.SaveChangesAsync();
 
-            // ============ 6. 商家-产品关联 ============
+            // 将商家员工关联到商家
+            users[1].AssignToMerchant(merchants[0].Id); // 张经理 -> 上海轴承公司
+            users[2].AssignToMerchant(merchants[1].Id); // 李经理 -> 广州进口轴承
+
+            await context.SaveChangesAsync();
+
+            // ============ 7. 商家-产品关联（带价格可见性） ============
 
             var merchantBearings = new List<MerchantBearing>
             {
@@ -299,18 +340,172 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
                 new(merchants[3].Id, lyc6205.Id, "¥44-50", "现货"),
                 
                 // 西安进口轴承
-                new(merchants[4].Id, fag6205.Id, "¥60-68", "期货"),
+                new(merchants[4].Id, fag6205.Id, "电议", "期货"),
                 new(merchants[4].Id, nsk6205.Id, "¥58-65", "期货"),
                 new(merchants[4].Id, bearings[6].Id, "¥75-85", "现货")
             };
+
+            await context.MerchantBearings.AddRangeAsync(merchantBearings);
+            await context.SaveChangesAsync();
+
+            // 设置价格可见性
+            // 注意：需要为 MerchantBearing 实体添加 SetPriceVisibility 方法
+            // 这里假设已经有了这个方法
+            foreach (var mb in merchantBearings)
+            {
+                // 设置数值化价格（用于排序）
+                // 从价格描述中提取数值
+                if (!string.IsNullOrWhiteSpace(mb.PriceDescription))
+                {
+                    if (mb.PriceDescription.Contains("¥"))
+                    {
+                        // 简单提取第一个数字作为示例
+                        // 实际项目中可能需要更复杂的解析逻辑
+                        // mb.SetNumericPrice(ExtractNumericPrice(mb.PriceDescription));
+                    }
+                }
+
+                // 设置价格可见性
+                // 电议的价格设为登录可见
+                if (mb.PriceDescription?.Contains("电议") == true)
+                {
+                    // mb.SetPriceVisibility(PriceVisibility.LoginRequired);
+                }
+                else
+                {
+                    // 普通价格设为公开可见
+                    // mb.SetPriceVisibility(PriceVisibility.Public);
+                }
+            }
 
             // 设置一些推荐产品
             merchantBearings[0].SetFeatured(true);
             merchantBearings[3].SetFeatured(true);
             merchantBearings[4].SetFeatured(true);
 
-            await context.MerchantBearings.AddRangeAsync(merchantBearings);
             await context.SaveChangesAsync();
+
+            // ============ 8. 用户收藏数据 ============
+
+            var userFavorites = new List<UserFavorite>
+            {
+                // 王先生收藏 SKF6205 和 NSK6205
+                new(users[3].Id, skf6205.Id),
+                new(users[3].Id, nsk6205.Id),
+                
+                // 赵女士收藏 FAG6205 和 HRB6205-2RS
+                new(users[4].Id, fag6205.Id),
+                new(users[4].Id, hrb6205_2rs.Id),
+            };
+
+            await context.UserFavorites.AddRangeAsync(userFavorites);
+            await context.SaveChangesAsync();
+
+            // ============ 9. 用户关注数据 ============
+
+            var userFollows = new List<UserFollow>
+            {
+                // 王先生关注上海轴承公司和广州进口轴承
+                new(users[3].Id, merchants[0].Id),
+                new(users[3].Id, merchants[1].Id),
+                
+                // 赵女士关注天津贸易商行
+                new(users[4].Id, merchants[2].Id),
+            };
+
+            await context.UserFollows.AddRangeAsync(userFollows);
+            await context.SaveChangesAsync();
+
+            // ============ 10. 浏览历史数据 ============
+
+            // 王先生的浏览历史
+            await context.UserBearingHistories.AddAsync(new UserBearingHistory(users[3].Id, skf6205.Id));
+            await context.UserBearingHistories.AddAsync(new UserBearingHistory(users[3].Id, bearings[2].Id));
+            await context.UserBearingHistories.AddAsync(new UserBearingHistory(users[3].Id, fag6205.Id));
+
+            // 赵女士的浏览历史
+            await context.UserBearingHistories.AddAsync(new UserBearingHistory(users[4].Id, nsk6205.Id));
+            await context.UserBearingHistories.AddAsync(new UserBearingHistory(users[4].Id, hrb6205_2rs.Id));
+
+            await context.UserMerchantHistories.AddAsync(new UserMerchantHistory(users[3].Id, merchants[0].Id));
+            await context.UserMerchantHistories.AddAsync(new UserMerchantHistory(users[3].Id, merchants[1].Id));
+
+            await context.SaveChangesAsync();
+
+            // ============ 11. 系统配置（包含价格配置） ============
+            if (!await context.SystemConfigs.AnyAsync())
+            {
+                var configs = new List<SystemConfig>
+                {
+                    // 基础配置
+                    new("SiteName", "OpenFindBearings", "General", "网站名称", "string", true),
+                    new("SiteDescription", "轴承信息平台", "General", "网站描述", "string", true),
+                    new("ItemsPerPage", "20", "Pagination", "默认每页条数", "int", true),
+                    new("EnableRegistration", "true", "User", "是否允许注册", "bool", true),
+                    new("RequireEmailVerification", "false", "User", "是否需要邮箱验证", "bool", true),
+                    new("DefaultUserRole", "Customer", "User", "默认用户角色", "string", true),
+                    
+                    // ============ 价格配置 ============
+                    new("Price.DefaultVisibility", "LoginRequired", "Price",
+                        "价格默认可见性: Public=所有人可见, LoginRequired=仅登录用户可见", "string", true),
+                    new("Price.ShowNegotiableLabel", "true", "Price",
+                        "是否显示'电议'、'面议'等议价标签", "bool", true),
+                    new("Price.NumericForSorting", "true", "Price",
+                        "是否启用数值化价格用于排序和筛选", "bool", true),
+                    new("Price.ExtractPattern", @"¥(\d+(?:\.\d+)?)", "Price",
+                        "从价格描述中提取数值的正则表达式", "string", true),
+                    
+                    // ============ 缓存配置 ============
+                    new("Cache.DefaultExpirationMinutes", "60", "Performance",
+                        "缓存默认过期时间（分钟）", "int", true),
+                    new("Cache.EnableRedis", "false", "Performance",
+                        "是否启用Redis缓存", "bool", true),
+                    new("Cache.MemorySizeLimit", "100", "Performance",
+                        "内存缓存大小限制（MB）", "int", true),
+                    
+                    // ============ 移动端配置 ============
+                    new("Mobile.AppVersion", "1.0.0", "Mobile", "App最新版本号", "string", true),
+                    new("Mobile.MinVersion", "1.0.0", "Mobile", "最低支持版本", "string", true),
+                    new("Mobile.ForceUpdate", "false", "Mobile", "是否强制更新", "bool", true),
+                    new("Mobile.DownloadUrl", "https://example.com/app", "Mobile", "App下载地址", "string", true),
+                    new("Mobile.WxAppId", "your_wx_app_id", "WeChat", "微信小程序AppId", "string", false),
+                    new("Mobile.WxSecret", "your_wx_secret", "WeChat", "微信小程序Secret", "string", false),
+                    new("Mobile.WxApiUrl", "https://api.weixin.qq.com", "WeChat", "微信API地址", "string", true),
+                    
+                    // ============ 图片配置 ============
+                    new("Image.MaxSize", "5242880", "Image", "图片最大大小(5MB)", "int", true),
+                    new("Image.AllowedTypes", "jpg,jpeg,png,webp", "Image", "允许的图片格式", "string", true),
+                    new("Image.CompressQuality", "80", "Image", "图片压缩质量(1-100)", "int", true),
+                    
+                    // ============ 分页配置 ============
+                    new("Mobile.PageSize", "10", "Mobile", "移动端默认每页条数", "int", true),
+                    new("Mobile.MaxPageSize", "50", "Mobile", "移动端最大每页条数", "int", true),
+                    
+                    // ============ 搜索配置 ============
+                    new("Search.DefaultSortBy", "partnumber", "Search", "默认排序字段", "string", true),
+                    new("Search.DefaultSortOrder", "asc", "Search", "默认排序方向", "string", true),
+                    new("Search.EnableFuzzySearch", "true", "Search", "是否启用模糊搜索", "bool", true),
+                };
+
+                await context.SystemConfigs.AddRangeAsync(configs);
+                await context.SaveChangesAsync();
+            }
+
+            // ============ 12. 辅助方法：提取数值化价格 ============
+            static decimal? ExtractNumericPrice(string priceDescription)
+            {
+                if (string.IsNullOrWhiteSpace(priceDescription))
+                    return null;
+
+                // 简单实现：提取第一个数字
+                var match = System.Text.RegularExpressions.Regex.Match(priceDescription, @"\d+(?:\.\d+)?");
+                if (match.Success && decimal.TryParse(match.Value, out var price))
+                {
+                    return price;
+                }
+
+                return null;
+            }
         }
     }
 }

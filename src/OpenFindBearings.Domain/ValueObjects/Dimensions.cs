@@ -24,12 +24,17 @@ namespace OpenFindBearings.Domain.ValueObjects
         public decimal Width { get; }
 
         /// <summary>
-        /// 创建尺寸参数
+        /// 私有构造函数，供EF Core使用
         /// </summary>
-        /// <param name="innerDiameter">内径</param>
-        /// <param name="outerDiameter">外径</param>
-        /// <param name="width">宽度</param>
-        /// <exception cref="ArgumentException">当尺寸不符合业务规则时抛出</exception>
+        private Dimensions() { }
+
+        /// <summary>
+        /// 创建尺寸参数值对象
+        /// </summary>
+        /// <param name="innerDiameter">内径，必须大于0</param>
+        /// <param name="outerDiameter">外径，必须大于内径</param>
+        /// <param name="width">宽度，必须大于0</param>
+        /// <exception cref="ArgumentException">当尺寸参数不符合业务规则时抛出</exception>
         public Dimensions(decimal innerDiameter, decimal outerDiameter, decimal width)
         {
             if (innerDiameter <= 0)
@@ -45,7 +50,7 @@ namespace OpenFindBearings.Domain.ValueObjects
         }
 
         /// <summary>
-        /// 获取用于比较的组件列表
+        /// 获取用于相等性比较的组件
         /// </summary>
         protected override IEnumerable<object> GetEqualityComponents()
         {
