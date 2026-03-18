@@ -20,17 +20,57 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
                 .IsRequired()
                 .HasMaxLength(200);
 
-            builder.Property(b => b.Dimensions.InnerDiameter)
-                .HasPrecision(10, 3);
+            // 值对象配置 - Dimensions
+            builder.OwnsOne(b => b.Dimensions, dim =>
+            {
+                dim.Property(d => d.InnerDiameter)
+                    .HasColumnName("InnerDiameter")
+                    .HasPrecision(10, 3)
+                    .IsRequired();
 
-            builder.Property(b => b.Dimensions.OuterDiameter)
-                .HasPrecision(10, 3);
+                dim.Property(d => d.OuterDiameter)
+                    .HasColumnName("OuterDiameter")
+                    .HasPrecision(10, 3)
+                    .IsRequired();
 
-            builder.Property(b => b.Dimensions.Width)
-                .HasPrecision(10, 3);
+                dim.Property(d => d.Width)
+                    .HasColumnName("Width")
+                    .HasPrecision(10, 3)
+                    .IsRequired();
+            });
+
+            // 值对象配置 - Performance
+            builder.OwnsOne(b => b.Performance, perf =>
+            {
+                perf.Property(p => p.DynamicLoadRating)
+                    .HasColumnName("DynamicLoadRating")
+                    .HasPrecision(10, 2);
+
+                perf.Property(p => p.StaticLoadRating)
+                    .HasColumnName("StaticLoadRating")
+                    .HasPrecision(10, 2);
+
+                perf.Property(p => p.LimitingSpeed)
+                    .HasColumnName("LimitingSpeed");
+            });
 
             builder.Property(b => b.Weight)
                 .HasPrecision(10, 3);
+
+            builder.Property(b => b.PrecisionGrade)
+                .HasMaxLength(20);
+
+            builder.Property(b => b.Material)
+                .HasMaxLength(50);
+
+            builder.Property(b => b.SealType)
+                .HasMaxLength(50);
+
+            builder.Property(b => b.CageType)
+                .HasMaxLength(50);
+
+            builder.Property(b => b.ViewCount)
+                .HasDefaultValue(0);
 
             builder.HasOne(b => b.BearingType)
                 .WithMany()
@@ -52,8 +92,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
 
             builder.HasIndex(b => b.BearingTypeId);
             builder.HasIndex(b => b.BrandId);
-            builder.HasIndex(b => b.Dimensions.InnerDiameter);
-            builder.HasIndex(b => b.Dimensions.OuterDiameter);
+            builder.HasIndex(b => "InnerDiameter");  // 通过列名索引
+            builder.HasIndex(b => "OuterDiameter");
+            builder.HasIndex(b => "Width");
         }
     }
 }

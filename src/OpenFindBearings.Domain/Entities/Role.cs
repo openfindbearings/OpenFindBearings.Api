@@ -25,13 +25,13 @@ namespace OpenFindBearings.Domain.Entities
         /// 用户-角色关联导航属性
         /// 一个角色可以分配给多个用户
         /// </summary>
-        public ICollection<UserRole> UserRoles { get; private set; } = new List<UserRole>();
+        public List<UserRole> UserRoles { get; set; } = [];
 
         /// <summary>
         /// 角色-权限关联导航属性
         /// 一个角色可以拥有多个权限
         /// </summary>
-        public ICollection<RolePermission> RolePermissions { get; private set; } = new List<RolePermission>();
+        public List<RolePermission> RolePermissions { get; set; } = [];
 
         /// <summary>
         /// 无参构造函数，仅供EF Core使用

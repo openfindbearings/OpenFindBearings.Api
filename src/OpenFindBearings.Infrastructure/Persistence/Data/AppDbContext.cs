@@ -23,7 +23,17 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
         public DbSet<UserRole> UserRoles { get; set; }
         public DbSet<RolePermission> RolePermissions { get; set; }
 
+        // 用户收藏与历史
+        public DbSet<UserFavorite> UserFavorites { get; set; }
+        public DbSet<UserFollow> UserFollows { get; set; }
+        public DbSet<UserBearingHistory> UserBearingHistories { get; set; }
+        public DbSet<UserMerchantHistory> UserMerchantHistories { get; set; }
+
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
+
+
+        public DbSet<AuditLog> AuditLogs { get; set; }
+        public DbSet<SystemConfig> SystemConfigs { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -31,8 +41,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
         }
 
-        public override async Task<int> SaveChangesAsync(
-            CancellationToken cancellationToken = default)
+        public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
             // 自动更新审计字段
             foreach (var entry in ChangeTracker.Entries<BaseEntity>())

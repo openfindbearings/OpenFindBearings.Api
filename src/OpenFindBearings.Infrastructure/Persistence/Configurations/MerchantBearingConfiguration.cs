@@ -8,7 +8,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
     {
         public void Configure(EntityTypeBuilder<MerchantBearing> builder)
         {
-            builder.ToTable("MerchantProducts");
+            builder.ToTable("MerchantBearings");
 
             builder.HasKey(mp => mp.Id);
 
@@ -24,20 +24,37 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             builder.Property(mp => mp.Remarks)
                 .HasMaxLength(500);
 
+            builder.Property(mp => mp.ViewCount)
+                .HasDefaultValue(0);
+
+            builder.Property(mp => mp.IsFeatured)
+                .HasDefaultValue(false);
+
+            builder.Property(mp => mp.IsOnSale)
+                .HasDefaultValue(true);
+
+            builder.Property(mp => mp.IsPendingApproval)
+                .HasDefaultValue(false);
+
+            builder.Property(mp => mp.ApprovalComment)
+                .HasMaxLength(500);
+
             // 关系配置
             builder.HasOne(mp => mp.Merchant)
-                .WithMany()
+                .WithMany(m => m.MerchantBearings)
                 .HasForeignKey(mp => mp.MerchantId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.Cascade);
 
             builder.HasOne(mp => mp.Bearing)
-                .WithMany()
+                .WithMany(b => b.MerchantBearings)
                 .HasForeignKey(mp => mp.BearingId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.Cascade);
 
             // 索引
             builder.HasIndex(mp => mp.MerchantId);
             builder.HasIndex(mp => mp.BearingId);
+            builder.HasIndex(mp => mp.IsOnSale);
+            builder.HasIndex(mp => mp.IsPendingApproval);
             builder.HasIndex(mp => new { mp.MerchantId, mp.BearingId }).IsUnique();
         }
     }

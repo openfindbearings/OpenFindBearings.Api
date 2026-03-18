@@ -1,6 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using OpenFindBearings.Domain.Entities;
-using OpenFindBearings.Domain.Repositories;
+using OpenFindBearings.Domain.Interfaces;
 using OpenFindBearings.Infrastructure.Persistence.Data;
 
 namespace OpenFindBearings.Infrastructure.Persistence.Repositories
@@ -76,6 +76,15 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         {
             return await _context.RolePermissions
                 .AnyAsync(rp => rp.RoleId == roleId && rp.PermissionId == permissionId, cancellationToken);
+        }
+
+        public async Task<List<Permission>> GetPermissionsByRoleIdAsync(Guid roleId, CancellationToken cancellationToken = default)
+        {
+            return await _context.RolePermissions
+                .Include(rp => rp.Permission)
+                .Where(rp => rp.RoleId == roleId)
+                .Select(rp => rp.Permission)
+                .ToListAsync(cancellationToken);
         }
     }
 }

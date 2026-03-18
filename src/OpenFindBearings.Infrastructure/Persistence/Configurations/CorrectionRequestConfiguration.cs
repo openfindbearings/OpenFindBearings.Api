@@ -12,9 +12,13 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
 
             builder.HasKey(c => c.Id);
 
-            builder.Property(c => c.EntityType)
+            // 目标类型和目标ID
+            builder.Property(c => c.TargetType)
                 .IsRequired()
-                .HasMaxLength(50);
+                .HasMaxLength(20);
+
+            builder.Property(c => c.TargetId)
+                .IsRequired();
 
             builder.Property(c => c.FieldName)
                 .IsRequired()
@@ -40,8 +44,35 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
 
             // 索引
             builder.HasIndex(c => c.Status);
-            builder.HasIndex(c => c.EntityType);
+            builder.HasIndex(c => c.TargetType);
+            builder.HasIndex(c => c.TargetId);
             builder.HasIndex(c => c.SubmittedBy);
+            builder.HasIndex(c => new { c.TargetType, c.TargetId });
+
+            // 关系配置 - 根据目标类型动态关联
+            builder.HasOne<Bearing>()
+                .WithMany()
+                .HasForeignKey(c => c.TargetId)
+                .HasConstraintName("FK_CorrectionRequests_Bearings_TargetId")
+                .OnDelete(DeleteBehavior.Restrict)
+                .IsRequired(false);
+
+            builder.HasOne<Merchant>()
+                .WithMany()
+                .HasForeignKey(c => c.TargetId)
+                .HasConstraintName("FK_CorrectionRequests_Merchants_TargetId")
+                .OnDelete(DeleteBehavior.Restrict)
+                .IsRequired(false);
+
+            builder.HasOne(c => c.Submitter)
+                .WithMany(u => u.SubmittedCorrections)
+                .HasForeignKey(c => c.SubmittedBy)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.HasOne(c => c.Reviewer)
+                .WithMany()
+                .HasForeignKey(c => c.ReviewedBy)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

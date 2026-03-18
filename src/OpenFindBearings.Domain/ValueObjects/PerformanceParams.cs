@@ -24,15 +24,19 @@ namespace OpenFindBearings.Domain.ValueObjects
         public decimal? LimitingSpeed { get; }
 
         /// <summary>
-        /// 创建性能参数
+        /// 私有构造函数，供EF Core使用
+        /// </summary>
+        private PerformanceParams() { }
+
+        /// <summary>
+        /// 创建性能参数值对象
         /// </summary>
         /// <param name="dynamicLoad">动载荷</param>
         /// <param name="staticLoad">静载荷</param>
         /// <param name="speed">极限转速</param>
-        /// <exception cref="ArgumentException">当性能参数不符合业务规则时抛出</exception>
+        /// <exception cref="ArgumentException">当动载荷大于静载荷时抛出</exception>
         public PerformanceParams(decimal? dynamicLoad, decimal? staticLoad, decimal? speed)
         {
-            // 如果两者都有值，检查动载荷是否小于静载荷
             if (dynamicLoad.HasValue && staticLoad.HasValue && dynamicLoad > staticLoad)
                 throw new ArgumentException("动载荷不能大于静载荷");
 
@@ -42,13 +46,21 @@ namespace OpenFindBearings.Domain.ValueObjects
         }
 
         /// <summary>
-        /// 获取用于比较的组件列表
+        /// 获取用于相等性比较的组件
         /// </summary>
         protected override IEnumerable<object> GetEqualityComponents()
         {
-            yield return DynamicLoadRating;
-            yield return StaticLoadRating;
-            yield return LimitingSpeed;
+            yield return DynamicLoadRating ?? 0;
+            yield return StaticLoadRating ?? 0;
+            yield return LimitingSpeed ?? 0;
         }
+
+        /// <summary>
+        /// 是否有任何性能数据
+        /// </summary>
+        public bool HasAnyValue =>
+            DynamicLoadRating.HasValue ||
+            StaticLoadRating.HasValue ||
+            LimitingSpeed.HasValue;
     }
 }
