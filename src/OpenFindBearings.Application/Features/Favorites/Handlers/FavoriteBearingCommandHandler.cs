@@ -11,14 +11,14 @@ namespace OpenFindBearings.Application.Features.Favorites.Handlers
     /// </summary>
     public class FavoriteBearingCommandHandler : IRequestHandler<FavoriteBearingCommand, bool>
     {
-        private readonly IUserFavoriteRepository _favoriteRepository;
+        private readonly IUserBearingFavoriteRepository _favoriteRepository;
         private readonly IUserRepository _userRepository;
         private readonly IBearingRepository _bearingRepository;
         private readonly IMediator _mediator;
         private readonly ILogger<FavoriteBearingCommandHandler> _logger;
 
         public FavoriteBearingCommandHandler(
-            IUserFavoriteRepository favoriteRepository,
+            IUserBearingFavoriteRepository favoriteRepository,
             IUserRepository userRepository,
             IBearingRepository bearingRepository,
             IMediator mediator,

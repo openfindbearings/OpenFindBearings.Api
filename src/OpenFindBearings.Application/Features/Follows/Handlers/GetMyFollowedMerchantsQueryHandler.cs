@@ -13,12 +13,12 @@ namespace OpenFindBearings.Application.Features.Follows.Handlers
     /// </summary>
     public class GetMyFollowedMerchantsQueryHandler : IRequestHandler<GetMyFollowedMerchantsQuery, PagedResult<FollowedMerchantDto>>
     {
-        private readonly IUserFollowRepository _followRepository;
+        private readonly IUserMerchantFollowRepository _followRepository;
         private readonly IUserRepository _userRepository;
         private readonly ILogger<GetMyFollowedMerchantsQueryHandler> _logger;
 
         public GetMyFollowedMerchantsQueryHandler(
-            IUserFollowRepository followRepository,
+            IUserMerchantFollowRepository followRepository,
             IUserRepository userRepository,
             ILogger<GetMyFollowedMerchantsQueryHandler> logger)
         {

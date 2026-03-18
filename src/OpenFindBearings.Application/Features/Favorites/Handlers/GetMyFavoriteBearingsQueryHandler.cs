@@ -13,12 +13,12 @@ namespace OpenFindBearings.Application.Features.Favorites.Handlers
     /// </summary>
     public class GetMyFavoriteBearingsQueryHandler : IRequestHandler<GetMyFavoriteBearingsQuery, PagedResult<FavoriteBearingDto>>
     {
-        private readonly IUserFavoriteRepository _favoriteRepository;
+        private readonly IUserBearingFavoriteRepository _favoriteRepository;
         private readonly IUserRepository _userRepository;
         private readonly ILogger<GetMyFavoriteBearingsQueryHandler> _logger;
 
         public GetMyFavoriteBearingsQueryHandler(
-            IUserFavoriteRepository favoriteRepository,
+            IUserBearingFavoriteRepository favoriteRepository,
             IUserRepository userRepository,
             ILogger<GetMyFavoriteBearingsQueryHandler> logger)
         {

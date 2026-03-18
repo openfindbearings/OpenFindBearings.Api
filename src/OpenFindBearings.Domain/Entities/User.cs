@@ -76,12 +76,12 @@ namespace OpenFindBearings.Domain.Entities
         /// <summary>
         /// 收藏的轴承
         /// </summary>
-        public List<UserFavorite> FavoriteBearings { get; private set; } = [];
+        public List<UserBearingFavorite> FavoriteBearings { get; private set; } = [];
 
         /// <summary>
         /// 关注的商家
         /// </summary>
-        public List<UserFollow> FollowedMerchants { get; private set; } = [];
+        public List<UserMerchantFollow> FollowedMerchants { get; private set; } = [];
 
         /// <summary>
         /// 轴承浏览历史
@@ -212,7 +212,7 @@ namespace OpenFindBearings.Domain.Entities
             if (FavoriteBearings.Any(f => f.BearingId == bearingId))
                 throw new InvalidOperationException("已经收藏过该轴承");
 
-            var favorite = new UserFavorite(Id, bearingId);
+            var favorite = new UserBearingFavorite(Id, bearingId);
             FavoriteBearings.Add(favorite);
             UpdateTimestamp();
         }
@@ -246,7 +246,7 @@ namespace OpenFindBearings.Domain.Entities
             if (FollowedMerchants.Any(f => f.MerchantId == merchantId))
                 throw new InvalidOperationException("已经关注过该商家");
 
-            var follow = new UserFollow(Id, merchantId);
+            var follow = new UserMerchantFollow(Id, merchantId);
             FollowedMerchants.Add(follow);
             UpdateTimestamp();
         }

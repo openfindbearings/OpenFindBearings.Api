@@ -8,22 +8,22 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
     /// <summary>
     /// 用户关注商家仓储实现
     /// </summary>
-    public class UserFollowRepository : IUserFollowRepository
+    public class UserMerchantFollowRepository : IUserMerchantFollowRepository
     {
         private readonly AppDbContext _context;
 
-        public UserFollowRepository(AppDbContext context)
+        public UserMerchantFollowRepository(AppDbContext context)
         {
             _context = context;
         }
 
-        public async Task<UserFollow?> GetAsync(Guid userId, Guid merchantId, CancellationToken cancellationToken = default)
+        public async Task<UserMerchantFollow?> GetAsync(Guid userId, Guid merchantId, CancellationToken cancellationToken = default)
         {
             return await _context.UserFollows
                 .FirstOrDefaultAsync(uf => uf.UserId == userId && uf.MerchantId == merchantId, cancellationToken);
         }
 
-        public async Task<List<UserFollow>> GetByUserIdAsync(Guid userId, int page, int pageSize, CancellationToken cancellationToken = default)
+        public async Task<List<UserMerchantFollow>> GetByUserIdAsync(Guid userId, int page, int pageSize, CancellationToken cancellationToken = default)
         {
             return await _context.UserFollows
                 .Include(uf => uf.Merchant)
@@ -60,7 +60,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                 .CountAsync(uf => uf.MerchantId == merchantId, cancellationToken);
         }
 
-        public async Task AddAsync(UserFollow follow, CancellationToken cancellationToken = default)
+        public async Task AddAsync(UserMerchantFollow follow, CancellationToken cancellationToken = default)
         {
             await _context.UserFollows.AddAsync(follow, cancellationToken);
             await _context.SaveChangesAsync(cancellationToken);

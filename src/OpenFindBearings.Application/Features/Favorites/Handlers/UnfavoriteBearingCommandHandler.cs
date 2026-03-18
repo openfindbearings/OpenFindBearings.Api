@@ -11,13 +11,13 @@ namespace OpenFindBearings.Application.Features.Favorites.Handlers
     /// </summary>
     public class UnfavoriteBearingCommandHandler : IRequestHandler<UnfavoriteBearingCommand>
     {
-        private readonly IUserFavoriteRepository _favoriteRepository;
+        private readonly IUserBearingFavoriteRepository _favoriteRepository;
         private readonly IUserRepository _userRepository;
         private readonly IMediator _mediator;
         private readonly ILogger<UnfavoriteBearingCommandHandler> _logger;
 
         public UnfavoriteBearingCommandHandler(
-            IUserFavoriteRepository favoriteRepository,
+            IUserBearingFavoriteRepository favoriteRepository,
             IUserRepository userRepository,
             IMediator mediator,
             ILogger<UnfavoriteBearingCommandHandler> logger)

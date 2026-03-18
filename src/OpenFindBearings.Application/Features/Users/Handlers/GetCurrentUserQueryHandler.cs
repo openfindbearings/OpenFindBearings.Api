@@ -14,16 +14,16 @@ namespace OpenFindBearings.Application.Features.Users.Handlers
     public class GetCurrentUserQueryHandler : IRequestHandler<GetCurrentUserQuery, UserDto?>
     {
         private readonly IUserRepository _userRepository;
-        private readonly IUserFavoriteRepository _favoriteRepository;
-        private readonly IUserFollowRepository _followRepository;
+        private readonly IUserBearingFavoriteRepository _favoriteRepository;
+        private readonly IUserMerchantFollowRepository _followRepository;
         private readonly ICorrectionRequestRepository _correctionRepository;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly ILogger<GetCurrentUserQueryHandler> _logger;
 
         public GetCurrentUserQueryHandler(
             IUserRepository userRepository,
-            IUserFavoriteRepository favoriteRepository,
-            IUserFollowRepository followRepository,
+            IUserBearingFavoriteRepository favoriteRepository,
+            IUserMerchantFollowRepository followRepository,
             ICorrectionRequestRepository correctionRepository,
             IHttpContextAccessor httpContextAccessor,
             ILogger<GetCurrentUserQueryHandler> logger)

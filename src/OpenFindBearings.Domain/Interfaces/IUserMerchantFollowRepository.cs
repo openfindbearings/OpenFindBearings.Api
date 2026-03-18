@@ -6,17 +6,17 @@ namespace OpenFindBearings.Domain.Interfaces
     /// 用户关注商家仓储接口
     /// 对应接口：POST /api/favorites/merchants/{merchantId}、GET /api/favorites/merchants
     /// </summary>
-    public interface IUserFollowRepository
+    public interface IUserMerchantFollowRepository
     {
         /// <summary>
         /// 根据用户ID和商家ID获取关注
         /// </summary>
-        Task<UserFollow?> GetAsync(Guid userId, Guid merchantId, CancellationToken cancellationToken = default);
+        Task<UserMerchantFollow?> GetAsync(Guid userId, Guid merchantId, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// 获取用户的关注列表
         /// </summary>
-        Task<List<UserFollow>> GetByUserIdAsync(Guid userId, int page, int pageSize, CancellationToken cancellationToken = default);
+        Task<List<UserMerchantFollow>> GetByUserIdAsync(Guid userId, int page, int pageSize, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// 获取用户的关注商家ID列表
@@ -41,7 +41,7 @@ namespace OpenFindBearings.Domain.Interfaces
         /// <summary>
         /// 添加关注
         /// </summary>
-        Task AddAsync(UserFollow follow, CancellationToken cancellationToken = default);
+        Task AddAsync(UserMerchantFollow follow, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// 删除关注

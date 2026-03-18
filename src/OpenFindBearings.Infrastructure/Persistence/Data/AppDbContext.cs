@@ -24,8 +24,8 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
         public DbSet<RolePermission> RolePermissions { get; set; }
 
         // 用户收藏与历史
-        public DbSet<UserFavorite> UserFavorites { get; set; }
-        public DbSet<UserFollow> UserFollows { get; set; }
+        public DbSet<UserBearingFavorite> UserFavorites { get; set; }
+        public DbSet<UserMerchantFollow> UserFollows { get; set; }
         public DbSet<UserBearingHistory> UserBearingHistories { get; set; }
         public DbSet<UserMerchantHistory> UserMerchantHistories { get; set; }
 

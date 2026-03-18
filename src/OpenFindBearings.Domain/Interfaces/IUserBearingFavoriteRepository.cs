@@ -6,17 +6,17 @@ namespace OpenFindBearings.Domain.Interfaces
     /// 用户收藏轴承仓储接口
     /// 对应接口：POST /api/favorites/bearings/{bearingId}、GET /api/favorites/bearings
     /// </summary>
-    public interface IUserFavoriteRepository
+    public interface IUserBearingFavoriteRepository
     {
         /// <summary>
         /// 根据用户ID和轴承ID获取收藏
         /// </summary>
-        Task<UserFavorite?> GetAsync(Guid userId, Guid bearingId, CancellationToken cancellationToken = default);
+        Task<UserBearingFavorite?> GetAsync(Guid userId, Guid bearingId, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// 获取用户的收藏列表
         /// </summary>
-        Task<List<UserFavorite>> GetByUserIdAsync(Guid userId, int page, int pageSize, CancellationToken cancellationToken = default);
+        Task<List<UserBearingFavorite>> GetByUserIdAsync(Guid userId, int page, int pageSize, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// 获取用户的收藏轴承ID列表
@@ -36,7 +36,7 @@ namespace OpenFindBearings.Domain.Interfaces
         /// <summary>
         /// 添加收藏
         /// </summary>
-        Task AddAsync(UserFavorite favorite, CancellationToken cancellationToken = default);
+        Task AddAsync(UserBearingFavorite favorite, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// 删除收藏

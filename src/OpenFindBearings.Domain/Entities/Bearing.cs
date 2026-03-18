@@ -123,7 +123,7 @@ namespace OpenFindBearings.Domain.Entities
         /// 收藏此轴承的用户
         /// 多对多关系，通过UserFavorite中间表关联
         /// </summary>
-        public List<UserFavorite> FavoritedByUsers { get; private set; } = [];
+        public List<UserBearingFavorite> FavoritedByUsers { get; private set; } = [];
 
         // ============ 统计字段 ============
 
