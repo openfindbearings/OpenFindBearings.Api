@@ -387,7 +387,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
 
             // ============ 8. 用户收藏数据 ============
 
-            var userFavorites = new List<UserFavorite>
+            var userFavorites = new List<UserBearingFavorite>
             {
                 // 王先生收藏 SKF6205 和 NSK6205
                 new(users[3].Id, skf6205.Id),
@@ -403,7 +403,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
 
             // ============ 9. 用户关注数据 ============
 
-            var userFollows = new List<UserFollow>
+            var userFollows = new List<UserMerchantFollow>
             {
                 // 王先生关注上海轴承公司和广州进口轴承
                 new(users[3].Id, merchants[0].Id),

@@ -10,12 +10,12 @@ namespace OpenFindBearings.Application.Features.Favorites.Handlers
     /// </summary>
     public class CheckBearingFavoriteQueryHandler : IRequestHandler<CheckBearingFavoriteQuery, bool>
     {
-        private readonly IUserFavoriteRepository _favoriteRepository;
+        private readonly IUserBearingFavoriteRepository _favoriteRepository;
         private readonly IUserRepository _userRepository;
         private readonly ILogger<CheckBearingFavoriteQueryHandler> _logger;
 
         public CheckBearingFavoriteQueryHandler(
-            IUserFavoriteRepository favoriteRepository,
+            IUserBearingFavoriteRepository favoriteRepository,
             IUserRepository userRepository,
             ILogger<CheckBearingFavoriteQueryHandler> logger)
         {

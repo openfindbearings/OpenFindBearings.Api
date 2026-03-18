@@ -76,7 +76,7 @@ namespace OpenFindBearings.Domain.Entities
         /// <summary>
         /// 关注此商家的用户
         /// </summary>
-        public List<UserFollow> FollowedByUsers { get; private set; } = [];
+        public List<UserMerchantFollow> FollowedByUsers { get; private set; } = [];
 
         /// <summary>
         /// 关注者数量

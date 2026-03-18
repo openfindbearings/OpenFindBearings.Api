@@ -10,12 +10,12 @@ namespace OpenFindBearings.Application.Features.Follows.Handlers
     /// </summary>
     public class CheckMerchantFollowQueryHandler : IRequestHandler<CheckMerchantFollowQuery, bool>
     {
-        private readonly IUserFollowRepository _followRepository;
+        private readonly IUserMerchantFollowRepository _followRepository;
         private readonly IUserRepository _userRepository;
         private readonly ILogger<CheckMerchantFollowQueryHandler> _logger;
 
         public CheckMerchantFollowQueryHandler(
-            IUserFollowRepository followRepository,
+            IUserMerchantFollowRepository followRepository,
             IUserRepository userRepository,
             ILogger<CheckMerchantFollowQueryHandler> logger)
         {

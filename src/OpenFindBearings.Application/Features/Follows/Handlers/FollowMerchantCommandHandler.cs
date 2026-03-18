@@ -11,14 +11,14 @@ namespace OpenFindBearings.Application.Features.Follows.Handlers
     /// </summary>
     public class FollowMerchantCommandHandler : IRequestHandler<FollowMerchantCommand, bool>
     {
-        private readonly IUserFollowRepository _followRepository;
+        private readonly IUserMerchantFollowRepository _followRepository;
         private readonly IUserRepository _userRepository;
         private readonly IMerchantRepository _merchantRepository;
         private readonly IMediator _mediator;
         private readonly ILogger<FollowMerchantCommandHandler> _logger;
 
         public FollowMerchantCommandHandler(
-            IUserFollowRepository followRepository,
+            IUserMerchantFollowRepository followRepository,
             IUserRepository userRepository,
             IMerchantRepository merchantRepository,
             IMediator mediator,

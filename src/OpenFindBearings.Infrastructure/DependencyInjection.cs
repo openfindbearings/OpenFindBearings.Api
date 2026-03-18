@@ -40,8 +40,8 @@ namespace OpenFindBearings.Infrastructure
             services.AddScoped<IUserRepository, UserRepository>();
 
             // 用户收藏与历史仓储
-            services.AddScoped<IUserFavoriteRepository, UserFavoriteRepository>();
-            services.AddScoped<IUserFollowRepository, UserFollowRepository>();
+            services.AddScoped<IUserBearingFavoriteRepository, UserBearingFavoriteRepository>();
+            services.AddScoped<IUserMerchantFollowRepository, UserMerchantFollowRepository>();
             services.AddScoped<IUserBearingHistoryRepository, UserBearingHistoryRepository>();
             services.AddScoped<IUserMerchantHistoryRepository, UserMerchantHistoryRepository>();
 

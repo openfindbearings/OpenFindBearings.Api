@@ -11,13 +11,13 @@ namespace OpenFindBearings.Application.Features.Follows.Handlers
     /// </summary>
     public class UnfollowMerchantCommandHandler : IRequestHandler<UnfollowMerchantCommand>
     {
-        private readonly IUserFollowRepository _followRepository;
+        private readonly IUserMerchantFollowRepository _followRepository;
         private readonly IUserRepository _userRepository;
         private readonly IMediator _mediator;
         private readonly ILogger<UnfollowMerchantCommandHandler> _logger;
 
         public UnfollowMerchantCommandHandler(
-            IUserFollowRepository followRepository,
+            IUserMerchantFollowRepository followRepository,
             IUserRepository userRepository,
             IMediator mediator,
             ILogger<UnfollowMerchantCommandHandler> logger)

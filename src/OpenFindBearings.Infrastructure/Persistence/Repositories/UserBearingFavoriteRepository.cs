@@ -8,22 +8,22 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
     /// <summary>
     /// 用户收藏轴承仓储实现
     /// </summary>
-    public class UserFavoriteRepository : IUserFavoriteRepository
+    public class UserBearingFavoriteRepository : IUserBearingFavoriteRepository
     {
         private readonly AppDbContext _context;
 
-        public UserFavoriteRepository(AppDbContext context)
+        public UserBearingFavoriteRepository(AppDbContext context)
         {
             _context = context;
         }
 
-        public async Task<UserFavorite?> GetAsync(Guid userId, Guid bearingId, CancellationToken cancellationToken = default)
+        public async Task<UserBearingFavorite?> GetAsync(Guid userId, Guid bearingId, CancellationToken cancellationToken = default)
         {
             return await _context.UserFavorites
                 .FirstOrDefaultAsync(uf => uf.UserId == userId && uf.BearingId == bearingId, cancellationToken);
         }
 
-        public async Task<List<UserFavorite>> GetByUserIdAsync(Guid userId, int page, int pageSize, CancellationToken cancellationToken = default)
+        public async Task<List<UserBearingFavorite>> GetByUserIdAsync(Guid userId, int page, int pageSize, CancellationToken cancellationToken = default)
         {
             return await _context.UserFavorites
                 .Include(uf => uf.Bearing)
@@ -55,7 +55,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                 .CountAsync(uf => uf.UserId == userId, cancellationToken);
         }
 
-        public async Task AddAsync(UserFavorite favorite, CancellationToken cancellationToken = default)
+        public async Task AddAsync(UserBearingFavorite favorite, CancellationToken cancellationToken = default)
         {
             await _context.UserFavorites.AddAsync(favorite, cancellationToken);
             await _context.SaveChangesAsync(cancellationToken);

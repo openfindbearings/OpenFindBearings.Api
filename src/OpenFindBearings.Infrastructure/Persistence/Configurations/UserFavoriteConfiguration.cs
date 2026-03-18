@@ -7,9 +7,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
     /// <summary>
     /// 用户收藏轴承配置类
     /// </summary>
-    public class UserFavoriteConfiguration : IEntityTypeConfiguration<UserFavorite>
+    public class UserFavoriteConfiguration : IEntityTypeConfiguration<UserBearingFavorite>
     {
-        public void Configure(EntityTypeBuilder<UserFavorite> builder)
+        public void Configure(EntityTypeBuilder<UserBearingFavorite> builder)
         {
             builder.ToTable("UserFavorites");
 
