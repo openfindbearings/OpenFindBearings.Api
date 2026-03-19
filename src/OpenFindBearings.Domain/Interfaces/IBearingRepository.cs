@@ -25,6 +25,14 @@ namespace OpenFindBearings.Domain.Interfaces
         Task<IEnumerable<Bearing>> SearchAsync(BearingSearchParams searchParams, CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// 获取轴承总数（用于分页）
+        /// </summary>
+        /// <param name="searchParams">搜索参数</param>
+        /// <param name="cancellationToken">取消令牌</param>
+        /// <returns>符合条件的轴承总数</returns>
+        Task<int> GetTotalCountAsync(BearingSearchParams searchParams, CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// 添加轴承
         /// </summary>
         Task AddAsync(Bearing bearing, CancellationToken cancellationToken = default);

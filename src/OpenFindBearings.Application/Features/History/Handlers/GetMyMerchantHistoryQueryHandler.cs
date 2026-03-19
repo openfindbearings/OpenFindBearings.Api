@@ -2,7 +2,7 @@
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.Features.History.DTOs;
 using OpenFindBearings.Application.Features.History.Queries;
-using OpenFindBearings.Domain.Common;
+using OpenFindBearings.Domain.Common.Models;
 using OpenFindBearings.Domain.Interfaces;
 
 namespace OpenFindBearings.Application.Features.History.Handlers
@@ -13,40 +13,43 @@ namespace OpenFindBearings.Application.Features.History.Handlers
     public class GetMyMerchantHistoryQueryHandler : IRequestHandler<GetMyMerchantHistoryQuery, PagedResult<MerchantHistoryDto>>
     {
         private readonly IUserMerchantHistoryRepository _historyRepository;
-        private readonly IUserRepository _userRepository;
         private readonly ILogger<GetMyMerchantHistoryQueryHandler> _logger;
 
         public GetMyMerchantHistoryQueryHandler(
             IUserMerchantHistoryRepository historyRepository,
-            IUserRepository userRepository,
             ILogger<GetMyMerchantHistoryQueryHandler> logger)
         {
             _historyRepository = historyRepository;
-            _userRepository = userRepository;
             _logger = logger;
         }
 
-        public async Task<PagedResult<MerchantHistoryDto>> Handle(GetMyMerchantHistoryQuery request, CancellationToken cancellationToken)
+        public async Task<PagedResult<MerchantHistoryDto>> Handle(
+            GetMyMerchantHistoryQuery request,
+            CancellationToken cancellationToken)
         {
-            var user = await _userRepository.GetByAuthUserIdAsync(request.AuthUserId, cancellationToken);
-            if (user == null)
-            {
-                return new PagedResult<MerchantHistoryDto>();
-            }
+            _logger.LogInformation("获取用户商家浏览历史: UserId={UserId}, Page={Page}, PageSize={PageSize}",
+                request.UserId, request.Page, request.PageSize);
 
-            var histories = await _historyRepository.GetByUserIdAsync(user.Id, request.Page, request.PageSize, cancellationToken);
+            var histories = await _historyRepository.GetByUserIdAsync(
+                request.UserId,
+                request.Page,
+                request.PageSize,
+                cancellationToken);
 
             var totalCount = histories.Count;
 
-            var items = histories.Select(h => new MerchantHistoryDto
-            {
-                Id = h.Id,
-                MerchantId = h.MerchantId,
-                MerchantName = h.Merchant?.Name ?? string.Empty,
-                CompanyName = h.Merchant?.CompanyName,
-                ViewedAt = h.ViewedAt,
-                ViewCount = 1
-            }).ToList();
+            var items = histories
+                .Where(h => h.Merchant != null)
+                .Select(h => new MerchantHistoryDto
+                {
+                    Id = h.Id,
+                    MerchantId = h.MerchantId,
+                    MerchantName = h.Merchant!.Name,
+                    CompanyName = h.Merchant.CompanyName,
+                    ViewedAt = h.ViewedAt,
+                    ViewCount = 1
+                })
+                .ToList();
 
             return new PagedResult<MerchantHistoryDto>
             {

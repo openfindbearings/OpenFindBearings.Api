@@ -30,30 +30,32 @@ namespace OpenFindBearings.Application.Features.Favorites.Handlers
 
         public async Task Handle(UnfavoriteBearingCommand request, CancellationToken cancellationToken)
         {
-            _logger.LogInformation("用户取消收藏轴承: UserId={AuthUserId}, BearingId={BearingId}",
+            _logger.LogInformation("用户取消收藏轴承: UserId={UserId}, BearingId={BearingId}",
                 request.UserId, request.BearingId);
 
-            var user = await _userRepository.GetByAuthUserIdAsync(request.UserId, cancellationToken);
+            // 检查是否存在收藏
+            var exists = await _favoriteRepository.ExistsAsync(request.UserId, request.BearingId, cancellationToken);
+            if (!exists)
+            {
+                _logger.LogWarning("用户未收藏该轴承: UserId={UserId}, BearingId={BearingId}",
+                    request.UserId, request.BearingId);
+                return;
+            }
+
+            // 获取用户实体
+            var user = await _userRepository.GetByIdAsync(request.UserId, cancellationToken);
             if (user == null)
             {
                 throw new InvalidOperationException($"用户不存在: {request.UserId}");
             }
 
-            var exists = await _favoriteRepository.ExistsAsync(user.Id, request.BearingId, cancellationToken);
-            if (!exists)
-            {
-                _logger.LogWarning("用户未收藏该轴承: UserId={UserId}, BearingId={BearingId}",
-                    user.Id, request.BearingId);
-                return;
-            }
-
             user.UnfavoriteBearing(request.BearingId);
             await _userRepository.UpdateAsync(user, cancellationToken);
 
-            await _mediator.Publish(new BearingUnfavoritedEvent(user.Id, request.BearingId), cancellationToken);
+            await _mediator.Publish(new BearingUnfavoritedEvent(request.UserId, request.BearingId), cancellationToken);
 
             _logger.LogInformation("用户取消收藏轴承成功: UserId={UserId}, BearingId={BearingId}",
-                user.Id, request.BearingId);
+                request.UserId, request.BearingId);
         }
     }
 }

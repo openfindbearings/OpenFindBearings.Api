@@ -37,6 +37,16 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
                     .HasColumnName("Width")
                     .HasPrecision(10, 3)
                     .IsRequired();
+
+                // 在值对象配置内部创建索引
+                dim.HasIndex(d => d.InnerDiameter)
+                    .HasDatabaseName("IX_Bearings_InnerDiameter");
+
+                dim.HasIndex(d => d.OuterDiameter)
+                    .HasDatabaseName("IX_Bearings_OuterDiameter");
+
+                dim.HasIndex(d => d.Width)
+                    .HasDatabaseName("IX_Bearings_Width");
             });
 
             // 值对象配置 - Performance
@@ -90,11 +100,11 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
                 .IsUnique()
                 .HasDatabaseName("IX_Bearings_PartNumber_BrandId");
 
-            builder.HasIndex(b => b.BearingTypeId);
-            builder.HasIndex(b => b.BrandId);
-            builder.HasIndex(b => "InnerDiameter");  // 通过列名索引
-            builder.HasIndex(b => "OuterDiameter");
-            builder.HasIndex(b => "Width");
+            builder.HasIndex(b => b.BearingTypeId)
+                .HasDatabaseName("IX_Bearings_BearingTypeId");
+
+            builder.HasIndex(b => b.BrandId)
+                .HasDatabaseName("IX_Bearings_BrandId");
         }
     }
 }

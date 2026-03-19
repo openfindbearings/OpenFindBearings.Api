@@ -7,11 +7,34 @@ namespace OpenFindBearings.Application.Features.Corrections.Commands
     /// </summary>
     public record SubmitMerchantCorrectionCommand : IRequest<Guid>
     {
-        public Guid MerchantId { get; set; }
+        /// <summary>
+        /// 商家ID
+        /// </summary>
+        public Guid MerchantId { get; init; }
+
+        /// <summary>
+        /// 字段名称
+        /// </summary>
         public string FieldName { get; init; } = string.Empty;
+
+        /// <summary>
+        /// 建议值
+        /// </summary>
         public string SuggestedValue { get; init; } = string.Empty;
+
+        /// <summary>
+        /// 原始值
+        /// </summary>
         public string? OriginalValue { get; init; }
+
+        /// <summary>
+        /// 纠错理由
+        /// </summary>
         public string? Reason { get; init; }
-        public string SubmittedBy { get; set; } = string.Empty; // AuthUserId
+
+        /// <summary>
+        /// 提交人ID
+        /// </summary>
+        public Guid SubmittedBy { get; init; }
     }
 }

@@ -1,4 +1,4 @@
-﻿using OpenFindBearings.Application.Common.Enums;
+﻿using OpenFindBearings.Domain.Enums;
 
 namespace OpenFindBearings.Application.Features.MerchantBearings.DTOs
 {

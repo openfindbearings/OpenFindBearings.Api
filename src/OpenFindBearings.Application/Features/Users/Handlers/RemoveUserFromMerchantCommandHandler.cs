@@ -23,13 +23,13 @@ namespace OpenFindBearings.Application.Features.Users.Handlers
 
         public async Task Handle(RemoveUserFromMerchantCommand request, CancellationToken cancellationToken)
         {
-            _logger.LogInformation("从商家移除用户: AuthUserId={AuthUserId}, MerchantId={MerchantId}",
-                request.AuthUserId, request.MerchantId);
+            _logger.LogInformation("从商家移除用户: UserId={UserId}, MerchantId={MerchantId}",
+                request.UserId, request.MerchantId);
 
-            var user = await _userRepository.GetByAuthUserIdAsync(request.AuthUserId, cancellationToken);
+            var user = await _userRepository.GetByIdAsync(request.UserId, cancellationToken);
             if (user == null)
             {
-                throw new InvalidOperationException($"用户不存在: {request.AuthUserId}");
+                throw new InvalidOperationException($"用户不存在: {request.UserId}");
             }
 
             if (user.MerchantId != request.MerchantId)

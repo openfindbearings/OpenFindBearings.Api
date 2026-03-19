@@ -23,19 +23,16 @@ namespace OpenFindBearings.Application.Features.Users.Handlers
 
         public async Task Handle(UpdateUserTypeCommand request, CancellationToken cancellationToken)
         {
-            _logger.LogInformation("更新用户类型: AuthUserId={AuthUserId}, NewType={UserType}",
-                request.AuthUserId, request.UserType);
+            _logger.LogInformation("更新用户类型: UserId={UserId}, NewType={UserType}",
+                request.UserId, request.UserType);
 
-            var user = await _userRepository.GetByAuthUserIdAsync(request.AuthUserId, cancellationToken);
+            var user = await _userRepository.GetByIdAsync(request.UserId, cancellationToken);
             if (user == null)
             {
-                throw new InvalidOperationException($"用户不存在: {request.AuthUserId}");
+                throw new InvalidOperationException($"用户不存在: {request.UserId}");
             }
 
-            // 需要为 User 实体添加 UpdateUserType 方法
-            // 首先在 User.cs 中添加这个方法
             user.UpdateUserType(request.UserType);
-
             await _userRepository.UpdateAsync(user, cancellationToken);
 
             _logger.LogInformation("用户类型更新成功: UserId={UserId}, NewType={UserType}",

@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace OpenFindBearings.Domain.Common
+﻿namespace OpenFindBearings.Domain.Common.Models
 {
     /// <summary>
     /// 领域层分页结果

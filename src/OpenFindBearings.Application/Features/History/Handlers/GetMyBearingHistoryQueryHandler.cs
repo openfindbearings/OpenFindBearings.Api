@@ -2,7 +2,7 @@
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.Features.History.DTOs;
 using OpenFindBearings.Application.Features.History.Queries;
-using OpenFindBearings.Domain.Common;
+using OpenFindBearings.Domain.Common.Models;
 using OpenFindBearings.Domain.Interfaces;
 
 namespace OpenFindBearings.Application.Features.History.Handlers
@@ -13,51 +13,44 @@ namespace OpenFindBearings.Application.Features.History.Handlers
     public class GetMyBearingHistoryQueryHandler : IRequestHandler<GetMyBearingHistoryQuery, PagedResult<BearingHistoryDto>>
     {
         private readonly IUserBearingHistoryRepository _historyRepository;
-        private readonly IUserRepository _userRepository;
         private readonly ILogger<GetMyBearingHistoryQueryHandler> _logger;
 
         public GetMyBearingHistoryQueryHandler(
             IUserBearingHistoryRepository historyRepository,
-            IUserRepository userRepository,
             ILogger<GetMyBearingHistoryQueryHandler> logger)
         {
             _historyRepository = historyRepository;
-            _userRepository = userRepository;
             _logger = logger;
         }
 
-        public async Task<PagedResult<BearingHistoryDto>> Handle(GetMyBearingHistoryQuery request, CancellationToken cancellationToken)
+        public async Task<PagedResult<BearingHistoryDto>> Handle(
+            GetMyBearingHistoryQuery request,
+            CancellationToken cancellationToken)
         {
-            var user = await _userRepository.GetByAuthUserIdAsync(request.AuthUserId, cancellationToken);
-            if (user == null)
-            {
-                return new PagedResult<BearingHistoryDto>();
-            }
+            _logger.LogInformation("获取用户轴承浏览历史: UserId={UserId}, Page={Page}, PageSize={PageSize}",
+                request.UserId, request.Page, request.PageSize);
 
-            var histories = await _historyRepository.GetByUserIdAsync(user.Id, request.Page, request.PageSize, cancellationToken);
+            var histories = await _historyRepository.GetByUserIdAsync(
+                request.UserId,
+                request.Page,
+                request.PageSize,
+                cancellationToken);
 
-            // 获取总记录数
-            var totalCount = await _historyRepository.CountByUserIdAsync(user.Id, cancellationToken);
+            var totalCount = await _historyRepository.CountByUserIdAsync(request.UserId, cancellationToken);
 
-            var items = new List<BearingHistoryDto>();
-            foreach (var history in histories)
-            {
-                if (history.Bearing == null) continue;
-
-                // 获取该轴承的总浏览次数（从 Bearing 实体获取）
-                var viewCount = history.Bearing.ViewCount;
-
-                items.Add(new BearingHistoryDto
+            var items = histories
+                .Where(h => h.Bearing != null)
+                .Select(h => new BearingHistoryDto
                 {
-                    Id = history.Id,
-                    BearingId = history.BearingId,
-                    BearingPartNumber = history.Bearing.PartNumber,
-                    BearingName = history.Bearing.Name,
-                    BrandName = history.Bearing.Brand?.Name,
-                    ViewedAt = history.ViewedAt,
-                    ViewCount = viewCount
-                });
-            }
+                    Id = h.Id,
+                    BearingId = h.BearingId,
+                    BearingPartNumber = h.Bearing!.PartNumber,
+                    BearingName = h.Bearing.Name,
+                    BrandName = h.Bearing.Brand?.Name,
+                    ViewedAt = h.ViewedAt,
+                    ViewCount = h.Bearing.ViewCount
+                })
+                .ToList();
 
             return new PagedResult<BearingHistoryDto>
             {

@@ -9,20 +9,20 @@ namespace OpenFindBearings.Application.Features.Corrections.Handlers
     /// <summary>
     /// 获取单个纠错详情查询处理器
     /// </summary>
-    public class GetCorrectionQueryHandler : IRequestHandler<GetCorrectionQuery, CorrectionDto?>
+    public class GetCorrectionDetailQueryHandler : IRequestHandler<GetCorrectionDetailQuery, CorrectionDto?>
     {
         private readonly ICorrectionRequestRepository _correctionRepository;
         private readonly IBearingRepository _bearingRepository;
         private readonly IMerchantRepository _merchantRepository;
         private readonly IUserRepository _userRepository;
-        private readonly ILogger<GetCorrectionQueryHandler> _logger;
+        private readonly ILogger<GetCorrectionDetailQueryHandler> _logger;
 
-        public GetCorrectionQueryHandler(
+        public GetCorrectionDetailQueryHandler(
             ICorrectionRequestRepository correctionRepository,
             IBearingRepository bearingRepository,
             IMerchantRepository merchantRepository,
             IUserRepository userRepository,
-            ILogger<GetCorrectionQueryHandler> logger)
+            ILogger<GetCorrectionDetailQueryHandler> logger)
         {
             _correctionRepository = correctionRepository;
             _bearingRepository = bearingRepository;
@@ -31,7 +31,7 @@ namespace OpenFindBearings.Application.Features.Corrections.Handlers
             _logger = logger;
         }
 
-        public async Task<CorrectionDto?> Handle(GetCorrectionQuery request, CancellationToken cancellationToken)
+        public async Task<CorrectionDto?> Handle(GetCorrectionDetailQuery request, CancellationToken cancellationToken)
         {
             var correction = await _correctionRepository.GetByIdAsync(request.Id, cancellationToken);
             if (correction == null)

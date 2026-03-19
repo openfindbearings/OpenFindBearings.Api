@@ -33,15 +33,8 @@ namespace OpenFindBearings.Application.Features.Favorites.Handlers
 
         public async Task<bool> Handle(FavoriteBearingCommand request, CancellationToken cancellationToken)
         {
-            _logger.LogInformation("用户收藏轴承: UserId={AuthUserId}, BearingId={BearingId}",
+            _logger.LogInformation("用户收藏轴承: UserId={UserId}, BearingId={BearingId}",
                 request.UserId, request.BearingId);
-
-            // 获取业务用户ID
-            var user = await _userRepository.GetByAuthUserIdAsync(request.UserId, cancellationToken);
-            if (user == null)
-            {
-                throw new InvalidOperationException($"用户不存在: {request.UserId}");
-            }
 
             // 检查轴承是否存在
             var bearing = await _bearingRepository.GetByIdAsync(request.BearingId, cancellationToken);
@@ -51,12 +44,19 @@ namespace OpenFindBearings.Application.Features.Favorites.Handlers
             }
 
             // 检查是否已收藏
-            var exists = await _favoriteRepository.ExistsAsync(user.Id, request.BearingId, cancellationToken);
+            var exists = await _favoriteRepository.ExistsAsync(request.UserId, request.BearingId, cancellationToken);
             if (exists)
             {
                 _logger.LogWarning("用户已收藏该轴承: UserId={UserId}, BearingId={BearingId}",
-                    user.Id, request.BearingId);
+                    request.UserId, request.BearingId);
                 return false;
+            }
+
+            // 获取用户实体
+            var user = await _userRepository.GetByIdAsync(request.UserId, cancellationToken);
+            if (user == null)
+            {
+                throw new InvalidOperationException($"用户不存在: {request.UserId}");
             }
 
             // 执行收藏
@@ -64,10 +64,10 @@ namespace OpenFindBearings.Application.Features.Favorites.Handlers
             await _userRepository.UpdateAsync(user, cancellationToken);
 
             // 发布领域事件
-            await _mediator.Publish(new BearingFavoritedEvent(user.Id, request.BearingId), cancellationToken);
+            await _mediator.Publish(new BearingFavoritedEvent(request.UserId, request.BearingId), cancellationToken);
 
             _logger.LogInformation("用户收藏轴承成功: UserId={UserId}, BearingId={BearingId}",
-                user.Id, request.BearingId);
+                request.UserId, request.BearingId);
 
             return true;
         }

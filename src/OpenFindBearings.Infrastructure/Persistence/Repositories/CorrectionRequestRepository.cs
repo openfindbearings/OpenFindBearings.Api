@@ -74,5 +74,14 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
             _context.CorrectionRequests.Update(correction);
             await _context.SaveChangesAsync(cancellationToken);
         }
+
+        public async Task<List<CorrectionRequest>> GetAllAsync(CancellationToken cancellationToken = default)
+        {
+            return await _context.CorrectionRequests
+                .Include(c => c.Submitter)
+                .Include(c => c.Reviewer)
+                .OrderByDescending(c => c.SubmittedAt)
+                .ToListAsync(cancellationToken);
+        }
     }
 }

@@ -1,6 +1,6 @@
 ﻿using MediatR;
 using OpenFindBearings.Application.Features.MerchantBearings.DTOs;
-using OpenFindBearings.Domain.Common;
+using OpenFindBearings.Domain.Common.Models;
 
 namespace OpenFindBearings.Application.Features.MerchantBearings.Queries
 {
@@ -38,6 +38,11 @@ namespace OpenFindBearings.Application.Features.MerchantBearings.Queries
         /// 关键词（搜索商家名称、轴承型号）
         /// </summary>
         public string? Keyword { get; set; }
+
+        /// <summary>
+        /// 当前用户是否已登录（由API层传入）
+        /// </summary>
+        public bool IsAuthenticated { get; set; }
 
         /// <summary>
         /// 页码

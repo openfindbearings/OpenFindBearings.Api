@@ -5,5 +5,11 @@ namespace OpenFindBearings.Application.Features.History.Commands
     /// <summary>
     /// 清空浏览历史命令
     /// </summary>
-    public record ClearHistoryCommand(string UserId) : IRequest;
+    public record ClearHistoryCommand : IRequest
+    {
+        /// <summary>
+        /// 用户ID
+        /// </summary>
+        public Guid UserId { get; init; }
+    }
 }

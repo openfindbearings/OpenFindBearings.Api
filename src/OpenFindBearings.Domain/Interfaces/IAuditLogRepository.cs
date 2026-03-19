@@ -1,4 +1,4 @@
-﻿using OpenFindBearings.Domain.Common;
+﻿using OpenFindBearings.Domain.Common.Models;
 using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Parameters;
 

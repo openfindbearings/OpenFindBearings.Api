@@ -23,10 +23,10 @@ namespace OpenFindBearings.Application.Features.Permissions.Handlers
 
         public async Task<bool> Handle(CheckUserPermissionQuery request, CancellationToken cancellationToken)
         {
-            _logger.LogDebug("检查用户权限: AuthUserId={AuthUserId}, Permission={PermissionName}",
-                request.AuthUserId, request.PermissionName);
+            _logger.LogDebug("检查用户权限: UserId={UserId}, Permission={PermissionName}",
+                request.UserId, request.PermissionName);
 
-            var user = await _userRepository.GetByAuthUserIdAsync(request.AuthUserId, cancellationToken);
+            var user = await _userRepository.GetByIdAsync(request.UserId, cancellationToken);
             if (user == null)
             {
                 return false;
