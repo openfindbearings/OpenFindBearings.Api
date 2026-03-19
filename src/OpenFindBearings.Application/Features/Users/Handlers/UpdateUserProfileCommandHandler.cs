@@ -23,9 +23,9 @@ namespace OpenFindBearings.Application.Features.Users.Handlers
 
         public async Task Handle(UpdateUserProfileCommand request, CancellationToken cancellationToken)
         {
-            _logger.LogInformation("更新用户资料: UserId={AuthUserId}", request.UserId);
+            _logger.LogInformation("更新用户资料: UserId={UserId}", request.UserId);
 
-            var user = await _userRepository.GetByAuthUserIdAsync(request.UserId, cancellationToken);
+            var user = await _userRepository.GetByIdAsync(request.UserId, cancellationToken);
             if (user == null)
             {
                 throw new InvalidOperationException($"用户不存在: {request.UserId}");

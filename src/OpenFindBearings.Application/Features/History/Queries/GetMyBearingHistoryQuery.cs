@@ -1,15 +1,27 @@
 ﻿using MediatR;
 using OpenFindBearings.Application.Features.History.DTOs;
-using OpenFindBearings.Domain.Common;
+using OpenFindBearings.Domain.Common.Models;
 
 namespace OpenFindBearings.Application.Features.History.Queries
 {
     /// <summary>
     /// 获取我的轴承浏览历史查询
     /// </summary>
-    public record GetMyBearingHistoryQuery(
-        string AuthUserId,
-        int Page = 1,
-        int PageSize = 20
-    ) : IRequest<PagedResult<BearingHistoryDto>>;
+    public record GetMyBearingHistoryQuery : IRequest<PagedResult<BearingHistoryDto>>
+    {
+        /// <summary>
+        /// 用户ID
+        /// </summary>
+        public Guid UserId { get; init; }
+
+        /// <summary>
+        /// 页码
+        /// </summary>
+        public int Page { get; init; } = 1;
+
+        /// <summary>
+        /// 每页条数
+        /// </summary>
+        public int PageSize { get; init; } = 20;
+    }
 }

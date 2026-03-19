@@ -23,9 +23,9 @@ namespace OpenFindBearings.Application.Features.Users.Handlers
 
         public async Task<List<string>> Handle(GetUserPermissionsQuery request, CancellationToken cancellationToken)
         {
-            _logger.LogInformation("获取用户权限列表: AuthUserId={AuthUserId}", request.AuthUserId);
+            _logger.LogInformation("获取用户权限列表: UserId={UserId}", request.UserId);
 
-            var user = await _userRepository.GetByAuthUserIdAsync(request.AuthUserId, cancellationToken);
+            var user = await _userRepository.GetByIdAsync(request.UserId, cancellationToken);
             if (user == null)
             {
                 return new List<string>();

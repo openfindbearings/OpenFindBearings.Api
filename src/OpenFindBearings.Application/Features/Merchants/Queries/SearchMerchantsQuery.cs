@@ -1,6 +1,6 @@
 ﻿using MediatR;
 using OpenFindBearings.Application.Features.Merchants.DTOs;
-using OpenFindBearings.Domain.Common;
+using OpenFindBearings.Domain.Common.Models;
 using OpenFindBearings.Domain.Enums;
 
 namespace OpenFindBearings.Application.Features.Merchants.Queries

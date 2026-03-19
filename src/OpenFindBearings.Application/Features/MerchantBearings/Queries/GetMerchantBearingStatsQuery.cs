@@ -5,17 +5,17 @@ namespace OpenFindBearings.Application.Features.MerchantBearings.Queries
     /// <summary>
     /// 获取商家-轴承关联统计信息查询
     /// </summary>
-    public class GetMerchantBearingStatsQuery : IRequest<MerchantBearingStatsDto>
+    public record GetMerchantBearingStatsQuery : IRequest<MerchantBearingStatsDto>
     {
         /// <summary>
         /// 商家ID（可选，统计指定商家）
         /// </summary>
-        public Guid? MerchantId { get; set; }
+        public Guid? MerchantId { get; init; }
 
         /// <summary>
         /// 轴承ID（可选，统计指定轴承）
         /// </summary>
-        public Guid? BearingId { get; set; }
+        public Guid? BearingId { get; init; }
     }
 
     /// <summary>

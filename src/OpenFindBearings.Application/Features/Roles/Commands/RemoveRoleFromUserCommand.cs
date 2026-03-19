@@ -8,9 +8,9 @@ namespace OpenFindBearings.Application.Features.Roles.Commands
     public record RemoveRoleFromUserCommand : IRequest
     {
         /// <summary>
-        /// 用户认证ID
+        /// 用户ID
         /// </summary>
-        public string AuthUserId { get; init; } = string.Empty;
+        public Guid UserId { get; init; }
 
         /// <summary>
         /// 角色名称

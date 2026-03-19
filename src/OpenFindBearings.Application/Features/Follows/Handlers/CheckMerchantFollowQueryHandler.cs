@@ -11,28 +11,22 @@ namespace OpenFindBearings.Application.Features.Follows.Handlers
     public class CheckMerchantFollowQueryHandler : IRequestHandler<CheckMerchantFollowQuery, bool>
     {
         private readonly IUserMerchantFollowRepository _followRepository;
-        private readonly IUserRepository _userRepository;
         private readonly ILogger<CheckMerchantFollowQueryHandler> _logger;
 
         public CheckMerchantFollowQueryHandler(
             IUserMerchantFollowRepository followRepository,
-            IUserRepository userRepository,
             ILogger<CheckMerchantFollowQueryHandler> logger)
         {
             _followRepository = followRepository;
-            _userRepository = userRepository;
             _logger = logger;
         }
 
         public async Task<bool> Handle(CheckMerchantFollowQuery request, CancellationToken cancellationToken)
         {
-            var user = await _userRepository.GetByAuthUserIdAsync(request.AuthUserId, cancellationToken);
-            if (user == null)
-            {
-                return false;
-            }
+            _logger.LogDebug("检查商家关注状态: UserId={UserId}, MerchantId={MerchantId}",
+                request.UserId, request.MerchantId);
 
-            return await _followRepository.ExistsAsync(user.Id, request.MerchantId, cancellationToken);
+            return await _followRepository.ExistsAsync(request.UserId, request.MerchantId, cancellationToken);
         }
     }
 }

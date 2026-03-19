@@ -1,4 +1,4 @@
-﻿namespace OpenFindBearings.Application.Common.Enums
+﻿namespace OpenFindBearings.Domain.Enums
 {
     /// <summary>
     /// 价格可见性枚举

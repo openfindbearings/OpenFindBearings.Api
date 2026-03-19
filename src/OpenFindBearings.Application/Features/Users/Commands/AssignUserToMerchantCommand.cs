@@ -1,7 +1,4 @@
 ﻿using MediatR;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace OpenFindBearings.Application.Features.Users.Commands
 {
@@ -11,9 +8,9 @@ namespace OpenFindBearings.Application.Features.Users.Commands
     public record AssignUserToMerchantCommand : IRequest
     {
         /// <summary>
-        /// 用户认证ID
+        /// 用户ID
         /// </summary>
-        public string AuthUserId { get; init; } = string.Empty;
+        public Guid UserId { get; init; }
 
         /// <summary>
         /// 商家ID

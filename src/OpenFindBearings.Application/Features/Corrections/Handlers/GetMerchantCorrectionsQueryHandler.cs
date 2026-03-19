@@ -2,7 +2,7 @@
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.Features.Corrections.DTOs;
 using OpenFindBearings.Application.Features.Corrections.Queries;
-using OpenFindBearings.Domain.Common;
+using OpenFindBearings.Domain.Common.Models;
 using OpenFindBearings.Domain.Interfaces;
 
 namespace OpenFindBearings.Application.Features.Corrections.Handlers

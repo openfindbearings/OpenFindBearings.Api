@@ -37,5 +37,10 @@ namespace OpenFindBearings.Domain.Interfaces
         /// 更新纠错
         /// </summary>
         Task UpdateAsync(CorrectionRequest correction, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 获取所有纠错
+        /// </summary>
+        Task<List<CorrectionRequest>> GetAllAsync(CancellationToken cancellationToken = default);
     }
 }

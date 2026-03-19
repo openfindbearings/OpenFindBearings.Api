@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.Features.Bearings.DTOs;
 using OpenFindBearings.Application.Features.Favorites.DTOs;
 using OpenFindBearings.Application.Features.Favorites.Queries;
-using OpenFindBearings.Domain.Common;
+using OpenFindBearings.Domain.Common.Models;
 using OpenFindBearings.Domain.Interfaces;
 
 namespace OpenFindBearings.Application.Features.Favorites.Handlers
@@ -29,14 +29,10 @@ namespace OpenFindBearings.Application.Features.Favorites.Handlers
 
         public async Task<PagedResult<FavoriteBearingDto>> Handle(GetMyFavoriteBearingsQuery request, CancellationToken cancellationToken)
         {
-            var user = await _userRepository.GetByAuthUserIdAsync(request.AuthUserId, cancellationToken);
-            if (user == null)
-            {
-                return new PagedResult<FavoriteBearingDto>();
-            }
+            _logger.LogInformation("获取用户收藏列表: UserId={UserId}, Page={Page}, PageSize={PageSize}", request.UserId, request.Page, request.PageSize);
 
-            var favorites = await _favoriteRepository.GetByUserIdAsync(user.Id, request.Page, request.PageSize, cancellationToken);
-            var totalCount = await _favoriteRepository.CountByUserIdAsync(user.Id, cancellationToken);
+            var favorites = await _favoriteRepository.GetByUserIdAsync(request.UserId, request.Page, request.PageSize, cancellationToken);
+            var totalCount = await _favoriteRepository.CountByUserIdAsync(request.UserId, cancellationToken);
 
             var items = new List<FavoriteBearingDto>();
             foreach (var favorite in favorites)

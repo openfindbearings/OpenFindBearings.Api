@@ -11,28 +11,22 @@ namespace OpenFindBearings.Application.Features.Favorites.Handlers
     public class CheckBearingFavoriteQueryHandler : IRequestHandler<CheckBearingFavoriteQuery, bool>
     {
         private readonly IUserBearingFavoriteRepository _favoriteRepository;
-        private readonly IUserRepository _userRepository;
         private readonly ILogger<CheckBearingFavoriteQueryHandler> _logger;
 
         public CheckBearingFavoriteQueryHandler(
             IUserBearingFavoriteRepository favoriteRepository,
-            IUserRepository userRepository,
             ILogger<CheckBearingFavoriteQueryHandler> logger)
         {
             _favoriteRepository = favoriteRepository;
-            _userRepository = userRepository;
             _logger = logger;
         }
 
         public async Task<bool> Handle(CheckBearingFavoriteQuery request, CancellationToken cancellationToken)
         {
-            var user = await _userRepository.GetByAuthUserIdAsync(request.AuthUserId, cancellationToken);
-            if (user == null)
-            {
-                return false;
-            }
+            _logger.LogDebug("检查轴承收藏状态: UserId={UserId}, BearingId={BearingId}",
+                request.UserId, request.BearingId);
 
-            return await _favoriteRepository.ExistsAsync(user.Id, request.BearingId, cancellationToken);
+            return await _favoriteRepository.ExistsAsync(request.UserId, request.BearingId, cancellationToken);
         }
     }
 }

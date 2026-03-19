@@ -9,9 +9,9 @@ namespace OpenFindBearings.Application.Features.Users.Commands
     public record UpdateUserTypeCommand : IRequest
     {
         /// <summary>
-        /// 用户认证ID
+        /// 用户ID
         /// </summary>
-        public string AuthUserId { get; init; } = string.Empty;
+        public Guid UserId { get; init; }
 
         /// <summary>
         /// 新的用户类型

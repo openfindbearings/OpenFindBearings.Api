@@ -29,13 +29,13 @@ namespace OpenFindBearings.Application.Features.Roles.Handlers
 
         public async Task Handle(AssignRoleToUserCommand request, CancellationToken cancellationToken)
         {
-            _logger.LogInformation("分配角色给用户: AuthUserId={AuthUserId}, Role={RoleName}",
-                request.AuthUserId, request.RoleName);
+            _logger.LogInformation("分配角色给用户: UserId={UserId}, Role={RoleName}",
+                request.UserId, request.RoleName);
 
-            var user = await _userRepository.GetByAuthUserIdAsync(request.AuthUserId, cancellationToken);
+            var user = await _userRepository.GetByIdAsync(request.UserId, cancellationToken);
             if (user == null)
             {
-                throw new InvalidOperationException($"用户不存在: {request.AuthUserId}");
+                throw new InvalidOperationException($"用户不存在: {request.UserId}");
             }
 
             var role = await _roleRepository.GetByNameAsync(request.RoleName, cancellationToken);

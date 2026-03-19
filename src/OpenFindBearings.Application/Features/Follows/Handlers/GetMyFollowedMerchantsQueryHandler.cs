@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.Features.Follows.DTOs;
 using OpenFindBearings.Application.Features.Follows.Queries;
 using OpenFindBearings.Application.Features.Merchants.DTOs;
-using OpenFindBearings.Domain.Common;
+using OpenFindBearings.Domain.Common.Models;
 using OpenFindBearings.Domain.Interfaces;
 
 namespace OpenFindBearings.Application.Features.Follows.Handlers
@@ -14,57 +14,52 @@ namespace OpenFindBearings.Application.Features.Follows.Handlers
     public class GetMyFollowedMerchantsQueryHandler : IRequestHandler<GetMyFollowedMerchantsQuery, PagedResult<FollowedMerchantDto>>
     {
         private readonly IUserMerchantFollowRepository _followRepository;
-        private readonly IUserRepository _userRepository;
         private readonly ILogger<GetMyFollowedMerchantsQueryHandler> _logger;
 
         public GetMyFollowedMerchantsQueryHandler(
             IUserMerchantFollowRepository followRepository,
-            IUserRepository userRepository,
             ILogger<GetMyFollowedMerchantsQueryHandler> logger)
         {
             _followRepository = followRepository;
-            _userRepository = userRepository;
             _logger = logger;
         }
 
-        public async Task<PagedResult<FollowedMerchantDto>> Handle(GetMyFollowedMerchantsQuery request, CancellationToken cancellationToken)
+        public async Task<PagedResult<FollowedMerchantDto>> Handle(
+            GetMyFollowedMerchantsQuery request,
+            CancellationToken cancellationToken)
         {
-            var user = await _userRepository.GetByAuthUserIdAsync(request.AuthUserId, cancellationToken);
-            if (user == null)
+            _logger.LogInformation("获取用户关注商家列表: UserId={UserId}, Page={Page}, PageSize={PageSize}",
+                request.UserId, request.Page, request.PageSize);
+
+            var follows = await _followRepository.GetByUserIdAsync(
+                request.UserId,
+                request.Page,
+                request.PageSize,
+                cancellationToken);
+
+            var totalCount = await _followRepository.CountByUserIdAsync(request.UserId, cancellationToken);
+
+            var items = follows.Select(f => new FollowedMerchantDto
             {
-                return new PagedResult<FollowedMerchantDto>();
-            }
-
-            var follows = await _followRepository.GetByUserIdAsync(user.Id, request.Page, request.PageSize, cancellationToken);
-            var totalCount = await _followRepository.CountByUserIdAsync(user.Id, cancellationToken);
-
-            var items = new List<FollowedMerchantDto>();
-            foreach (var follow in follows)
-            {
-                if (follow.Merchant == null) continue;  // 处理 null 情况
-
-                items.Add(new FollowedMerchantDto
+                Id = f.Id,
+                CreatedAt = f.CreatedAt,
+                Merchant = f.Merchant != null ? new MerchantDto
                 {
-                    Id = follow.Id,
-                    CreatedAt = follow.CreatedAt,
-                    Merchant = new MerchantDto
-                    {
-                        Id = follow.Merchant.Id,
-                        Name = follow.Merchant.Name,
-                        CompanyName = follow.Merchant.CompanyName,
-                        Type = follow.Merchant.Type.ToString(),
-                        ContactPerson = follow.Merchant.Contact?.ContactPerson,
-                        Phone = follow.Merchant.Contact?.Phone,
-                        Mobile = follow.Merchant.Contact?.Mobile,
-                        Email = follow.Merchant.Contact?.Email,
-                        Address = follow.Merchant.Contact?.Address,
-                        IsVerified = follow.Merchant.IsVerified,
-                        Grade = follow.Merchant.Grade.ToString(),
-                        FollowerCount = follow.Merchant.FollowerCount,
-                        ProductCount = follow.Merchant.MerchantBearings?.Count ?? 0
-                    }
-                });
-            }
+                    Id = f.Merchant.Id,
+                    Name = f.Merchant.Name,
+                    CompanyName = f.Merchant.CompanyName,
+                    Type = f.Merchant.Type.ToString(),
+                    ContactPerson = f.Merchant.Contact?.ContactPerson,
+                    Phone = f.Merchant.Contact?.Phone,
+                    Mobile = f.Merchant.Contact?.Mobile,
+                    Email = f.Merchant.Contact?.Email,
+                    Address = f.Merchant.Contact?.Address,
+                    IsVerified = f.Merchant.IsVerified,
+                    Grade = f.Merchant.Grade.ToString(),
+                    FollowerCount = f.Merchant.FollowerCount,
+                    ProductCount = f.Merchant.MerchantBearings?.Count ?? 0
+                } : null!
+            }).ToList();
 
             return new PagedResult<FollowedMerchantDto>
             {

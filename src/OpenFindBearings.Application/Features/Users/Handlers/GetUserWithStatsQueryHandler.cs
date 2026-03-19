@@ -1,58 +1,45 @@
 ﻿using MediatR;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.Features.Users.DTOs;
 using OpenFindBearings.Application.Features.Users.Queries;
 using OpenFindBearings.Domain.Interfaces;
-using System.Security.Claims;
 
 namespace OpenFindBearings.Application.Features.Users.Handlers
 {
     /// <summary>
-    /// 获取当前用户信息查询处理器
+    /// 获取当前用户详细信息查询处理器
+    /// 包含收藏数、关注数、纠错数等统计信息
     /// </summary>
-    public class GetCurrentUserQueryHandler : IRequestHandler<GetCurrentUserQuery, UserDto?>
+    public class GetUserWithStatsQueryHandler : IRequestHandler<GetUserWithStatsQuery, UserDto?>
     {
         private readonly IUserRepository _userRepository;
         private readonly IUserBearingFavoriteRepository _favoriteRepository;
         private readonly IUserMerchantFollowRepository _followRepository;
         private readonly ICorrectionRequestRepository _correctionRepository;
-        private readonly IHttpContextAccessor _httpContextAccessor;
-        private readonly ILogger<GetCurrentUserQueryHandler> _logger;
+        private readonly ILogger<GetUserWithStatsQueryHandler> _logger;
 
-        public GetCurrentUserQueryHandler(
+        public GetUserWithStatsQueryHandler(
             IUserRepository userRepository,
             IUserBearingFavoriteRepository favoriteRepository,
             IUserMerchantFollowRepository followRepository,
             ICorrectionRequestRepository correctionRepository,
-            IHttpContextAccessor httpContextAccessor,
-            ILogger<GetCurrentUserQueryHandler> logger)
+            ILogger<GetUserWithStatsQueryHandler> logger)
         {
             _userRepository = userRepository;
             _favoriteRepository = favoriteRepository;
             _followRepository = followRepository;
             _correctionRepository = correctionRepository;
-            _httpContextAccessor = httpContextAccessor;
             _logger = logger;
         }
 
-        public async Task<UserDto?> Handle(GetCurrentUserQuery request, CancellationToken cancellationToken)
+        public async Task<UserDto?> Handle(GetUserWithStatsQuery request, CancellationToken cancellationToken)
         {
-            var authUserId = _httpContextAccessor.HttpContext?.User?
-                .FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            _logger.LogInformation("获取当前用户详细信息: UserId={UserId}", request.UserId);
 
-            if (string.IsNullOrEmpty(authUserId))
-            {
-                _logger.LogWarning("未找到当前用户认证ID");
-                return null;
-            }
-
-            _logger.LogInformation("获取当前用户信息: AuthUserId={AuthUserId}", authUserId);
-
-            var user = await _userRepository.GetByAuthUserIdAsync(authUserId, cancellationToken);
+            var user = await _userRepository.GetByIdAsync(request.UserId, cancellationToken);
             if (user == null)
             {
-                _logger.LogWarning("用户不存在: AuthUserId={AuthUserId}", authUserId);
+                _logger.LogWarning("用户不存在: UserId={UserId}", request.UserId);
                 return null;
             }
 

@@ -14,38 +14,29 @@ namespace OpenFindBearings.Application.Features.Corrections.Handlers
         private readonly ICorrectionRequestRepository _correctionRepository;
         private readonly IBearingRepository _bearingRepository;
         private readonly IMerchantRepository _merchantRepository;
-        private readonly IUserRepository _userRepository;
         private readonly ILogger<ApproveCorrectionCommandHandler> _logger;
 
         public ApproveCorrectionCommandHandler(
             ICorrectionRequestRepository correctionRepository,
             IBearingRepository bearingRepository,
             IMerchantRepository merchantRepository,
-            IUserRepository userRepository,
             ILogger<ApproveCorrectionCommandHandler> logger)
         {
             _correctionRepository = correctionRepository;
             _bearingRepository = bearingRepository;
             _merchantRepository = merchantRepository;
-            _userRepository = userRepository;
             _logger = logger;
         }
 
         public async Task Handle(ApproveCorrectionCommand request, CancellationToken cancellationToken)
         {
-            _logger.LogInformation("审核通过纠错: CorrectionId={CorrectionId}, Reviewer={AuthUserId}",
+            _logger.LogInformation("审核通过纠错: CorrectionId={CorrectionId}, Reviewer={ReviewerId}",
                 request.CorrectionId, request.ReviewedBy);
 
             var correction = await _correctionRepository.GetByIdAsync(request.CorrectionId, cancellationToken);
             if (correction == null)
             {
                 throw new InvalidOperationException($"纠错不存在: {request.CorrectionId}");
-            }
-
-            var reviewer = await _userRepository.GetByAuthUserIdAsync(request.ReviewedBy, cancellationToken);
-            if (reviewer == null)
-            {
-                throw new InvalidOperationException($"审核人不存在: {request.ReviewedBy}");
             }
 
             // 更新对应实体的字段
@@ -58,7 +49,7 @@ namespace OpenFindBearings.Application.Features.Corrections.Handlers
                 await ApplyMerchantCorrection(correction, cancellationToken);
             }
 
-            correction.Approve(reviewer.Id, request.Comment);
+            correction.Approve(request.ReviewedBy, request.Comment);
             await _correctionRepository.UpdateAsync(correction, cancellationToken);
 
             _logger.LogInformation("纠错审核通过成功: CorrectionId={CorrectionId}", correction.Id);
