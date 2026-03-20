@@ -9,9 +9,6 @@ namespace OpenFindBearings.Api.Extensions
     {
         public static void MapApiEndpoints(this IEndpointRouteBuilder app)
         {
-            // 健康检查
-            app.MapHealthChecks("/health");
-
             // 按模块映射端点
             app.MapPublicEndpoints();      // 公共接口
             app.MapUserEndpoints();        // 用户接口
