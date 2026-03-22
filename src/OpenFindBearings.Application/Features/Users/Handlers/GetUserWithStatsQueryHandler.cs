@@ -62,8 +62,6 @@ namespace OpenFindBearings.Application.Features.Users.Handlers
                 AuthUserId = user.AuthUserId,
                 Nickname = user.Nickname,
                 Avatar = user.Avatar,
-                Email = user.Email,
-                Phone = user.Phone,
                 UserType = user.UserType.ToString(),
                 MerchantId = user.MerchantId,
                 MerchantName = user.Merchant?.Name,

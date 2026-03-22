@@ -25,19 +25,9 @@ namespace OpenFindBearings.Domain.Entities
         public string? Avatar { get; private set; }
 
         /// <summary>
-        /// 电子邮箱
-        /// </summary>
-        public string? Email { get; private set; }
-
-        /// <summary>
         /// 用户类型
         /// </summary>
         public UserType UserType { get; private set; }
-
-        /// <summary>
-        /// 联系电话
-        /// </summary>
-        public string? Phone { get; private set; }
 
         /// <summary>
         /// 地址
@@ -70,8 +60,6 @@ namespace OpenFindBearings.Domain.Entities
         /// 用户-角色关联导航属性
         /// </summary>
         public List<UserRole> UserRoles { get; private set; } = [];
-
-        // ============ 新增：收藏与历史导航属性 ============
 
         /// <summary>
         /// 收藏的轴承
@@ -121,8 +109,7 @@ namespace OpenFindBearings.Domain.Entities
         public User(
             string authUserId,
             UserType userType,
-            string? nickname = null,
-            string? email = null)
+            string? nickname = null)
         {
             if (string.IsNullOrWhiteSpace(authUserId))
                 throw new ArgumentException("认证用户ID不能为空", nameof(authUserId));
@@ -130,7 +117,6 @@ namespace OpenFindBearings.Domain.Entities
             AuthUserId = authUserId;
             UserType = userType;
             Nickname = nickname;
-            Email = email;
         }
 
         /// <summary>
@@ -151,12 +137,10 @@ namespace OpenFindBearings.Domain.Entities
         public void UpdateProfile(
             string? nickname,
             string? avatar,
-            string? phone,
             string? address)
         {
             Nickname = nickname;
             Avatar = avatar;
-            Phone = phone;
             Address = address;
             UpdateTimestamp();
         }
@@ -193,10 +177,9 @@ namespace OpenFindBearings.Domain.Entities
         /// <summary>
         /// 转换为正式用户
         /// </summary>
-        public void ConvertToRegisteredUser(string authUserId, string email)
+        public void ConvertToRegisteredUser(string authUserId)
         {
             AuthUserId = authUserId;
-            Email = email;
             UserType = UserType.Individual;
             GuestSessionId = null;
             UpdateTimestamp();

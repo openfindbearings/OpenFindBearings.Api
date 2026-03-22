@@ -134,7 +134,7 @@ namespace OpenFindBearings.Application.Features.Admin.Handlers
             if (operatorUser == null)
                 return "未知用户";
 
-            return operatorUser.Nickname ?? operatorUser.Email ?? operatorUser.AuthUserId;
+            return operatorUser.Nickname ?? operatorUser.AuthUserId;
         }
 
         /// <summary>
@@ -210,7 +210,7 @@ namespace OpenFindBearings.Application.Features.Admin.Handlers
             if (user == null)
                 return id.ToString();
 
-            return user.Nickname ?? user.Email ?? user.AuthUserId;
+            return user.Nickname ?? user.AuthUserId;
         }
 
         /// <summary>

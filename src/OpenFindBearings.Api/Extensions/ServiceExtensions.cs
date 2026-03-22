@@ -4,6 +4,10 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using OpenFindBearings.Api.Services;
+using OpenFindBearings.Application.Common.Interfaces;
+using OpenFindBearings.Domain.Interfaces;
+using OpenFindBearings.Infrastructure.Persistence.Repositories;
+using OpenFindBearings.Infrastructure.Services;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 
@@ -24,6 +28,28 @@ namespace OpenFindBearings.Api.Extensions
             // 添加自定义服务
             services.AddScoped<ICurrentUserService, CurrentUserService>();
             services.AddScoped<IPermissionService, PermissionService>();
+            // ============ 认证服务客户端 ============
+            // 从配置获取认证服务地址
+            var authBaseUrl = configuration["Authentication:Authority"] ?? "https://localhost:5001";
+            var webAppUrl = configuration["Authentication:WebAppUrl"] ?? "https://localhost:7000";
+
+            // 注册认证服务 HTTP 客户端
+            services.AddHttpClient<IIdentityService, IdentityService>(client =>
+            {
+                client.BaseAddress = new Uri(authBaseUrl);
+                client.DefaultRequestHeaders.Add("Accept", "application/json");
+                client.Timeout = TimeSpan.FromSeconds(30);
+            });
+
+            // 配置认证服务选项（供 IdentityService 使用）
+            services.Configure<IdentityServiceOptions>(options =>
+            {
+                options.BaseUrl = authBaseUrl;
+                options.WebAppUrl = webAppUrl;
+            });
+
+            // ============ 邀请仓储 ============
+            services.AddScoped<IStaffInvitationRepository, StaffInvitationRepository>();
 
             // 添加CORS
             services.AddCors(options =>

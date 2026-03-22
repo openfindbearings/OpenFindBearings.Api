@@ -25,12 +25,6 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             builder.Property(u => u.Avatar)
                 .HasMaxLength(500);
 
-            builder.Property(u => u.Email)
-                .HasMaxLength(200);
-
-            builder.Property(u => u.Phone)
-                .HasMaxLength(20);
-
             // 用户类型枚举存为字符串
             builder.Property(u => u.UserType)
                 .HasConversion<string>()
@@ -81,7 +75,6 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
                 .OnDelete(DeleteBehavior.Restrict);
 
             // 索引
-            builder.HasIndex(u => u.Email);
             builder.HasIndex(u => u.UserType);
             builder.HasIndex(u => u.MerchantId);
             builder.HasIndex(u => u.GuestSessionId);
