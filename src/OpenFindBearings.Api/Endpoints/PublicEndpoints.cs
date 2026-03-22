@@ -72,33 +72,23 @@ namespace OpenFindBearings.Api.Endpoints
                 HttpContext httpContext) =>
             {
                 var logger = loggerFactory.CreateLogger("PublicEndpoints");
-                var query = new GetBearingQuery(id);
+
+                // 获取用户信息
+                var userId = httpContext.GetUserId();
+                var sessionId = httpContext.GetSessionId();
+
+                // 创建查询，传入用户信息用于记录浏览次数
+                var query = new GetBearingQuery
+                {
+                    Id = id,
+                    UserId = userId,
+                    SessionId = sessionId
+                };
+
                 var result = await mediator.Send(query);
 
                 if (result == null)
                     return ApiResponseHelper.NotFound("轴承不存在", httpContext);
-
-                // 如果用户已登录，记录浏览历史（异步，不影响返回）
-                var userId = httpContext.GetUserId();
-                if (userId.HasValue)
-                {
-                    _ = Task.Run(async () =>
-                    {
-                        try
-                        {
-                            var command = new RecordBearingViewCommand
-                            {
-                                UserId = userId.Value,
-                                BearingId = id
-                            };
-                            await mediator.Send(command);
-                        }
-                        catch (Exception ex)
-                        {
-                            logger.LogError(ex, "记录浏览历史失败: BearingId={BearingId}, UserId={UserId}", id, userId);
-                        }
-                    });
-                }
 
                 return ApiResponseHelper.Ok(result, httpContext: httpContext);
             })
