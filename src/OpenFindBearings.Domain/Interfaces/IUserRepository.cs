@@ -19,11 +19,6 @@ namespace OpenFindBearings.Domain.Interfaces
         Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// 根据邮箱获取用户
-        /// </summary>
-        Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default);
-
-        /// <summary>
         /// 获取商家的所有员工
         /// </summary>
         Task<IEnumerable<User>> GetByMerchantIdAsync(Guid merchantId, CancellationToken cancellationToken = default);

@@ -27,16 +27,6 @@
         public string? Avatar { get; set; }
 
         /// <summary>
-        /// 电子邮箱
-        /// </summary>
-        public string? Email { get; set; }
-
-        /// <summary>
-        /// 联系电话
-        /// </summary>
-        public string? Phone { get; set; }
-
-        /// <summary>
         /// 用户类型
         /// </summary>
         public string UserType { get; set; } = string.Empty;

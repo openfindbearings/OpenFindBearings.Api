@@ -55,16 +55,6 @@ namespace OpenFindBearings.Application.Features.Merchants.DTOs
         public string Nickname { get; set; } = string.Empty;
 
         /// <summary>
-        /// 员工邮箱
-        /// </summary>
-        public string? Email { get; set; }
-
-        /// <summary>
-        /// 员工电话
-        /// </summary>
-        public string? Phone { get; set; }
-
-        /// <summary>
         /// 员工头像
         /// </summary>
         public string? Avatar { get; set; }

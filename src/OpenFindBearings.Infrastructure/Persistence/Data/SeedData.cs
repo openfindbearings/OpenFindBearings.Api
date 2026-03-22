@@ -132,11 +132,11 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
             // 创建测试用户
             var users = new List<User>
             {
-                new("auth-admin-001", UserType.Admin, "系统管理员", "admin@openfindbearings.com"),
-                new("auth-merchant-001", UserType.MerchantStaff, "张经理", "zhang@shbearing.com"),
-                new("auth-merchant-002", UserType.MerchantStaff, "李经理", "li@gzbearing.com"),
-                new("auth-customer-001", UserType.Individual, "王先生", "wang@example.com"),
-                new("auth-customer-002", UserType.Individual, "赵女士", "zhao@example.com"),
+                new("auth-admin-001", UserType.Admin, "系统管理员"),
+                new("auth-merchant-001", UserType.MerchantStaff, "张经理"),
+                new("auth-merchant-002", UserType.MerchantStaff, "李经理"),
+                new("auth-customer-001", UserType.Individual, "王先生"),
+                new("auth-customer-002", UserType.Individual, "赵女士"),
             };
 
             await context.Users.AddRangeAsync(users);

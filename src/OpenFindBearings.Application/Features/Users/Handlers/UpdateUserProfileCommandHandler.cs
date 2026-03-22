@@ -34,7 +34,6 @@ namespace OpenFindBearings.Application.Features.Users.Handlers
             user.UpdateProfile(
                 request.Nickname,
                 request.Avatar,
-                request.Phone,
                 request.Address
             );
 

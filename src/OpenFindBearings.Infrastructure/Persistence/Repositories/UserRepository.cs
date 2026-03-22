@@ -37,18 +37,6 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         }
 
         /// <summary>
-        /// 根据邮箱获取用户
-        /// </summary>
-        public async Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
-        {
-            return await _context.Users
-                .Include(u => u.Merchant)
-                .Include(u => u.UserRoles)
-                    .ThenInclude(ur => ur.Role)
-                .FirstOrDefaultAsync(u => u.Email == email && u.IsActive, cancellationToken);
-        }
-
-        /// <summary>
         /// 获取商家的所有员工
         /// </summary>
         public async Task<IEnumerable<User>> GetByMerchantIdAsync(Guid merchantId, CancellationToken cancellationToken = default)
