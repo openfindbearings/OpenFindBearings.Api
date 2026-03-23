@@ -54,55 +54,6 @@ namespace OpenFindBearings.Api.Endpoints
             .WithDescription("获取当前登录用户的详细信息，包括角色、权限、统计信息等");
 
             /// <summary>
-            /// 用户注册回调（由认证服务调用）- 新增
-            /// </summary>
-            group.MapPost("/callback/register", async (
-                UserRegisteredCallbackRequest request,
-                [FromServices] IMediator mediator,
-                HttpContext httpContext) =>
-            {
-                var command = new CreateUserFromAuthCommand
-                {
-                    AuthUserId = request.AuthUserId,
-                    UserType = Domain.Enums.UserType.Individual,
-                    Nickname = request.Nickname ?? request.Email?.Split('@')[0]
-                };
-                var userId = await mediator.Send(command);
-
-                return ApiResponseHelper.Ok(new { userId, authUserId = request.AuthUserId }, "用户创建成功", httpContext: httpContext);
-            })
-            .WithName("UserRegisterCallback")
-            .WithSummary("用户注册回调")
-            .WithDescription("认证服务注册成功后调用，创建业务用户")
-            .AllowAnonymous();
-
-            /// <summary>
-            /// 合并游客数据到当前用户 - 新增
-            /// </summary>
-            group.MapPost("/merge-guest", async (
-                MergeGuestRequest request,
-                [FromServices] ICurrentUserService currentUser,
-                [FromServices] IMediator mediator,
-                HttpContext httpContext) =>
-            {
-                if (!currentUser.UserId.HasValue)
-                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
-
-                var command = new MergeGuestUserCommand
-                {
-                    AuthUserId = currentUser.AuthUserId!,
-                    GuestSessionId = request.GuestSessionId
-                };
-                await mediator.Send(command);
-
-                return ApiResponseHelper.Ok("游客数据合并成功", httpContext: httpContext);
-            })
-            .WithName("MergeGuestData")
-            .WithSummary("合并游客数据")
-            .WithDescription("用户登录后，将游客期间的数据合并到当前账户")
-            .RequireAuthorization("Authenticated");
-
-            /// <summary>
             /// 更新个人信息
             /// </summary>
             group.MapPut("/me", async (
@@ -698,8 +649,4 @@ namespace OpenFindBearings.Api.Endpoints
             .WithDescription("查看当前用户提交的所有纠错记录");
         }
     }
-
-    // ============ Request DTOs（新增） ============
-    public record UserRegisteredCallbackRequest(string AuthUserId, string Email, string? Nickname);
-    public record MergeGuestRequest(string GuestSessionId);
 }

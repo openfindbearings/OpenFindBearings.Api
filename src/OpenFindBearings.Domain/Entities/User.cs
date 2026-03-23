@@ -178,17 +178,6 @@ namespace OpenFindBearings.Domain.Entities
         }
 
         /// <summary>
-        /// 转换为正式用户（游客注册时）
-        /// </summary>
-        public void ConvertToRegisteredUser(string authUserId)
-        {
-            AuthUserId = authUserId;
-            UserType = UserType.Individual;
-            GuestSessionId = null;
-            UpdateTimestamp();
-        }
-
-        /// <summary>
         /// 启用用户
         /// </summary>
         public void Enable()
