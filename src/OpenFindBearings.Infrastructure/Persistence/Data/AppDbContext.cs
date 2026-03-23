@@ -15,6 +15,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
         public DbSet<MerchantBearing> MerchantBearings { get; set; }
         public DbSet<BearingInterchange> BearingInterchanges { get; set; }
         public DbSet<CorrectionRequest> CorrectionRequests { get; set; }
+        public DbSet<LicenseVerification> LicenseVerifications { get; set; }
 
         // ============ 用户与权限 ============
         public DbSet<User> Users { get; set; }
