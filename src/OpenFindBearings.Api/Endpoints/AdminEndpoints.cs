@@ -1,5 +1,6 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using OpenFindBearings.Api.Common.Models.DTOs;
 using OpenFindBearings.Api.Helpers;
 using OpenFindBearings.Api.Services;
 using OpenFindBearings.Application.Features.Admin.Commands;
@@ -11,8 +12,13 @@ using OpenFindBearings.Application.Features.Corrections.Commands;
 using OpenFindBearings.Application.Features.Corrections.Queries;
 using OpenFindBearings.Application.Features.Merchants.Commands;
 using OpenFindBearings.Application.Features.Merchants.Queries;
+using OpenFindBearings.Application.Features.Permissions.Commands;
+using OpenFindBearings.Application.Features.Permissions.Queries;
+using OpenFindBearings.Application.Features.Roles.Commands;
+using OpenFindBearings.Application.Features.Roles.Queries;
 using OpenFindBearings.Application.Features.SystemConfig.Commands;
 using OpenFindBearings.Application.Features.SystemConfig.Queries;
+using OpenFindBearings.Application.Features.Users.Queries;
 using OpenFindBearings.Domain.Enums;
 
 namespace OpenFindBearings.Api.Endpoints
@@ -582,8 +588,354 @@ namespace OpenFindBearings.Api.Endpoints
             .WithSummary("审核拒绝营业执照")
             .WithDescription("拒绝营业执照审核，填写拒绝理由")
             .RequireAuthorization("Admin");
+
+            // ============ 角色管理 ============
+
+            /// <summary>
+            /// 获取角色列表（分页）
+            /// </summary>
+            group.MapGet("/roles", async (
+                [FromServices] IMediator mediator,
+                HttpContext httpContext,
+                [FromQuery] int page = 1,
+                [FromQuery] int pageSize = 20,
+                [FromQuery] string? keyword = null) =>
+            {
+                var query = new GetRolesQuery
+                {
+                    Page = page,
+                    PageSize = pageSize,
+                    Keyword = keyword
+                };
+                var result = await mediator.Send(query);
+                return ApiResponseHelper.Paged(result.Items, result.TotalCount, result.Page, result.PageSize, httpContext);
+            })
+            .WithName("GetRoles")
+            .WithSummary("获取角色列表")
+            .WithDescription("分页获取所有角色列表")
+            .RequireAuthorization("Admin");
+
+            /// <summary>
+            /// 获取角色详情
+            /// </summary>
+            group.MapGet("/roles/{id:guid}", async (
+                Guid id,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                // 正确写法：使用构造函数传递参数
+                var query = new GetRoleDetailQuery(id);
+                var result = await mediator.Send(query);
+                return result == null
+                    ? ApiResponseHelper.NotFound("角色不存在", httpContext)
+                    : ApiResponseHelper.Ok(result, httpContext: httpContext);
+            })
+            .WithName("GetRoleDetail")
+            .WithSummary("获取角色详情")
+            .WithDescription("获取角色详细信息，包括拥有的权限")
+            .RequireAuthorization("Admin");
+
+            /// <summary>
+            /// 获取角色列表（全部，用于下拉框）
+            /// </summary>
+            group.MapGet("/roles/all", async (
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                var query = new GetAllRolesQuery();
+                var result = await mediator.Send(query);
+                return ApiResponseHelper.Ok(result, httpContext: httpContext);
+            })
+            .WithName("GetAllRoles")
+            .WithSummary("获取所有角色")
+            .WithDescription("获取所有角色列表，用于下拉框")
+            .RequireAuthorization("Admin");
+
+            /// <summary>
+            /// 创建角色
+            /// </summary>
+            group.MapPost("/roles", async (
+                CreateRoleRequest request,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                var command = new CreateRoleCommand
+                {
+                    Name = request.Name,
+                    Description = request.Description
+                };
+                var id = await mediator.Send(command);
+                return ApiResponseHelper.Ok(new { id }, "角色创建成功", httpContext);
+            })
+            .WithName("CreateRole")
+            .WithSummary("创建角色")
+            .WithDescription("创建新角色")
+            .RequireAuthorization("Admin");
+
+            /// <summary>
+            /// 更新角色
+            /// </summary>
+            group.MapPut("/roles/{id:guid}", async (
+                Guid id,
+                UpdateRoleRequest request,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                var command = new UpdateRoleCommand
+                {
+                    Id = id,
+                    Name = request.Name,
+                    Description = request.Description
+                };
+                await mediator.Send(command);
+                return ApiResponseHelper.Ok("角色更新成功", httpContext);
+            })
+            .WithName("UpdateRole")
+            .WithSummary("更新角色")
+            .WithDescription("更新角色信息")
+            .RequireAuthorization("Admin");
+
+            /// <summary>
+            /// 删除角色
+            /// </summary>
+            group.MapDelete("/roles/{id:guid}", async (
+                Guid id,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                var command = new DeleteRoleCommand(id);
+                await mediator.Send(command);
+                return ApiResponseHelper.Ok("角色删除成功", httpContext);
+            })
+            .WithName("DeleteRole")
+            .WithSummary("删除角色")
+            .WithDescription("删除角色（不能删除系统角色）")
+            .RequireAuthorization("Admin");
+
+            /// <summary>
+            /// 为角色分配权限
+            /// </summary>
+            group.MapPost("/roles/{id:guid}/permissions", async (
+                Guid id,
+                AssignPermissionsRequest request,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                var command = new AssignPermissionsToRoleCommand
+                {
+                    RoleId = id,
+                    PermissionNames = request.PermissionNames
+                };
+                await mediator.Send(command);
+                return ApiResponseHelper.Ok("权限分配成功", httpContext);
+            })
+            .WithName("AssignPermissionsToRole")
+            .WithSummary("分配权限")
+            .WithDescription("为角色分配权限")
+            .RequireAuthorization("Admin");
+
+            /// <summary>
+            /// 获取角色的权限列表
+            /// </summary>
+            group.MapGet("/roles/{id:guid}/permissions", async (
+                Guid id,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                var query = new GetRolePermissionsQuery(id);
+                var result = await mediator.Send(query);
+                return ApiResponseHelper.Ok(result, httpContext: httpContext);
+            })
+            .WithName("GetRolePermissions")
+            .WithSummary("获取角色权限")
+            .WithDescription("获取角色拥有的权限名称列表")
+            .RequireAuthorization("Admin");
+
+            // ============ 权限管理 ============
+
+            /// <summary>
+            /// 获取权限列表
+            /// </summary>
+            group.MapGet("/permissions", async (
+                [FromServices] IMediator mediator,
+                HttpContext httpContext,
+                [FromQuery] int page = 1,
+                [FromQuery] int pageSize = 20,
+                [FromQuery] string? group = null) =>
+            {
+                var query = new GetPermissionsQuery
+                {
+                    Page = page,
+                    PageSize = pageSize,
+                    Group = group
+                };
+                var result = await mediator.Send(query);
+                return ApiResponseHelper.Paged(result.Items, result.TotalCount, result.Page, result.PageSize, httpContext);
+            })
+            .WithName("GetPermissions")
+            .WithSummary("获取权限列表")
+            .WithDescription("分页获取所有权限列表")
+            .RequireAuthorization("Admin");
+
+            /// <summary>
+            /// 获取权限详情
+            /// </summary>
+            group.MapGet("/permissions/{id:guid}", async (
+                Guid id,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                var query = new GetPermissionQuery(id);
+                var result = await mediator.Send(query);
+                return result == null
+                    ? ApiResponseHelper.NotFound("权限不存在", httpContext)
+                    : ApiResponseHelper.Ok(result, httpContext: httpContext);
+            })
+            .WithName("GetPermissionDetail")
+            .WithSummary("获取权限详情")
+            .WithDescription("获取权限详细信息")
+            .RequireAuthorization("Admin");
+
+            /// <summary>
+            /// 创建权限
+            /// </summary>
+            group.MapPost("/permissions", async (
+                CreatePermissionRequest request,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                var command = new CreatePermissionCommand
+                {
+                    Name = request.Name,
+                    Description = request.Description
+                };
+                var id = await mediator.Send(command);
+                return ApiResponseHelper.Ok(new { id }, "权限创建成功", httpContext);
+            })
+            .WithName("CreatePermission")
+            .WithSummary("创建权限")
+            .WithDescription("创建新权限")
+            .RequireAuthorization("Admin");
+
+            /// <summary>
+            /// 更新权限
+            /// </summary>
+            group.MapPut("/permissions/{id:guid}", async (
+                Guid id,
+                UpdatePermissionRequest request,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                var command = new UpdatePermissionCommand
+                {
+                    Id = id,
+                    Name = request.Name,
+                    Description = request.Description
+                };
+                await mediator.Send(command);
+                return ApiResponseHelper.Ok("权限更新成功", httpContext);
+            })
+            .WithName("UpdatePermission")
+            .WithSummary("更新权限")
+            .WithDescription("更新权限信息")
+            .RequireAuthorization("Admin");
+
+            /// <summary>
+            /// 删除权限
+            /// </summary>
+            group.MapDelete("/permissions/{id:guid}", async (
+                Guid id,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                var command = new DeletePermissionCommand(id);
+                await mediator.Send(command);
+                return ApiResponseHelper.Ok("权限删除成功", httpContext);
+            })
+            .WithName("DeletePermission")
+            .WithSummary("删除权限")
+            .WithDescription("删除权限（不能删除已被使用的权限）")
+            .RequireAuthorization("Admin");
+
+            // ============ 用户角色管理 ============
+
+            /// <summary>
+            /// 分配角色给用户
+            /// </summary>
+            group.MapPost("/users/{userId:guid}/roles", async (
+                Guid userId,
+                AssignUserRoleRequest request,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                var command = new AssignRoleToUserCommand
+                {
+                    UserId = userId,
+                    RoleName = request.RoleName
+                };
+                await mediator.Send(command);
+                return ApiResponseHelper.Ok("角色分配成功", httpContext);
+            })
+            .WithName("AssignRoleToUser")
+            .WithSummary("分配角色")
+            .WithDescription("分配角色给用户")
+            .RequireAuthorization("Admin");
+
+            /// <summary>
+            /// 移除用户角色
+            /// </summary>
+            group.MapDelete("/users/{userId:guid}/roles/{roleName}", async (
+                Guid userId,
+                string roleName,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                var command = new RemoveRoleFromUserCommand
+                {
+                    UserId = userId,
+                    RoleName = roleName
+                };
+                await mediator.Send(command);
+                return ApiResponseHelper.Ok("角色移除成功", httpContext);
+            })
+            .WithName("RemoveRoleFromUser")
+            .WithSummary("移除角色")
+            .WithDescription("从用户移除角色")
+            .RequireAuthorization("Admin");
+
+            /// <summary>
+            /// 获取用户的角色列表
+            /// </summary>
+            group.MapGet("/users/{userId:guid}/roles", async (
+                Guid userId,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                var query = new GetUserRolesQuery { UserId = userId };
+                var result = await mediator.Send(query);
+                return ApiResponseHelper.Ok(result, httpContext: httpContext);
+            })
+            .WithName("GetUserRoles")
+            .WithSummary("获取用户角色")
+            .WithDescription("获取用户的角色列表")
+            .RequireAuthorization("Admin");
+
+            /// <summary>
+            /// 获取用户的权限列表
+            /// </summary>
+            group.MapGet("/users/{userId:guid}/permissions", async (
+                Guid userId,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                var query = new GetUserPermissionsQuery { UserId = userId };
+                var result = await mediator.Send(query);
+                return ApiResponseHelper.Ok(result, httpContext: httpContext);
+            })
+            .WithName("GetUserPermissions")
+            .WithSummary("获取用户权限")
+            .WithDescription("获取用户的权限列表")
+            .RequireAuthorization("Admin");
         }
     }
-
-    public record RejectLicenseRequest(string Reason);
 }
