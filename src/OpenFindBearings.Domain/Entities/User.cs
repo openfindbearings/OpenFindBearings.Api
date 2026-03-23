@@ -10,12 +10,12 @@ namespace OpenFindBearings.Domain.Entities
     public class User : BaseEntity
     {
         /// <summary>
-        /// 认证系统用户ID
+        /// 认证系统用户ID (来自 OpenIddict)
         /// </summary>
         public string AuthUserId { get; private set; } = string.Empty;
 
         /// <summary>
-        /// 用户昵称
+        /// 用户昵称（展示用）
         /// </summary>
         public string? Nickname { get; private set; }
 
@@ -25,17 +25,17 @@ namespace OpenFindBearings.Domain.Entities
         public string? Avatar { get; private set; }
 
         /// <summary>
-        /// 用户类型
+        /// 用户类型：Admin/MerchantStaff/Individual/Guest
         /// </summary>
         public UserType UserType { get; private set; }
 
         /// <summary>
-        /// 地址
+        /// 地址（业务数据）
         /// </summary>
         public string? Address { get; private set; }
 
         /// <summary>
-        /// 游客会话ID
+        /// 游客会话ID（仅游客用户）
         /// </summary>
         public string? GuestSessionId { get; private set; }
 
@@ -45,7 +45,22 @@ namespace OpenFindBearings.Domain.Entities
         public DateTime? LastLoginAt { get; private set; }
 
         /// <summary>
-        /// 所属商家ID
+        /// 是否活跃（软删除）
+        /// </summary>
+        public bool IsActive { get; private set; } = true;
+
+        /// <summary>
+        /// 是否已合并（游客数据已迁移）
+        /// </summary>
+        public bool IsMerged { get; private set; }
+
+        /// <summary>
+        /// 合并到的正式账户ID
+        /// </summary>
+        public Guid? MergedToUserId { get; private set; }
+
+        /// <summary>
+        /// 所属商家ID（仅商家员工）
         /// </summary>
         public Guid? MerchantId { get; private set; }
 
@@ -88,28 +103,17 @@ namespace OpenFindBearings.Domain.Entities
 
         // ============ 统计属性 ============
 
-        /// <summary>
-        /// 收藏数量
-        /// </summary>
         public int FavoriteCount => FavoriteBearings.Count;
-
-        /// <summary>
-        /// 关注数量
-        /// </summary>
         public int FollowCount => FollowedMerchants.Count;
 
-        /// <summary>
-        /// 无参构造函数，仅供EF Core使用
-        /// </summary>
+        // ============ 构造函数 ============
+
         private User() { }
 
         /// <summary>
-        /// 创建新用户
+        /// 创建正式用户
         /// </summary>
-        public User(
-            string authUserId,
-            UserType userType,
-            string? nickname = null)
+        public User(string authUserId, UserType userType, string? nickname = null)
         {
             if (string.IsNullOrWhiteSpace(authUserId))
                 throw new ArgumentException("认证用户ID不能为空", nameof(authUserId));
@@ -131,13 +135,12 @@ namespace OpenFindBearings.Domain.Entities
             UserType = UserType.Guest;
         }
 
+        // ============ 业务方法 ============
+
         /// <summary>
-        /// 更新用户基本信息
+        /// 更新用户资料（只更新业务字段）
         /// </summary>
-        public void UpdateProfile(
-            string? nickname,
-            string? avatar,
-            string? address)
+        public void UpdateProfile(string? nickname, string? avatar, string? address)
         {
             Nickname = nickname;
             Avatar = avatar;
@@ -175,7 +178,7 @@ namespace OpenFindBearings.Domain.Entities
         }
 
         /// <summary>
-        /// 转换为正式用户
+        /// 转换为正式用户（游客注册时）
         /// </summary>
         public void ConvertToRegisteredUser(string authUserId)
         {
@@ -185,24 +188,55 @@ namespace OpenFindBearings.Domain.Entities
             UpdateTimestamp();
         }
 
-        // ============ 收藏相关方法 ============
+        /// <summary>
+        /// 启用用户
+        /// </summary>
+        public void Enable()
+        {
+            IsActive = true;
+            UpdateTimestamp();
+        }
 
         /// <summary>
-        /// 收藏轴承
+        /// 禁用用户
         /// </summary>
+        public void Disable()
+        {
+            IsActive = false;
+            UpdateTimestamp();
+        }
+
+        /// <summary>
+        /// 标记为已合并（游客数据已迁移到正式账户）
+        /// </summary>
+        public void MarkAsMerged(Guid mergedToUserId)
+        {
+            IsMerged = true;
+            MergedToUserId = mergedToUserId;
+            UpdateTimestamp();
+        }
+
+        /// <summary>
+        /// 更新用户类型
+        /// </summary>
+        public void UpdateUserType(UserType newType)
+        {
+            if (UserType == newType) return;
+            UserType = newType;
+            UpdateTimestamp();
+        }
+
+        // ============ 收藏相关方法 ============
+
         public void FavoriteBearing(Guid bearingId)
         {
             if (FavoriteBearings.Any(f => f.BearingId == bearingId))
                 throw new InvalidOperationException("已经收藏过该轴承");
 
-            var favorite = new UserBearingFavorite(Id, bearingId);
-            FavoriteBearings.Add(favorite);
+            FavoriteBearings.Add(new UserBearingFavorite(Id, bearingId));
             UpdateTimestamp();
         }
 
-        /// <summary>
-        /// 取消收藏轴承
-        /// </summary>
         public void UnfavoriteBearing(Guid bearingId)
         {
             var favorite = FavoriteBearings.FirstOrDefault(f => f.BearingId == bearingId);
@@ -213,30 +247,20 @@ namespace OpenFindBearings.Domain.Entities
             }
         }
 
-        /// <summary>
-        /// 检查是否已收藏轴承
-        /// </summary>
         public bool HasFavoritedBearing(Guid bearingId)
             => FavoriteBearings.Any(f => f.BearingId == bearingId);
 
         // ============ 关注相关方法 ============
 
-        /// <summary>
-        /// 关注商家
-        /// </summary>
         public void FollowMerchant(Guid merchantId)
         {
             if (FollowedMerchants.Any(f => f.MerchantId == merchantId))
                 throw new InvalidOperationException("已经关注过该商家");
 
-            var follow = new UserMerchantFollow(Id, merchantId);
-            FollowedMerchants.Add(follow);
+            FollowedMerchants.Add(new UserMerchantFollow(Id, merchantId));
             UpdateTimestamp();
         }
 
-        /// <summary>
-        /// 取消关注商家
-        /// </summary>
         public void UnfollowMerchant(Guid merchantId)
         {
             var follow = FollowedMerchants.FirstOrDefault(f => f.MerchantId == merchantId);
@@ -247,17 +271,11 @@ namespace OpenFindBearings.Domain.Entities
             }
         }
 
-        /// <summary>
-        /// 检查是否已关注商家
-        /// </summary>
         public bool HasFollowedMerchant(Guid merchantId)
             => FollowedMerchants.Any(f => f.MerchantId == merchantId);
 
         // ============ 历史相关方法 ============
 
-        /// <summary>
-        /// 记录轴承浏览
-        /// </summary>
         public void RecordBearingView(Guid bearingId)
         {
             var existing = BearingHistory.FirstOrDefault(h => h.BearingId == bearingId);
@@ -270,19 +288,14 @@ namespace OpenFindBearings.Domain.Entities
                 BearingHistory.Add(new UserBearingHistory(Id, bearingId));
             }
 
-            // 限制历史记录数量（最多保留50条）
             if (BearingHistory.Count > 50)
             {
                 var oldest = BearingHistory.OrderBy(h => h.ViewedAt).First();
                 BearingHistory.Remove(oldest);
             }
-
             UpdateTimestamp();
         }
 
-        /// <summary>
-        /// 记录商家浏览
-        /// </summary>
         public void RecordMerchantView(Guid merchantId)
         {
             var existing = MerchantHistory.FirstOrDefault(h => h.MerchantId == merchantId);
@@ -295,19 +308,14 @@ namespace OpenFindBearings.Domain.Entities
                 MerchantHistory.Add(new UserMerchantHistory(Id, merchantId));
             }
 
-            // 限制历史记录数量
             if (MerchantHistory.Count > 50)
             {
                 var oldest = MerchantHistory.OrderBy(h => h.ViewedAt).First();
                 MerchantHistory.Remove(oldest);
             }
-
             UpdateTimestamp();
         }
 
-        /// <summary>
-        /// 清空浏览历史
-        /// </summary>
         public void ClearHistory()
         {
             BearingHistory.Clear();
@@ -317,36 +325,8 @@ namespace OpenFindBearings.Domain.Entities
 
         // ============ 辅助属性 ============
 
-        /// <summary>
-        /// 判断是否为商家员工
-        /// </summary>
         public bool IsMerchantStaff => UserType == UserType.MerchantStaff && MerchantId.HasValue;
-
-        /// <summary>
-        /// 判断是否为平台管理员
-        /// </summary>
         public bool IsAdmin => UserType == UserType.Admin;
-
-        /// <summary>
-        /// 判断是否为游客
-        /// </summary>
         public bool IsGuest => UserType == UserType.Guest;
-
-        /// <summary>
-        /// 更新用户类型
-        /// </summary>
-        public void UpdateUserType(UserType newType)
-        {
-            if (UserType == newType) return;
-
-            // 可以添加一些业务规则
-            if (UserType == UserType.Admin && newType != UserType.Admin)
-            {
-                // 检查是否是最后一个管理员等
-            }
-
-            UserType = newType;
-            UpdateTimestamp();
-        }
     }
 }

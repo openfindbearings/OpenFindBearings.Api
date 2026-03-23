@@ -4,9 +4,12 @@ namespace OpenFindBearings.Application.Common.Interfaces
 {
     /// <summary>
     /// 认证服务客户端接口
+    /// 用于与 OpenIddict 认证服务通信
     /// </summary>
     public interface IIdentityService
     {
+        #region 用户查询
+
         /// <summary>
         /// 根据邮箱获取认证用户信息
         /// </summary>
@@ -21,6 +24,10 @@ namespace OpenFindBearings.Application.Common.Interfaces
         /// 根据认证用户ID获取用户信息
         /// </summary>
         Task<OidcUserInfo?> GetUserByIdAsync(string sub, CancellationToken cancellationToken = default);
+
+        #endregion
+
+        #region 邀请管理
 
         /// <summary>
         /// 记录邀请信息
@@ -58,6 +65,47 @@ namespace OpenFindBearings.Application.Common.Interfaces
             string invitationCode,
             string sub,
             CancellationToken cancellationToken = default);
+
+        #endregion
+
+        #region 账户管理
+
+        /// <summary>
+        /// 注册新用户
+        /// </summary>
+        Task<IdentityRegisterResult> RegisterAsync(RegisterIdentityRequest request, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 发送短信验证码
+        /// </summary>
+        Task<bool> SendPhoneVerificationCodeAsync(string phoneNumber, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 发送密码重置验证码
+        /// </summary>
+        Task<bool> SendPasswordResetCodeAsync(string email, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 重置密码
+        /// </summary>
+        Task<bool> ResetPasswordAsync(string email, string code, string newPassword, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 修改密码
+        /// </summary>
+        Task<bool> ChangePasswordAsync(string authUserId, string currentPassword, string newPassword, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 更新手机号
+        /// </summary>
+        Task<bool> UpdatePhoneAsync(string authUserId, string phoneNumber, string verificationCode, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 更新邮箱
+        /// </summary>
+        Task<bool> UpdateEmailAsync(string authUserId, string email, string verificationCode, CancellationToken cancellationToken = default);
+
+        #endregion
     }
 
     /// <summary>
@@ -75,5 +123,32 @@ namespace OpenFindBearings.Application.Common.Interfaces
 
         public static InvitationResult Failed(string message) =>
             new() { IsSuccess = false, Message = message };
+    }
+
+    /// <summary>
+    /// 注册请求
+    /// </summary>
+    public class RegisterIdentityRequest
+    {
+        public string UserName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string? PhoneNumber { get; set; }
+        public string Password { get; set; } = string.Empty;
+    }
+
+    /// <summary>
+    /// 注册结果
+    /// </summary>
+    public class IdentityRegisterResult
+    {
+        public bool Success { get; set; }
+        public string? Message { get; set; }
+        public string? UserId { get; set; }
+
+        public static IdentityRegisterResult Succeeded(string userId) =>
+            new() { Success = true, UserId = userId };
+
+        public static IdentityRegisterResult Failed(string message) =>
+            new() { Success = false, Message = message };
     }
 }

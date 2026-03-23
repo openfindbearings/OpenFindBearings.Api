@@ -9,13 +9,25 @@ namespace OpenFindBearings.Api.Extensions
     {
         public static void MapApiEndpoints(this IEndpointRouteBuilder app)
         {
-            // 按模块映射端点
-            app.MapPublicEndpoints();      // 公共接口
-            app.MapUserEndpoints();        // 用户接口
-            app.MapMerchantEndpoints();    // 商家接口
-            app.MapAdminEndpoints();       // 管理员接口
-            app.MapSyncEndpoints();        // 同步接口
-            app.MapMobileEndpoints();      // 移动端接口
+            // ============ 按模块映射端点 ============
+
+            // 公共接口（无需认证）
+            app.MapPublicEndpoints();
+
+            // 移动端接口（部分需要认证）
+            app.MapMobileEndpoints();
+
+            // 用户接口（需登录）
+            app.MapUserEndpoints();
+
+            // 商家管理接口（需商家角色）
+            app.MapMerchantEndpoints();
+
+            // 管理员接口（需管理员角色）
+            app.MapAdminEndpoints();
+
+            // 同步接口（限 sync_client）
+            app.MapSyncEndpoints();
         }
     }
 }

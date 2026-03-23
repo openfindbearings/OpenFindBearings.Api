@@ -1,6 +1,6 @@
 ﻿using OpenFindBearings.Domain.Common.Models;
 using OpenFindBearings.Domain.Entities;
-using OpenFindBearings.Domain.Parameters;
+using OpenFindBearings.Domain.Specifications;
 
 namespace OpenFindBearings.Domain.Interfaces
 {

@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using OpenFindBearings.Domain.Common.Models;
 using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Interfaces;
@@ -70,6 +71,78 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         {
             _context.Users.Update(user);
             await _context.SaveChangesAsync(cancellationToken);
+        }
+
+        /// <summary>
+        /// 根据游客会话ID获取用户
+        /// </summary>
+        public async Task<User?> GetByGuestSessionIdAsync(string sessionId, CancellationToken cancellationToken = default)
+        {
+            return await _context.Users
+                .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.GuestSessionId == sessionId && u.UserType == UserType.Guest, cancellationToken);
+        }
+
+        /// <summary>
+        /// 分页获取用户列表
+        /// </summary>
+        public async Task<PagedResult<User>> GetPagedAsync(
+            string? keyword = null,
+            UserType? userType = null,
+            bool? isActive = null,
+            int page = 1,
+            int pageSize = 20,
+            CancellationToken cancellationToken = default)
+        {
+            var query = _context.Users.AsQueryable();
+
+            // 关键词搜索（昵称或AuthUserId）
+            if (!string.IsNullOrEmpty(keyword))
+            {
+                query = query.Where(u =>
+                    (u.Nickname != null && u.Nickname.Contains(keyword)) ||
+                    u.AuthUserId.Contains(keyword));
+            }
+
+            // 用户类型筛选
+            if (userType.HasValue)
+            {
+                query = query.Where(u => u.UserType == userType.Value);
+            }
+
+            // 活跃状态筛选
+            if (isActive.HasValue)
+            {
+                query = query.Where(u => u.IsActive == isActive.Value);
+            }
+
+            var totalCount = await query.CountAsync(cancellationToken);
+
+            var items = await query
+                .Include(u => u.Merchant)
+                .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.Role)
+                .OrderByDescending(u => u.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
+
+            return new PagedResult<User>
+            {
+                Items = items,
+                TotalCount = totalCount,
+                Page = page,
+                PageSize = pageSize
+            };
+        }
+
+        /// <summary>
+        /// 检查用户是否存在
+        /// </summary>
+        public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
+        {
+            return await _context.Users.AnyAsync(u => u.Id == id, cancellationToken);
         }
     }
 }

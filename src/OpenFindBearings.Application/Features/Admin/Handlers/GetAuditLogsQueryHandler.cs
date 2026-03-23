@@ -5,7 +5,7 @@ using OpenFindBearings.Application.Features.Admin.Queries;
 using OpenFindBearings.Domain.Common.Models;
 using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Interfaces;
-using OpenFindBearings.Domain.Parameters;
+using OpenFindBearings.Domain.Specifications;
 
 namespace OpenFindBearings.Application.Features.Admin.Handlers
 {

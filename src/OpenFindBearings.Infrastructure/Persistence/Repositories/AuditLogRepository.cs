@@ -2,7 +2,7 @@
 using OpenFindBearings.Domain.Common.Models;
 using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Interfaces;
-using OpenFindBearings.Domain.Parameters;
+using OpenFindBearings.Domain.Specifications;
 using OpenFindBearings.Infrastructure.Persistence.Data;
 
 namespace OpenFindBearings.Infrastructure.Persistence.Repositories

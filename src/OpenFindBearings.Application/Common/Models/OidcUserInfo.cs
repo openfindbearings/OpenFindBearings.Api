@@ -62,7 +62,7 @@
         public bool IsActive { get; set; } = true;
 
         /// <summary>
-        /// 获取显示名称（优先使用 name，其次使用 preferred_username）
+        /// 获取显示名称
         /// </summary>
         public string GetDisplayName() => Name ?? PreferredUsername ?? Sub;
     }
