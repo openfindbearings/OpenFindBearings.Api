@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using OpenFindBearings.Api.Helpers;
 using OpenFindBearings.Api.Services;
+using OpenFindBearings.Application.Features.Admin.Commands;
 using OpenFindBearings.Application.Features.Admin.Queries;
 using OpenFindBearings.Application.Features.Bearings.Commands;
 using OpenFindBearings.Application.Features.BearingTypes.Commands;
@@ -507,6 +508,82 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("GetPriceConfig")
             .WithSummary("获取价格配置")
             .WithDescription("获取价格相关配置");
+
+            /// <summary>
+            /// 获取待审核的营业执照列表
+            /// </summary>
+            group.MapGet("/licenses/pending", async (
+                [FromServices] IMediator mediator,
+                HttpContext httpContext,
+                [FromQuery] int page = 1,
+                [FromQuery] int pageSize = 20) =>
+            {
+                var query = new GetPendingLicensesQuery
+                {
+                    Page = page,
+                    PageSize = pageSize
+                };
+                var result = await mediator.Send(query);
+                return ApiResponseHelper.Paged(result.Items, result.TotalCount, result.Page, result.PageSize, httpContext);
+            })
+            .WithName("GetPendingLicenses")
+            .WithSummary("获取待审核营业执照")
+            .WithDescription("获取所有待审核的营业执照列表")
+            .RequireAuthorization("Admin");
+
+            /// <summary>
+            /// 审核通过营业执照
+            /// </summary>
+            group.MapPost("/licenses/{id:guid}/approve", async (
+                Guid id,
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                var command = new ApproveLicenseCommand
+                {
+                    VerificationId = id,
+                    ReviewedBy = currentUser.UserId.Value
+                };
+                await mediator.Send(command);
+                return ApiResponseHelper.Ok("审核通过，商家已认证", httpContext);
+            })
+            .WithName("ApproveLicense")
+            .WithSummary("审核通过营业执照")
+            .WithDescription("通过营业执照审核，商家获得认证")
+            .RequireAuthorization("Admin");
+
+            /// <summary>
+            /// 审核拒绝营业执照
+            /// </summary>
+            group.MapPost("/licenses/{id:guid}/reject", async (
+                Guid id,
+                RejectLicenseRequest request,
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                var command = new RejectLicenseCommand
+                {
+                    VerificationId = id,
+                    ReviewedBy = currentUser.UserId.Value,
+                    Reason = request.Reason
+                };
+                await mediator.Send(command);
+                return ApiResponseHelper.Ok("已拒绝", httpContext);
+            })
+            .WithName("RejectLicense")
+            .WithSummary("审核拒绝营业执照")
+            .WithDescription("拒绝营业执照审核，填写拒绝理由")
+            .RequireAuthorization("Admin");
         }
     }
+
+    public record RejectLicenseRequest(string Reason);
 }

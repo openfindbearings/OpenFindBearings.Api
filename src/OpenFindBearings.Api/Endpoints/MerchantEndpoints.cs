@@ -81,11 +81,11 @@ namespace OpenFindBearings.Api.Endpoints
             /// 上传营业执照
             /// </summary>
             group.MapPost("/license", async (
-                IFormFile file,
-                [FromServices] ICurrentUserService currentUser,
-                [FromServices] IMediator mediator,
-                [FromServices] IWebHostEnvironment environment,
-                HttpContext httpContext) =>
+            IFormFile file,
+            [FromServices] ICurrentUserService currentUser,
+            [FromServices] IMediator mediator,
+            [FromServices] IWebHostEnvironment environment,
+            HttpContext httpContext) =>
             {
                 if (!currentUser.UserId.HasValue)
                     return ApiResponseHelper.Unauthorized(httpContext: httpContext);
@@ -97,15 +97,11 @@ namespace OpenFindBearings.Api.Endpoints
                 var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".pdf" };
                 var fileExtension = Path.GetExtension(file.FileName).ToLowerInvariant();
                 if (!allowedExtensions.Contains(fileExtension))
-                {
                     return ApiResponseHelper.BadRequest("只支持 JPG、PNG、PDF 格式", httpContext: httpContext);
-                }
 
                 // 检查文件大小（最大5MB）
                 if (file.Length > 5 * 1024 * 1024)
-                {
                     return ApiResponseHelper.BadRequest("文件大小不能超过5MB", httpContext: httpContext);
-                }
 
                 try
                 {
@@ -117,7 +113,7 @@ namespace OpenFindBearings.Api.Endpoints
                     var merchant = await mediator.Send(merchantQuery);
 
                     if (merchant == null)
-                        return ApiResponseHelper.NotFound("未找到所属商家", httpContext);
+                        return ApiResponseHelper.NotFound("未找到所属商家", httpContext: httpContext);
 
                     // 保存文件
                     var uploadsFolder = Path.Combine(environment.WebRootPath, "uploads", "licenses");
@@ -133,18 +129,20 @@ namespace OpenFindBearings.Api.Endpoints
 
                     var fileUrl = $"/uploads/licenses/{fileName}";
 
-                    // TODO: 调用命令更新商家认证信息并提交审核
-                    // var licenseCommand = new SubmitLicenseCommand
-                    // {
-                    //     MerchantId = merchant.Id,
-                    //     LicenseUrl = fileUrl
-                    // };
-                    // await mediator.Send(licenseCommand);
+                    // ✅ 放开注释：调用命令更新商家认证信息并提交审核
+                    var licenseCommand = new SubmitLicenseCommand
+                    {
+                        MerchantId = merchant.Id,
+                        LicenseUrl = fileUrl,
+                        SubmittedBy = currentUser.UserId.Value
+                    };
+                    var verificationId = await mediator.Send(licenseCommand);
 
                     return ApiResponseHelper.Ok(new
                     {
+                        verificationId,
                         url = fileUrl,
-                        message = "营业执照上传成功，等待审核"
+                        message = "营业执照已上传，等待审核"
                     }, httpContext: httpContext);
                 }
                 catch (Exception ex)
