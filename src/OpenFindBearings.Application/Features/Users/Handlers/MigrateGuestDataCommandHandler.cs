@@ -7,22 +7,22 @@ using OpenFindBearings.Domain.Interfaces;
 namespace OpenFindBearings.Application.Features.Users.Handlers
 {
     /// <summary>
-    /// 合并游客数据到正式账户命令处理器
+    /// 迁移游客数据命令处理器
     /// </summary>
-    public class MergeGuestUserCommandHandler : IRequestHandler<MergeGuestUserCommand>
+    public class MigrateGuestDataCommandHandler : IRequestHandler<MigrateGuestDataCommand>
     {
         private readonly IUserRepository _userRepository;
         private readonly IUserBearingHistoryRepository _historyRepository;
         private readonly IUserBearingFavoriteRepository _favoriteRepository;
         private readonly IUserMerchantFollowRepository _followRepository;
-        private readonly ILogger<MergeGuestUserCommandHandler> _logger;
+        private readonly ILogger<MigrateGuestDataCommandHandler> _logger;
 
-        public MergeGuestUserCommandHandler(
+        public MigrateGuestDataCommandHandler(
             IUserRepository userRepository,
             IUserBearingHistoryRepository historyRepository,
             IUserBearingFavoriteRepository favoriteRepository,
             IUserMerchantFollowRepository followRepository,
-            ILogger<MergeGuestUserCommandHandler> logger)
+            ILogger<MigrateGuestDataCommandHandler> logger)
         {
             _userRepository = userRepository;
             _historyRepository = historyRepository;
@@ -31,32 +31,31 @@ namespace OpenFindBearings.Application.Features.Users.Handlers
             _logger = logger;
         }
 
-        public async Task Handle(MergeGuestUserCommand request, CancellationToken cancellationToken)
+        public async Task Handle(MigrateGuestDataCommand request, CancellationToken cancellationToken)
         {
-            _logger.LogInformation("合并游客数据: AuthUserId={AuthUserId}, GuestSessionId={GuestSessionId}",
-                request.AuthUserId, request.GuestSessionId);
+            _logger.LogInformation("开始迁移游客数据: SessionId={SessionId}, TargetUserId={TargetUserId}",
+                request.GuestSessionId, request.TargetUserId);
 
             // 1. 获取游客用户
             var guestUser = await _userRepository.GetByGuestSessionIdAsync(request.GuestSessionId, cancellationToken);
-            if (guestUser == null || guestUser.IsMerged)
+            if (guestUser == null)
             {
-                _logger.LogDebug("游客用户不存在或已合并: SessionId={SessionId}", request.GuestSessionId);
+                _logger.LogDebug("游客用户不存在: SessionId={SessionId}", request.GuestSessionId);
                 return;
             }
 
-            // 2. 获取或创建正式用户
-            var registeredUser = await _userRepository.GetByAuthUserIdAsync(request.AuthUserId, cancellationToken);
-            if (registeredUser == null)
+            // 2. 如果已经迁移过，跳过
+            if (guestUser.IsMerged)
             {
-                registeredUser = new User(request.AuthUserId, Domain.Enums.UserType.Individual);
-                await _userRepository.AddAsync(registeredUser, cancellationToken);
+                _logger.LogDebug("游客数据已迁移: SessionId={SessionId}", request.GuestSessionId);
+                return;
             }
 
             // 3. 迁移浏览历史
             var histories = await _historyRepository.GetByUserIdAsync(guestUser.Id, 1, int.MaxValue, cancellationToken);
             foreach (var history in histories)
             {
-                await _historyRepository.AddOrUpdateAsync(registeredUser.Id, history.BearingId, cancellationToken);
+                await _historyRepository.AddOrUpdateAsync(request.TargetUserId, history.BearingId, cancellationToken);
             }
             _logger.LogDebug("迁移浏览历史: {Count}条", histories.Count);
 
@@ -64,9 +63,9 @@ namespace OpenFindBearings.Application.Features.Users.Handlers
             var favorites = await _favoriteRepository.GetByUserIdAsync(guestUser.Id, 1, int.MaxValue, cancellationToken);
             foreach (var favorite in favorites)
             {
-                if (!await _favoriteRepository.ExistsAsync(registeredUser.Id, favorite.BearingId, cancellationToken))
+                if (!await _favoriteRepository.ExistsAsync(request.TargetUserId, favorite.BearingId, cancellationToken))
                 {
-                    await _favoriteRepository.AddAsync(new UserBearingFavorite(registeredUser.Id, favorite.BearingId), cancellationToken);
+                    await _favoriteRepository.AddAsync(new UserBearingFavorite(request.TargetUserId, favorite.BearingId), cancellationToken);
                 }
             }
             _logger.LogDebug("迁移收藏: {Count}条", favorites.Count);
@@ -75,19 +74,19 @@ namespace OpenFindBearings.Application.Features.Users.Handlers
             var follows = await _followRepository.GetByUserIdAsync(guestUser.Id, 1, int.MaxValue, cancellationToken);
             foreach (var follow in follows)
             {
-                if (!await _followRepository.ExistsAsync(registeredUser.Id, follow.MerchantId, cancellationToken))
+                if (!await _followRepository.ExistsAsync(request.TargetUserId, follow.MerchantId, cancellationToken))
                 {
-                    await _followRepository.AddAsync(new UserMerchantFollow(registeredUser.Id, follow.MerchantId), cancellationToken);
+                    await _followRepository.AddAsync(new UserMerchantFollow(request.TargetUserId, follow.MerchantId), cancellationToken);
                 }
             }
             _logger.LogDebug("迁移关注: {Count}条", follows.Count);
 
             // 6. 标记游客已合并
-            guestUser.MarkAsMerged(registeredUser.Id);
+            guestUser.MarkAsMerged(request.TargetUserId);
             await _userRepository.UpdateAsync(guestUser, cancellationToken);
 
-            _logger.LogInformation("游客数据合并完成: SessionId={SessionId}, UserId={UserId}",
-                request.GuestSessionId, registeredUser.Id);
+            _logger.LogInformation("游客数据迁移完成: SessionId={SessionId}, TargetUserId={TargetUserId}",
+                request.GuestSessionId, request.TargetUserId);
         }
     }
 }
