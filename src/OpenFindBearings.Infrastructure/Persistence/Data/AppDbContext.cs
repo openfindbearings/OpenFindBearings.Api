@@ -7,7 +7,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
 {
     public class AppDbContext : DbContext
     {
-        // 核心业务
+        // ============ 核心业务 ============
         public DbSet<Bearing> Bearings { get; set; }
         public DbSet<BearingType> BearingTypes { get; set; }
         public DbSet<Brand> Brands { get; set; }
@@ -16,24 +16,27 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
         public DbSet<BearingInterchange> BearingInterchanges { get; set; }
         public DbSet<CorrectionRequest> CorrectionRequests { get; set; }
 
-        // 用户与权限
+        // ============ 用户与权限 ============
         public DbSet<User> Users { get; set; }
         public DbSet<Role> Roles { get; set; }
         public DbSet<Permission> Permissions { get; set; }
         public DbSet<UserRole> UserRoles { get; set; }
         public DbSet<RolePermission> RolePermissions { get; set; }
 
-        // 用户收藏与历史
+        // ============ 用户收藏与历史 ============
         public DbSet<UserBearingFavorite> UserFavorites { get; set; }
         public DbSet<UserMerchantFollow> UserFollows { get; set; }
         public DbSet<UserBearingHistory> UserBearingHistories { get; set; }
         public DbSet<UserMerchantHistory> UserMerchantHistories { get; set; }
 
-        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
-
-
+        // ============ 审计与配置 ============
         public DbSet<AuditLog> AuditLogs { get; set; }
         public DbSet<SystemConfig> SystemConfigs { get; set; }
+
+        // ============ 邀请管理 ============
+        public DbSet<StaffInvitation> StaffInvitations { get; set; }
+
+        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

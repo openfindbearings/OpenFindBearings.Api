@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace OpenFindBearings.Domain.Parameters
+namespace OpenFindBearings.Domain.Specifications
 {
     /// <summary>
     /// 审核日志搜索参数

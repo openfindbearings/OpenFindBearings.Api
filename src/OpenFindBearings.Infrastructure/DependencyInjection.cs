@@ -11,6 +11,9 @@ using StackExchange.Redis;
 
 namespace OpenFindBearings.Infrastructure
 {
+    /// <summary>
+    /// 基础设施层依赖注入配置
+    /// </summary>
     public static class DependencyInjection
     {
         public static IServiceCollection AddInfrastructure(
@@ -55,6 +58,9 @@ namespace OpenFindBearings.Infrastructure
             services.AddScoped<IAuditLogRepository, AuditLogRepository>();
             services.AddScoped<ISystemConfigRepository, SystemConfigRepository>();
 
+            // 邀请仓储
+            services.AddScoped<IStaffInvitationRepository, StaffInvitationRepository>();
+
             // ============ 3. 注册缓存服务 ============
 
             // 读取缓存配置
@@ -64,7 +70,7 @@ namespace OpenFindBearings.Infrastructure
             // 添加内存缓存
             services.AddMemoryCache(options =>
             {
-                options.SizeLimit = cacheSettings.MemoryCacheSizeLimit * 1024 * 1024; // 转换为字节
+                options.SizeLimit = cacheSettings.MemoryCacheSizeLimit * 1024 * 1024;
                 options.ExpirationScanFrequency = TimeSpan.FromMinutes(1);
             });
 
@@ -105,7 +111,24 @@ namespace OpenFindBearings.Infrastructure
             // 注册缓存服务
             services.AddSingleton<ICacheService, CacheService>();
 
-            // ============ 4. 注册其他基础设施服务 ============
+            // ============ 4. 注册认证服务客户端 ============
+            var identityBaseUrl = configuration["Authentication:Authority"] ?? "https://localhost:5001";
+            var webAppUrl = configuration["Authentication:WebAppUrl"] ?? "https://localhost:7000";
+
+            services.AddHttpClient<IIdentityService, IdentityService>(client =>
+            {
+                client.BaseAddress = new Uri(identityBaseUrl);
+                client.DefaultRequestHeaders.Add("Accept", "application/json");
+                client.Timeout = TimeSpan.FromSeconds(30);
+            });
+
+            services.Configure<IdentityServiceOptions>(options =>
+            {
+                options.BaseUrl = identityBaseUrl;
+                options.WebAppUrl = webAppUrl;
+            });
+
+            // ============ 5. 注册其他基础设施服务 ============
 
             // 通知服务
             services.AddScoped<INotificationService, NotificationService>();

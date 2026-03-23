@@ -23,11 +23,6 @@ namespace OpenFindBearings.Application.Features.Users.Commands
         public string? Avatar { get; init; }
 
         /// <summary>
-        /// 联系电话
-        /// </summary>
-        public string? Phone { get; init; }
-
-        /// <summary>
         /// 地址
         /// </summary>
         public string? Address { get; init; }
