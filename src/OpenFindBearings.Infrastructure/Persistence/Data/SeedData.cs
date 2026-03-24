@@ -260,6 +260,38 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
             bearings[bearingIndex++].UpdateTechnicalSpecs("P0", "GCr15", "Open", "钢保持架");
             bearings[bearingIndex++].UpdateTechnicalSpecs("P0", "GCr15", "Open", "钢保持架");
 
+            // 为现有轴承设置产地和类别
+
+            // SKF 系列（瑞典，进口）
+            bearingIndex = 0;
+            bearings[bearingIndex++].SetOrigin("瑞典", ProductCategory.Imported);
+            bearings[bearingIndex++].SetOrigin("瑞典", ProductCategory.Imported);
+            bearings[bearingIndex++].SetOrigin("瑞典", ProductCategory.Imported);
+            bearings[bearingIndex++].SetOrigin("瑞典", ProductCategory.Imported);
+
+            // FAG 系列（德国，进口）
+            bearings[bearingIndex++].SetOrigin("德国", ProductCategory.Imported);
+            bearings[bearingIndex++].SetOrigin("德国", ProductCategory.Imported);
+            bearings[bearingIndex++].SetOrigin("德国", ProductCategory.Imported);
+
+            // NSK 系列（日本，进口）
+            bearings[bearingIndex++].SetOrigin("日本", ProductCategory.Imported);
+            bearings[bearingIndex++].SetOrigin("日本", ProductCategory.Imported);
+            bearings[bearingIndex++].SetOrigin("日本", ProductCategory.Imported);
+
+            // HRB 系列（中国，国产）
+            bearings[bearingIndex++].SetOrigin("中国", ProductCategory.Domestic);
+            bearings[bearingIndex++].SetOrigin("中国", ProductCategory.Domestic);
+            bearings[bearingIndex++].SetOrigin("中国", ProductCategory.Domestic);
+
+            // ZWZ 系列（中国，国产）
+            bearings[bearingIndex++].SetOrigin("中国", ProductCategory.Domestic);
+            bearings[bearingIndex++].SetOrigin("中国", ProductCategory.Domestic);
+
+            // LYC 系列（中国，国产）
+            bearings[bearingIndex++].SetOrigin("中国", ProductCategory.Domestic);
+            bearings[bearingIndex++].SetOrigin("中国", ProductCategory.Domestic);
+
             await context.SaveChangesAsync();
 
             // ============ 5. 替代品关系 ============

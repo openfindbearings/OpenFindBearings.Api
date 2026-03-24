@@ -1,4 +1,5 @@
 ﻿using OpenFindBearings.Domain.Common;
+using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Events;
 using OpenFindBearings.Domain.ValueObjects;
 
@@ -76,6 +77,21 @@ namespace OpenFindBearings.Domain.Entities
         /// 包含动载荷、静载荷、极限转速等性能指标
         /// </summary>
         public PerformanceParams? Performance { get; private set; }
+
+        /// <summary>
+        /// 产地（原产国/地区）
+        /// 如：瑞典、德国、日本、中国
+        /// </summary>
+        public string? OriginCountry { get; private set; }
+
+        /// <summary>
+        /// 产品类别
+        /// Imported: 进口
+        /// Domestic: 国产
+        /// JointVenture: 合资
+        /// Others：其他
+        /// </summary>
+        public ProductCategory Category { get; private set; } = ProductCategory.Domestic;
 
         // ============ 关联属性 ============
 
@@ -285,6 +301,16 @@ namespace OpenFindBearings.Domain.Entities
                 MerchantBearings.Remove(mb);
                 UpdateTimestamp();
             }
+        }
+
+        /// <summary>
+        /// 设置产地和类别
+        /// </summary>
+        public void SetOrigin(string? country, ProductCategory category)
+        {
+            OriginCountry = country;
+            Category = category;
+            UpdateTimestamp();
         }
     }
 }

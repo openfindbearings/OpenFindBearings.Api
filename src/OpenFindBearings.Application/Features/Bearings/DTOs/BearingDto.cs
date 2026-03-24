@@ -21,6 +21,10 @@
         public string BrandName { get; set; } = string.Empty;
         public string? BrandCountry { get; set; }
 
+        // 产地和类别信息
+        public string? OriginCountry { get; set; }
+        public string Category { get; set; } = string.Empty;
+
         // 类型信息
         public Guid BearingTypeId { get; set; }
         public string BearingTypeName { get; set; } = string.Empty;

@@ -44,5 +44,17 @@
         /// 最低价格
         /// </summary>
         public decimal? MinPrice { get; set; }
+
+        /// <summary>
+        /// 产地（原产国/地区）
+        /// 如：瑞典、德国、日本、中国
+        /// </summary>
+        public string? OriginCountry { get; set; }
+
+        /// <summary>
+        /// 产品类别
+        /// 进口/国产/合资/其他
+        /// </summary>
+        public string Category { get; set; } = string.Empty;
     }
 }

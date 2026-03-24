@@ -50,6 +50,19 @@ namespace OpenFindBearings.Application.Features.Bearings.Handlers
                 changedFields.Add("Description");
             }
 
+            // 更新产地和类别
+            if (request.OriginCountry != null)
+            {
+                // bearing.SetOriginCountry(request.OriginCountry);
+                changedFields.Add("OriginCountry");
+            }
+
+            if (request.Category.HasValue)
+            {
+                // bearing.SetCategory(request.Category.Value);
+                changedFields.Add("Category");
+            }
+
             if (request.PrecisionGrade != null || request.Material != null ||
                 request.SealType != null || request.CageType != null)
             {
@@ -58,8 +71,8 @@ namespace OpenFindBearings.Application.Features.Bearings.Handlers
                     request.Material,
                     request.SealType,
                     request.CageType);
-                changedFields.AddRange(new[] { "PrecisionGrade", "Material", "SealType", "CageType" });
-            }
+                changedFields.AddRange(["PrecisionGrade", "Material", "SealType", "CageType"]);
+            }           
 
             await _bearingRepository.UpdateAsync(bearing, cancellationToken);
 

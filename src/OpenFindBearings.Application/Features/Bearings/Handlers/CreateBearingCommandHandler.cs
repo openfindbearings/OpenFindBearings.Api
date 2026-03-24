@@ -70,13 +70,16 @@ namespace OpenFindBearings.Application.Features.Bearings.Handlers
             // 6. 设置技术参数
             SetTechnicalParameters(bearing, request);
 
-            // 7. 保存到仓储
+            // 7. 设置产地和类别
+            bearing.SetOrigin(request.OriginCountry, request.Category);
+
+            // 8. 保存到仓储
             await SaveBearingAsync(bearing, cancellationToken);
 
-            // 8. 发布领域事件
+            // 9. 发布领域事件
             await PublishBearingCreatedEventAsync(bearing, cancellationToken);
 
-            // 9. 返回结果
+            // 10. 返回结果
             _logger.LogInformation("轴承创建成功: {BearingId}, 型号: {PartNumber}",
                 bearing.Id, bearing.PartNumber);
 

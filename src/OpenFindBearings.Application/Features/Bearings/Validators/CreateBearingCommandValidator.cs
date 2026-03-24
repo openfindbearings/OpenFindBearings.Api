@@ -21,6 +21,13 @@ namespace OpenFindBearings.Application.Features.Bearings.Validators
                 .NotEmpty().WithMessage("产品名称不能为空")
                 .MaximumLength(200).WithMessage("名称长度不能超过200个字符");
 
+            // 添加产地验证
+            When(x => !string.IsNullOrWhiteSpace(x.OriginCountry), () =>
+            {
+                RuleFor(x => x.OriginCountry)
+                    .MaximumLength(50).WithMessage("产地长度不能超过50个字符");
+            });
+
             // 尺寸验证
             RuleFor(x => x.InnerDiameter)
                 .GreaterThan(0).WithMessage("内径必须大于0");

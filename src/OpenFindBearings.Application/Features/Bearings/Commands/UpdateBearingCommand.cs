@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using OpenFindBearings.Domain.Enums;
 
 namespace OpenFindBearings.Application.Features.Bearings.Commands
 {
@@ -18,5 +19,7 @@ namespace OpenFindBearings.Application.Features.Bearings.Commands
         public decimal? DynamicLoadRating { get; init; }
         public decimal? StaticLoadRating { get; init; }
         public decimal? LimitingSpeed { get; init; }
+        public string? OriginCountry { get; init; }
+        public ProductCategory? Category { get; init; }
     }
 }

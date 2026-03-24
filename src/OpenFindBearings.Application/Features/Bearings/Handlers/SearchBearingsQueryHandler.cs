@@ -36,6 +36,8 @@ namespace OpenFindBearings.Application.Features.Bearings.Handlers
                 MaxOuterDiameter = request.MaxOuterDiameter,
                 MinWidth = request.MinWidth,
                 MaxWidth = request.MaxWidth,
+                OriginCountry = request.OriginCountry,
+                Category = request.Category,
                 BrandId = request.BrandId,
                 BearingTypeId = request.BearingTypeId,
                 SortBy = request.SortBy,
@@ -64,7 +66,9 @@ namespace OpenFindBearings.Application.Features.Bearings.Handlers
                 BearingTypeId = b.BearingTypeId,
                 BearingTypeName = b.BearingType?.Name ?? string.Empty,
                 ViewCount = b.ViewCount,
-                FavoriteCount = b.FavoriteCount
+                FavoriteCount = b.FavoriteCount,
+                OriginCountry = b.OriginCountry,
+                Category = b.Category.ToString()
             }).ToList();
 
             return new PagedResult<BearingDto>

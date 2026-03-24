@@ -19,9 +19,9 @@ namespace OpenFindBearings.Application.Features.Bearings.DTOs
         public decimal? LimitingSpeed { get; set; }
 
         // 在售商家列表
-        public List<MerchantBearingDto> Merchants { get; set; } = new();
+        public List<MerchantBearingDto> Merchants { get; set; } = [];
 
         // 替代品列表
-        public List<BearingDto> Interchanges { get; set; } = new();
+        public List<BearingDto> Interchanges { get; set; } = [];
     }
 }

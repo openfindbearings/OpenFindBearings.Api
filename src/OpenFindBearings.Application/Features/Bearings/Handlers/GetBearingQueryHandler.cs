@@ -67,7 +67,7 @@ namespace OpenFindBearings.Application.Features.Bearings.Handlers
                     IsFeatured = mb.IsFeatured,
                     ViewCount = mb.ViewCount,
                     CreatedAt = mb.CreatedAt,
-                    UpdatedAt = mb.UpdatedAt,
+                    UpdatedAt = mb.UpdatedAt
                 })
                 .OrderByDescending(mb => mb.IsFeatured)
                 .ThenBy(mb => mb.NumericPrice)
@@ -117,7 +117,9 @@ namespace OpenFindBearings.Application.Features.Bearings.Handlers
                 LimitingSpeed = bearing.Performance?.LimitingSpeed,
                 ViewCount = bearing.ViewCount,
                 Merchants = onSaleMerchants,
-                Interchanges = interchangeBearings
+                Interchanges = interchangeBearings,
+                OriginCountry = bearing.OriginCountry,
+                Category = bearing.Category.ToString()
             };
         }
     }

@@ -49,7 +49,9 @@ namespace OpenFindBearings.Application.Features.Bearings.Handlers
                         BrandName = bearing.Brand?.Name ?? string.Empty,
                         BearingTypeId = bearing.BearingTypeId,
                         BearingTypeName = bearing.BearingType?.Name ?? string.Empty,
-                        ViewCount = bearing.ViewCount
+                        ViewCount = bearing.ViewCount,
+                        OriginCountry = bearing.OriginCountry,
+                        Category = bearing.Category.ToString()
                     });
                 }
             }

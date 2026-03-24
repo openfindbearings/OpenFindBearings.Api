@@ -1,4 +1,6 @@
-﻿namespace OpenFindBearings.Application.Features.Sync.DTOs
+﻿using OpenFindBearings.Domain.Enums;
+
+namespace OpenFindBearings.Application.Features.Sync.DTOs
 {
     /// <summary>
     /// 同步轴承DTO（用于爬虫数据导入）
@@ -84,5 +86,17 @@
         /// 轴承类型代码（如 DGBB、ACBB）
         /// </summary>
         public string BearingTypeCode { get; set; } = string.Empty;
+
+        /// <summary>
+        /// 产地（原产国/地区）
+        /// 如：瑞典、德国、日本、中国
+        /// </summary>
+        public string? OriginCountry { get; set; }
+
+        /// <summary>
+        /// 产品类别
+        /// 1: 进口, 2: 国产, 3: 合资, 4: 其他
+        /// </summary>
+        public ProductCategory Category { get; set; } = ProductCategory.Domestic;
     }
 }

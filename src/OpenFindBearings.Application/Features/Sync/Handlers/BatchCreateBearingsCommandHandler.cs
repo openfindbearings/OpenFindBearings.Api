@@ -94,7 +94,9 @@ namespace OpenFindBearings.Application.Features.Sync.Handlers
                             StaticLoadRating = bearingDto.StaticLoadRating,
                             LimitingSpeed = bearingDto.LimitingSpeed,
                             BearingTypeId = bearingType.Id,
-                            BrandId = brand.Id
+                            BrandId = brand.Id,
+                            OriginCountry = bearingDto.OriginCountry,
+                            Category = bearingDto.Category
                         };
 
                         var id = await _mediator.Send(createCommand, cancellationToken);
@@ -116,7 +118,9 @@ namespace OpenFindBearings.Application.Features.Sync.Handlers
                             CageType = bearingDto.CageType,
                             DynamicLoadRating = bearingDto.DynamicLoadRating,
                             StaticLoadRating = bearingDto.StaticLoadRating,
-                            LimitingSpeed = bearingDto.LimitingSpeed
+                            LimitingSpeed = bearingDto.LimitingSpeed,
+                            OriginCountry = bearingDto.OriginCountry,
+                            Category = bearingDto.Category
                         };
                         await _mediator.Send(updateCommand, cancellationToken);
                         result.AddSuccess(bearingDto.PartNumber, "updated", existingBearing.Id);

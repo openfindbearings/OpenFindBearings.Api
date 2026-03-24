@@ -1,8 +1,5 @@
 ﻿using MediatR;
 using OpenFindBearings.Application.Features.BearingTypes.DTOs;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace OpenFindBearings.Application.Features.BearingTypes.Queries
 {

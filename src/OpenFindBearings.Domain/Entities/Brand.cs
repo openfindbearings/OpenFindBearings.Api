@@ -83,5 +83,14 @@ namespace OpenFindBearings.Domain.Entities
             Level = newLevel;
             UpdateTimestamp();
         }
+
+        /// <summary>
+        /// 更新品牌名称
+        /// </summary>
+        public void UpdateName(string name)
+        {
+            Name = name;
+            UpdateTimestamp();
+        }
     }
 }

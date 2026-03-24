@@ -50,5 +50,15 @@ namespace OpenFindBearings.Domain.Entities
             Name = name;
             Description = description;
         }
+
+        /// <summary>
+        /// 更新名称和描述
+        /// </summary>
+        public void Update(string? name, string? description)
+        {
+            if (!string.IsNullOrWhiteSpace(name)) Name = name;
+            if (description != null) Description = description;
+            UpdateTimestamp();
+        }
     }
 }
