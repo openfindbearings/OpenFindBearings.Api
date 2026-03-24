@@ -876,7 +876,7 @@ namespace OpenFindBearings.Api.Endpoints
                 await mediator.Send(command);
                 return ApiResponseHelper.Ok("角色分配成功", httpContext);
             })
-            .WithName("AssignRoleToUser")
+            .WithName("AdminAssignRoleToUser") 
             .WithSummary("分配角色")
             .WithDescription("分配角色给用户")
             .RequireAuthorization("Admin");
@@ -898,7 +898,7 @@ namespace OpenFindBearings.Api.Endpoints
                 await mediator.Send(command);
                 return ApiResponseHelper.Ok("角色移除成功", httpContext);
             })
-            .WithName("RemoveRoleFromUser")
+            .WithName("AdminRemoveRoleFromUser") 
             .WithSummary("移除角色")
             .WithDescription("从用户移除角色")
             .RequireAuthorization("Admin");
@@ -915,7 +915,7 @@ namespace OpenFindBearings.Api.Endpoints
                 var result = await mediator.Send(query);
                 return ApiResponseHelper.Ok(result, httpContext: httpContext);
             })
-            .WithName("GetUserRoles")
+            .WithName("AdminGetUserRoles") 
             .WithSummary("获取用户角色")
             .WithDescription("获取用户的角色列表")
             .RequireAuthorization("Admin");
@@ -932,7 +932,7 @@ namespace OpenFindBearings.Api.Endpoints
                 var result = await mediator.Send(query);
                 return ApiResponseHelper.Ok(result, httpContext: httpContext);
             })
-            .WithName("GetUserPermissions")
+            .WithName("AdminGetUserPermissions") 
             .WithSummary("获取用户权限")
             .WithDescription("获取用户的权限列表")
             .RequireAuthorization("Admin");

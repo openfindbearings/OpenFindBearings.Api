@@ -4,6 +4,7 @@ using OpenFindBearings.Application.Common.Constants;
 using OpenFindBearings.Application.Common.Interfaces;
 using OpenFindBearings.Application.Features.Bearings.DTOs;
 using OpenFindBearings.Application.Features.Bearings.Queries;
+using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Interfaces;
 
 namespace OpenFindBearings.Application.Features.Bearings.Handlers
@@ -58,7 +59,9 @@ namespace OpenFindBearings.Application.Features.Bearings.Handlers
                 BearingTypeId = b.BearingTypeId,
                 BearingTypeName = b.BearingType?.Name ?? string.Empty,
                 ViewCount = b.ViewCount,
-                FavoriteCount = b.FavoriteCount
+                FavoriteCount = b.FavoriteCount,
+                OriginCountry = b.OriginCountry,
+                Category = b.Category.ToString()
             }).ToList();
 
             // 存入缓存（1小时过期）

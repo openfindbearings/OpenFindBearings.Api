@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using OpenFindBearings.Domain.Entities;
+using OpenFindBearings.Domain.Enums;
 
 namespace OpenFindBearings.Infrastructure.Persistence.Configurations
 {
@@ -78,6 +79,17 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
 
             builder.Property(b => b.CageType)
                 .HasMaxLength(50);
+
+            // 产地配置
+            builder.Property(b => b.OriginCountry)
+                .HasMaxLength(50)
+                .HasColumnName("OriginCountry");
+
+            // 类别配置
+            builder.Property(b => b.Category)
+                .HasConversion<int>()
+                .HasDefaultValue(ProductCategory.Domestic)
+                .HasColumnName("Category");
 
             builder.Property(b => b.ViewCount)
                 .HasDefaultValue(0);

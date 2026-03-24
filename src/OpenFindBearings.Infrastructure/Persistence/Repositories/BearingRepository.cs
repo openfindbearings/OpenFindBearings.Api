@@ -96,6 +96,18 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                 query = query.Where(b => b.BearingTypeId == searchParams.BearingTypeId.Value);
             }
 
+            // 产地筛选
+            if (!string.IsNullOrWhiteSpace(searchParams.OriginCountry))
+            {
+                query = query.Where(b => b.OriginCountry == searchParams.OriginCountry);
+            }
+
+            // 类别筛选
+            if (searchParams.Category.HasValue)
+            {
+                query = query.Where(b => b.Category == searchParams.Category.Value);
+            }
+
             // 排序
             query = (searchParams.SortBy?.ToLower()) switch
             {
@@ -136,6 +148,14 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                 query = query.Where(b =>
                     b.PartNumber.Contains(searchParams.Keyword) ||
                     b.Name.Contains(searchParams.Keyword));
+
+            // 产地筛选
+            if (!string.IsNullOrWhiteSpace(searchParams.OriginCountry))
+                query = query.Where(b => b.OriginCountry == searchParams.OriginCountry);
+
+            // 类别筛选
+            if (searchParams.Category.HasValue)
+                query = query.Where(b => b.Category == searchParams.Category.Value);
 
             if (searchParams.MinInnerDiameter.HasValue)
                 query = query.Where(b => b.Dimensions.InnerDiameter >= searchParams.MinInnerDiameter.Value);
@@ -191,6 +211,33 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                 .OrderByDescending(b => b.ViewCount)  // 按浏览次数排序
                 .Take(count)
                 .ToListAsync(cancellationToken);
+        }
+
+        public async Task<Dictionary<Guid, int>> GetBearingCountByTypeAsync(CancellationToken cancellationToken = default)
+        {
+            return await _context.Bearings
+                .Where(b => b.IsActive)
+                .GroupBy(b => b.BearingTypeId)
+                .Select(g => new { BearingTypeId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.BearingTypeId, x => x.Count, cancellationToken);
+        }
+
+        public async Task<IEnumerable<Bearing>> GetAllAsync(CancellationToken cancellationToken = default)
+        {
+            return await _context.Bearings
+                .Include(b => b.BearingType)
+                .Include(b => b.Brand)
+                .Where(b => b.IsActive)
+                .ToListAsync(cancellationToken);
+        }
+
+        public async Task<Dictionary<Guid, int>> GetBearingCountByBrandAsync(CancellationToken cancellationToken = default)
+        {
+            return await _context.Bearings
+                .Where(b => b.IsActive)
+                .GroupBy(b => b.BrandId)
+                .Select(g => new { BrandId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.BrandId, x => x.Count, cancellationToken);
         }
     }
 }

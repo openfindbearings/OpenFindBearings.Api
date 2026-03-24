@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using OpenFindBearings.Domain.Enums;
 
 namespace OpenFindBearings.Application.Features.Bearings.Commands
 {
@@ -86,5 +87,15 @@ namespace OpenFindBearings.Application.Features.Bearings.Commands
         /// 品牌ID
         /// </summary>
         public Guid BrandId { get; init; }
+
+        /// <summary>
+        /// 产地（原产国/地区）
+        /// </summary>
+        public string? OriginCountry { get; init; }
+
+        /// <summary>
+        /// 产品类别
+        /// </summary>
+        public ProductCategory Category { get; init; } = ProductCategory.Domestic;
     }
 }

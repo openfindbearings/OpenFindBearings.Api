@@ -19,6 +19,13 @@ namespace OpenFindBearings.Application.Features.Bearings.Validators
                     .MaximumLength(200).WithMessage("名称长度不能超过200个字符");
             });
 
+            // 添加产地验证
+            When(x => !string.IsNullOrWhiteSpace(x.OriginCountry), () =>
+            {
+                RuleFor(x => x.OriginCountry)
+                    .MaximumLength(50).WithMessage("产地长度不能超过50个字符");
+            });
+
             When(x => x.Weight.HasValue, () =>
             {
                 RuleFor(x => x.Weight!.Value)

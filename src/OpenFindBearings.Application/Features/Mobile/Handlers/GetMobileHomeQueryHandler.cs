@@ -76,7 +76,9 @@ namespace OpenFindBearings.Application.Features.Mobile.Handlers
                     OuterDiameter = b.Dimensions.OuterDiameter,
                     Width = b.Dimensions.Width,
                     ThumbnailUrl = GetBearingThumbnailUrl(b.Id, b.Brand?.Code),
-                    MinPrice = null // 可以后续计算
+                    MinPrice = null, // 可以后续计算
+                    OriginCountry = b.OriginCountry,
+                    Category = b.Category.ToString()
                 }).ToList(),
 
                 // 推荐商家

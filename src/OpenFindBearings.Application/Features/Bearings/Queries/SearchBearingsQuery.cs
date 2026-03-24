@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using OpenFindBearings.Application.Features.Bearings.DTOs;
 using OpenFindBearings.Domain.Common.Models;
+using OpenFindBearings.Domain.Enums;
 
 namespace OpenFindBearings.Application.Features.Bearings.Queries
 {
@@ -48,6 +49,16 @@ namespace OpenFindBearings.Application.Features.Bearings.Queries
         /// 最大宽度
         /// </summary>
         public decimal? MaxWidth { get; set; }
+
+        /// <summary>
+        /// 产地筛选
+        /// </summary>
+        public string? OriginCountry { get; set; }
+
+        /// <summary>
+        /// 产品类别筛选
+        /// </summary>
+        public ProductCategory? Category { get; set; }
 
         /// <summary>
         /// 品牌ID

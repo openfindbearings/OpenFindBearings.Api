@@ -54,7 +54,9 @@ namespace OpenFindBearings.Application.Features.Bearings.Handlers
                 DynamicLoadRating = bearing.Performance?.DynamicLoadRating,
                 StaticLoadRating = bearing.Performance?.StaticLoadRating,
                 LimitingSpeed = bearing.Performance?.LimitingSpeed,
-                ViewCount = bearing.ViewCount
+                ViewCount = bearing.ViewCount,
+                OriginCountry = bearing.OriginCountry,
+                Category = bearing.Category.ToString()
             };
         }
     }

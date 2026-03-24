@@ -65,7 +65,9 @@ namespace OpenFindBearings.Application.Features.Mobile.Handlers
                     OuterDiameter = bearing.Dimensions.OuterDiameter,
                     Width = bearing.Dimensions.Width,
                     ThumbnailUrl = $"/images/bearings/{bearing.Id}.jpg",
-                    MinPrice = minPrice
+                    MinPrice = minPrice,
+                    OriginCountry = bearing.OriginCountry,
+                    Category = bearing.Category.ToString()
                 });
             }
 
@@ -88,7 +90,7 @@ namespace OpenFindBearings.Application.Features.Mobile.Handlers
             // 只考虑在售且有数值化价格的商品
             var prices = merchantBearings
                 .Where(mb => mb.IsOnSale && mb.NumericPrice.HasValue)
-                .Select(mb => mb.NumericPrice.Value);
+                .Select(mb => mb.NumericPrice.GetValueOrDefault());
 
             return prices.Any() ? prices.Min() : null;
         }

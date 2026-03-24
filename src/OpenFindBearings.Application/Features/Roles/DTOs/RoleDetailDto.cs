@@ -11,6 +11,6 @@ namespace OpenFindBearings.Application.Features.Roles.DTOs
         /// <summary>
         /// 拥有的权限列表（完整信息）
         /// </summary>
-        public List<PermissionDto> Permissions { get; set; } = new();
+        public new List<PermissionDto> Permissions { get; set; } = [];
     }
 }

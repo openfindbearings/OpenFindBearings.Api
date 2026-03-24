@@ -93,7 +93,7 @@ namespace OpenFindBearings.Api.Endpoints
 
                 return ApiResponseHelper.Ok(result, httpContext: httpContext);
             })
-            .WithName("GetUserPermissions")
+            .WithName("GetMyPermissions") 
             .WithSummary("获取用户权限")
             .WithDescription("获取当前用户拥有的所有权限列表");
 
@@ -116,7 +116,7 @@ namespace OpenFindBearings.Api.Endpoints
 
                 return ApiResponseHelper.Ok(result, httpContext: httpContext);
             })
-            .WithName("GetUserRoles")
+            .WithName("GetMyRoles") 
             .WithSummary("获取用户角色")
             .WithDescription("获取当前用户拥有的所有角色列表");
 

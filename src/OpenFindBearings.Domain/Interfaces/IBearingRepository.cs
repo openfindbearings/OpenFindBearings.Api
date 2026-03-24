@@ -51,5 +51,20 @@ namespace OpenFindBearings.Domain.Interfaces
         /// 获取热门轴承
         /// </summary>
         Task<IEnumerable<Bearing>> GetHotBearingsAsync(int count, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 获取所有轴承（用于统计）
+        /// </summary>
+        Task<IEnumerable<Bearing>> GetAllAsync(CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 获取各轴承类型的轴承数量统计
+        /// </summary>
+        Task<Dictionary<Guid, int>> GetBearingCountByTypeAsync(CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 获取各品牌的轴承数量统计
+        /// </summary>
+        Task<Dictionary<Guid, int>> GetBearingCountByBrandAsync(CancellationToken cancellationToken = default);
     }
 }

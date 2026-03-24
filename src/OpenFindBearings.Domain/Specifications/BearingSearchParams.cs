@@ -1,4 +1,6 @@
-﻿namespace OpenFindBearings.Domain.Specifications
+﻿using OpenFindBearings.Domain.Enums;
+
+namespace OpenFindBearings.Domain.Specifications
 {
     public class BearingSearchParams
     {
@@ -10,19 +12,23 @@
         public decimal? MinInnerDiameter { get; set; }
         public decimal? MaxInnerDiameter { get; set; }
 
-        // 新增：外径范围
+        // 外径范围
         public decimal? MinOuterDiameter { get; set; }
         public decimal? MaxOuterDiameter { get; set; }
 
-        // 新增：宽度范围
+        // 宽度范围
         public decimal? MinWidth { get; set; }
         public decimal? MaxWidth { get; set; }
 
-        // 新增：品牌和类型筛选
+        // 产地和类别筛选
+        public string? OriginCountry { get; set; }
+        public ProductCategory? Category { get; set; }
+
+        // 品牌和类型筛选
         public Guid? BrandId { get; set; }
         public Guid? BearingTypeId { get; set; }
 
-        // 新增：排序
+        // 排序
         public string? SortBy { get; set; } // "partNumber", "innerDiameter", "outerDiameter", "width"
         public string? SortOrder { get; set; } = "asc"; // "asc" 或 "desc"
 

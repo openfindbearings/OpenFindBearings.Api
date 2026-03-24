@@ -23,7 +23,7 @@
         /// <summary>
         /// 各项目结果列表
         /// </summary>
-        public List<BatchItemResult> Items { get; set; } = new();
+        public List<BatchItemResult> Items { get; set; } = [];
 
         /// <summary>
         /// 添加成功项
