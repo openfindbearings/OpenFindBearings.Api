@@ -29,23 +29,16 @@ namespace OpenFindBearings.Api.Extensions
             services.AddScoped<ICurrentUserService, CurrentUserService>();
             services.AddScoped<IPermissionService, PermissionService>();
             // ============ 认证服务客户端 ============
-            // 从配置获取认证服务地址
-            var authBaseUrl = configuration["Authentication:Authority"] ?? "https://localhost:5001";
-            var webAppUrl = configuration["Authentication:WebAppUrl"] ?? "https://localhost:7000";
+            //// 从配置获取认证服务地址
+            //var authBaseUrl = configuration["Authentication:Authority"] ?? "https://localhost:7201";
+            //var webAppUrl = configuration["Authentication:WebAppUrl"] ?? "https://localhost:7201/api";
 
             // 注册认证服务 HTTP 客户端
             services.AddHttpClient<IIdentityService, IdentityService>(client =>
             {
-                client.BaseAddress = new Uri(authBaseUrl);
+                client.BaseAddress = new Uri(configuration["Authentication:Authority"] ?? "https://localhost:7201");
                 client.DefaultRequestHeaders.Add("Accept", "application/json");
                 client.Timeout = TimeSpan.FromSeconds(30);
-            });
-
-            // 配置认证服务选项（供 IdentityService 使用）
-            services.Configure<IdentityServiceOptions>(options =>
-            {
-                options.BaseUrl = authBaseUrl;
-                options.WebAppUrl = webAppUrl;
             });
 
             // ============ 邀请仓储 ============
@@ -133,7 +126,7 @@ namespace OpenFindBearings.Api.Extensions
             {
                 options.Authority = configuration["Authentication:Authority"];
                 options.Audience = configuration["Authentication:Audience"];
-                options.RequireHttpsMetadata = false;
+                options.RequireHttpsMetadata = configuration.GetValue<bool>("Authentication:RequireHttpsMetadata", false);
 
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
@@ -178,14 +171,9 @@ namespace OpenFindBearings.Api.Extensions
                 options.AddPolicy("Merchant", policy =>
                     policy.RequireAuthenticatedUser());
 
-                // 同步客户端策略 - 基于 client_id
+                // 同步客户端策略
                 options.AddPolicy("SyncClient", policy =>
-                    policy.RequireAssertion(context =>
-                    {
-                        var clientId = context.User.FindFirst("client_id")?.Value;
-                        return clientId == "sync-client" ||
-                               context.User.HasClaim(c => c.Type == "role" && c.Value == "SyncClient");
-                    }));
+                    policy.RequireClaim("scope", "api:sync"));
 
                 // 登录用户策略
                 options.AddPolicy("Authenticated", policy =>
