@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OpenFindBearings.Application.Common.Interfaces;
 using OpenFindBearings.Application.Common.Models;
@@ -16,19 +17,19 @@ namespace OpenFindBearings.Infrastructure.Services
     {
         private readonly HttpClient _httpClient;
         private readonly IStaffInvitationRepository _invitationRepository;
+        private readonly IConfiguration _configuration;
         private readonly ILogger<IdentityService> _logger;
-        private readonly IdentityServiceOptions _options;
         private readonly JsonSerializerOptions _jsonOptions;
 
         public IdentityService(
             HttpClient httpClient,
             IStaffInvitationRepository invitationRepository,
-            IOptions<IdentityServiceOptions> options,
+            IConfiguration configuration,
             ILogger<IdentityService> logger)
         {
             _httpClient = httpClient;
             _invitationRepository = invitationRepository;
-            _options = options.Value;
+            _configuration = configuration;
             _logger = logger;
 
             _jsonOptions = new JsonSerializerOptions
@@ -45,7 +46,7 @@ namespace OpenFindBearings.Infrastructure.Services
             try
             {
                 var response = await _httpClient.GetAsync(
-                    $"{_options.BaseUrl}/api/users/by-email?email={Uri.EscapeDataString(email)}",
+                    $"{ _configuration["Authentication:Authority"] ?? "https://localhost:7201" }/api/users/by-email?email={Uri.EscapeDataString(email)}",
                     cancellationToken);
 
                 if (!response.IsSuccessStatusCode) return null;
@@ -65,7 +66,7 @@ namespace OpenFindBearings.Infrastructure.Services
             try
             {
                 var response = await _httpClient.GetAsync(
-                    $"{_options.BaseUrl}/api/users/by-phone?phone={Uri.EscapeDataString(phone)}",
+                    $"{_configuration["Authentication:Authority"] ?? "https://localhost:7201"}/api/users/by-phone?phone={Uri.EscapeDataString(phone)}",
                     cancellationToken);
 
                 if (!response.IsSuccessStatusCode) return null;
@@ -85,7 +86,7 @@ namespace OpenFindBearings.Infrastructure.Services
             try
             {
                 var response = await _httpClient.GetAsync(
-                    $"{_options.BaseUrl}/api/users/{sub}",
+                    $"{_configuration["Authentication:Authority"] ?? "https://localhost:7201"}/api/users/{sub}",
                     cancellationToken);
 
                 if (!response.IsSuccessStatusCode) return null;
@@ -127,7 +128,7 @@ namespace OpenFindBearings.Infrastructure.Services
             string invitationCode,
             CancellationToken cancellationToken = default)
         {
-            var inviteUrl = $"{_options.WebAppUrl}/register?code={invitationCode}&type=staff";
+            var inviteUrl = $"{_configuration["Authentication:Authority"] ?? "https://localhost:7201"}/register?code={invitationCode}&type=staff";
             _logger.LogInformation("发送邮件邀请: {Email}, 邀请链接: {InviteUrl}", email, inviteUrl);
             await Task.CompletedTask;
         }
@@ -138,7 +139,7 @@ namespace OpenFindBearings.Infrastructure.Services
             string invitationCode,
             CancellationToken cancellationToken = default)
         {
-            var inviteUrl = $"{_options.WebAppUrl}/register?code={invitationCode}&type=staff";
+            var inviteUrl = $"{_configuration["Authentication:Authority"] ?? "https://localhost:7201"}/register?code={invitationCode}&type=staff";
             _logger.LogInformation("发送短信邀请: {Phone}, 邀请链接: {InviteUrl}", phone, inviteUrl);
             await Task.CompletedTask;
         }
@@ -177,7 +178,7 @@ namespace OpenFindBearings.Infrastructure.Services
                     "application/json");
 
                 var response = await _httpClient.PostAsync(
-                    $"{_options.BaseUrl}/api/users/register",
+                    $"{_configuration["Authentication:Authority"] ?? "https://localhost:7201"}/api/users/register",
                     content,
                     cancellationToken);
 
@@ -210,7 +211,7 @@ namespace OpenFindBearings.Infrastructure.Services
                     "application/json");
 
                 var response = await _httpClient.PostAsync(
-                    $"{_options.BaseUrl}/api/sms/send",
+                    $"{_configuration["Authentication:Authority"] ?? "https://localhost:7201"}/api/sms/send",
                     content,
                     cancellationToken);
 
@@ -234,7 +235,7 @@ namespace OpenFindBearings.Infrastructure.Services
                     "application/json");
 
                 var response = await _httpClient.PostAsync(
-                    $"{_options.BaseUrl}/api/users/forgot-password",
+                    $"{_configuration["Authentication:Authority"] ?? "https://localhost:7201"}/api/users/forgot-password",
                     content,
                     cancellationToken);
 
@@ -258,7 +259,7 @@ namespace OpenFindBearings.Infrastructure.Services
                     "application/json");
 
                 var response = await _httpClient.PostAsync(
-                    $"{_options.BaseUrl}/api/users/reset-password",
+                    $"{_configuration["Authentication:Authority"] ?? "https://localhost:7201"}/api/users/reset-password",
                     content,
                     cancellationToken);
 
@@ -282,7 +283,7 @@ namespace OpenFindBearings.Infrastructure.Services
                     "application/json");
 
                 var response = await _httpClient.PutAsync(
-                    $"{_options.BaseUrl}/api/users/{authUserId}/password",
+                    $"{_configuration["Authentication:Authority"] ?? "https://localhost:7201"}/api/users/{authUserId}/password",
                     content,
                     cancellationToken);
 
@@ -306,7 +307,7 @@ namespace OpenFindBearings.Infrastructure.Services
                     "application/json");
 
                 var response = await _httpClient.PutAsync(
-                    $"{_options.BaseUrl}/api/users/{authUserId}/phone",
+                    $"{_configuration["Authentication:Authority"] ?? "https://localhost:7201"}/api/users/{authUserId}/phone",
                     content,
                     cancellationToken);
 
@@ -330,7 +331,7 @@ namespace OpenFindBearings.Infrastructure.Services
                     "application/json");
 
                 var response = await _httpClient.PutAsync(
-                    $"{_options.BaseUrl}/api/users/{authUserId}/email",
+                    $"{_configuration["Authentication:Authority"] ?? "https://localhost:7201"}/api/users/{authUserId}/email",
                     content,
                     cancellationToken);
 
@@ -344,12 +345,6 @@ namespace OpenFindBearings.Infrastructure.Services
         }
 
         #endregion
-    }
-
-    public class IdentityServiceOptions
-    {
-        public string BaseUrl { get; set; } = string.Empty;
-        public string WebAppUrl { get; set; } = string.Empty;
     }
 
     internal class RegisterResponse

@@ -113,20 +113,13 @@ namespace OpenFindBearings.Infrastructure
             services.AddSingleton<ICacheService, CacheService>();
 
             // ============ 4. 注册认证服务客户端 ============
-            var identityBaseUrl = configuration["Authentication:Authority"] ?? "https://localhost:5001";
-            var webAppUrl = configuration["Authentication:WebAppUrl"] ?? "https://localhost:7000";
+            var identityBaseUrl = configuration["Authentication:Authority"] ?? "https://localhost:7201";
 
             services.AddHttpClient<IIdentityService, IdentityService>(client =>
             {
                 client.BaseAddress = new Uri(identityBaseUrl);
                 client.DefaultRequestHeaders.Add("Accept", "application/json");
                 client.Timeout = TimeSpan.FromSeconds(30);
-            });
-
-            services.Configure<IdentityServiceOptions>(options =>
-            {
-                options.BaseUrl = identityBaseUrl;
-                options.WebAppUrl = webAppUrl;
             });
 
             // ============ 5. 注册其他基础设施服务 ============
