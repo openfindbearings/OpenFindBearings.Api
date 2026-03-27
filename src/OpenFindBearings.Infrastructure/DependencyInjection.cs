@@ -21,10 +21,22 @@ namespace OpenFindBearings.Infrastructure
             IConfiguration configuration)
         {
             // ============ 1. 添加DbContext ============
+            var envName = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+            var isDev = string.IsNullOrWhiteSpace(envName) || envName == "Development"; // 默认视为开发环境
+
             services.AddDbContext<AppDbContext>(options =>
-                options.UseSqlite(
-                    configuration.GetConnectionString("DefaultConnection"),
-                    b => b.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName)));
+            {
+                if (isDev)
+                {
+                    options.UseSqlite(configuration.GetConnectionString("DefaultConnection"), b => b.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName));
+                }
+                else
+                {
+                    // 生产环境：PostgreSQL
+                    options.UseNpgsql(configuration.GetConnectionString("DefaultConnection"), b => b.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName));
+                }
+            });
+            
 
             // ============ 2. 注册所有仓储 ============
 
