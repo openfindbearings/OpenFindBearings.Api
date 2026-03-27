@@ -21,6 +21,9 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       docker_tag: ${{ steps.set_tag.outputs.docker_tag }}
+      # 1. 新增输出：动态生成的镜像名
+      image_name: ${{ steps.set_image_name.outputs.image_name }}
+      
     steps:
       - name: Checkout code
         uses: actions/checkout@v6.0.1
@@ -34,19 +37,24 @@ jobs:
             release)
               TAG="${{ github.event.release.tag_name }}"
               ;;
-            pull_request)
-              TAG="latest"
-              ;;
             workflow_dispatch)
               TAG="${{ github.event.inputs.tag }}"
               ;;
             *)
-              echo "Unsupported event: ${{ github.event_name }}"
-              exit 1
+              TAG="latest"
               ;;
           esac
           echo "docker_tag=$TAG" >> $GITHUB_OUTPUT
-          echo "Will build and push tag: $TAG"
+
+      - name: Determine Image Name (Replace . with -)
+        id: set_image_name
+        run: |
+          # 获取仓库名 
+          REPO_NAME="${{ github.event.repository.name }}"
+          # 将点号 . 替换为连接符 - 
+          IMAGE_NAME=$(echo "$REPO_NAME" | tr '.' '-')
+          echo "image_name=$IMAGE_NAME" >> $GITHUB_OUTPUT
+          echo "Using image name: $IMAGE_NAME"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3.7.0
@@ -57,7 +65,8 @@ jobs:
       - name: Build and export image as tar
         uses: docker/build-push-action@v6.18.0
         with:
-          context: ./src/Web/abcsxl
+          context: .
+          file: ./src/OpenFindBearings.Api/Dockerfile
           tags: temp-image:${{ steps.set_tag.outputs.docker_tag }}
           outputs: type=docker,dest=/tmp/image.tar
 
@@ -85,7 +94,8 @@ jobs:
       - name: Push to Docker Hub
         run: |
           TAG=${{ needs.build.outputs.docker_tag }}
-          IMAGE=${{ secrets.DOCKERHUB_USERNAME }}/abcsxl:$TAG
+          # 2. 使用动态名称
+          IMAGE=${{ secrets.DOCKERHUB_USERNAME }}/${{ needs.build.outputs.image_name }}:$TAG
           docker tag temp-image:$TAG $IMAGE
           docker push $IMAGE
 
@@ -108,10 +118,9 @@ jobs:
       - name: Push to Quay.io
         run: |
           TAG=${{ needs.build.outputs.docker_tag }}
-          IMAGE=quay.io/${{ secrets.QUAY_ROBOT_USERNAME }}/../abcsxl:$TAG
-          # 提取组织名（去掉 +robot 部分）
+          # 2. 使用动态名称
           ORG=$(echo "${{ secrets.QUAY_ROBOT_USERNAME }}" | cut -d'+' -f1)
-          IMAGE=quay.io/$ORG/abcsxl:$TAG
+          IMAGE=quay.io/$ORG/${{ needs.build.outputs.image_name }}:$TAG
           docker tag temp-image:$TAG $IMAGE
           docker push $IMAGE
 
@@ -134,6 +143,7 @@ jobs:
       - name: Push to GHCR
         run: |
           TAG=${{ needs.build.outputs.docker_tag }}
-          IMAGE=ghcr.io/${{ github.repository_owner }}/abcsxl:$TAG
+          # 2. 使用动态名称
+          IMAGE=ghcr.io/${{ github.repository_owner }}/${{ needs.build.outputs.image_name }}:$TAG
           docker tag temp-image:$TAG $IMAGE
           docker push $IMAGE
