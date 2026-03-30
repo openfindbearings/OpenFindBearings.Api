@@ -11,7 +11,9 @@
     "https": {
       "commandName": "Project",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "POD_NETWORK_CIDR": "",
+        "SERVICE_NETWORK_CIDR": ""
       },
       "dotnetRunMessages": true,
       "applicationUrl": "https://localhost:7183;http://localhost:5015"

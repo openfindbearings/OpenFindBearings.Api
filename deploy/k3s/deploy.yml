@@ -1,0 +1,122 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: openfindbearings
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: openfindbearings-api-config
+  namespace: openfindbearings
+data:
+  Authentication__Authority: "https://auth.abcsxl.com"
+  Authentication__Audience: "openfindbearings-api"
+  Authentication__RequireHttpsMetadata: "true"
+  CacheSettings__EnableRedis: "false"
+  CacheSettings__DefaultExpirationMinutes: "60"
+  CacheSettings__MemoryCacheSizeLimit: "200"
+  CacheSettings__EnableStatistics: "true"
+  Logging__LogLevel__Default: "Information"
+  Logging__LogLevel__Microsoft_AspNetCore: "Information"
+  Logging__LogLevel__Microsoft_EntityFrameworkCore: "Information"
+  AllowedHosts: "*"
+  AllowedOrigins__0: "https://www.515813.xyz"
+  AllowedOrigins__1: "https://515813.xyz"
+  AllowedOrigins__2: "https://api.515813.xyz"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openfindbearings-api-deployment
+  namespace: openfindbearings
+  labels:
+    app: openfindbearings-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: openfindbearings-api
+  template:
+    metadata:
+      labels:
+        app: openfindbearings-api
+    spec:
+      containers:
+      - name: openfindbearings-api
+        image: ghcr.io/openfindbearings/openfindbearings-api:v1.0.0
+        ports:
+        - containerPort: 80
+
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Production"
+        - name: ASPNETCORE_URLS
+          value: "http://+:80"
+        - name: POD_NETWORK_CIDR
+          value: "10.42.0.0/16"  # 根据实际集群配置
+        - name: SERVICE_NETWORK_CIDR
+          value: "10.43.0.0/16"
+        envFrom:
+        - secretRef:
+            name: openfindbearings-api-secrets
+        - configMapRef:
+            name: openfindbearings-api-config
+        
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 10
+
+---
+apiVersion: v1
+kind: Service
+metadata:  
+  name: openfindbearings-api-service
+  namespace: openfindbearings
+spec:
+  selector:
+    app: openfindbearings-api
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: openfindbearings-api-ingress
+  namespace: openfindbearings
+  labels:
+    name: openfindbearings-api-ingress
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    acme.cert-manager.io/http01-edit-in-place: "true" 
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+      - api.515813.xyz
+    secretName: api-515813-xyz-tls
+
+  rules:
+  - host: "api.515813.xyz"
+    http:
+      paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: openfindbearings-api-service
+              port:
+                number: 80
