@@ -419,3 +419,4 @@ FodyWeavers.xsd
 /src/OpenFindBearings.Api/OpenFindBearings.db
 /src/OpenFindBearings.Api/OpenFindBearings.db-shm
 /src/OpenFindBearings.Api/OpenFindBearings.db-wal
+deploy/k3s/secret.yml

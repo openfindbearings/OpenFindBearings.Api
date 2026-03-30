@@ -10,36 +10,47 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
         public static async Task SeedAsync(AppDbContext context)
         {
             // 检查是否已有数据
-            if (await context.Brands.AnyAsync())
+            if (await context.SystemConfigs.AnyAsync())
                 return;
+
+            var envName = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+            var isDev = string.IsNullOrWhiteSpace(envName) || envName == "Development"; // 默认视为开发环境
 
             // ============ 1. 基础字典数据 ============
 
-            // 添加品牌
-            var brands = new List<Brand>
+            var brands = new List<Brand>();
+            if (isDev)
             {
-                new("SKF", "SKF", BrandLevel.InternationalPremium),
-                new("FAG", "FAG", BrandLevel.InternationalPremium),
-                new("NSK", "NSK", BrandLevel.InternationalPremium),
-                new("HRB", "HRB", BrandLevel.DomesticPremium),
-                new("ZWZ", "ZWZ", BrandLevel.DomesticPremium),
-                new("LYC", "LYC", BrandLevel.DomesticPremium)
-            };
+                // 添加品牌
+                brands.AddRange(
+                [
+                    new("SKF", "SKF", BrandLevel.InternationalPremium),
+                    new("FAG", "FAG", BrandLevel.InternationalPremium),
+                    new("NSK", "NSK", BrandLevel.InternationalPremium),
+                    new("HRB", "HRB", BrandLevel.DomesticPremium),
+                    new("ZWZ", "ZWZ", BrandLevel.DomesticPremium),
+                    new("LYC", "LYC", BrandLevel.DomesticPremium)
+                ]);
 
-            await context.Brands.AddRangeAsync(brands);
-            await context.SaveChangesAsync();
+                await context.Brands.AddRangeAsync(brands);
+                await context.SaveChangesAsync();
+            }
 
-            // 添加轴承类型
-            var bearingTypes = new List<BearingType>
+            var bearingTypes = new List<BearingType>();
+            if (isDev)
             {
-                new("DGBB", "深沟球轴承", "最常用的滚动轴承，主要承受径向载荷"),
-                new("ACBB", "角接触球轴承", "可同时承受径向和轴向载荷"),
-                new("SRB", "调心滚子轴承", "具有调心功能，适用于重载"),
-                new("TRB", "圆锥滚子轴承", "可承受径向和轴向联合载荷")
-            };
+                // 添加轴承类型
+                bearingTypes.AddRange(
+                [
+                    new("DGBB", "深沟球轴承", "最常用的滚动轴承，主要承受径向载荷"),
+                    new("ACBB", "角接触球轴承", "可同时承受径向和轴向载荷"),
+                    new("SRB", "调心滚子轴承", "具有调心功能，适用于重载"),
+                    new("TRB", "圆锥滚子轴承", "可承受径向和轴向联合载荷")
+                ]);
 
-            await context.BearingTypes.AddRangeAsync(bearingTypes);
-            await context.SaveChangesAsync();
+                await context.BearingTypes.AddRangeAsync(bearingTypes);
+                await context.SaveChangesAsync();
+            }
 
             // ============ 2. 角色和权限 ============
 
@@ -132,12 +143,19 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
             // 创建测试用户
             var users = new List<User>
             {
-                new("auth-admin-001", UserType.Admin, "系统管理员"),
-                new("auth-merchant-001", UserType.MerchantStaff, "张经理"),
-                new("auth-merchant-002", UserType.MerchantStaff, "李经理"),
-                new("auth-customer-001", UserType.Individual, "王先生"),
-                new("auth-customer-002", UserType.Individual, "赵女士"),
+                new("auth-admin-001", UserType.Admin, "系统管理员")
             };
+
+            if (isDev)
+            {
+                users.AddRange(
+                [
+                    new("auth-merchant-001", UserType.MerchantStaff, "张经理"),
+                    new("auth-merchant-002", UserType.MerchantStaff, "李经理"),
+                    new("auth-customer-001", UserType.Individual, "王先生"),
+                    new("auth-customer-002", UserType.Individual, "赵女士"),
+                ]);
+            }
 
             await context.Users.AddRangeAsync(users);
             await context.SaveChangesAsync();
@@ -145,324 +163,315 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
             // 分配用户角色
             var userRoles = new List<UserRole>
             {
-                new(users[0].Id, globalAdmin.Id),
-                new(users[1].Id, merchantStaff.Id),
-                new(users[2].Id, merchantStaff.Id),
-                new(users[3].Id, customer.Id),
-                new(users[4].Id, customer.Id),
+                new(users[0].Id, globalAdmin.Id)
             };
+
+            if (!isDev)
+            {
+                userRoles.AddRange(
+                [
+                    new(users[1].Id, merchantStaff.Id),
+                    new(users[2].Id, merchantStaff.Id),
+                    new(users[3].Id, customer.Id),
+                    new(users[4].Id, customer.Id),
+                ]);
+            }
 
             await context.UserRoles.AddRangeAsync(userRoles);
             await context.SaveChangesAsync();
 
-            // ============ 4. 轴承产品数据 ============
-
-            var bearings = new List<Bearing>();
-
-            // 辅助方法：创建轴承
-            Bearing CreateBearing(
-                string partNumber,
-                string name,
-                decimal innerDia, decimal outerDia, decimal width,
-                BearingType type, Brand brand,
-                PerformanceParams? performance = null,
-                decimal? weight = null)
+            if (isDev)
             {
-                var dimensions = new Dimensions(innerDia, outerDia, width);
-                return new Bearing(
-                    partNumber: partNumber,
-                    name: name,
-                    dimensions: dimensions,
-                    bearingTypeId: type.Id,
-                    brandId: brand.Id,
-                    performance: performance,
-                    weight: weight);
-            }
+                // ============ 4. 轴承产品数据 ============
 
-            // SKF 品牌的产品
-            bearings.Add(CreateBearing("6205", "SKF 深沟球轴承 6205", 25, 52, 15,
-                bearingTypes[0], brands[0], weight: 0.12m));
-            bearings.Add(CreateBearing("6206", "SKF 深沟球轴承 6206", 30, 62, 16,
-                bearingTypes[0], brands[0], weight: 0.15m));
-            bearings.Add(CreateBearing("6305", "SKF 深沟球轴承 6305", 25, 62, 17,
-                bearingTypes[0], brands[0], weight: 0.17m));
-            bearings.Add(CreateBearing("6310", "SKF 深沟球轴承 6310", 50, 110, 27,
-                bearingTypes[0], brands[0], weight: 0.85m));
-
-            // FAG 品牌的产品
-            bearings.Add(CreateBearing("6205", "FAG 深沟球轴承 6205", 25, 52, 15,
-                bearingTypes[0], brands[1], weight: 0.12m));
-            bearings.Add(CreateBearing("6305", "FAG 深沟球轴承 6305", 25, 62, 17,
-                bearingTypes[0], brands[1], weight: 0.17m));
-            bearings.Add(CreateBearing("7205-B", "FAG 角接触球轴承 7205-B", 25, 52, 15,
-                bearingTypes[1], brands[1], weight: 0.13m));
-
-            // NSK 品牌的产品
-            bearings.Add(CreateBearing("6205", "NSK 深沟球轴承 6205", 25, 52, 15,
-                bearingTypes[0], brands[2], weight: 0.12m));
-            bearings.Add(CreateBearing("6205DU", "NSK 深沟球轴承 6205DU", 25, 52, 15,
-                bearingTypes[0], brands[2], weight: 0.12m));
-            bearings.Add(CreateBearing("7205", "NSK 角接触球轴承 7205", 25, 52, 15,
-                bearingTypes[1], brands[2], weight: 0.13m));
-
-            // HRB 品牌的产品
-            bearings.Add(CreateBearing("6205-2RS", "HRB 深沟球轴承 6205-2RS", 25, 52, 15,
-                bearingTypes[0], brands[3], weight: 0.12m));
-            bearings.Add(CreateBearing("6205-Z", "HRB 深沟球轴承 6205-Z", 25, 52, 15,
-                bearingTypes[0], brands[3], weight: 0.12m));
-            bearings.Add(CreateBearing("6305", "HRB 深沟球轴承 6305", 25, 62, 17,
-                bearingTypes[0], brands[3], weight: 0.17m));
-
-            // ZWZ 品牌的产品
-            bearings.Add(CreateBearing("6205", "ZWZ 深沟球轴承 6205", 25, 52, 15,
-                bearingTypes[0], brands[4], weight: 0.12m));
-            bearings.Add(CreateBearing("6206", "ZWZ 深沟球轴承 6206", 30, 62, 16,
-                bearingTypes[0], brands[4], weight: 0.15m));
-
-            // LYC 品牌的产品
-            bearings.Add(CreateBearing("6205", "LYC 深沟球轴承 6205", 25, 52, 15,
-                bearingTypes[0], brands[5], weight: 0.12m));
-            bearings.Add(CreateBearing("6310", "LYC 深沟球轴承 6310", 50, 110, 27,
-                bearingTypes[0], brands[5], weight: 0.85m));
-
-            await context.Bearings.AddRangeAsync(bearings);
-            await context.SaveChangesAsync();
-
-            // 补充技术参数
-            var bearingIndex = 0;
-
-            // SKF 系列
-            bearings[bearingIndex++].UpdateTechnicalSpecs("P0", "GCr15", "Open", "钢保持架");
-            bearings[bearingIndex++].UpdateTechnicalSpecs("P0", "GCr15", "Open", "钢保持架");
-            bearings[bearingIndex++].UpdateTechnicalSpecs("P0", "GCr15", "Open", "钢保持架");
-            bearings[bearingIndex++].UpdateTechnicalSpecs("P0", "GCr15", "Open", "钢保持架");
-
-            // FAG 系列
-            bearings[bearingIndex++].UpdateTechnicalSpecs("P0", "GCr15", "Open", "钢保持架");
-            bearings[bearingIndex++].UpdateTechnicalSpecs("P0", "GCr15", "Open", "钢保持架");
-            bearings[bearingIndex++].UpdateTechnicalSpecs("P0", "GCr15", "Open", "钢保持架");
-
-            // NSK 系列
-            bearings[bearingIndex++].UpdateTechnicalSpecs("P0", "GCr15", "Open", "钢保持架");
-            bearings[bearingIndex++].UpdateTechnicalSpecs("P0", "GCr15", "ZZ", "钢保持架");
-            bearings[bearingIndex++].UpdateTechnicalSpecs("P0", "GCr15", "Open", "钢保持架");
-
-            // HRB 系列
-            bearings[bearingIndex++].UpdateTechnicalSpecs("P0", "GCr15", "2RS", "钢保持架");
-            bearings[bearingIndex++].UpdateTechnicalSpecs("P0", "GCr15", "Z", "钢保持架");
-            bearings[bearingIndex++].UpdateTechnicalSpecs("P0", "GCr15", "Open", "钢保持架");
-
-            // ZWZ 系列
-            bearings[bearingIndex++].UpdateTechnicalSpecs("P0", "GCr15", "Open", "钢保持架");
-            bearings[bearingIndex++].UpdateTechnicalSpecs("P0", "GCr15", "Open", "钢保持架");
-
-            // LYC 系列
-            bearings[bearingIndex++].UpdateTechnicalSpecs("P0", "GCr15", "Open", "钢保持架");
-            bearings[bearingIndex++].UpdateTechnicalSpecs("P0", "GCr15", "Open", "钢保持架");
-
-            // 为现有轴承设置产地和类别
-
-            // SKF 系列（瑞典，进口）
-            bearingIndex = 0;
-            bearings[bearingIndex++].SetOrigin("瑞典", ProductCategory.Imported);
-            bearings[bearingIndex++].SetOrigin("瑞典", ProductCategory.Imported);
-            bearings[bearingIndex++].SetOrigin("瑞典", ProductCategory.Imported);
-            bearings[bearingIndex++].SetOrigin("瑞典", ProductCategory.Imported);
-
-            // FAG 系列（德国，进口）
-            bearings[bearingIndex++].SetOrigin("德国", ProductCategory.Imported);
-            bearings[bearingIndex++].SetOrigin("德国", ProductCategory.Imported);
-            bearings[bearingIndex++].SetOrigin("德国", ProductCategory.Imported);
-
-            // NSK 系列（日本，进口）
-            bearings[bearingIndex++].SetOrigin("日本", ProductCategory.Imported);
-            bearings[bearingIndex++].SetOrigin("日本", ProductCategory.Imported);
-            bearings[bearingIndex++].SetOrigin("日本", ProductCategory.Imported);
-
-            // HRB 系列（中国，国产）
-            bearings[bearingIndex++].SetOrigin("中国", ProductCategory.Domestic);
-            bearings[bearingIndex++].SetOrigin("中国", ProductCategory.Domestic);
-            bearings[bearingIndex++].SetOrigin("中国", ProductCategory.Domestic);
-
-            // ZWZ 系列（中国，国产）
-            bearings[bearingIndex++].SetOrigin("中国", ProductCategory.Domestic);
-            bearings[bearingIndex++].SetOrigin("中国", ProductCategory.Domestic);
-
-            // LYC 系列（中国，国产）
-            bearings[bearingIndex++].SetOrigin("中国", ProductCategory.Domestic);
-            bearings[bearingIndex++].SetOrigin("中国", ProductCategory.Domestic);
-
-            await context.SaveChangesAsync();
-
-            // ============ 5. 替代品关系 ============
-
-            var skf6205 = bearings[0];
-            var fag6205 = bearings[4];
-            var nsk6205 = bearings[7];
-            var hrb6205_2rs = bearings[10];
-            var zwz6205 = bearings[13];
-            var lyc6205 = bearings[15];
-            var skf6305 = bearings[2];
-
-            var interchanges = new List<BearingInterchange>
-            {
-                new(skf6205.Id, fag6205.Id, "exact", 100, "SKF官方互换表", remarks: "完全替代", isBidirectional: true),
-                new(skf6205.Id, nsk6205.Id, "exact", 100, "SKF官方互换表", remarks: "完全替代", isBidirectional: true),
-                new(skf6205.Id, hrb6205_2rs.Id, "exact", 95, "国标互换手册", remarks: "带密封圈", isBidirectional: true),
-                new(skf6205.Id, zwz6205.Id, "exact", 90, "国标互换手册", remarks: "完全替代", isBidirectional: true),
-                new(skf6205.Id, lyc6205.Id, "exact", 90, "国标互换手册", remarks: "完全替代", isBidirectional: true),
-                new(skf6205.Id, skf6305.Id, "conditional", 60, "尺寸相近", remarks: "内径相同，外径和宽度更大", isBidirectional: false)
-            };
-
-            await context.BearingInterchanges.AddRangeAsync(interchanges);
-            await context.SaveChangesAsync();
-
-            // ============ 6. 商家数据 ============
-
-            var merchants = new List<Merchant>
-            {
-                new("上海轴承公司", MerchantType.Distributor,
-                    new ContactInfo("张经理", "021-12345678", "13912345678",
-                        "sh@bearing.com", "上海市浦东新区")),
-                new("广州进口轴承", MerchantType.AuthorizedDealer,
-                    new ContactInfo("李经理", "020-87654321", "13887654321",
-                        "gz@bearing.com", "广州市天河区")),
-                new("天津贸易商行", MerchantType.Trader,
-                    new ContactInfo("王经理", "022-11223344", "13711223344",
-                        "tj@bearing.com", "天津市滨海新区")),
-                new("沈阳轴承批发", MerchantType.Distributor,
-                    new ContactInfo("刘经理", "024-12345678", "13912345679",
-                        "sy@bearing.com", "沈阳市铁西区")),
-                new("西安进口轴承", MerchantType.AuthorizedDealer,
-                    new ContactInfo("陈经理", "029-87654321", "13887654322",
-                        "xa@bearing.com", "西安市高新区"))
-            };
-
-            await context.Merchants.AddRangeAsync(merchants);
-            await context.SaveChangesAsync();
-
-            // 将商家员工关联到商家
-            users[1].AssignToMerchant(merchants[0].Id); // 张经理 -> 上海轴承公司
-            users[2].AssignToMerchant(merchants[1].Id); // 李经理 -> 广州进口轴承
-
-            await context.SaveChangesAsync();
-
-            // ============ 7. 商家-产品关联（带价格可见性） ============
-
-            var merchantBearings = new List<MerchantBearing>
-            {
-                // 上海轴承公司
-                new(merchants[0].Id, skf6205.Id, "¥55-60", "现货"),
-                new(merchants[0].Id, bearings[1].Id, "¥65-70", "现货"),
-                new(merchants[0].Id, bearings[2].Id, "¥85-95", "现货"),
-                new(merchants[0].Id, fag6205.Id, "¥58-65", "期货"),
-                
-                // 广州进口轴承
-                new(merchants[1].Id, skf6205.Id, "¥58-65", "现货"),
-                new(merchants[1].Id, nsk6205.Id, "¥56-62", "现货"),
-                new(merchants[1].Id, bearings[2].Id, "¥80-90", "需预订"),
-                
-                // 天津贸易商行
-                new(merchants[2].Id, skf6205.Id, "电议", "期货"),
-                new(merchants[2].Id, hrb6205_2rs.Id, "¥45-52", "现货"),
-                
-                // 沈阳轴承批发
-                new(merchants[3].Id, zwz6205.Id, "¥42-48", "现货"),
-                new(merchants[3].Id, bearings[14].Id, "¥50-58", "现货"),
-                new(merchants[3].Id, lyc6205.Id, "¥44-50", "现货"),
-                
-                // 西安进口轴承
-                new(merchants[4].Id, fag6205.Id, "电议", "期货"),
-                new(merchants[4].Id, nsk6205.Id, "¥58-65", "期货"),
-                new(merchants[4].Id, bearings[6].Id, "¥75-85", "现货")
-            };
-
-            await context.MerchantBearings.AddRangeAsync(merchantBearings);
-            await context.SaveChangesAsync();
-
-            // 设置价格可见性
-            // 注意：需要为 MerchantBearing 实体添加 SetPriceVisibility 方法
-            // 这里假设已经有了这个方法
-            foreach (var mb in merchantBearings)
-            {
-                // 设置数值化价格（用于排序）
-                // 从价格描述中提取数值
-                if (!string.IsNullOrWhiteSpace(mb.PriceDescription))
+                var bearings = new List<Bearing>
                 {
-                    if (mb.PriceDescription.Contains("¥"))
+                    // SKF 品牌的产品
+                    CreateBearing("6205", "SKF 深沟球轴承 6205", 25, 52, 15,
+                    bearingTypes[0], brands[0], weight: 0.12m),
+                    CreateBearing("6206", "SKF 深沟球轴承 6206", 30, 62, 16,
+                    bearingTypes[0], brands[0], weight: 0.15m),
+                    CreateBearing("6305", "SKF 深沟球轴承 6305", 25, 62, 17,
+                    bearingTypes[0], brands[0], weight: 0.17m),
+                    CreateBearing("6310", "SKF 深沟球轴承 6310", 50, 110, 27,
+                    bearingTypes[0], brands[0], weight: 0.85m),
+
+                    // FAG 品牌的产品
+                    CreateBearing("6205", "FAG 深沟球轴承 6205", 25, 52, 15,
+                    bearingTypes[0], brands[1], weight: 0.12m),
+                    CreateBearing("6305", "FAG 深沟球轴承 6305", 25, 62, 17,
+                    bearingTypes[0], brands[1], weight: 0.17m),
+                    CreateBearing("7205-B", "FAG 角接触球轴承 7205-B", 25, 52, 15,
+                    bearingTypes[1], brands[1], weight: 0.13m),
+
+                    // NSK 品牌的产品
+                    CreateBearing("6205", "NSK 深沟球轴承 6205", 25, 52, 15,
+                    bearingTypes[0], brands[2], weight: 0.12m),
+                    CreateBearing("6205DU", "NSK 深沟球轴承 6205DU", 25, 52, 15,
+                    bearingTypes[0], brands[2], weight: 0.12m),
+                    CreateBearing("7205", "NSK 角接触球轴承 7205", 25, 52, 15,
+                    bearingTypes[1], brands[2], weight: 0.13m),
+
+                    // HRB 品牌的产品
+                    CreateBearing("6205-2RS", "HRB 深沟球轴承 6205-2RS", 25, 52, 15,
+                    bearingTypes[0], brands[3], weight: 0.12m),
+                    CreateBearing("6205-Z", "HRB 深沟球轴承 6205-Z", 25, 52, 15,
+                    bearingTypes[0], brands[3], weight: 0.12m),
+                    CreateBearing("6305", "HRB 深沟球轴承 6305", 25, 62, 17,
+                    bearingTypes[0], brands[3], weight: 0.17m),
+
+                    // ZWZ 品牌的产品
+                    CreateBearing("6205", "ZWZ 深沟球轴承 6205", 25, 52, 15,
+                    bearingTypes[0], brands[4], weight: 0.12m),
+                    CreateBearing("6206", "ZWZ 深沟球轴承 6206", 30, 62, 16,
+                    bearingTypes[0], brands[4], weight: 0.15m),
+
+                    // LYC 品牌的产品
+                    CreateBearing("6205", "LYC 深沟球轴承 6205", 25, 52, 15,
+                    bearingTypes[0], brands[5], weight: 0.12m),
+                    CreateBearing("6310", "LYC 深沟球轴承 6310", 50, 110, 27,
+                    bearingTypes[0], brands[5], weight: 0.85m)
+                };
+
+                await context.Bearings.AddRangeAsync(bearings);
+                await context.SaveChangesAsync();
+
+                // 补充技术参数
+                var bearingIndex = 0;
+
+                // SKF 系列
+                bearings[bearingIndex++].UpdateTechnicalSpecs("P0", "GCr15", "Open", "钢保持架");
+                bearings[bearingIndex++].UpdateTechnicalSpecs("P0", "GCr15", "Open", "钢保持架");
+                bearings[bearingIndex++].UpdateTechnicalSpecs("P0", "GCr15", "Open", "钢保持架");
+                bearings[bearingIndex++].UpdateTechnicalSpecs("P0", "GCr15", "Open", "钢保持架");
+
+                // FAG 系列
+                bearings[bearingIndex++].UpdateTechnicalSpecs("P0", "GCr15", "Open", "钢保持架");
+                bearings[bearingIndex++].UpdateTechnicalSpecs("P0", "GCr15", "Open", "钢保持架");
+                bearings[bearingIndex++].UpdateTechnicalSpecs("P0", "GCr15", "Open", "钢保持架");
+
+                // NSK 系列
+                bearings[bearingIndex++].UpdateTechnicalSpecs("P0", "GCr15", "Open", "钢保持架");
+                bearings[bearingIndex++].UpdateTechnicalSpecs("P0", "GCr15", "ZZ", "钢保持架");
+                bearings[bearingIndex++].UpdateTechnicalSpecs("P0", "GCr15", "Open", "钢保持架");
+
+                // HRB 系列
+                bearings[bearingIndex++].UpdateTechnicalSpecs("P0", "GCr15", "2RS", "钢保持架");
+                bearings[bearingIndex++].UpdateTechnicalSpecs("P0", "GCr15", "Z", "钢保持架");
+                bearings[bearingIndex++].UpdateTechnicalSpecs("P0", "GCr15", "Open", "钢保持架");
+
+                // ZWZ 系列
+                bearings[bearingIndex++].UpdateTechnicalSpecs("P0", "GCr15", "Open", "钢保持架");
+                bearings[bearingIndex++].UpdateTechnicalSpecs("P0", "GCr15", "Open", "钢保持架");
+
+                // LYC 系列
+                bearings[bearingIndex++].UpdateTechnicalSpecs("P0", "GCr15", "Open", "钢保持架");
+                bearings[bearingIndex++].UpdateTechnicalSpecs("P0", "GCr15", "Open", "钢保持架");
+
+                // 为现有轴承设置产地和类别
+
+                // SKF 系列（瑞典，进口）
+                bearingIndex = 0;
+                bearings[bearingIndex++].SetOrigin("瑞典", ProductCategory.Imported);
+                bearings[bearingIndex++].SetOrigin("瑞典", ProductCategory.Imported);
+                bearings[bearingIndex++].SetOrigin("瑞典", ProductCategory.Imported);
+                bearings[bearingIndex++].SetOrigin("瑞典", ProductCategory.Imported);
+
+                // FAG 系列（德国，进口）
+                bearings[bearingIndex++].SetOrigin("德国", ProductCategory.Imported);
+                bearings[bearingIndex++].SetOrigin("德国", ProductCategory.Imported);
+                bearings[bearingIndex++].SetOrigin("德国", ProductCategory.Imported);
+
+                // NSK 系列（日本，进口）
+                bearings[bearingIndex++].SetOrigin("日本", ProductCategory.Imported);
+                bearings[bearingIndex++].SetOrigin("日本", ProductCategory.Imported);
+                bearings[bearingIndex++].SetOrigin("日本", ProductCategory.Imported);
+
+                // HRB 系列（中国，国产）
+                bearings[bearingIndex++].SetOrigin("中国", ProductCategory.Domestic);
+                bearings[bearingIndex++].SetOrigin("中国", ProductCategory.Domestic);
+                bearings[bearingIndex++].SetOrigin("中国", ProductCategory.Domestic);
+
+                // ZWZ 系列（中国，国产）
+                bearings[bearingIndex++].SetOrigin("中国", ProductCategory.Domestic);
+                bearings[bearingIndex++].SetOrigin("中国", ProductCategory.Domestic);
+
+                // LYC 系列（中国，国产）
+                bearings[bearingIndex++].SetOrigin("中国", ProductCategory.Domestic);
+                bearings[bearingIndex++].SetOrigin("中国", ProductCategory.Domestic);
+
+                await context.SaveChangesAsync();
+
+                // ============ 5. 替代品关系 ============
+
+                var skf6205 = bearings[0];
+                var fag6205 = bearings[4];
+                var nsk6205 = bearings[7];
+                var hrb6205_2rs = bearings[10];
+                var zwz6205 = bearings[13];
+                var lyc6205 = bearings[15];
+                var skf6305 = bearings[2];
+
+                var interchanges = new List<BearingInterchange>
+                {
+                    new(skf6205.Id, fag6205.Id, "exact", 100, "SKF官方互换表", remarks: "完全替代", isBidirectional: true),
+                    new(skf6205.Id, nsk6205.Id, "exact", 100, "SKF官方互换表", remarks: "完全替代", isBidirectional: true),
+                    new(skf6205.Id, hrb6205_2rs.Id, "exact", 95, "国标互换手册", remarks: "带密封圈", isBidirectional: true),
+                    new(skf6205.Id, zwz6205.Id, "exact", 90, "国标互换手册", remarks: "完全替代", isBidirectional: true),
+                    new(skf6205.Id, lyc6205.Id, "exact", 90, "国标互换手册", remarks: "完全替代", isBidirectional: true),
+                    new(skf6205.Id, skf6305.Id, "conditional", 60, "尺寸相近", remarks: "内径相同，外径和宽度更大", isBidirectional: false)
+                };
+
+                await context.BearingInterchanges.AddRangeAsync(interchanges);
+                await context.SaveChangesAsync();
+
+                // ============ 6. 商家数据 ============
+
+                var merchants = new List<Merchant>
+                {
+                    new("上海轴承公司", MerchantType.Distributor,
+                        new ContactInfo("张经理", "021-12345678", "13912345678",
+                            "sh@bearing.com", "上海市浦东新区")),
+                    new("广州进口轴承", MerchantType.AuthorizedDealer,
+                        new ContactInfo("李经理", "020-87654321", "13887654321",
+                            "gz@bearing.com", "广州市天河区")),
+                    new("天津贸易商行", MerchantType.Trader,
+                        new ContactInfo("王经理", "022-11223344", "13711223344",
+                            "tj@bearing.com", "天津市滨海新区")),
+                    new("沈阳轴承批发", MerchantType.Distributor,
+                        new ContactInfo("刘经理", "024-12345678", "13912345679",
+                            "sy@bearing.com", "沈阳市铁西区")),
+                    new("西安进口轴承", MerchantType.AuthorizedDealer,
+                        new ContactInfo("陈经理", "029-87654321", "13887654322",
+                            "xa@bearing.com", "西安市高新区"))
+                };
+
+                await context.Merchants.AddRangeAsync(merchants);
+                await context.SaveChangesAsync();
+
+                // 将商家员工关联到商家
+                users[1].AssignToMerchant(merchants[0].Id); // 张经理 -> 上海轴承公司
+                users[2].AssignToMerchant(merchants[1].Id); // 李经理 -> 广州进口轴承
+
+                await context.SaveChangesAsync();
+
+                // ============ 7. 商家-产品关联（带价格可见性） ============
+
+                var merchantBearings = new List<MerchantBearing>
+                {
+                    // 上海轴承公司
+                    new(merchants[0].Id, skf6205.Id, "¥55-60", "现货"),
+                    new(merchants[0].Id, bearings[1].Id, "¥65-70", "现货"),
+                    new(merchants[0].Id, bearings[2].Id, "¥85-95", "现货"),
+                    new(merchants[0].Id, fag6205.Id, "¥58-65", "期货"),
+                
+                    // 广州进口轴承
+                    new(merchants[1].Id, skf6205.Id, "¥58-65", "现货"),
+                    new(merchants[1].Id, nsk6205.Id, "¥56-62", "现货"),
+                    new(merchants[1].Id, bearings[2].Id, "¥80-90", "需预订"),
+                
+                    // 天津贸易商行
+                    new(merchants[2].Id, skf6205.Id, "电议", "期货"),
+                    new(merchants[2].Id, hrb6205_2rs.Id, "¥45-52", "现货"),
+                
+                    // 沈阳轴承批发
+                    new(merchants[3].Id, zwz6205.Id, "¥42-48", "现货"),
+                    new(merchants[3].Id, bearings[14].Id, "¥50-58", "现货"),
+                    new(merchants[3].Id, lyc6205.Id, "¥44-50", "现货"),
+                
+                    // 西安进口轴承
+                    new(merchants[4].Id, fag6205.Id, "电议", "期货"),
+                    new(merchants[4].Id, nsk6205.Id, "¥58-65", "期货"),
+                    new(merchants[4].Id, bearings[6].Id, "¥75-85", "现货")
+                };
+
+                await context.MerchantBearings.AddRangeAsync(merchantBearings);
+                await context.SaveChangesAsync();
+
+                // 设置价格可见性
+                // 注意：需要为 MerchantBearing 实体添加 SetPriceVisibility 方法
+                // 这里假设已经有了这个方法
+                foreach (var mb in merchantBearings)
+                {
+                    // 设置数值化价格（用于排序）
+                    // 从价格描述中提取数值
+                    if (!string.IsNullOrWhiteSpace(mb.PriceDescription))
                     {
-                        // 简单提取第一个数字作为示例
-                        // 实际项目中可能需要更复杂的解析逻辑
-                        // mb.SetNumericPrice(ExtractNumericPrice(mb.PriceDescription));
+                        if (mb.PriceDescription.Contains("¥"))
+                        {
+                            // 简单提取第一个数字作为示例
+                            // 实际项目中可能需要更复杂的解析逻辑
+                            // mb.SetNumericPrice(ExtractNumericPrice(mb.PriceDescription));
+                        }
+                    }
+
+                    // 设置价格可见性
+                    // 电议的价格设为登录可见
+                    if (mb.PriceDescription?.Contains("电议") == true)
+                    {
+                        // mb.SetPriceVisibility(PriceVisibility.LoginRequired);
+                    }
+                    else
+                    {
+                        // 普通价格设为公开可见
+                        // mb.SetPriceVisibility(PriceVisibility.Public);
                     }
                 }
 
-                // 设置价格可见性
-                // 电议的价格设为登录可见
-                if (mb.PriceDescription?.Contains("电议") == true)
+                // 设置一些推荐产品
+                merchantBearings[0].SetFeatured(true);
+                merchantBearings[3].SetFeatured(true);
+                merchantBearings[4].SetFeatured(true);
+
+                await context.SaveChangesAsync();
+
+                // ============ 8. 用户收藏数据 ============
+
+                var userFavorites = new List<UserBearingFavorite>
                 {
-                    // mb.SetPriceVisibility(PriceVisibility.LoginRequired);
-                }
-                else
+                    // 王先生收藏 SKF6205 和 NSK6205
+                    new(users[3].Id, skf6205.Id),
+                    new(users[3].Id, nsk6205.Id),
+                
+                    // 赵女士收藏 FAG6205 和 HRB6205-2RS
+                    new(users[4].Id, fag6205.Id),
+                    new(users[4].Id, hrb6205_2rs.Id),
+                };
+
+                await context.UserFavorites.AddRangeAsync(userFavorites);
+                await context.SaveChangesAsync();
+
+                // ============ 9. 用户关注数据 ============
+
+                var userFollows = new List<UserMerchantFollow>
                 {
-                    // 普通价格设为公开可见
-                    // mb.SetPriceVisibility(PriceVisibility.Public);
-                }
+                    // 王先生关注上海轴承公司和广州进口轴承
+                    new(users[3].Id, merchants[0].Id),
+                    new(users[3].Id, merchants[1].Id),
+                
+                    // 赵女士关注天津贸易商行
+                    new(users[4].Id, merchants[2].Id),
+                };
+
+                await context.UserFollows.AddRangeAsync(userFollows);
+                await context.SaveChangesAsync();
+
+                // ============ 10. 浏览历史数据 ============
+
+                // 王先生的浏览历史
+                await context.UserBearingHistories.AddAsync(new UserBearingHistory(users[3].Id, skf6205.Id));
+                await context.UserBearingHistories.AddAsync(new UserBearingHistory(users[3].Id, bearings[2].Id));
+                await context.UserBearingHistories.AddAsync(new UserBearingHistory(users[3].Id, fag6205.Id));
+
+                // 赵女士的浏览历史
+                await context.UserBearingHistories.AddAsync(new UserBearingHistory(users[4].Id, nsk6205.Id));
+                await context.UserBearingHistories.AddAsync(new UserBearingHistory(users[4].Id, hrb6205_2rs.Id));
+
+                await context.UserMerchantHistories.AddAsync(new UserMerchantHistory(users[3].Id, merchants[0].Id));
+                await context.UserMerchantHistories.AddAsync(new UserMerchantHistory(users[3].Id, merchants[1].Id));
+
+                await context.SaveChangesAsync();
             }
-
-            // 设置一些推荐产品
-            merchantBearings[0].SetFeatured(true);
-            merchantBearings[3].SetFeatured(true);
-            merchantBearings[4].SetFeatured(true);
-
-            await context.SaveChangesAsync();
-
-            // ============ 8. 用户收藏数据 ============
-
-            var userFavorites = new List<UserBearingFavorite>
-            {
-                // 王先生收藏 SKF6205 和 NSK6205
-                new(users[3].Id, skf6205.Id),
-                new(users[3].Id, nsk6205.Id),
-                
-                // 赵女士收藏 FAG6205 和 HRB6205-2RS
-                new(users[4].Id, fag6205.Id),
-                new(users[4].Id, hrb6205_2rs.Id),
-            };
-
-            await context.UserFavorites.AddRangeAsync(userFavorites);
-            await context.SaveChangesAsync();
-
-            // ============ 9. 用户关注数据 ============
-
-            var userFollows = new List<UserMerchantFollow>
-            {
-                // 王先生关注上海轴承公司和广州进口轴承
-                new(users[3].Id, merchants[0].Id),
-                new(users[3].Id, merchants[1].Id),
-                
-                // 赵女士关注天津贸易商行
-                new(users[4].Id, merchants[2].Id),
-            };
-
-            await context.UserFollows.AddRangeAsync(userFollows);
-            await context.SaveChangesAsync();
-
-            // ============ 10. 浏览历史数据 ============
-
-            // 王先生的浏览历史
-            await context.UserBearingHistories.AddAsync(new UserBearingHistory(users[3].Id, skf6205.Id));
-            await context.UserBearingHistories.AddAsync(new UserBearingHistory(users[3].Id, bearings[2].Id));
-            await context.UserBearingHistories.AddAsync(new UserBearingHistory(users[3].Id, fag6205.Id));
-
-            // 赵女士的浏览历史
-            await context.UserBearingHistories.AddAsync(new UserBearingHistory(users[4].Id, nsk6205.Id));
-            await context.UserBearingHistories.AddAsync(new UserBearingHistory(users[4].Id, hrb6205_2rs.Id));
-
-            await context.UserMerchantHistories.AddAsync(new UserMerchantHistory(users[3].Id, merchants[0].Id));
-            await context.UserMerchantHistories.AddAsync(new UserMerchantHistory(users[3].Id, merchants[1].Id));
-
-            await context.SaveChangesAsync();
 
             // ============ 11. 系统配置（包含价格配置） ============
             if (!await context.SystemConfigs.AnyAsync())
@@ -523,20 +532,26 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
                 await context.SaveChangesAsync();
             }
 
-            // ============ 12. 辅助方法：提取数值化价格 ============
-            static decimal? ExtractNumericPrice(string priceDescription)
+            // ============ 12. 辅助方法 ============
+
+            // 创建轴承
+            static Bearing CreateBearing(
+                string partNumber,
+                string name,
+                decimal innerDia, decimal outerDia, decimal width,
+                BearingType type, Brand brand,
+                PerformanceParams? performance = null,
+                decimal? weight = null)
             {
-                if (string.IsNullOrWhiteSpace(priceDescription))
-                    return null;
-
-                // 简单实现：提取第一个数字
-                var match = System.Text.RegularExpressions.Regex.Match(priceDescription, @"\d+(?:\.\d+)?");
-                if (match.Success && decimal.TryParse(match.Value, out var price))
-                {
-                    return price;
-                }
-
-                return null;
+                var dimensions = new Dimensions(innerDia, outerDia, width);
+                return new Bearing(
+                    partNumber: partNumber,
+                    name: name,
+                    dimensions: dimensions,
+                    bearingTypeId: type.Id,
+                    brandId: brand.Id,
+                    performance: performance,
+                    weight: weight);
             }
         }
     }
