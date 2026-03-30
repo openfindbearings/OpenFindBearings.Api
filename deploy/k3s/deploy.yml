@@ -54,6 +54,10 @@ spec:
           value: "Production"
         - name: ASPNETCORE_URLS
           value: "http://+:80"
+        - name: POD_NETWORK_CIDR
+          value: "10.42.0.0/16"  # 根据实际集群配置
+        - name: SERVICE_NETWORK_CIDR
+          value: "10.43.0.0/16"
         envFrom:
         - secretRef:
             name: openfindbearings-api-secrets

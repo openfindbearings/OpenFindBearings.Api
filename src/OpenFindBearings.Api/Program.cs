@@ -1,10 +1,53 @@
+using Microsoft.AspNetCore.HttpOverrides;
 using OpenFindBearings.Api.Extensions;
 using OpenFindBearings.Api.Middleware;
 using OpenFindBearings.Application;
 using OpenFindBearings.Infrastructure;
 using OpenFindBearings.Infrastructure.Persistence.Data;
+using System.Net;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+
+    if (!builder.Environment.IsDevelopment())
+    {
+        var podCidr = Environment.GetEnvironmentVariable("POD_NETWORK_CIDR");
+        if (!string.IsNullOrEmpty(podCidr))
+        {
+            try
+            {
+                var parts = podCidr.Split('/');
+                if (parts.Length == 2 &&
+                    IPAddress.TryParse(parts[0], out var ip) &&
+                    int.TryParse(parts[1], out var prefix))
+                {
+                    options.KnownIPNetworks.Add(new System.Net.IPNetwork(ip, prefix));
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to parse CIDR: {ex.Message}");
+            }
+        }
+
+        // 可选：添加 Service 网络 CIDR
+        var serviceCidr = Environment.GetEnvironmentVariable("SERVICE_NETWORK_CIDR");
+        if (!string.IsNullOrEmpty(serviceCidr))
+        {
+            var parts = serviceCidr.Split('/');
+            if (parts.Length == 2 &&
+                IPAddress.TryParse(parts[0], out var ip) &&
+                int.TryParse(parts[1], out var prefix))
+            {
+                options.KnownIPNetworks.Add(new System.Net.IPNetwork(ip, prefix));
+            }
+        }
+    }
+});
+
 
 // ============ 添加服务 ============
 
@@ -26,6 +69,8 @@ var logger = app.Services.GetRequiredService<ILogger<Program>>();
 logger.LogInformation("启动 OpenFindBearings API");
 
 // ============ 配置中间件管道 ============
+
+app.UseForwardedHeaders();
 
 // 开发环境特定配置
 if (app.Environment.IsDevelopment())
