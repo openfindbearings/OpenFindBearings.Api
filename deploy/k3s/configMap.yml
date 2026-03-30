@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: openfindbearings-api-config
+  namespace: openfindbearings
+data:
+  Authentication__Authority: "https://auth.abcsxl.com"
+  Authentication__Audience: "openfindbearings-api"
+  Authentication__RequireHttpsMetadata: "true"
+  CacheSettings__EnableRedis: "false"
+  CacheSettings__DefaultExpirationMinutes: "60"
+  CacheSettings__MemoryCacheSizeLimit: "200"
+  CacheSettings__EnableStatistics: "true"
+  Logging__LogLevel__Default: "Information"
+  Logging__LogLevel__Microsoft_AspNetCore: "Information"
+  Logging__LogLevel__Microsoft_EntityFrameworkCore: "Information"
+  AllowedHosts: "*"
+  AllowedOrigins__0: "https://www.515813.xyz"
+  AllowedOrigins__1: "https://515813.xyz"
+  AllowedOrigins__2: "https://api.515813.xyz"
