@@ -17,15 +17,15 @@ spec:
     spec:
       containers:
       - name: openfindbearings-api
-        image: ghcr.io/openfindbearings/openfindbearings-api:v1.0.0
+        image: ghcr.io/openfindbearings/openfindbearings-api:v1.0.2
         ports:
-        - containerPort: 80
+        - containerPort: 8080
 
         env:
         - name: ASPNETCORE_ENVIRONMENT
           value: "Production"
         - name: ASPNETCORE_URLS
-          value: "http://+:80"
+          value: "http://+:8080"
         - name: POD_NETWORK_CIDR
           value: "10.42.0.0/16"  # 根据实际集群配置
         - name: SERVICE_NETWORK_CIDR
@@ -39,7 +39,7 @@ spec:
         livenessProbe:
           httpGet:
             path: /live
-            port: 80
+            port: 8080
           initialDelaySeconds: 30  # 容器启动后延迟30秒开始探测
           periodSeconds: 10        # 每10秒探测一次
           timeoutSeconds: 5        # 探测超时时间
@@ -48,7 +48,7 @@ spec:
         readinessProbe:
           httpGet:
             path: /ready
-            port: 80
+            port: 8080
           initialDelaySeconds: 5   # 启动后5秒开始探测
           periodSeconds: 5         # 每5秒探测一次
           timeoutSeconds: 3
@@ -67,7 +67,7 @@ spec:
   ports:
     - protocol: TCP
       port: 80
-      targetPort: 80
+      targetPort: 8080
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
