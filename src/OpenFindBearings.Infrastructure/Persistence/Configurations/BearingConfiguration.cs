@@ -53,6 +53,12 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             // 值对象配置 - Performance
             builder.OwnsOne(b => b.Performance, perf =>
             {
+                // 添加 HasData 标识属性，用于 EF Core 判断是否存在性能数据
+                perf.Property(p => p.HasData)
+                    .HasColumnName("PerformanceHasData")
+                    .HasDefaultValue(false)
+                    .IsRequired();
+
                 perf.Property(p => p.DynamicLoadRating)
                     .HasColumnName("DynamicLoadRating")
                     .HasPrecision(10, 2);
@@ -89,6 +95,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             builder.Property(b => b.Category)
                 .HasConversion<int>()
                 .HasDefaultValue(ProductCategory.Domestic)
+                .HasSentinel(ProductCategory.Unknown)  // 当值为 Unknown 时，使用数据库默认值
                 .HasColumnName("Category");
 
             builder.Property(b => b.ViewCount)

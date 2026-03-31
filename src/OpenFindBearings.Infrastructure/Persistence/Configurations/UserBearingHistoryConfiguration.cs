@@ -31,6 +31,10 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
                 .WithMany()
                 .HasForeignKey(ubh => ubh.BearingId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // 添加全局过滤器，只显示活跃轴承的浏览历史
+            builder.HasQueryFilter(ubh =>
+                ubh.Bearing != null && ubh.Bearing.IsActive);
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿namespace OpenFindBearings.Application.Common.Interfaces
+﻿namespace OpenFindBearings.Application.Interfaces
 {
     /// <summary>
     /// 缓存服务接口

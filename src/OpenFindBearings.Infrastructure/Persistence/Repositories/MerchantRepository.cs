@@ -8,9 +8,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 {
     public class MerchantRepository : IMerchantRepository
     {
-        private readonly AppDbContext _context;
+        private readonly ApplicationDbContext _context;
 
-        public MerchantRepository(AppDbContext context)
+        public MerchantRepository(ApplicationDbContext context)
         {
             _context = context;
         }

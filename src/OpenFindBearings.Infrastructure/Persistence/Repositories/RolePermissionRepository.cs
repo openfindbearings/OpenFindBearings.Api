@@ -10,9 +10,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
     /// </summary>
   public class RolePermissionRepository : IRolePermissionRepository
     {
-        private readonly AppDbContext _context;
+        private readonly ApplicationDbContext _context;
 
-        public RolePermissionRepository(AppDbContext context)
+        public RolePermissionRepository(ApplicationDbContext context)
         {
             _context = context;
         }

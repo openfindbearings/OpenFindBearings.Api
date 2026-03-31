@@ -1,15 +1,13 @@
-﻿using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.Extensions.Options;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using OpenFindBearings.Api.Services;
-using OpenFindBearings.Application.Common.Interfaces;
+using OpenFindBearings.Application.Interfaces;
 using OpenFindBearings.Domain.Interfaces;
+using OpenFindBearings.Infrastructure.Persistence.Data;
 using OpenFindBearings.Infrastructure.Persistence.Repositories;
 using OpenFindBearings.Infrastructure.Services;
-using System.Security.Claims;
-using System.Text.Encodings.Web;
 
 namespace OpenFindBearings.Api.Extensions
 {
@@ -50,7 +48,7 @@ namespace OpenFindBearings.Api.Extensions
                 options.AddPolicy("AllowSpecificOrigins", policy =>
                 {
                     var allowedOrigins = configuration.GetSection("AllowedOrigins").Get<string[]>()
-                        ?? new[] { "http://localhost:3000", "https://localhost:7000" };
+                        ?? ["http://localhost:3000", "https://localhost:7000"];
 
                     policy.WithOrigins(allowedOrigins)
                           .AllowAnyHeader()
@@ -60,7 +58,27 @@ namespace OpenFindBearings.Api.Extensions
             });
 
             // 添加健康检查
-            services.AddHealthChecks();
+            services.AddHealthChecks()
+                 // 1. 数据库检查（必须）
+                 .AddDbContextCheck<ApplicationDbContext>(
+                     name: "database",
+                     failureStatus: HealthStatus.Unhealthy)
+
+                 // 2. 内存检查（可选）
+                 .AddCheck<MemoryHealthCheck>(
+                     name: "memory",
+                     failureStatus: HealthStatus.Degraded)  // Degraded 表示降级，不是完全不可用
+
+                 // 3. 磁盘空间检查（可选）
+                 .AddCheck<DiskSpaceHealthCheck>(
+                     name: "disk",
+                     failureStatus: HealthStatus.Unhealthy)
+
+                 // 4. 外部依赖检查（可选）
+                 .AddUrlGroup(
+                     new Uri($"{configuration["Authentication:Authority"] ?? "https://localhost:7201"}/health"),
+                     name: "external_api",
+                     failureStatus: HealthStatus.Unhealthy);
 
             // 添加响应压缩
             services.AddResponseCompression(options =>
@@ -184,35 +202,66 @@ namespace OpenFindBearings.Api.Extensions
         }
     }
 
+    // ============ 自定义健康检查类 ============
+
     /// <summary>
-    /// 测试认证处理器（用于开发阶段）
+    /// 内存健康检查
     /// </summary>
-    public class TestAuthenticationHandler : AuthenticationHandler<AuthenticationSchemeOptions>
+    public class MemoryHealthCheck : IHealthCheck
     {
-        public TestAuthenticationHandler(
-            IOptionsMonitor<AuthenticationSchemeOptions> options,
-            ILoggerFactory logger,
-            UrlEncoder encoder)
-            : base(options, logger, encoder)
+        private readonly long _thresholdBytes = 512 * 1024 * 1024; // 512MB
+
+        public Task<HealthCheckResult> CheckHealthAsync(
+            HealthCheckContext context,
+            CancellationToken cancellationToken = default)
         {
+            var usedMemory = GC.GetTotalMemory(false);
+
+            if (usedMemory > _thresholdBytes)
+            {
+                return Task.FromResult(HealthCheckResult.Degraded(
+                    $"Memory usage is high: {usedMemory / 1024 / 1024}MB / {_thresholdBytes / 1024 / 1024}MB"));
+            }
+
+            return Task.FromResult(HealthCheckResult.Healthy());
+        }
+    }
+
+    /// <summary>
+    /// 磁盘空间健康检查（可选）
+    /// </summary>
+    public class DiskSpaceHealthCheck : IHealthCheck
+    {
+        private readonly string _path;
+        private readonly long _thresholdBytes; // 最小可用空间
+
+        public DiskSpaceHealthCheck(string path = "/", long thresholdBytes = 1024 * 1024 * 1024) // 默认 1GB
+        {
+            _path = path;
+            _thresholdBytes = thresholdBytes;
         }
 
-        protected override Task<AuthenticateResult> HandleAuthenticateAsync()
+        public Task<HealthCheckResult> CheckHealthAsync(
+            HealthCheckContext context,
+            CancellationToken cancellationToken = default)
         {
-            // 开发环境返回测试用户
-            var claims = new[]
+            try
             {
-                new Claim(ClaimTypes.NameIdentifier, "auth-admin-001"),
-                new Claim(ClaimTypes.Name, "测试管理员"),
-                new Claim("role", "GlobalAdmin"),
-                new Claim("user_type", "Admin")
-            };
+                var driveInfo = new DriveInfo(_path);
+                var freeSpace = driveInfo.AvailableFreeSpace;
 
-            var identity = new ClaimsIdentity(claims, Scheme.Name);
-            var principal = new ClaimsPrincipal(identity);
-            var ticket = new AuthenticationTicket(principal, Scheme.Name);
+                if (freeSpace < _thresholdBytes)
+                {
+                    return Task.FromResult(HealthCheckResult.Degraded(
+                        $"Low disk space: {freeSpace / 1024 / 1024}MB free, threshold: {_thresholdBytes / 1024 / 1024}MB"));
+                }
 
-            return Task.FromResult(AuthenticateResult.Success(ticket));
+                return Task.FromResult(HealthCheckResult.Healthy());
+            }
+            catch (Exception ex)
+            {
+                return Task.FromResult(HealthCheckResult.Unhealthy("Disk space check failed", ex));
+            }
         }
     }
 }

@@ -1,6 +1,6 @@
 ﻿using OpenFindBearings.Application.Common.Models;
 
-namespace OpenFindBearings.Application.Common.Interfaces
+namespace OpenFindBearings.Application.Interfaces
 {
     /// <summary>
     /// 认证服务客户端接口

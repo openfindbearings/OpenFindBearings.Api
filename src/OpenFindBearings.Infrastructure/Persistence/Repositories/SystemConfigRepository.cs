@@ -10,9 +10,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
     /// </summary>
     public class SystemConfigRepository : ISystemConfigRepository
     {
-        private readonly AppDbContext _context;
+        private readonly ApplicationDbContext _context;
 
-        public SystemConfigRepository(AppDbContext context)
+        public SystemConfigRepository(ApplicationDbContext context)
         {
             _context = context;
         }

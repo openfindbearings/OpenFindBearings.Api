@@ -7,11 +7,11 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
     /// <summary>
     /// 用户收藏轴承配置类
     /// </summary>
-    public class UserFavoriteConfiguration : IEntityTypeConfiguration<UserBearingFavorite>
+    public class UserBearingFavoriteConfiguration : IEntityTypeConfiguration<UserBearingFavorite>
     {
         public void Configure(EntityTypeBuilder<UserBearingFavorite> builder)
         {
-            builder.ToTable("UserFavorites");
+            builder.ToTable("UserBearingFavorites");
 
             builder.HasKey(uf => uf.Id);
 
@@ -31,6 +31,10 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
                 .WithMany(b => b.FavoritedByUsers)
                 .HasForeignKey(uf => uf.BearingId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // 添加全局过滤器，只显示活跃轴承的收藏
+            builder.HasQueryFilter(ubf =>
+                ubf.Bearing != null && ubf.Bearing.IsActive);
         }
     }
 }

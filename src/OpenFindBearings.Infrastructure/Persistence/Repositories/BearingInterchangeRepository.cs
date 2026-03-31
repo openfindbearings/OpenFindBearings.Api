@@ -7,9 +7,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 {
     public class BearingInterchangeRepository : IBearingInterchangeRepository
     {
-        private readonly AppDbContext _context;
+        private readonly ApplicationDbContext _context;
 
-        public BearingInterchangeRepository(AppDbContext context)
+        public BearingInterchangeRepository(ApplicationDbContext context)
         {
             _context = context;
         }

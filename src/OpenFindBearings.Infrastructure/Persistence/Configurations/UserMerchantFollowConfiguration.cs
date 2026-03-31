@@ -7,11 +7,11 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
     /// <summary>
     /// 用户关注商家配置类
     /// </summary>
-    public class UserFollowConfiguration : IEntityTypeConfiguration<UserMerchantFollow>
+    public class UserMerchantFollowConfiguration : IEntityTypeConfiguration<UserMerchantFollow>
     {
         public void Configure(EntityTypeBuilder<UserMerchantFollow> builder)
         {
-            builder.ToTable("UserFollows");
+            builder.ToTable("UserMerchantFollows");
 
             builder.HasKey(uf => uf.Id);
 

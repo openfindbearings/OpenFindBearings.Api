@@ -1,4 +1,7 @@
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using OpenFindBearings.Api.Extensions;
 using OpenFindBearings.Api.Middleware;
 using OpenFindBearings.Application;
@@ -110,12 +113,12 @@ app.UseAuthorization();       // 授权
 app.UseResponseCompression();
 
 // 健康检查
-app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+app.MapHealthChecks("/health", new HealthCheckOptions
 {
     ResponseWriter = async (context, report) =>
     {
         context.Response.ContentType = "application/json";
-        var response = new
+        var result = new
         {
             status = report.Status.ToString(),
             checks = report.Entries.Select(e => new
@@ -126,8 +129,35 @@ app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks
             }),
             duration = report.TotalDuration
         };
-        await context.Response.WriteAsJsonAsync(response);
+        await context.Response.WriteAsJsonAsync(result);
     }
+});
+
+// K8s 风格（简洁响应）
+app.MapHealthChecks("/healthz", new HealthCheckOptions
+{
+    Predicate = _ => true,
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.StatusCode = report.Status == HealthStatus.Healthy ? 200 : 503;
+        await context.Response.WriteAsync(report.Status.ToString());
+    }
+});
+
+// K8s 就绪探针
+app.MapHealthChecks("/ready", new HealthCheckOptions
+{
+    Predicate = _ => true,
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.StatusCode = report.Status == HealthStatus.Healthy ? 200 : 503;
+    }
+});
+
+// K8s 存活探针（只检查进程是否存活）
+app.MapHealthChecks("/live", new HealthCheckOptions
+{
+    Predicate = _ => false
 });
 
 // 映射所有 API 端点
@@ -139,10 +169,10 @@ using (var scope = app.Services.CreateScope())
     var services = scope.ServiceProvider;
     try
     {
-        var context = services.GetRequiredService<AppDbContext>();
+        var context = services.GetRequiredService<ApplicationDbContext>();
 
         // 确保数据库创建
-        await context.Database.EnsureCreatedAsync();
+        await context.Database.MigrateAsync();
 
         // 填充种子数据
         await SeedData.SeedAsync(context);

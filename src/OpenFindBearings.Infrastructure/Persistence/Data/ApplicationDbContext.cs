@@ -5,7 +5,7 @@ using OpenFindBearings.Domain.Entities;
 
 namespace OpenFindBearings.Infrastructure.Persistence.Data
 {
-    public class AppDbContext : DbContext
+    public class ApplicationDbContext : DbContext
     {
         // ============ 核心业务 ============
         public DbSet<Bearing> Bearings { get; set; }
@@ -37,12 +37,12 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
         // ============ 邀请管理 ============
         public DbSet<StaffInvitation> StaffInvitations { get; set; }
 
-        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             // 应用所有配置
-            modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
+            modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
         }
 
         public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

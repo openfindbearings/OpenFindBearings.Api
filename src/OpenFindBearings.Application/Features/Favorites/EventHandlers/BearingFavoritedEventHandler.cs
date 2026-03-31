@@ -1,7 +1,7 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.Common.Constants;
-using OpenFindBearings.Application.Common.Interfaces;
+using OpenFindBearings.Application.Interfaces;
 using OpenFindBearings.Domain.Events;
 
 namespace OpenFindBearings.Application.Features.Favorites.EventHandlers

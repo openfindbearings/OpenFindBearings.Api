@@ -7,23 +7,20 @@
     public enum MerchantGrade
     {
         /// <summary>
-        /// 铂金商家（最高等级）
+        /// 未知/未评级
         /// </summary>
-        Platinum = 1,
-
+        Unknown = 0,
         /// <summary>
-        /// 金牌商家
+        /// 标准商家
         /// </summary>
-        Gold = 2,
-
+        Standard = 1,
         /// <summary>
-        /// 银牌商家
+        /// 优质商家
         /// </summary>
-        Silver = 3,
-
+        Premium = 2,
         /// <summary>
-        /// 普通商家（默认等级）
+        /// 认证商家
         /// </summary>
-        Regular = 4
+        Verified = 3
     }
 }

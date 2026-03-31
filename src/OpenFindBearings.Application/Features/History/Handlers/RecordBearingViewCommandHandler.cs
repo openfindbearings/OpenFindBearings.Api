@@ -1,7 +1,7 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
-using OpenFindBearings.Application.Common.Interfaces;
 using OpenFindBearings.Application.Features.History.Commands;
+using OpenFindBearings.Application.Interfaces;
 using OpenFindBearings.Domain.Interfaces;
 
 namespace OpenFindBearings.Application.Features.History.Handlers

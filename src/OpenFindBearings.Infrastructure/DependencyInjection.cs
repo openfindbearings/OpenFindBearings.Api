@@ -2,7 +2,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using OpenFindBearings.Application.Common.Interfaces;
+using OpenFindBearings.Application.Interfaces;
 using OpenFindBearings.Domain.Interfaces;
 using OpenFindBearings.Infrastructure.Persistence.Data;
 using OpenFindBearings.Infrastructure.Persistence.Repositories;
@@ -24,16 +24,16 @@ namespace OpenFindBearings.Infrastructure
             var envName = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
             var isDev = string.IsNullOrWhiteSpace(envName) || envName == "Development"; // 默认视为开发环境
 
-            services.AddDbContext<AppDbContext>(options =>
+            services.AddDbContext<ApplicationDbContext>(options =>
             {
                 if (isDev)
                 {
-                    options.UseSqlite(configuration.GetConnectionString("DefaultConnection"), b => b.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName));
+                    options.UseSqlite(configuration.GetConnectionString("DefaultConnection"), b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName));
                 }
                 else
                 {
                     // 生产环境：PostgreSQL
-                    options.UseNpgsql(configuration.GetConnectionString("DefaultConnection"), b => b.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName));
+                    options.UseNpgsql(configuration.GetConnectionString("DefaultConnection"), b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName));
                 }
             });
             

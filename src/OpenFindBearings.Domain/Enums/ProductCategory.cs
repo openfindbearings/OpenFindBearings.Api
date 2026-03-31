@@ -6,6 +6,10 @@
     public enum ProductCategory
     {
         /// <summary>
+        /// 未知/未指定
+        /// </summary>
+        Unknown = 0,  
+        /// <summary>
         /// 进口
         /// </summary>
         Imported = 1,
@@ -18,11 +22,6 @@
         /// <summary>
         /// 合资
         /// </summary>
-        JointVenture = 3,
-
-        /// <summary>
-        /// 其他
-        /// </summary>
-        Others = 4
+        JointVenture = 3
     }
 }

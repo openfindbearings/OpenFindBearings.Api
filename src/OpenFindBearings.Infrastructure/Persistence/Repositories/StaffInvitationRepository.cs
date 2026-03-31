@@ -10,9 +10,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
     /// </summary>
     public class StaffInvitationRepository : IStaffInvitationRepository
     {
-        private readonly AppDbContext _context;
+        private readonly ApplicationDbContext _context;
 
-        public StaffInvitationRepository(AppDbContext context)
+        public StaffInvitationRepository(ApplicationDbContext context)
         {
             _context = context;
         }

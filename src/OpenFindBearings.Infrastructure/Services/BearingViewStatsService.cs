@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.Common.Constants;
-using OpenFindBearings.Application.Common.Interfaces;
+using OpenFindBearings.Application.Interfaces;
 using OpenFindBearings.Domain.Interfaces;
 
 namespace OpenFindBearings.Infrastructure.Services

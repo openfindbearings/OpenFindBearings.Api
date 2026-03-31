@@ -1,5 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
-using OpenFindBearings.Application.Common.Interfaces;
+using OpenFindBearings.Application.Interfaces;
 
 namespace OpenFindBearings.Infrastructure.Services
 {

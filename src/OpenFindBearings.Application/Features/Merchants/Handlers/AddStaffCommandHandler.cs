@@ -1,9 +1,9 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
-using OpenFindBearings.Application.Common.Interfaces;
 using OpenFindBearings.Application.Common.Models;
 using OpenFindBearings.Application.Features.Merchants.Commands;
 using OpenFindBearings.Application.Features.Merchants.DTOs;
+using OpenFindBearings.Application.Interfaces;
 using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Interfaces;

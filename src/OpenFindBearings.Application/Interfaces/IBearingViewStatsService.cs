@@ -1,4 +1,4 @@
-﻿namespace OpenFindBearings.Application.Common.Interfaces
+﻿namespace OpenFindBearings.Application.Interfaces
 {
     /// <summary>
     /// 轴承查看统计服务
