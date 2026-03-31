@@ -78,7 +78,7 @@ namespace OpenFindBearings.Api.Extensions
                  .AddUrlGroup(
                      new Uri($"{configuration["Authentication:Authority"] ?? "https://localhost:7201"}/health"),
                      name: "external_api",
-                     failureStatus: HealthStatus.Unhealthy);
+                     failureStatus: HealthStatus.Degraded);
 
             // 添加响应压缩
             services.AddResponseCompression(options =>
