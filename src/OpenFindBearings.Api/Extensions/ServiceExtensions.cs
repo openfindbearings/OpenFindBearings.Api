@@ -240,7 +240,7 @@ namespace OpenFindBearings.Api.Extensions
                 Predicate = _ => true,
                 ResponseWriter = async (context, report) =>
                 {
-                    context.Response.StatusCode = report.Status == HealthStatus.Healthy ? 200 : 503;
+                    context.Response.StatusCode = report.Status != HealthStatus.Unhealthy ? 200 : 503;
                 }
             });
 
