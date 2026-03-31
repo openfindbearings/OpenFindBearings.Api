@@ -23,7 +23,7 @@ spec:
     spec:
       containers:
       - name: openfindbearings-api
-        image: ghcr.io/openfindbearings/openfindbearings-api:v1.0.5
+        image: ghcr.io/openfindbearings/openfindbearings-api:v1.0.6
         ports:
         - containerPort: 8080
 
