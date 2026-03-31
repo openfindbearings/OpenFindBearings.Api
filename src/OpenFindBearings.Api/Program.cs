@@ -121,17 +121,25 @@ using (var scope = app.Services.CreateScope())
     {
         var context = services.GetRequiredService<ApplicationDbContext>();
 
-        // 确保数据库创建
-        await context.Database.MigrateAsync();
+        // 使用迁移，但处理异常
+        try
+        {
+            await context.Database.MigrateAsync();
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "迁移失败，尝试重新创建数据库");
+            await context.Database.EnsureDeletedAsync();
+            await context.Database.MigrateAsync();
+        }
 
-        // 填充种子数据
         await SeedData.SeedAsync(context);
-
         logger.LogInformation("数据库初始化成功");
     }
     catch (Exception ex)
     {
         logger.LogError(ex, "数据库初始化失败");
+        throw;
     }
 }
 
