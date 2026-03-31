@@ -10,9 +10,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
     /// </summary>
     public class BearingTypeRepository : IBearingTypeRepository
     {
-        private readonly AppDbContext _context;
+        private readonly ApplicationDbContext _context;
 
-        public BearingTypeRepository(AppDbContext context)
+        public BearingTypeRepository(ApplicationDbContext context)
         {
             _context = context;
         }

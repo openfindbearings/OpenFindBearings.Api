@@ -7,7 +7,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
 {
     public static class SeedData
     {
-        public static async Task SeedAsync(AppDbContext context)
+        public static async Task SeedAsync(ApplicationDbContext context)
         {
             // 检查是否已有数据
             if (await context.SystemConfigs.AnyAsync())

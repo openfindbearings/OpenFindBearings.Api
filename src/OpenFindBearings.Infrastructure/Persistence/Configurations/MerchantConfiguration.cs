@@ -33,7 +33,10 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
                 .HasDefaultValue(false);
 
             builder.Property(m => m.Grade)
-                .HasDefaultValue(MerchantGrade.Regular);
+                .HasConversion<int>()
+                .HasDefaultValue(MerchantGrade.Standard)
+                .HasSentinel(MerchantGrade.Unknown)  // 当值为 Unknown 时，使用数据库默认值
+                .HasColumnName("Grade");
 
             // 值对象配置 - ContactInfo
             builder.OwnsOne(m => m.Contact, contact =>

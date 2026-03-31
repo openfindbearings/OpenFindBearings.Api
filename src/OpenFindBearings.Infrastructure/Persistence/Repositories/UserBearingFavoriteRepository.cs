@@ -10,9 +10,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
     /// </summary>
     public class UserBearingFavoriteRepository : IUserBearingFavoriteRepository
     {
-        private readonly AppDbContext _context;
+        private readonly ApplicationDbContext _context;
 
-        public UserBearingFavoriteRepository(AppDbContext context)
+        public UserBearingFavoriteRepository(ApplicationDbContext context)
         {
             _context = context;
         }

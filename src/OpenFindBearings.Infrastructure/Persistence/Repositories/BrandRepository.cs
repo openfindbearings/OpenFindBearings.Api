@@ -10,9 +10,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
     /// </summary>
     public class BrandRepository : IBrandRepository
     {
-        private readonly AppDbContext _context;
+        private readonly ApplicationDbContext _context;
 
-        public BrandRepository(AppDbContext context)
+        public BrandRepository(ApplicationDbContext context)
         {
             _context = context;
         }

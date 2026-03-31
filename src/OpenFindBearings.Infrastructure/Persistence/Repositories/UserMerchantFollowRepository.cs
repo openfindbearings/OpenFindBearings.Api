@@ -10,9 +10,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
     /// </summary>
     public class UserMerchantFollowRepository : IUserMerchantFollowRepository
     {
-        private readonly AppDbContext _context;
+        private readonly ApplicationDbContext _context;
 
-        public UserMerchantFollowRepository(AppDbContext context)
+        public UserMerchantFollowRepository(ApplicationDbContext context)
         {
             _context = context;
         }

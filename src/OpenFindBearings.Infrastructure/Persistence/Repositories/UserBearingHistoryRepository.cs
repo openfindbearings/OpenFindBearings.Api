@@ -10,9 +10,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
     /// </summary>
     public class UserBearingHistoryRepository : IUserBearingHistoryRepository
     {
-        private readonly AppDbContext _context;
+        private readonly ApplicationDbContext _context;
 
-        public UserBearingHistoryRepository(AppDbContext context)
+        public UserBearingHistoryRepository(ApplicationDbContext context)
         {
             _context = context;
         }

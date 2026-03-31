@@ -9,9 +9,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 {
     public class LicenseVerificationRepository : ILicenseVerificationRepository
     {
-        private readonly AppDbContext _context;
+        private readonly ApplicationDbContext _context;
 
-        public LicenseVerificationRepository(AppDbContext context)
+        public LicenseVerificationRepository(ApplicationDbContext context)
         {
             _context = context;
         }

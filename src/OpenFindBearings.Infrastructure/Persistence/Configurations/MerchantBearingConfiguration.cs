@@ -56,6 +56,10 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             builder.HasIndex(mp => mp.IsOnSale);
             builder.HasIndex(mp => mp.IsPendingApproval);
             builder.HasIndex(mp => new { mp.MerchantId, mp.BearingId }).IsUnique();
+
+            // 添加全局过滤器，只显示活跃轴承的商家关联
+            builder.HasQueryFilter(mb =>
+                mb.Bearing != null && mb.Bearing.IsActive);
         }
     }
 }

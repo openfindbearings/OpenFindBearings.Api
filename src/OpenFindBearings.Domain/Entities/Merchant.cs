@@ -107,7 +107,7 @@ namespace OpenFindBearings.Domain.Entities
             Name = name;
             Type = type;
             Contact = contact ?? throw new ArgumentNullException(nameof(contact));
-            Grade = MerchantGrade.Regular;
+            Grade = MerchantGrade.Standard;
         }
 
         /// <summary>

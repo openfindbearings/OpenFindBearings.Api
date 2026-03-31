@@ -11,9 +11,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
     /// </summary>
     public class CorrectionRequestRepository : ICorrectionRequestRepository
     {
-        private readonly AppDbContext _context;
+        private readonly ApplicationDbContext _context;
 
-        public CorrectionRequestRepository(AppDbContext context)
+        public CorrectionRequestRepository(ApplicationDbContext context)
         {
             _context = context;
         }

@@ -1,4 +1,4 @@
-﻿namespace OpenFindBearings.Application.Common.Interfaces
+﻿namespace OpenFindBearings.Application.Interfaces
 {
     /// <summary>
     /// 通知服务接口

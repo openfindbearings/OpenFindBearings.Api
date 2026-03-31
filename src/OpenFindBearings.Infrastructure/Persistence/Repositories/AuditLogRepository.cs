@@ -12,9 +12,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
     /// </summary>
     public class AuditLogRepository : IAuditLogRepository
     {
-        private readonly AppDbContext _context;
+        private readonly ApplicationDbContext _context;
 
-        public AuditLogRepository(AppDbContext context)
+        public AuditLogRepository(ApplicationDbContext context)
         {
             _context = context;
         }

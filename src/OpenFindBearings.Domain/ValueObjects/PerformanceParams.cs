@@ -9,32 +9,36 @@ namespace OpenFindBearings.Domain.ValueObjects
     public class PerformanceParams : ValueObject
     {
         /// <summary>
+        /// 是否存在性能数据（用于EF Core表共享识别）
+        /// </summary>
+        public bool HasData { get; private set; }
+
+        /// <summary>
         /// 动载荷 (kN)
         /// </summary>
-        public decimal? DynamicLoadRating { get; }
+        public decimal? DynamicLoadRating { get; private set; }
 
         /// <summary>
         /// 静载荷 (kN)
         /// </summary>
-        public decimal? StaticLoadRating { get; }
+        public decimal? StaticLoadRating { get; private set; }
 
         /// <summary>
         /// 极限转速 (rpm)
         /// </summary>
-        public decimal? LimitingSpeed { get; }
+        public decimal? LimitingSpeed { get; private set; }
 
         /// <summary>
         /// 私有构造函数，供EF Core使用
         /// </summary>
-        private PerformanceParams() { }
+        private PerformanceParams()
+        {
+            HasData = false;
+        }
 
         /// <summary>
         /// 创建性能参数值对象
         /// </summary>
-        /// <param name="dynamicLoad">动载荷</param>
-        /// <param name="staticLoad">静载荷</param>
-        /// <param name="speed">极限转速</param>
-        /// <exception cref="ArgumentException">当动载荷大于静载荷时抛出</exception>
         public PerformanceParams(decimal? dynamicLoad, decimal? staticLoad, decimal? speed)
         {
             if (dynamicLoad.HasValue && staticLoad.HasValue && dynamicLoad > staticLoad)
@@ -43,6 +47,7 @@ namespace OpenFindBearings.Domain.ValueObjects
             DynamicLoadRating = dynamicLoad;
             StaticLoadRating = staticLoad;
             LimitingSpeed = speed;
+            HasData = true;
         }
 
         /// <summary>
@@ -50,6 +55,7 @@ namespace OpenFindBearings.Domain.ValueObjects
         /// </summary>
         protected override IEnumerable<object> GetEqualityComponents()
         {
+            yield return HasData;
             yield return DynamicLoadRating ?? 0;
             yield return StaticLoadRating ?? 0;
             yield return LimitingSpeed ?? 0;
@@ -58,9 +64,6 @@ namespace OpenFindBearings.Domain.ValueObjects
         /// <summary>
         /// 是否有任何性能数据
         /// </summary>
-        public bool HasAnyValue =>
-            DynamicLoadRating.HasValue ||
-            StaticLoadRating.HasValue ||
-            LimitingSpeed.HasValue;
+        public bool HasAnyValue => HasData;
     }
 }
