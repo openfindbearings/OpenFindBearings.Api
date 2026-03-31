@@ -1,14 +1,11 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
-using OpenFindBearings.Api.Endpoints;
 using OpenFindBearings.Api.Services;
 using OpenFindBearings.Application.Interfaces;
 using OpenFindBearings.Domain.Interfaces;
-using OpenFindBearings.Infrastructure.Persistence.Data;
 using OpenFindBearings.Infrastructure.Persistence.Repositories;
 using OpenFindBearings.Infrastructure.Services;
 
@@ -63,9 +60,9 @@ namespace OpenFindBearings.Api.Extensions
             // 添加健康检查
             services.AddHealthChecks()
                  // 1. 数据库检查（必须）
-                 .AddDbContextCheck<ApplicationDbContext>(
-                     name: "database",
-                     failureStatus: HealthStatus.Degraded)
+                 //.AddDbContextCheck<ApplicationDbContext>(
+                 //    name: "database",
+                 //    failureStatus: HealthStatus.Degraded)
 
                  // 2. 内存检查（可选）
                  .AddCheck<MemoryHealthCheck>(
