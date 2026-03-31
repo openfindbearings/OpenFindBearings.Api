@@ -112,6 +112,28 @@ app.UseAuthorization();       // 授权
 // 响应压缩
 app.UseResponseCompression();
 
+// ============ 初始化数据库 ============
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var context = services.GetRequiredService<ApplicationDbContext>();
+
+        // 确保数据库创建
+        await context.Database.MigrateAsync();
+
+        // 填充种子数据
+        await SeedData.SeedAsync(context);
+
+        logger.LogInformation("数据库初始化成功");
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "数据库初始化失败");
+    }
+}
+
 // 健康检查
 app.MapHealthChecks("/health", new HealthCheckOptions
 {
@@ -162,28 +184,6 @@ app.MapHealthChecks("/live", new HealthCheckOptions
 
 // 映射所有 API 端点
 app.MapApiEndpoints();
-
-// ============ 初始化数据库 ============
-using (var scope = app.Services.CreateScope())
-{
-    var services = scope.ServiceProvider;
-    try
-    {
-        var context = services.GetRequiredService<ApplicationDbContext>();
-
-        // 确保数据库创建
-        await context.Database.MigrateAsync();
-
-        // 填充种子数据
-        await SeedData.SeedAsync(context);
-
-        logger.LogInformation("数据库初始化成功");
-    }
-    catch (Exception ex)
-    {
-        logger.LogError(ex, "数据库初始化失败");
-    }
-}
 
 // ============ 启动应用 ============
 app.Run();
