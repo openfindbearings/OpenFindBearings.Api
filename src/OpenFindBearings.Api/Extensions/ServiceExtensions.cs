@@ -65,7 +65,7 @@ namespace OpenFindBearings.Api.Extensions
                  // 1. 数据库检查（必须）
                  .AddDbContextCheck<ApplicationDbContext>(
                      name: "database",
-                     failureStatus: HealthStatus.Unhealthy)
+                     failureStatus: HealthStatus.Degraded)
 
                  // 2. 内存检查（可选）
                  .AddCheck<MemoryHealthCheck>(
