@@ -113,7 +113,12 @@ app.UseResponseCompression();
 // 映射所有 API 端点
 app.MapApiEndpoints();
 
-// ============ 初始化数据库 ============
+// 健康检查
+app.MapAllMapHealthChecks();
+
+// ==========================================
+// 执行数据库迁移
+// ==========================================
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
@@ -133,8 +138,6 @@ using (var scope = app.Services.CreateScope())
             await context.Database.MigrateAsync();
         }
 
-        //await context.Database.EnsureCreatedAsync();
-
         await SeedData.SeedAsync(context);
         logger.LogInformation("数据库初始化成功");
     }
@@ -143,9 +146,6 @@ using (var scope = app.Services.CreateScope())
         logger.LogError(ex, "数据库初始化失败");
     }
 }
-
-// 健康检查
-app.MapAllMapHealthChecks();
 
 // ============ 启动应用 ============
 app.Run();
