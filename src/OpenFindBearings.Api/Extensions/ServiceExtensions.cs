@@ -1,7 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+using OpenFindBearings.Api.Endpoints;
 using OpenFindBearings.Api.Services;
 using OpenFindBearings.Application.Interfaces;
 using OpenFindBearings.Domain.Interfaces;
@@ -199,6 +201,56 @@ namespace OpenFindBearings.Api.Extensions
             });
 
             return services;
+        }
+
+        public static void MapAllMapHealthChecks(this IEndpointRouteBuilder app)
+        {
+            app.MapHealthChecks("/health", new HealthCheckOptions
+            {
+                ResponseWriter = async (context, report) =>
+                {
+                    context.Response.ContentType = "application/json";
+                    var result = new
+                    {
+                        status = report.Status.ToString(),
+                        checks = report.Entries.Select(e => new
+                        {
+                            name = e.Key,
+                            status = e.Value.Status.ToString(),
+                            description = e.Value.Description
+                        }),
+                        duration = report.TotalDuration
+                    };
+                    await context.Response.WriteAsJsonAsync(result);
+                }
+            });
+
+            // K8s 风格（简洁响应）
+            app.MapHealthChecks("/healthz", new HealthCheckOptions
+            {
+                Predicate = _ => true,
+                ResponseWriter = async (context, report) =>
+                {
+                    context.Response.StatusCode = report.Status == HealthStatus.Healthy ? 200 : 503;
+                    await context.Response.WriteAsync(report.Status.ToString());
+                }
+            });
+
+            // K8s 就绪探针
+            app.MapHealthChecks("/ready", new HealthCheckOptions
+            {
+                Predicate = _ => true,
+                ResponseWriter = async (context, report) =>
+                {
+                    context.Response.StatusCode = report.Status == HealthStatus.Healthy ? 200 : 503;
+                }
+            });
+
+            // K8s 存活探针（只检查进程是否存活）
+            app.MapHealthChecks("/live", new HealthCheckOptions
+            {
+                Predicate = _ => false
+            });
         }
     }
 

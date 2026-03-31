@@ -1,7 +1,5 @@
-using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
 using OpenFindBearings.Api.Extensions;
 using OpenFindBearings.Api.Middleware;
 using OpenFindBearings.Application;
@@ -112,6 +110,9 @@ app.UseAuthorization();       // 授权
 // 响应压缩
 app.UseResponseCompression();
 
+// 映射所有 API 端点
+app.MapApiEndpoints();
+
 // ============ 初始化数据库 ============
 using (var scope = app.Services.CreateScope())
 {
@@ -135,55 +136,7 @@ using (var scope = app.Services.CreateScope())
 }
 
 // 健康检查
-app.MapHealthChecks("/health", new HealthCheckOptions
-{
-    ResponseWriter = async (context, report) =>
-    {
-        context.Response.ContentType = "application/json";
-        var result = new
-        {
-            status = report.Status.ToString(),
-            checks = report.Entries.Select(e => new
-            {
-                name = e.Key,
-                status = e.Value.Status.ToString(),
-                description = e.Value.Description
-            }),
-            duration = report.TotalDuration
-        };
-        await context.Response.WriteAsJsonAsync(result);
-    }
-});
-
-// K8s 风格（简洁响应）
-app.MapHealthChecks("/healthz", new HealthCheckOptions
-{
-    Predicate = _ => true,
-    ResponseWriter = async (context, report) =>
-    {
-        context.Response.StatusCode = report.Status == HealthStatus.Healthy ? 200 : 503;
-        await context.Response.WriteAsync(report.Status.ToString());
-    }
-});
-
-// K8s 就绪探针
-app.MapHealthChecks("/ready", new HealthCheckOptions
-{
-    Predicate = _ => true,
-    ResponseWriter = async (context, report) =>
-    {
-        context.Response.StatusCode = report.Status == HealthStatus.Healthy ? 200 : 503;
-    }
-});
-
-// K8s 存活探针（只检查进程是否存活）
-app.MapHealthChecks("/live", new HealthCheckOptions
-{
-    Predicate = _ => false
-});
-
-// 映射所有 API 端点
-app.MapApiEndpoints();
+app.MapAllMapHealthChecks();
 
 // ============ 启动应用 ============
 app.Run();
