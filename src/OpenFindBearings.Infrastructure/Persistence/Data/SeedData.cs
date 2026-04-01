@@ -7,19 +7,16 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
 {
     public static class SeedData
     {
-        public static async Task SeedAsync(ApplicationDbContext context)
+        public static async Task SeedAsync(ApplicationDbContext context, bool isDevelopment)
         {
             // 检查是否已有数据
             if (await context.SystemConfigs.AnyAsync())
                 return;
 
-            var envName = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
-            var isDev = string.IsNullOrWhiteSpace(envName) || envName == "Development"; // 默认视为开发环境
-
             // ============ 1. 基础字典数据 ============
 
             var brands = new List<Brand>();
-            if (isDev)
+            if (isDevelopment)
             {
                 // 添加品牌
                 brands.AddRange(
@@ -37,7 +34,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
             }
 
             var bearingTypes = new List<BearingType>();
-            if (isDev)
+            if (isDevelopment)
             {
                 // 添加轴承类型
                 bearingTypes.AddRange(
@@ -146,7 +143,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
                 new("auth-admin-001", UserType.Admin, "系统管理员")
             };
 
-            if (isDev)
+            if (isDevelopment)
             {
                 users.AddRange(
                 [
@@ -166,7 +163,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
                 new(users[0].Id, globalAdmin.Id)
             };
 
-            if (!isDev)
+            if (isDevelopment)
             {
                 userRoles.AddRange(
                 [
@@ -180,7 +177,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
             await context.UserRoles.AddRangeAsync(userRoles);
             await context.SaveChangesAsync();
 
-            if (isDev)
+            if (isDevelopment)
             {
                 // ============ 4. 轴承产品数据 ============
 

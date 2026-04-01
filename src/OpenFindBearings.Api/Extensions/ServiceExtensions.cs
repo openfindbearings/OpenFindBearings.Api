@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
@@ -9,6 +9,7 @@ using OpenFindBearings.Domain.Interfaces;
 using OpenFindBearings.Infrastructure.Persistence.Data;
 using OpenFindBearings.Infrastructure.Persistence.Repositories;
 using OpenFindBearings.Infrastructure.Services;
+using System.Net;
 
 namespace OpenFindBearings.Api.Extensions
 {
@@ -17,9 +18,7 @@ namespace OpenFindBearings.Api.Extensions
     /// </summary>
     public static class ServiceExtensions
     {
-        public static IServiceCollection AddApiServices(
-            this IServiceCollection services,
-            IConfiguration configuration)
+        public static IServiceCollection AddApiServices(this IServiceCollection services, IConfiguration configuration)
         {
             // 添加HttpContext访问器
             services.AddHttpContextAccessor();
@@ -43,6 +42,17 @@ namespace OpenFindBearings.Api.Extensions
             // ============ 邀请仓储 ============
             services.AddScoped<IStaffInvitationRepository, StaffInvitationRepository>();
 
+            // 添加响应压缩
+            services.AddResponseCompression(options =>
+            {
+                options.EnableForHttps = true;
+            });
+
+            return services;
+        }
+
+        public static IServiceCollection AddCorsService(this IServiceCollection services, IConfiguration configuration)
+        {
             // 添加CORS
             services.AddCors(options =>
             {
@@ -58,6 +68,11 @@ namespace OpenFindBearings.Api.Extensions
                 });
             });
 
+            return services;
+        }
+
+        public static IServiceCollection AddHealthChecksService(this IServiceCollection services, IConfiguration configuration)
+        { 
             // 添加健康检查
             services.AddHealthChecks()
                  // 1. 数据库检查（必须）
@@ -67,13 +82,13 @@ namespace OpenFindBearings.Api.Extensions
 
                  // 2. 内存检查（可选）
                  .AddCheck<MemoryHealthCheck>(
-                     name: "memory",
-                     failureStatus: HealthStatus.Degraded)  // Degraded 表示降级，不是完全不可用
+                    name: "memory",
+                    failureStatus: HealthStatus.Degraded)  // Degraded 表示降级，不是完全不可用
 
-                 // 3. 磁盘空间检查（可选）
-                 .AddCheck<DiskSpaceHealthCheck>(
-                     name: "disk",
-                     failureStatus: HealthStatus.Degraded)
+                // 3. 磁盘空间检查（可选）
+                .AddCheck<DiskSpaceHealthCheck>(
+                    name: "disk",
+                    failureStatus: HealthStatus.Degraded)
 
                  // 4. 外部依赖检查（可选）
                  .AddUrlGroup(
@@ -81,17 +96,10 @@ namespace OpenFindBearings.Api.Extensions
                      name: "external_api",
                      failureStatus: HealthStatus.Degraded);
 
-            // 添加响应压缩
-            services.AddResponseCompression(options =>
-            {
-                options.EnableForHttps = true;
-            });
-
             return services;
         }
 
-        public static IServiceCollection AddSwagger(
-            this IServiceCollection services)
+        public static IServiceCollection AddSwagger(this IServiceCollection services)
         {
             services.AddEndpointsApiExplorer();
 
@@ -131,9 +139,7 @@ namespace OpenFindBearings.Api.Extensions
             return services;
         }
 
-        public static IServiceCollection AddAuthenticationAndAuthorization(
-            this IServiceCollection services,
-            IConfiguration configuration)
+        public static IServiceCollection AddAuthenticationAndAuthorization(this IServiceCollection services, IConfiguration configuration)
         {
             // JWT 认证配置
             services.AddAuthentication(options =>
@@ -202,64 +208,56 @@ namespace OpenFindBearings.Api.Extensions
             return services;
         }
 
-        public static void MapAllMapHealthChecks(this IEndpointRouteBuilder app)
+        public static IServiceCollection ConfigureForwardedHeaders(this IServiceCollection services, bool isDevelopment)
         {
-            app.MapHealthChecks("/health", new HealthCheckOptions
+            services.Configure<ForwardedHeadersOptions>(options =>
             {
-                ResponseWriter = async (context, report) =>
+                // 所有环境都可以先打开
+                options.ForwardedHeaders =
+                    ForwardedHeaders.XForwardedFor |
+                    ForwardedHeaders.XForwardedProto;
+
+                // 但只在非开发环境信任网络
+                if (!isDevelopment)
                 {
-                    context.Response.ContentType = "application/json";
-                    var result = new
-                    {
-                        status = report.Status.ToString(),
-                        checks = report.Entries.Select(e => new
-                        {
-                            name = e.Key,
-                            status = e.Value.Status.ToString(),
-                            description = e.Value.Description
-                        }),
-                        duration = report.TotalDuration
-                    };
-                    await context.Response.WriteAsJsonAsync(result);
+                    AddKnownNetwork(options, "POD_NETWORK_CIDR");
+                    AddKnownNetwork(options, "SERVICE_NETWORK_CIDR");
+                }
+                else
+                {
+                    // 开发环境：不信任任何代理
+                    options.KnownProxies.Clear();
+                    options.KnownIPNetworks.Clear();
                 }
             });
 
-            // K8s 风格（简洁响应）
-            app.MapHealthChecks("/healthz", new HealthCheckOptions
+            return services;
+        }
+
+        private static void AddKnownNetwork(ForwardedHeadersOptions options, string envVarName)
+        {
+            var cidr = Environment.GetEnvironmentVariable(envVarName);
+            if (string.IsNullOrEmpty(cidr))
+                return;
+
+            try
             {
-                Predicate = _ => true,
-                ResponseWriter = async (context, report) =>
+                var parts = cidr.Split('/');
+                if (parts.Length == 2 &&
+                    IPAddress.TryParse(parts[0], out var ip) &&
+                    int.TryParse(parts[1], out var prefix))
                 {
-                    // 修改这里：只有 Unhealthy 才返回 503，Degraded 返回 200
-                    var statusCode = report.Status == HealthStatus.Unhealthy ? 503 : 200;
-                    context.Response.StatusCode = statusCode;
-
-                    await context.Response.WriteAsync(report.Status.ToString());
+                    options.KnownIPNetworks.Add(new System.Net.IPNetwork(ip, prefix));
                 }
-            });
-
-            // --- A. 存活探针 (/live) ---
-            // 职责：只检查进程是否死锁。
-            // 策略：不执行任何注册的检查项 (Predicate = false)。
-            app.MapHealthChecks("/live", new HealthCheckOptions
+            }
+            catch (Exception ex)
             {
-                Predicate = _ => false
-            });
-
-            // --- B. 就绪探针 (/ready) ---
-            // 职责：检查是否准备好接收流量。
-            // 【修复点】：排除 "db" 标签的检查。
-            // 原因：在数据库迁移期间，数据库连接可能被占用。如果这里检查数据库，会导致就绪探针失败，
-            // 进而导致 K8s 认为服务未就绪甚至重启服务，导致迁移永远无法完成。
-            app.MapHealthChecks("/ready", new HealthCheckOptions
-            {
-                Predicate = check => !check.Tags.Contains("db")
-            });
+                Console.WriteLine($"Failed to parse CIDR ({envVarName}): {ex.Message}");
+            }
         }
     }
 
     // ============ 自定义健康检查类 ============
-
     /// <summary>
     /// 内存健康检查
     /// </summary>
