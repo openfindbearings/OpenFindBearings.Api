@@ -1,6 +1,4 @@
-﻿using OpenFindBearings.Domain.Common;
-
-namespace OpenFindBearings.Domain.Entities
+﻿namespace OpenFindBearings.Domain.Entities
 {
     /// <summary>
     /// 轴承类型实体

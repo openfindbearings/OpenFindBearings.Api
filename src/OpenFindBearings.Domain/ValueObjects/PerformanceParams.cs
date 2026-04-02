@@ -1,6 +1,4 @@
-﻿using OpenFindBearings.Domain.Common;
-
-namespace OpenFindBearings.Domain.ValueObjects
+﻿namespace OpenFindBearings.Domain.ValueObjects
 {
     /// <summary>
     /// 性能参数值对象

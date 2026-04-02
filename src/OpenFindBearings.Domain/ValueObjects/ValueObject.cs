@@ -1,4 +1,4 @@
-﻿namespace OpenFindBearings.Domain.Common
+﻿namespace OpenFindBearings.Domain.ValueObjects
 {
     /// <summary>
     /// 值对象基类

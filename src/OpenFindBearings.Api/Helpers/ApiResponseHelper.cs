@@ -1,4 +1,4 @@
-﻿using OpenFindBearings.Api.Common.Models;
+﻿using OpenFindBearings.Api.DTOs;
 
 namespace OpenFindBearings.Api.Helpers
 {

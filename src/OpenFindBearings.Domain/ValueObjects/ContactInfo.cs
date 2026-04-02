@@ -1,6 +1,4 @@
-﻿using OpenFindBearings.Domain.Common;
-
-namespace OpenFindBearings.Domain.ValueObjects
+﻿namespace OpenFindBearings.Domain.ValueObjects
 {
     /// <summary>
     /// 联系方式值对象

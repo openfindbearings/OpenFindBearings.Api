@@ -1,6 +1,5 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
-using OpenFindBearings.Application.Common.Models;
 using OpenFindBearings.Application.Features.Bearings.Commands;
 using OpenFindBearings.Application.Features.Sync.Commands;
 using OpenFindBearings.Domain.Interfaces;
@@ -61,13 +60,13 @@ namespace OpenFindBearings.Application.Features.Sync.Handlers
                     // 检查轴承是否已存在
                     var existingBearing = await _bearingRepository.GetByPartNumberAsync(bearingDto.PartNumber, cancellationToken);
 
-                    if (existingBearing != null && request.Mode == Common.Enums.SyncMode.Create)
+                    if (existingBearing != null && request.Mode == SyncMode.Create)
                     {
                         result.AddFailed(bearingDto.PartNumber, "轴承型号已存在");
                         continue;
                     }
 
-                    if (existingBearing == null && request.Mode == Common.Enums.SyncMode.Update)
+                    if (existingBearing == null && request.Mode == SyncMode.Update)
                     {
                         result.AddFailed(bearingDto.PartNumber, "轴承型号不存在");
                         continue;
@@ -102,7 +101,7 @@ namespace OpenFindBearings.Application.Features.Sync.Handlers
                         var id = await _mediator.Send(createCommand, cancellationToken);
                         result.AddSuccess(bearingDto.PartNumber, "created", id);
                     }
-                    else if (request.Mode == Common.Enums.SyncMode.Update || request.Mode == Common.Enums.SyncMode.Upsert)
+                    else if (request.Mode == SyncMode.Update || request.Mode == SyncMode.Upsert)
                     {
                         // 更新现有轴承
                         // 这里需要实现 UpdateBearingCommand

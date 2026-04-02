@@ -1,7 +1,7 @@
 ﻿using MediatR;
 using OpenFindBearings.Application.Features.Bearings.DTOs;
-using OpenFindBearings.Domain.Common.Models;
 using OpenFindBearings.Domain.Enums;
+using OpenFindBearings.Domain.Interfaces;
 
 namespace OpenFindBearings.Application.Features.Bearings.Queries
 {

@@ -1,5 +1,4 @@
-﻿using OpenFindBearings.Domain.Common;
-using OpenFindBearings.Domain.Enums;
+﻿using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Events;
 
 namespace OpenFindBearings.Domain.Entities

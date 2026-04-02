@@ -1,4 +1,4 @@
-﻿namespace OpenFindBearings.Application.Common.Models
+﻿namespace OpenFindBearings.Application.Features.Sync.Commands
 {
     /// <summary>
     /// 批量操作结果

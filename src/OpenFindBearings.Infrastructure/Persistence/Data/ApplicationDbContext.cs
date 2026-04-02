@@ -1,6 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
-using OpenFindBearings.Domain.Common;
 using OpenFindBearings.Domain.Entities;
 
 namespace OpenFindBearings.Infrastructure.Persistence.Data

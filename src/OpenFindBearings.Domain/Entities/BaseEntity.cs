@@ -1,7 +1,7 @@
 ﻿using MediatR;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace OpenFindBearings.Domain.Common
+namespace OpenFindBearings.Domain.Entities
 {
     /// <summary>
     /// 领域实体基类
