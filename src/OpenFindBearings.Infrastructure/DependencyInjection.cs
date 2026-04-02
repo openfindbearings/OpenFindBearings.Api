@@ -16,25 +16,13 @@ namespace OpenFindBearings.Infrastructure
     /// </summary>
     public static class DependencyInjection
     {
-        public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration, bool isDevelopment)
+        public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
         {
             // ============ 1. 添加DbContext ============
-            var envName = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
-            var isDev = string.IsNullOrWhiteSpace(envName) || envName == "Development"; // 默认视为开发环境
-
             services.AddDbContext<ApplicationDbContext>(options =>
             {
-                if (isDevelopment)
-                {
-                    options.UseSqlite(configuration.GetConnectionString("DefaultConnection"), b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName));
-                }
-                else
-                {
-                    // 生产环境：PostgreSQL
-                    options.UseNpgsql(configuration.GetConnectionString("DefaultConnection"), b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName));
-                }
+                options.UseNpgsql(configuration.GetConnectionString("DefaultConnection"), b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName));
             });
-
 
             // ============ 2. 注册所有仓储 ============
 
