@@ -15,13 +15,13 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                 name: "BearingTypes",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Code = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false),
-                    Name = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
-                    Description = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    IsActive = table.Column<bool>(type: "INTEGER", nullable: false)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Code = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    Description = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -32,15 +32,15 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                 name: "Brands",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Code = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false),
-                    Name = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
-                    Country = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
-                    LogoUrl = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
-                    Level = table.Column<int>(type: "INTEGER", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    IsActive = table.Column<bool>(type: "INTEGER", nullable: false)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Code = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    Country = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    LogoUrl = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    Level = table.Column<int>(type: "integer", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -51,23 +51,23 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                 name: "Merchants",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Name = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
-                    CompanyName = table.Column<string>(type: "TEXT", maxLength: 200, nullable: true),
-                    Type = table.Column<int>(type: "INTEGER", nullable: false),
-                    ContactPerson = table.Column<string>(type: "TEXT", maxLength: 100, nullable: true),
-                    Phone = table.Column<string>(type: "TEXT", maxLength: 20, nullable: true),
-                    Mobile = table.Column<string>(type: "TEXT", maxLength: 20, nullable: true),
-                    Email = table.Column<string>(type: "TEXT", maxLength: 100, nullable: true),
-                    Address = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
-                    Description = table.Column<string>(type: "TEXT", maxLength: 1000, nullable: true),
-                    BusinessScope = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
-                    IsVerified = table.Column<bool>(type: "INTEGER", nullable: false, defaultValue: false),
-                    VerifiedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    Grade = table.Column<int>(type: "INTEGER", nullable: false, defaultValue: 1),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    IsActive = table.Column<bool>(type: "INTEGER", nullable: false)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    CompanyName = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
+                    Type = table.Column<int>(type: "integer", nullable: false),
+                    ContactPerson = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    Phone = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
+                    Mobile = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
+                    Email = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    Address = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    Description = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
+                    BusinessScope = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    IsVerified = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    VerifiedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    Grade = table.Column<int>(type: "integer", nullable: false, defaultValue: 1),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -78,12 +78,12 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                 name: "Permissions",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Name = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
-                    Description = table.Column<string>(type: "TEXT", maxLength: 200, nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    IsActive = table.Column<bool>(type: "INTEGER", nullable: false)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    Description = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -94,12 +94,12 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                 name: "Roles",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Name = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
-                    Description = table.Column<string>(type: "TEXT", maxLength: 200, nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    IsActive = table.Column<bool>(type: "INTEGER", nullable: false)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Name = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    Description = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -110,19 +110,19 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                 name: "StaffInvitations",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    MerchantId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Email = table.Column<string>(type: "TEXT", maxLength: 200, nullable: true),
-                    Phone = table.Column<string>(type: "TEXT", maxLength: 20, nullable: true),
-                    Role = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
-                    InvitationCode = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
-                    OperatorId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    IsCompleted = table.Column<bool>(type: "INTEGER", nullable: false, defaultValue: false),
-                    CompletedSub = table.Column<string>(type: "TEXT", maxLength: 100, nullable: true),
-                    CompletedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    IsActive = table.Column<bool>(type: "INTEGER", nullable: false)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    MerchantId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Email = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
+                    Phone = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
+                    Role = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    InvitationCode = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    OperatorId = table.Column<Guid>(type: "uuid", nullable: false),
+                    IsCompleted = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    CompletedSub = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    CompletedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -133,30 +133,30 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                 name: "Bearings",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    PartNumber = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
-                    Name = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
-                    Description = table.Column<string>(type: "TEXT", nullable: true),
-                    InnerDiameter = table.Column<decimal>(type: "TEXT", precision: 10, scale: 3, nullable: false),
-                    OuterDiameter = table.Column<decimal>(type: "TEXT", precision: 10, scale: 3, nullable: false),
-                    Width = table.Column<decimal>(type: "TEXT", precision: 10, scale: 3, nullable: false),
-                    Weight = table.Column<decimal>(type: "TEXT", precision: 10, scale: 3, nullable: true),
-                    PrecisionGrade = table.Column<string>(type: "TEXT", maxLength: 20, nullable: true),
-                    Material = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
-                    SealType = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
-                    CageType = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
-                    PerformanceHasData = table.Column<bool>(type: "INTEGER", nullable: true, defaultValue: false),
-                    DynamicLoadRating = table.Column<decimal>(type: "TEXT", precision: 10, scale: 2, nullable: true),
-                    StaticLoadRating = table.Column<decimal>(type: "TEXT", precision: 10, scale: 2, nullable: true),
-                    LimitingSpeed = table.Column<decimal>(type: "TEXT", nullable: true),
-                    OriginCountry = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
-                    Category = table.Column<int>(type: "INTEGER", nullable: false, defaultValue: 2),
-                    BearingTypeId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    BrandId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    ViewCount = table.Column<int>(type: "INTEGER", nullable: false, defaultValue: 0),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    IsActive = table.Column<bool>(type: "INTEGER", nullable: false)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    PartNumber = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    Name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    Description = table.Column<string>(type: "text", nullable: true),
+                    InnerDiameter = table.Column<decimal>(type: "numeric(10,3)", precision: 10, scale: 3, nullable: false),
+                    OuterDiameter = table.Column<decimal>(type: "numeric(10,3)", precision: 10, scale: 3, nullable: false),
+                    Width = table.Column<decimal>(type: "numeric(10,3)", precision: 10, scale: 3, nullable: false),
+                    Weight = table.Column<decimal>(type: "numeric(10,3)", precision: 10, scale: 3, nullable: true),
+                    PrecisionGrade = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
+                    Material = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    SealType = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    CageType = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    PerformanceHasData = table.Column<bool>(type: "boolean", nullable: true, defaultValue: false),
+                    DynamicLoadRating = table.Column<decimal>(type: "numeric(10,2)", precision: 10, scale: 2, nullable: true),
+                    StaticLoadRating = table.Column<decimal>(type: "numeric(10,2)", precision: 10, scale: 2, nullable: true),
+                    LimitingSpeed = table.Column<decimal>(type: "numeric", nullable: true),
+                    OriginCountry = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    Category = table.Column<int>(type: "integer", nullable: false, defaultValue: 2),
+                    BearingTypeId = table.Column<Guid>(type: "uuid", nullable: false),
+                    BrandId = table.Column<Guid>(type: "uuid", nullable: false),
+                    ViewCount = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -179,20 +179,20 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                 name: "Users",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    AuthUserId = table.Column<string>(type: "TEXT", maxLength: 450, nullable: false),
-                    Nickname = table.Column<string>(type: "TEXT", maxLength: 100, nullable: true),
-                    Avatar = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
-                    UserType = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false),
-                    Address = table.Column<string>(type: "TEXT", nullable: true),
-                    GuestSessionId = table.Column<string>(type: "TEXT", maxLength: 100, nullable: true),
-                    LastLoginAt = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    IsActive = table.Column<bool>(type: "INTEGER", nullable: false),
-                    IsMerged = table.Column<bool>(type: "INTEGER", nullable: false),
-                    MergedToUserId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    MerchantId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: true)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    AuthUserId = table.Column<string>(type: "character varying(450)", maxLength: 450, nullable: false),
+                    Nickname = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    Avatar = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    UserType = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    Address = table.Column<string>(type: "text", nullable: true),
+                    GuestSessionId = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    LastLoginAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false),
+                    IsMerged = table.Column<bool>(type: "boolean", nullable: false),
+                    MergedToUserId = table.Column<Guid>(type: "uuid", nullable: true),
+                    MerchantId = table.Column<Guid>(type: "uuid", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -209,12 +209,12 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                 name: "RolePermissions",
                 columns: table => new
                 {
-                    RoleId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    PermissionId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    IsActive = table.Column<bool>(type: "INTEGER", nullable: false)
+                    RoleId = table.Column<Guid>(type: "uuid", nullable: false),
+                    PermissionId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -237,17 +237,17 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                 name: "BearingInterchanges",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    SourceBearingId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    TargetBearingId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    InterchangeType = table.Column<string>(type: "TEXT", maxLength: 20, nullable: true, defaultValue: "exact"),
-                    Confidence = table.Column<int>(type: "INTEGER", nullable: false, defaultValue: 80),
-                    Source = table.Column<string>(type: "TEXT", maxLength: 100, nullable: true),
-                    Remarks = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
-                    IsBidirectional = table.Column<bool>(type: "INTEGER", nullable: false, defaultValue: true),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    IsActive = table.Column<bool>(type: "INTEGER", nullable: false)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    SourceBearingId = table.Column<Guid>(type: "uuid", nullable: false),
+                    TargetBearingId = table.Column<Guid>(type: "uuid", nullable: false),
+                    InterchangeType = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true, defaultValue: "exact"),
+                    Confidence = table.Column<int>(type: "integer", nullable: false, defaultValue: 80),
+                    Source = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    Remarks = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    IsBidirectional = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -270,23 +270,23 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                 name: "MerchantBearings",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    MerchantId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    BearingId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    PriceDescription = table.Column<string>(type: "TEXT", maxLength: 100, nullable: true),
-                    PriceVisibility = table.Column<int>(type: "INTEGER", nullable: false),
-                    NumericPrice = table.Column<decimal>(type: "TEXT", nullable: true),
-                    StockDescription = table.Column<string>(type: "TEXT", maxLength: 100, nullable: true),
-                    MinOrderDescription = table.Column<string>(type: "TEXT", maxLength: 100, nullable: true),
-                    Remarks = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
-                    ViewCount = table.Column<int>(type: "INTEGER", nullable: false, defaultValue: 0),
-                    IsFeatured = table.Column<bool>(type: "INTEGER", nullable: false, defaultValue: false),
-                    IsOnSale = table.Column<bool>(type: "INTEGER", nullable: false, defaultValue: true),
-                    IsPendingApproval = table.Column<bool>(type: "INTEGER", nullable: false, defaultValue: false),
-                    ApprovalComment = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    IsActive = table.Column<bool>(type: "INTEGER", nullable: false)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    MerchantId = table.Column<Guid>(type: "uuid", nullable: false),
+                    BearingId = table.Column<Guid>(type: "uuid", nullable: false),
+                    PriceDescription = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    PriceVisibility = table.Column<int>(type: "integer", nullable: false),
+                    NumericPrice = table.Column<decimal>(type: "numeric", nullable: true),
+                    StockDescription = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    MinOrderDescription = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    Remarks = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    ViewCount = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    IsFeatured = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    IsOnSale = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
+                    IsPendingApproval = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    ApprovalComment = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -309,18 +309,18 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                 name: "AuditLogs",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Action = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
-                    EntityType = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
-                    EntityId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Action = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    EntityType = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    EntityId = table.Column<Guid>(type: "uuid", nullable: false),
                     BeforeData = table.Column<string>(type: "jsonb", nullable: true),
                     AfterData = table.Column<string>(type: "jsonb", nullable: true),
-                    OperatorId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    OperatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    Remarks = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    IsActive = table.Column<bool>(type: "INTEGER", nullable: false)
+                    OperatorId = table.Column<Guid>(type: "uuid", nullable: false),
+                    OperatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    Remarks = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -337,24 +337,24 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                 name: "CorrectionRequests",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    TargetType = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false),
-                    TargetId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    BearingId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    MerchantId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    FieldName = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
-                    OriginalValue = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
-                    SuggestedValue = table.Column<string>(type: "TEXT", maxLength: 500, nullable: false),
-                    Reason = table.Column<string>(type: "TEXT", maxLength: 1000, nullable: true),
-                    SubmittedBy = table.Column<Guid>(type: "TEXT", nullable: false),
-                    SubmittedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    Status = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false),
-                    ReviewedBy = table.Column<Guid>(type: "TEXT", nullable: true),
-                    ReviewedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    ReviewComment = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    IsActive = table.Column<bool>(type: "INTEGER", nullable: false)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    TargetType = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    TargetId = table.Column<Guid>(type: "uuid", nullable: false),
+                    BearingId = table.Column<Guid>(type: "uuid", nullable: true),
+                    MerchantId = table.Column<Guid>(type: "uuid", nullable: true),
+                    FieldName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    OriginalValue = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    SuggestedValue = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
+                    Reason = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
+                    SubmittedBy = table.Column<Guid>(type: "uuid", nullable: false),
+                    SubmittedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    Status = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    ReviewedBy = table.Column<Guid>(type: "uuid", nullable: true),
+                    ReviewedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    ReviewComment = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -399,18 +399,18 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                 name: "LicenseVerifications",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    MerchantId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    LicenseUrl = table.Column<string>(type: "TEXT", maxLength: 500, nullable: false),
-                    Status = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false),
-                    SubmittedBy = table.Column<Guid>(type: "TEXT", nullable: false),
-                    SubmittedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    ReviewedBy = table.Column<Guid>(type: "TEXT", nullable: true),
-                    ReviewedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    ReviewComment = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    IsActive = table.Column<bool>(type: "INTEGER", nullable: false)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    MerchantId = table.Column<Guid>(type: "uuid", nullable: false),
+                    LicenseUrl = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
+                    Status = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    SubmittedBy = table.Column<Guid>(type: "uuid", nullable: false),
+                    SubmittedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    ReviewedBy = table.Column<Guid>(type: "uuid", nullable: true),
+                    ReviewedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    ReviewComment = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -439,17 +439,17 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                 name: "SystemConfigs",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Key = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
-                    Value = table.Column<string>(type: "TEXT", maxLength: 1000, nullable: false),
-                    Description = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
-                    Group = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
-                    ValueType = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false, defaultValue: "string"),
-                    IsSystem = table.Column<bool>(type: "INTEGER", nullable: false, defaultValue: false),
-                    UpdatedBy = table.Column<Guid>(type: "TEXT", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    IsActive = table.Column<bool>(type: "INTEGER", nullable: false)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Key = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    Value = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: false),
+                    Description = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    Group = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    ValueType = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false, defaultValue: "string"),
+                    IsSystem = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    UpdatedBy = table.Column<Guid>(type: "uuid", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -466,12 +466,12 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                 name: "UserBearingFavorites",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    UserId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    BearingId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    IsActive = table.Column<bool>(type: "INTEGER", nullable: false)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    BearingId = table.Column<Guid>(type: "uuid", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -494,13 +494,13 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                 name: "UserBearingHistories",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    UserId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    BearingId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    ViewedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    IsActive = table.Column<bool>(type: "INTEGER", nullable: false)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    BearingId = table.Column<Guid>(type: "uuid", nullable: false),
+                    ViewedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -523,12 +523,12 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                 name: "UserMerchantFollows",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    UserId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    MerchantId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    IsActive = table.Column<bool>(type: "INTEGER", nullable: false)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    MerchantId = table.Column<Guid>(type: "uuid", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -551,13 +551,13 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                 name: "UserMerchantHistories",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    UserId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    MerchantId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    ViewedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    IsActive = table.Column<bool>(type: "INTEGER", nullable: false)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    MerchantId = table.Column<Guid>(type: "uuid", nullable: false),
+                    ViewedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -580,12 +580,12 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                 name: "UserRoles",
                 columns: table => new
                 {
-                    UserId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    RoleId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    IsActive = table.Column<bool>(type: "INTEGER", nullable: false)
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    RoleId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
