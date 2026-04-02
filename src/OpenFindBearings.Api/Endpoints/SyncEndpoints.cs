@@ -1,8 +1,7 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using OpenFindBearings.Api.Common.Models;
+using OpenFindBearings.Api.DTOs;
 using OpenFindBearings.Api.Helpers;
-using OpenFindBearings.Application.Common.Models;
 using OpenFindBearings.Application.Features.Sync.Commands;
 using OpenFindBearings.Application.Features.Sync.DTOs;
 using OpenFindBearings.Application.Features.Sync.Queries;

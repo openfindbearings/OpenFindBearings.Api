@@ -1,6 +1,5 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
-using OpenFindBearings.Application.Common.Models;
 using OpenFindBearings.Application.Features.Sync.Commands;
 using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Interfaces;
@@ -45,13 +44,13 @@ namespace OpenFindBearings.Application.Features.Sync.Handlers
 
                     var existing = existingMerchants.FirstOrDefault();
 
-                    if (existing != null && request.Mode == Common.Enums.SyncMode.Create)
+                    if (existing != null && request.Mode == SyncMode.Create)
                     {
                         result.AddFailed(merchantDto.Name, "商家名称已存在");
                         continue;
                     }
 
-                    if (existing == null && request.Mode == Common.Enums.SyncMode.Update)
+                    if (existing == null && request.Mode == SyncMode.Update)
                     {
                         result.AddFailed(merchantDto.Name, "商家不存在");
                         continue;
@@ -88,7 +87,7 @@ namespace OpenFindBearings.Application.Features.Sync.Handlers
                         await _merchantRepository.AddAsync(merchant, cancellationToken);
                         result.AddSuccess(merchantDto.Name, "created", merchant.Id);
                     }
-                    else if (request.Mode == Common.Enums.SyncMode.Update || request.Mode == Common.Enums.SyncMode.Upsert)
+                    else if (request.Mode == SyncMode.Update || request.Mode == SyncMode.Upsert)
                     {
                         // 更新现有商家
                         existing.UpdateBasicInfo(

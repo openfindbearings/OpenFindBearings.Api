@@ -1,4 +1,4 @@
-﻿namespace OpenFindBearings.Domain.Common.Models
+﻿namespace OpenFindBearings.Domain.Interfaces
 {
     /// <summary>
     /// 领域层分页结果

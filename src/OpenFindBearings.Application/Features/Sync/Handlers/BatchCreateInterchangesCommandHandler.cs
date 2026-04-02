@@ -1,6 +1,5 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
-using OpenFindBearings.Application.Common.Models;
 using OpenFindBearings.Application.Features.Sync.Commands;
 using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Interfaces;

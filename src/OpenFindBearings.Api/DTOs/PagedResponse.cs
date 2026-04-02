@@ -1,4 +1,4 @@
-﻿namespace OpenFindBearings.Api.Common.Models
+﻿namespace OpenFindBearings.Api.DTOs
 {
     /// <summary>
     /// 分页数据包装

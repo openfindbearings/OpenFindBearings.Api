@@ -3,7 +3,6 @@ using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.Features.Follows.DTOs;
 using OpenFindBearings.Application.Features.Follows.Queries;
 using OpenFindBearings.Application.Features.Merchants.DTOs;
-using OpenFindBearings.Domain.Common.Models;
 using OpenFindBearings.Domain.Interfaces;
 
 namespace OpenFindBearings.Application.Features.Follows.Handlers

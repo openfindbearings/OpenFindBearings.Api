@@ -2,7 +2,7 @@
 using System.Text;
 using System.Text.Json;
 
-namespace OpenFindBearings.Application.Common.Constants
+namespace OpenFindBearings.Application.Constants
 {
     /// <summary>
     /// 缓存键常量定义

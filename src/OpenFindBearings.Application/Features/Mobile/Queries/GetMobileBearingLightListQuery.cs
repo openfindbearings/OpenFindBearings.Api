@@ -1,6 +1,6 @@
 ﻿using MediatR;
 using OpenFindBearings.Application.Features.Mobile.DTOs;
-using OpenFindBearings.Domain.Common.Models;
+using OpenFindBearings.Domain.Interfaces;
 
 namespace OpenFindBearings.Application.Features.Mobile.Queries
 {

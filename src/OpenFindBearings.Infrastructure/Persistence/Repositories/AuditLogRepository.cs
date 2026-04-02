@@ -1,5 +1,4 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using OpenFindBearings.Domain.Common.Models;
 using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Interfaces;
 using OpenFindBearings.Domain.Specifications;

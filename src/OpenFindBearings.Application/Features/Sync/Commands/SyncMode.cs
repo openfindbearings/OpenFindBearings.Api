@@ -1,4 +1,4 @@
-﻿namespace OpenFindBearings.Application.Common.Enums
+﻿namespace OpenFindBearings.Application.Features.Sync.Commands
 {
     /// <summary>
     /// 同步模式

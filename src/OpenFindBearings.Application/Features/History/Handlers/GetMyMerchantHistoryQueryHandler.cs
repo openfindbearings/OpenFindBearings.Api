@@ -2,7 +2,6 @@
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.Features.History.DTOs;
 using OpenFindBearings.Application.Features.History.Queries;
-using OpenFindBearings.Domain.Common.Models;
 using OpenFindBearings.Domain.Interfaces;
 
 namespace OpenFindBearings.Application.Features.History.Handlers

@@ -2,7 +2,6 @@
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.Features.Admin.DTOs;
 using OpenFindBearings.Application.Features.Admin.Queries;
-using OpenFindBearings.Domain.Common.Models;
 using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Interfaces;
 using OpenFindBearings.Domain.Specifications;
