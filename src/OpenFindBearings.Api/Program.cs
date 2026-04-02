@@ -12,7 +12,7 @@ builder.Services.ConfigureForwardedHeaders(builder.Environment.IsDevelopment());
 
 // 添加各层服务
 builder.Services.AddApplication();                         // Application 层 (MediatR + FluentValidation)
-builder.Services.AddInfrastructure(builder.Configuration, builder.Environment.IsDevelopment()); // Infrastructure 层 (EF Core + Repositories)
+builder.Services.AddInfrastructure(builder.Configuration); // Infrastructure 层 (EF Core + Repositories)
 builder.Services.AddApiServices(builder.Configuration);    // API 层服务
 
 // 添加跨域

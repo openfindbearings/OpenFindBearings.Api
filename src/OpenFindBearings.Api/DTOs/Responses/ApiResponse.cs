@@ -1,4 +1,4 @@
-﻿namespace OpenFindBearings.Api.DTOs
+﻿namespace OpenFindBearings.Api.DTOs.Responses
 {
     /// <summary>
     /// 统一API响应格式
