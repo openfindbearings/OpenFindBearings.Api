@@ -19,9 +19,35 @@ namespace OpenFindBearings.Api.Endpoints
                 .WithTags("数据同步接口")
                 .RequireAuthorization("SyncClient"); // 使用策略认证，不需要自定义 Filter
 
-            /// <summary>
-            /// 批量同步轴承
-            /// </summary>
+            // 批量同步品牌
+            group.MapPost("/brands/batch", async (BatchCreateBrandsCommand command, IMediator mediator) =>
+            {
+                var result = await mediator.Send(command);
+                return Results.Ok(result);
+            })
+            .WithName("SyncBrands")
+            .WithSummary("批量同步品牌")
+            .WithDescription("批量同步品牌数据")
+            .Produces<ApiResponse<SyncResultDto>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<BatchResult>>(StatusCodes.Status202Accepted)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized);
+
+            // 批量同步轴承类型
+            group.MapPost("/bearingtypes/batch", async (BatchCreateBearingTypesCommand command, IMediator mediator) =>
+            {
+                var result = await mediator.Send(command);
+                return Results.Ok(result);
+            })
+            .WithName("SyncBearingTypes")
+            .WithSummary("批量同步轴承类型")
+            .WithDescription("批量同步轴承类型数据")
+            .Produces<ApiResponse<SyncResultDto>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<BatchResult>>(StatusCodes.Status202Accepted)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized);
+
+            // 批量同步轴承
             group.MapPost("/bearings/batch", async (
                 BatchCreateBearingsCommand command,
                 [FromServices] IMediator mediator,
@@ -45,9 +71,7 @@ namespace OpenFindBearings.Api.Endpoints
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
 
-            /// <summary>
-            /// 批量同步商家
-            /// </summary>
+            // 批量同步商家
             group.MapPost("/merchants/batch", async (
                 BatchCreateMerchantsCommand command,
                 [FromServices] IMediator mediator,
@@ -65,10 +89,8 @@ namespace OpenFindBearings.Api.Endpoints
             .WithDescription("批量创建/更新商家数据（需客户端认证）")
             .Produces<ApiResponse<BatchResult>>(StatusCodes.Status202Accepted);
 
-            /// <summary>
-            /// 批量同步商家-轴承关联
-            /// </summary>
-            group.MapPost("/merchant-bearings/batch", async (
+            // 批量同步商家-轴承关联
+            group.MapPost("/merchantbearings/batch", async (
                 BatchCreateMerchantBearingsCommand command,
                 [FromServices] IMediator mediator,
                 HttpContext httpContext) =>
@@ -85,9 +107,7 @@ namespace OpenFindBearings.Api.Endpoints
             .WithDescription("批量创建/更新商家-轴承关联数据（需客户端认证）")
             .Produces<ApiResponse<BatchResult>>(StatusCodes.Status202Accepted);
 
-            /// <summary>
-            /// 批量同步替代品关系
-            /// </summary>
+            // 批量同步替代品关系
             group.MapPost("/interchanges/batch", async (
                 BatchCreateInterchangesCommand command,
                 [FromServices] IMediator mediator,
@@ -105,9 +125,7 @@ namespace OpenFindBearings.Api.Endpoints
             .WithDescription("批量创建/更新轴承替代品关系（需客户端认证）")
             .Produces<ApiResponse<BatchResult>>(StatusCodes.Status202Accepted);
 
-            /// <summary>
-            /// 获取同步任务状态
-            /// </summary>
+            // 获取同步任务状态
             group.MapGet("/tasks/{taskId}", async (
                 string taskId,
                 [FromServices] IMediator mediator,
