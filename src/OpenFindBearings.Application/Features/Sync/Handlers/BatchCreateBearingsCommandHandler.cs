@@ -42,14 +42,14 @@ namespace OpenFindBearings.Application.Features.Sync.Handlers
             {
                 try
                 {
-                    // 验证品牌和类型是否存在
+                    // 验证品牌是否存在
                     var brand = await _brandRepository.GetByCodeAsync(bearingDto.BrandCode, cancellationToken);
                     if (brand == null)
                     {
                         result.AddFailed(bearingDto.PartNumber, $"品牌不存在: {bearingDto.BrandCode}");
                         continue;
                     }
-
+                    // 验证类型是否存在
                     var bearingType = await _bearingTypeRepository.GetByCodeAsync(bearingDto.BearingTypeCode, cancellationToken);
                     if (bearingType == null)
                     {
