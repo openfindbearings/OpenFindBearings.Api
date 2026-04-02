@@ -16,9 +16,7 @@ namespace OpenFindBearings.Infrastructure
     /// </summary>
     public static class DependencyInjection
     {
-        public static IServiceCollection AddInfrastructure(
-            this IServiceCollection services,
-            IConfiguration configuration)
+        public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration, bool isDevelopment)
         {
             // ============ 1. 添加DbContext ============
             var envName = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
@@ -26,7 +24,7 @@ namespace OpenFindBearings.Infrastructure
 
             services.AddDbContext<ApplicationDbContext>(options =>
             {
-                if (isDev)
+                if (isDevelopment)
                 {
                     options.UseSqlite(configuration.GetConnectionString("DefaultConnection"), b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName));
                 }
@@ -36,7 +34,7 @@ namespace OpenFindBearings.Infrastructure
                     options.UseNpgsql(configuration.GetConnectionString("DefaultConnection"), b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName));
                 }
             });
-            
+
 
             // ============ 2. 注册所有仓储 ============
 
