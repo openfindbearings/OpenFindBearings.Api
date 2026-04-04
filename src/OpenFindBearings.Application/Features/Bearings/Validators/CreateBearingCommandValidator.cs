@@ -3,25 +3,32 @@ using OpenFindBearings.Application.Features.Bearings.Commands;
 
 namespace OpenFindBearings.Application.Features.Bearings.Validators
 {
-    /// <summary>
-    /// 创建轴承命令验证器
-    /// </summary>
     public class CreateBearingCommandValidator : AbstractValidator<CreateBearingCommand>
     {
         public CreateBearingCommandValidator()
         {
-            // 型号验证
-            RuleFor(x => x.PartNumber)
+            // ✅ 修改：PartNumber → CurrentCode
+            RuleFor(x => x.CurrentCode)
                 .NotEmpty().WithMessage("轴承型号不能为空")
-                .MaximumLength(50).WithMessage("型号长度不能超过50个字符")
+                .MaximumLength(100).WithMessage("型号长度不能超过100个字符")
                 .Matches(@"^[A-Z0-9\-]+$").WithMessage("型号只能包含大写字母、数字和连字符");
+
+            // ✅ 新增：曾用代号验证
+            RuleFor(x => x.FormerCode)
+                .MaximumLength(100).WithMessage("曾用代号长度不能超过100个字符")
+                .When(x => !string.IsNullOrWhiteSpace(x.FormerCode));
 
             // 名称验证
             RuleFor(x => x.Name)
                 .NotEmpty().WithMessage("产品名称不能为空")
                 .MaximumLength(200).WithMessage("名称长度不能超过200个字符");
 
-            // 添加产地验证
+            // ✅ 新增：轴承类型名称验证
+            RuleFor(x => x.BearingType)
+                .NotEmpty().WithMessage("轴承类型名称不能为空")
+                .MaximumLength(50).WithMessage("轴承类型名称长度不能超过50个字符");
+
+            // 产地验证
             When(x => !string.IsNullOrWhiteSpace(x.OriginCountry), () =>
             {
                 RuleFor(x => x.OriginCountry)
@@ -46,19 +53,32 @@ namespace OpenFindBearings.Application.Features.Bearings.Validators
             RuleFor(x => x.BrandId)
                 .NotEmpty().WithMessage("品牌不能为空");
 
-            // 重量验证（如果提供）
+            // 重量验证
             When(x => x.Weight.HasValue, () =>
             {
                 RuleFor(x => x.Weight!.Value)
                     .GreaterThan(0).WithMessage("重量必须大于0");
             });
 
+            // 倒角验证
+            When(x => x.ChamferRmin.HasValue, () =>
+            {
+                RuleFor(x => x.ChamferRmin!.Value)
+                    .GreaterThanOrEqualTo(0).WithMessage("倒角尺寸不能为负数");
+            });
+
+            When(x => x.ChamferRmax.HasValue, () =>
+            {
+                RuleFor(x => x.ChamferRmax!.Value)
+                    .GreaterThanOrEqualTo(0).WithMessage("倒角尺寸不能为负数");
+            });
+
             // 性能参数验证
             When(x => x.DynamicLoadRating.HasValue && x.StaticLoadRating.HasValue, () =>
             {
                 RuleFor(x => x.DynamicLoadRating!.Value)
-                    .LessThanOrEqualTo(x => x.StaticLoadRating!.Value)
-                    .WithMessage("动载荷不能大于静载荷");
+                    .LessThanOrEqualTo(x => x.StaticLoadRating!.Value * 1.5m)
+                    .WithMessage("动载荷异常大于静载荷，请核对数据");
             });
 
             // 精度等级格式验证

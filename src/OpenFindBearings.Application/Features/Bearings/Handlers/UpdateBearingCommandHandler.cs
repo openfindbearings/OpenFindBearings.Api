@@ -1,14 +1,13 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.Features.Bearings.Commands;
+using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Events;
-using OpenFindBearings.Domain.Interfaces;
+using OpenFindBearings.Domain.Repositories;
+using OpenFindBearings.Domain.ValueObjects;
 
 namespace OpenFindBearings.Application.Features.Bearings.Handlers
 {
-    /// <summary>
-    /// 更新轴承命令处理器
-    /// </summary>
     public class UpdateBearingCommandHandler : IRequestHandler<UpdateBearingCommand>
     {
         private readonly IBearingRepository _bearingRepository;
@@ -35,34 +34,46 @@ namespace OpenFindBearings.Application.Features.Bearings.Handlers
                 throw new InvalidOperationException($"轴承不存在: {request.Id}");
             }
 
-            // 记录修改的字段
             var changedFields = new List<string>();
 
+            // 更新基本信息
             if (request.Name != null)
             {
                 // bearing.UpdateName(request.Name);
                 changedFields.Add("Name");
             }
 
-            if (request.Description != null)
+            // 更新描述和重量
+            if (request.Description != null || request.Weight.HasValue)
             {
                 bearing.UpdateDetails(request.Description, request.Weight);
                 changedFields.Add("Description");
+                if (request.Weight.HasValue) changedFields.Add("Weight");
             }
 
-            // 更新产地和类别
-            if (request.OriginCountry != null)
+            // 更新尺寸相关参数
+            if (request.ChamferRmin.HasValue || request.ChamferRmax.HasValue)
             {
-                // bearing.SetOriginCountry(request.OriginCountry);
-                changedFields.Add("OriginCountry");
+                bearing.UpdateDimensionDetails(request.ChamferRmin, request.ChamferRmax);
+                changedFields.Add("ChamferRmin");
+                changedFields.Add("ChamferRmax");
             }
 
-            if (request.Category.HasValue)
+            // 更新结构类型
+            if (request.StructureType != null)
             {
-                // bearing.SetCategory(request.Category.Value);
-                changedFields.Add("Category");
+                // bearing.UpdateStructureType(request.StructureType);
+                changedFields.Add("StructureType");
             }
 
+            // 更新尺寸系列
+            if (request.SizeSeries != null)
+            {
+                // bearing.UpdateSizeSeries(request.SizeSeries);
+                changedFields.Add("SizeSeries");
+            }
+
+            // 更新技术参数
             if (request.PrecisionGrade != null || request.Material != null ||
                 request.SealType != null || request.CageType != null)
             {
@@ -72,14 +83,43 @@ namespace OpenFindBearings.Application.Features.Bearings.Handlers
                     request.SealType,
                     request.CageType);
                 changedFields.AddRange(["PrecisionGrade", "Material", "SealType", "CageType"]);
-            }           
+            }
+
+            // 更新性能参数
+            if (request.DynamicLoadRating.HasValue || request.StaticLoadRating.HasValue || request.LimitingSpeed.HasValue)
+            {
+                var performance = new PerformanceParams(
+                    request.DynamicLoadRating,
+                    request.StaticLoadRating,
+                    request.LimitingSpeed);
+                bearing.UpdatePerformance(performance);
+                changedFields.Add("Performance");
+            }
+
+            // 更新商标
+            if (request.Trademark != null)
+            {
+                bearing.UpdateIdentification(null, null, request.Trademark);
+                changedFields.Add("Trademark");
+            }
+
+            // 更新产地和类别
+            if (request.OriginCountry != null)
+            {
+                bearing.SetOrigin(request.OriginCountry, request.Category ?? bearing.Category);
+                changedFields.Add("OriginCountry");
+            }
+            else if (request.Category.HasValue)
+            {
+                bearing.SetOrigin(bearing.OriginCountry, request.Category.Value);
+                changedFields.Add("Category");
+            }
 
             await _bearingRepository.UpdateAsync(bearing, cancellationToken);
 
-            // 发布更新事件
             await _mediator.Publish(new BearingUpdatedEvent(
                 bearing.Id,
-                bearing.PartNumber,
+                bearing.CurrentCode,
                 changedFields
             ), cancellationToken);
 

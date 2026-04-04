@@ -1,8 +1,9 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.Features.Sync.Commands;
-using OpenFindBearings.Domain.Entities;
-using OpenFindBearings.Domain.Interfaces;
+using OpenFindBearings.Domain.Aggregates;
+using OpenFindBearings.Domain.Enums;
+using OpenFindBearings.Domain.Repositories;
 using OpenFindBearings.Domain.ValueObjects;
 
 namespace OpenFindBearings.Application.Features.Sync.Handlers
@@ -35,14 +36,15 @@ namespace OpenFindBearings.Application.Features.Sync.Handlers
                 try
                 {
                     // 检查商家是否已存在
-                    var existingMerchants = await _merchantRepository.SearchAsync(
+                    var existingMerchantsResult = await _merchantRepository.SearchAsync(
                         new Domain.Specifications.MerchantSearchParams
                         {
                             Keyword = merchantDto.Name,
                             PageSize = 10
                         }, cancellationToken);
 
-                    var existing = existingMerchants.FirstOrDefault();
+                    // ✅ 修改：使用 existingMerchantsResult.Items
+                    var existing = existingMerchantsResult.Items.FirstOrDefault();
 
                     if (existing != null && request.Mode == SyncMode.Create)
                     {
@@ -69,14 +71,18 @@ namespace OpenFindBearings.Application.Features.Sync.Handlers
 
                         var merchant = new Merchant(
                             merchantDto.Name,
-                            (Domain.Enums.MerchantType)merchantDto.Type,
+                            (MerchantType)merchantDto.Type,
                             contact
                         );
 
+                        // ✅ 修改：传递所有6个参数
                         merchant.UpdateBasicInfo(
-                            merchantDto.CompanyName,
-                            merchantDto.Description,
-                            merchantDto.BusinessScope
+                            companyName: merchantDto.CompanyName,
+                            unifiedSocialCreditCode: merchantDto.UnifiedSocialCreditCode,
+                            description: merchantDto.Description,
+                            businessScope: merchantDto.BusinessScope,
+                            logoUrl: merchantDto.LogoUrl,
+                            website: merchantDto.Website
                         );
 
                         if (merchantDto.IsVerified)
@@ -89,19 +95,22 @@ namespace OpenFindBearings.Application.Features.Sync.Handlers
                     }
                     else if (request.Mode == SyncMode.Update || request.Mode == SyncMode.Upsert)
                     {
-                        // 更新现有商家
+                        // ✅ 修改：传递所有6个参数
                         existing.UpdateBasicInfo(
-                            merchantDto.CompanyName,
-                            merchantDto.Description,
-                            merchantDto.BusinessScope
+                            companyName: merchantDto.CompanyName ?? existing.CompanyName,
+                            unifiedSocialCreditCode: merchantDto.UnifiedSocialCreditCode ?? existing.UnifiedSocialCreditCode,
+                            description: merchantDto.Description ?? existing.Description,
+                            businessScope: merchantDto.BusinessScope ?? existing.BusinessScope,
+                            logoUrl: merchantDto.LogoUrl ?? existing.LogoUrl,
+                            website: merchantDto.Website ?? existing.Website
                         );
 
                         var newContact = new ContactInfo(
-                            merchantDto.ContactPerson ?? existing.Contact?.ContactPerson,
-                            merchantDto.Phone ?? existing.Contact?.Phone,
-                            merchantDto.Mobile ?? existing.Contact?.Mobile,
-                            merchantDto.Email ?? existing.Contact?.Email,
-                            merchantDto.Address ?? existing.Contact?.Address
+                            contactPerson: merchantDto.ContactPerson ?? existing.Contact?.ContactPerson,
+                            phone: merchantDto.Phone ?? existing.Contact?.Phone,
+                            mobile: merchantDto.Mobile ?? existing.Contact?.Mobile,
+                            email: merchantDto.Email ?? existing.Contact?.Email,
+                            address: merchantDto.Address ?? existing.Contact?.Address
                         );
                         existing.UpdateContact(newContact);
 

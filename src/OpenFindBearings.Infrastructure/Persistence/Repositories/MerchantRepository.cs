@@ -1,6 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using OpenFindBearings.Domain.Entities;
-using OpenFindBearings.Domain.Interfaces;
+using OpenFindBearings.Domain.Aggregates;
+using OpenFindBearings.Domain.Repositories;
 using OpenFindBearings.Domain.Specifications;
 using OpenFindBearings.Infrastructure.Persistence.Data;
 
@@ -34,7 +34,10 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                 .FirstOrDefaultAsync(cancellationToken);
         }
 
-        public async Task<IEnumerable<Merchant>> SearchAsync(MerchantSearchParams searchParams, CancellationToken cancellationToken = default)
+        /// <summary>
+        /// 商家搜索
+        /// </summary>
+        public async Task<PagedResult<Merchant>> SearchAsync(MerchantSearchParams searchParams, CancellationToken cancellationToken = default)
         {
             var query = _context.Merchants.AsNoTracking();
 
@@ -54,10 +57,33 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
             if (searchParams.VerifiedOnly.HasValue && searchParams.VerifiedOnly.Value)
                 query = query.Where(m => m.IsVerified);
 
-            return await query
+            var totalCount = await query.CountAsync(cancellationToken);
+
+            var items = await query
                 .Skip((searchParams.Page - 1) * searchParams.PageSize)
                 .Take(searchParams.PageSize)
                 .ToListAsync(cancellationToken);
+
+            return new PagedResult<Merchant>
+            {
+                Items = items,
+                TotalCount = totalCount,
+                Page = searchParams.Page,
+                PageSize = searchParams.PageSize
+            };
+        }
+
+        // 检查名称是否存在
+        public async Task<bool> ExistsByNameAsync(string name, CancellationToken cancellationToken = default)
+        {
+            return await _context.Merchants
+                .AnyAsync(m => m.Name == name, cancellationToken);
+        }
+
+        // 获取总数
+        public async Task<int> GetTotalCountAsync(CancellationToken cancellationToken = default)
+        {
+            return await _context.Merchants.CountAsync(cancellationToken);
         }
 
         public async Task AddAsync(Merchant merchant, CancellationToken cancellationToken = default)

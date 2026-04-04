@@ -2,7 +2,7 @@
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.Features.Corrections.Commands;
 using OpenFindBearings.Domain.Entities;
-using OpenFindBearings.Domain.Interfaces;
+using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Features.Corrections.Handlers
 {
@@ -40,7 +40,7 @@ namespace OpenFindBearings.Application.Features.Corrections.Handlers
             // 获取原始值
             string? originalValue = request.FieldName.ToLower() switch
             {
-                "partnumber" => bearing.PartNumber,
+                "partnumber" => bearing.CurrentCode,
                 "name" => bearing.Name,
                 "description" => bearing.Description,
                 "innerdiameter" => bearing.Dimensions.InnerDiameter.ToString(),

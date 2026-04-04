@@ -4,14 +4,11 @@ using OpenFindBearings.Application.Features.Admin.DTOs;
 using OpenFindBearings.Application.Features.Admin.Queries;
 using OpenFindBearings.Application.Features.Bearings.DTOs;
 using OpenFindBearings.Application.Features.Merchants.DTOs;
-using OpenFindBearings.Domain.Entities;
-using OpenFindBearings.Domain.Interfaces;
+using OpenFindBearings.Domain.Aggregates;
+using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Features.Admin.Handlers
 {
-    /// <summary>
-    /// 获取待审核商家产品查询处理器
-    /// </summary>
     public class GetPendingMerchantBearingsQueryHandler : IRequestHandler<GetPendingMerchantBearingsQuery, PagedResult<PendingMerchantBearingDto>>
     {
         private readonly IMerchantBearingRepository _merchantBearingRepository;
@@ -35,10 +32,8 @@ namespace OpenFindBearings.Application.Features.Admin.Handlers
             GetPendingMerchantBearingsQuery request,
             CancellationToken cancellationToken)
         {
-            // 获取待审核的商家产品关联
             var pendingItems = await _merchantBearingRepository.GetPendingApprovalAsync(cancellationToken);
 
-            // 分页处理
             var items = pendingItems
                 .Skip((request.Page - 1) * request.PageSize)
                 .Take(request.PageSize)
@@ -61,7 +56,7 @@ namespace OpenFindBearings.Application.Features.Admin.Handlers
                     MinOrderDescription = item.MinOrderDescription,
                     Remarks = item.Remarks,
                     CreatedAt = item.CreatedAt,
-                    SubmitterName = "待实现" // TODO: 从用户仓储获取提交人
+                    SubmitterName = "待实现"
                 });
             }
 
@@ -99,7 +94,8 @@ namespace OpenFindBearings.Application.Features.Admin.Handlers
             return new BearingDto
             {
                 Id = bearing.Id,
-                PartNumber = bearing.PartNumber,
+                CurrentCode = bearing.CurrentCode,
+                FormerCode = bearing.FormerCode,           // ✅ 新增
                 Name = bearing.Name,
                 Description = bearing.Description,
                 InnerDiameter = bearing.Dimensions.InnerDiameter,
@@ -109,9 +105,12 @@ namespace OpenFindBearings.Application.Features.Admin.Handlers
                 BrandId = bearing.BrandId,
                 BrandName = bearing.Brand?.Name ?? string.Empty,
                 BearingTypeId = bearing.BearingTypeId,
-                BearingTypeName = bearing.BearingType?.Name ?? string.Empty,
+                BearingTypeName = bearing.BearingType,
                 ViewCount = bearing.ViewCount,
-                FavoriteCount = bearing.FavoriteCount
+                FavoriteCount = bearing.FavoriteCount,
+                IsStandard = bearing.IsStandard,           // ✅ 新增
+                OriginCountry = bearing.OriginCountry,
+                Category = bearing.Category.ToString()
             };
         }
     }

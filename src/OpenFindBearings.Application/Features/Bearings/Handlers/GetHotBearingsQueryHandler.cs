@@ -4,14 +4,10 @@ using OpenFindBearings.Application.Constants;
 using OpenFindBearings.Application.Features.Bearings.DTOs;
 using OpenFindBearings.Application.Features.Bearings.Queries;
 using OpenFindBearings.Application.Interfaces;
-using OpenFindBearings.Domain.Entities;
-using OpenFindBearings.Domain.Interfaces;
+using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Features.Bearings.Handlers
 {
-    /// <summary>
-    /// 获取热门轴承查询处理器
-    /// </summary>
     public class GetHotBearingsQueryHandler : IRequestHandler<GetHotBearingsQuery, List<BearingDto>>
     {
         private readonly IBearingRepository _bearingRepository;
@@ -30,10 +26,8 @@ namespace OpenFindBearings.Application.Features.Bearings.Handlers
 
         public async Task<List<BearingDto>> Handle(GetHotBearingsQuery request, CancellationToken cancellationToken)
         {
-            //var cacheKey = $"hot_bearings_{request.Count}";
             var cacheKey = CacheKeys.GetHotBearingsKey(request.Count);
 
-            // 尝试从缓存获取
             var cached = await _cacheService.GetAsync<List<BearingDto>>(cacheKey, cancellationToken);
             if (cached != null)
             {
@@ -41,13 +35,13 @@ namespace OpenFindBearings.Application.Features.Bearings.Handlers
                 return cached;
             }
 
-            // 从数据库获取
             var bearings = await _bearingRepository.GetHotBearingsAsync(request.Count, cancellationToken);
 
             var result = bearings.Select(b => new BearingDto
             {
                 Id = b.Id,
-                PartNumber = b.PartNumber,
+                CurrentCode = b.CurrentCode,
+                FormerCode = b.FormerCode,                 // ✅ 新增
                 Name = b.Name,
                 Description = b.Description,
                 InnerDiameter = b.Dimensions.InnerDiameter,
@@ -57,14 +51,14 @@ namespace OpenFindBearings.Application.Features.Bearings.Handlers
                 BrandId = b.BrandId,
                 BrandName = b.Brand?.Name ?? string.Empty,
                 BearingTypeId = b.BearingTypeId,
-                BearingTypeName = b.BearingType?.Name ?? string.Empty,
+                BearingTypeName = b.BearingType,
                 ViewCount = b.ViewCount,
                 FavoriteCount = b.FavoriteCount,
                 OriginCountry = b.OriginCountry,
-                Category = b.Category.ToString()
+                Category = b.Category.ToString(),
+                IsStandard = b.IsStandard                  // ✅ 新增
             }).ToList();
 
-            // 存入缓存（1小时过期）
             await _cacheService.SetAsync(cacheKey, result, TimeSpan.FromHours(1), cancellationToken);
 
             return result;

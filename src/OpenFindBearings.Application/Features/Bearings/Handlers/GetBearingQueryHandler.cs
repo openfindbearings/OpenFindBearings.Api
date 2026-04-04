@@ -3,14 +3,10 @@ using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.Features.Bearings.DTOs;
 using OpenFindBearings.Application.Features.Bearings.Queries;
 using OpenFindBearings.Application.Features.MerchantBearings.DTOs;
-using OpenFindBearings.Domain.Events;
-using OpenFindBearings.Domain.Interfaces;
+using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Features.Bearings.Handlers
 {
-    /// <summary>
-    /// 获取轴承查询处理器
-    /// </summary>
     public class GetBearingQueryHandler : IRequestHandler<GetBearingQuery, BearingDetailDto?>
     {
         private readonly IBearingRepository _bearingRepository;
@@ -41,7 +37,7 @@ namespace OpenFindBearings.Application.Features.Bearings.Handlers
             if (bearing == null)
                 return null;
 
-            // 发布浏览次数增加事件（异步处理）
+            // 发布浏览次数增加事件
             bearing.IncrementViewCount(request.UserId, request.SessionId);
             await _bearingRepository.UpdateAsync(bearing, cancellationToken);
 
@@ -80,24 +76,29 @@ namespace OpenFindBearings.Application.Features.Bearings.Handlers
                 .Select(i => new BearingDto
                 {
                     Id = i.TargetBearing!.Id,
-                    PartNumber = i.TargetBearing.PartNumber,
+                    CurrentCode = i.TargetBearing.CurrentCode,
+                    FormerCode = i.TargetBearing.FormerCode,     // ✅ 新增
                     Name = i.TargetBearing.Name,
                     InnerDiameter = i.TargetBearing.Dimensions.InnerDiameter,
                     OuterDiameter = i.TargetBearing.Dimensions.OuterDiameter,
                     Width = i.TargetBearing.Dimensions.Width,
+                    Weight = i.TargetBearing.Weight,              // ✅ 新增
                     BrandId = i.TargetBearing.BrandId,
                     BrandName = i.TargetBearing.Brand?.Name ?? string.Empty,
                     BearingTypeId = i.TargetBearing.BearingTypeId,
-                    BearingTypeName = i.TargetBearing.BearingType?.Name ?? string.Empty,
+                    BearingTypeName = i.TargetBearing.BearingType,
                     ViewCount = i.TargetBearing.ViewCount,
-                    FavoriteCount = i.TargetBearing.FavoriteCount
+                    FavoriteCount = i.TargetBearing.FavoriteCount,
+                    OriginCountry = i.TargetBearing.OriginCountry,
+                    Category = i.TargetBearing.Category.ToString(),
+                    IsStandard = i.TargetBearing.IsStandard      // ✅ 新增
                 })
                 .ToList();
 
             return new BearingDetailDto
             {
                 Id = bearing.Id,
-                PartNumber = bearing.PartNumber,
+                CurrentCode = bearing.CurrentCode,
                 Name = bearing.Name,
                 Description = bearing.Description,
                 InnerDiameter = bearing.Dimensions.InnerDiameter,
@@ -107,7 +108,7 @@ namespace OpenFindBearings.Application.Features.Bearings.Handlers
                 BrandId = bearing.BrandId,
                 BrandName = bearing.Brand?.Name ?? string.Empty,
                 BearingTypeId = bearing.BearingTypeId,
-                BearingTypeName = bearing.BearingType?.Name ?? string.Empty,
+                BearingTypeName = bearing.BearingType,
                 PrecisionGrade = bearing.PrecisionGrade,
                 Material = bearing.Material,
                 SealType = bearing.SealType,
@@ -119,7 +120,13 @@ namespace OpenFindBearings.Application.Features.Bearings.Handlers
                 Merchants = onSaleMerchants,
                 Interchanges = interchangeBearings,
                 OriginCountry = bearing.OriginCountry,
-                Category = bearing.Category.ToString()
+                Category = bearing.Category.ToString(),
+                IsStandard = bearing.IsStandard,
+                StructureType = bearing.StructureType,
+                SizeSeries = bearing.SizeSeries,
+                ChamferRmin = bearing.ChamferRmin,
+                ChamferRmax = bearing.ChamferRmax,
+                Trademark = bearing.Trademark
             };
         }
     }

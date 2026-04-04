@@ -11,14 +11,29 @@
         public Guid Id { get; set; }
 
         /// <summary>
-        /// 轴承型号
+        /// 轴承现行代号
         /// </summary>
-        public string PartNumber { get; set; } = string.Empty;
+        public string CurrentCode { get; set; } = string.Empty;
+
+        /// <summary>
+        /// 轴承曾用代号
+        /// </summary>
+        public string? FormerCode { get; set; }
+
+        /// <summary>
+        /// 轴承名称
+        /// </summary>
+        public string Name { get; set; } = string.Empty;
 
         /// <summary>
         /// 品牌名称
         /// </summary>
         public string BrandName { get; set; } = string.Empty;
+
+        /// <summary>
+        /// 轴承类型名称
+        /// </summary>
+        public string? BearingTypeName { get; set; }
 
         /// <summary>
         /// 内径
@@ -47,13 +62,11 @@
 
         /// <summary>
         /// 产地（原产国/地区）
-        /// 如：瑞典、德国、日本、中国
         /// </summary>
         public string? OriginCountry { get; set; }
 
         /// <summary>
         /// 产品类别
-        /// 进口/国产/合资/其他
         /// </summary>
         public string Category { get; set; } = string.Empty;
     }

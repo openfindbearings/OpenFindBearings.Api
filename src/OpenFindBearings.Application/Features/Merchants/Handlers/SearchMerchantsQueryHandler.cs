@@ -2,7 +2,7 @@
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.Features.Merchants.DTOs;
 using OpenFindBearings.Application.Features.Merchants.Queries;
-using OpenFindBearings.Domain.Interfaces;
+using OpenFindBearings.Domain.Repositories;
 using OpenFindBearings.Domain.Specifications;
 
 namespace OpenFindBearings.Application.Features.Merchants.Handlers
@@ -35,12 +35,10 @@ namespace OpenFindBearings.Application.Features.Merchants.Handlers
                 PageSize = request.PageSize
             };
 
-            var merchants = await _merchantRepository.SearchAsync(searchParams, cancellationToken);
+            // ✅ 现在 SearchAsync 直接返回 PagedResult<Merchant>
+            var result = await _merchantRepository.SearchAsync(searchParams, cancellationToken);
 
-            // TODO: 需要实现 CountAsync 方法
-            var totalCount = merchants.Count();
-
-            var items = merchants.Select(m => new MerchantDto
+            var items = result.Items.Select(m => new MerchantDto
             {
                 Id = m.Id,
                 Name = m.Name,
@@ -60,9 +58,9 @@ namespace OpenFindBearings.Application.Features.Merchants.Handlers
             return new PagedResult<MerchantDto>
             {
                 Items = items,
-                TotalCount = totalCount,
-                Page = request.Page,
-                PageSize = request.PageSize
+                TotalCount = result.TotalCount,
+                Page = result.Page,
+                PageSize = result.PageSize
             };
         }
     }

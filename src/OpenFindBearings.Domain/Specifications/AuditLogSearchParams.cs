@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace OpenFindBearings.Domain.Specifications
+﻿namespace OpenFindBearings.Domain.Specifications
 {
     /// <summary>
     /// 审核日志搜索参数

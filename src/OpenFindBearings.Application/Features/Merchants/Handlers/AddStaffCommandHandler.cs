@@ -4,9 +4,9 @@ using OpenFindBearings.Application.Common.Models;
 using OpenFindBearings.Application.Features.Merchants.Commands;
 using OpenFindBearings.Application.Features.Merchants.DTOs;
 using OpenFindBearings.Application.Interfaces;
-using OpenFindBearings.Domain.Entities;
+using OpenFindBearings.Domain.Aggregates;
 using OpenFindBearings.Domain.Enums;
-using OpenFindBearings.Domain.Interfaces;
+using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Features.Merchants.Handlers
 {
@@ -47,21 +47,18 @@ namespace OpenFindBearings.Application.Features.Merchants.Handlers
             _logger.LogInformation("添加员工: MerchantId={MerchantId}, Contact={Contact}, OperatorId={OperatorId}",
                 request.MerchantId, contactInfo, request.OperatorId);
 
-            // 1. 检查操作人权限
             var operatorUser = await _userRepository.GetByIdAsync(request.OperatorId, cancellationToken);
             if (operatorUser == null || operatorUser.MerchantId != request.MerchantId)
             {
                 throw new UnauthorizedAccessException("您无权添加员工");
             }
 
-            // 2. 检查商家是否存在
             var merchant = await _merchantRepository.GetByIdAsync(request.MerchantId, cancellationToken);
             if (merchant == null)
             {
                 throw new InvalidOperationException($"商家不存在: {request.MerchantId}");
             }
 
-            // 3. 尝试通过邮箱或手机号查找用户
             OidcUserInfo? oidcUser = null;
             string? foundBy = null;
 
@@ -77,7 +74,6 @@ namespace OpenFindBearings.Application.Features.Merchants.Handlers
                 if (oidcUser != null) foundBy = "phone";
             }
 
-            // 4. 如果用户存在，直接关联
             if (oidcUser != null)
             {
                 return await LinkExistingUserAsync(
@@ -87,13 +83,9 @@ namespace OpenFindBearings.Application.Features.Merchants.Handlers
                     cancellationToken);
             }
 
-            // 5. 用户不存在，发送邀请
             return await SendInvitationAsync(request, cancellationToken);
         }
 
-        /// <summary>
-        /// 关联已存在的用户
-        /// </summary>
         private async Task<AddStaffResult> LinkExistingUserAsync(
             AddStaffCommand request,
             OidcUserInfo oidcUser,
@@ -103,29 +95,31 @@ namespace OpenFindBearings.Application.Features.Merchants.Handlers
             _logger.LogInformation("用户已存在，通过 {FoundBy} 找到: Sub={Sub}",
                 foundBy, oidcUser.Sub);
 
-            // 根据 Sub (AuthUserId) 获取或创建业务用户
             var user = await _userRepository.GetByAuthUserIdAsync(oidcUser.Sub, cancellationToken);
             if (user == null)
             {
                 var nickname = oidcUser.GetDisplayName();
-                user = new User(oidcUser.Sub, UserType.MerchantStaff, nickname);
+                // ✅ 修改：添加 RegistrationSource 参数
+                user = new User(
+                    authUserId: oidcUser.Sub,
+                    userType: UserType.MerchantStaff,
+                    registrationSource: RegistrationSource.Admin,  // 管理员添加的员工
+                    registerIp: null,
+                    nickname: nickname);
                 await _userRepository.AddAsync(user, cancellationToken);
             }
 
-            // 如果用户已经是其他商家的员工，不能重复添加
             if (user.MerchantId.HasValue && user.MerchantId != request.MerchantId)
             {
                 throw new InvalidOperationException("该用户已是其他商家的员工");
             }
 
-            // 关联用户到商家
             if (!user.MerchantId.HasValue)
             {
                 user.AssignToMerchant(request.MerchantId);
                 await _userRepository.UpdateAsync(user, cancellationToken);
             }
 
-            // 分配角色
             await AssignRoleAsync(user, request.Role, cancellationToken);
 
             _logger.LogInformation("员工添加成功: UserId={UserId}, MerchantId={MerchantId}",
@@ -134,22 +128,15 @@ namespace OpenFindBearings.Application.Features.Merchants.Handlers
             return AddStaffResult.Linked(user.Id);
         }
 
-        /// <summary>
-        /// 发送邀请
-        /// </summary>
         private async Task<AddStaffResult> SendInvitationAsync(AddStaffCommand request, CancellationToken cancellationToken)
         {
             _logger.LogInformation("用户不存在，发送邀请: Email={Email}, Phone={Phone}",
                 request.Email, request.Phone);
 
-            // 生成邀请码
             var invitationCode = Guid.NewGuid().ToString("N")[..12];
-
-            // 获取商家名称
             var merchant = await _merchantRepository.GetByIdAsync(request.MerchantId, cancellationToken);
             var merchantName = merchant?.Name ?? "商家";
 
-            // 记录邀请信息
             var invitationId = await _identityService.RecordInvitationAsync(
                 merchantId: request.MerchantId,
                 email: request.Email,
@@ -161,7 +148,6 @@ namespace OpenFindBearings.Application.Features.Merchants.Handlers
             bool emailSent = false;
             bool smsSent = false;
 
-            // 发送邮件邀请
             if (!string.IsNullOrEmpty(request.Email))
             {
                 await _identityService.SendEmailInvitationAsync(
@@ -173,7 +159,6 @@ namespace OpenFindBearings.Application.Features.Merchants.Handlers
                 _logger.LogInformation("邮件邀请已发送: {Email}", request.Email);
             }
 
-            // 发送短信邀请
             if (!string.IsNullOrEmpty(request.Phone))
             {
                 await _identityService.SendSmsInvitationAsync(
@@ -188,9 +173,6 @@ namespace OpenFindBearings.Application.Features.Merchants.Handlers
             return AddStaffResult.InvitationSent(invitationId, emailSent, smsSent);
         }
 
-        /// <summary>
-        /// 分配角色
-        /// </summary>
         private async Task AssignRoleAsync(User user, string? roleName, CancellationToken cancellationToken)
         {
             var targetRole = roleName ?? "MerchantStaff";

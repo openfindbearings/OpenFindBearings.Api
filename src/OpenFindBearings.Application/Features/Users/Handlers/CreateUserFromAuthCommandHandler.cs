@@ -1,8 +1,8 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.Features.Users.Commands;
-using OpenFindBearings.Domain.Entities;
-using OpenFindBearings.Domain.Interfaces;
+using OpenFindBearings.Domain.Aggregates;
+using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Features.Users.Handlers
 {
@@ -24,8 +24,8 @@ namespace OpenFindBearings.Application.Features.Users.Handlers
 
         public async Task<Guid> Handle(CreateUserFromAuthCommand request, CancellationToken cancellationToken)
         {
-            _logger.LogInformation("创建业务用户: AuthUserId={AuthUserId}, UserType={UserType}, Nickname={Nickname}",
-                request.AuthUserId, request.UserType, request.Nickname);
+            _logger.LogInformation("创建业务用户: AuthUserId={AuthUserId}, UserType={UserType}, RegistrationSource={RegistrationSource}, Nickname={Nickname}",
+                request.AuthUserId, request.UserType, request.RegistrationSource, request.Nickname);
 
             // 检查是否已存在
             var existingUser = await _userRepository.GetByAuthUserIdAsync(request.AuthUserId, cancellationToken);
@@ -40,6 +40,8 @@ namespace OpenFindBearings.Application.Features.Users.Handlers
             var user = new User(
                 authUserId: request.AuthUserId,
                 userType: request.UserType,
+                registrationSource: request.RegistrationSource,
+                registerIp: request.RegisterIp,
                 nickname: request.Nickname
             );
 

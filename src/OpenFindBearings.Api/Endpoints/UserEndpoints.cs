@@ -39,7 +39,7 @@ namespace OpenFindBearings.Api.Endpoints
                 if (!currentUser.UserId.HasValue)
                     return ApiResponseHelper.Unauthorized(httpContext: httpContext);
 
-                var query = new GetUserWithStatsQuery
+                var query = new GetUserProfileQuery
                 {
                     UserId = currentUser.UserId.Value
                 };
@@ -52,6 +52,28 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("GetCurrentUser")
             .WithSummary("获取当前用户信息")
             .WithDescription("获取当前登录用户的详细信息，包括角色、权限、统计信息等");
+
+            /// <summary>
+            /// 获取个人信息
+            /// </summary>
+            group.MapGet("/me/profile", async (
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                var query = new GetUserProfileQuery { UserId = currentUser.UserId.Value };
+                var result = await mediator.Send(query);
+
+                return result == null
+                    ? ApiResponseHelper.NotFound("用户不存在", httpContext)
+                    : ApiResponseHelper.Ok(result, httpContext: httpContext);
+            })
+            .WithName("GetUserProfile")
+            .WithSummary("获取用户画像")
+            .WithDescription("获取用户的职业、行业、公司等信息");
 
             /// <summary>
             /// 更新个人信息
@@ -200,7 +222,7 @@ namespace OpenFindBearings.Api.Endpoints
                 var result = await mediator.Send(query);
 
                 return ApiResponseHelper.Paged(
-                    result.Items,
+                    result.Items.ToList(),
                     result.TotalCount,
                     result.Page,
                     result.PageSize,
@@ -316,7 +338,7 @@ namespace OpenFindBearings.Api.Endpoints
                 var result = await mediator.Send(query);
 
                 return ApiResponseHelper.Paged(
-                    result.Items,
+                    result.Items.ToList(),
                     result.TotalCount,
                     result.Page,
                     result.PageSize,
@@ -405,7 +427,7 @@ namespace OpenFindBearings.Api.Endpoints
                 var result = await mediator.Send(query);
 
                 return ApiResponseHelper.Paged(
-                    result.Items,
+                    result.Items.ToList(),
                     result.TotalCount,
                     result.Page,
                     result.PageSize,
@@ -463,7 +485,7 @@ namespace OpenFindBearings.Api.Endpoints
                 var result = await mediator.Send(query);
 
                 return ApiResponseHelper.Paged(
-                    result.Items,
+                    result.Items.ToList(),
                     result.TotalCount,
                     result.Page,
                     result.PageSize,
@@ -574,7 +596,7 @@ namespace OpenFindBearings.Api.Endpoints
                 var result = await mediator.Send(query);
 
                 return ApiResponseHelper.Paged(
-                    result.Items,
+                    result.Items.ToList(),
                     result.TotalCount,
                     result.Page,
                     result.PageSize,
@@ -604,7 +626,7 @@ namespace OpenFindBearings.Api.Endpoints
                 var result = await mediator.Send(query);
 
                 return ApiResponseHelper.Paged(
-                    result.Items,
+                    result.Items.ToList(),
                     result.TotalCount,
                     result.Page,
                     result.PageSize,
@@ -637,7 +659,7 @@ namespace OpenFindBearings.Api.Endpoints
                 var result = await mediator.Send(query);
 
                 return ApiResponseHelper.Paged(
-                    result.Items,
+                    result.Items.ToList(),
                     result.TotalCount,
                     result.Page,
                     result.PageSize,

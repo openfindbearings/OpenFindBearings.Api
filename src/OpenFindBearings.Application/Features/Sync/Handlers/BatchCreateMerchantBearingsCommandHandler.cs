@@ -2,7 +2,7 @@
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.Features.Sync.Commands;
 using OpenFindBearings.Domain.Entities;
-using OpenFindBearings.Domain.Interfaces;
+using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Features.Sync.Handlers
 {
@@ -39,14 +39,15 @@ namespace OpenFindBearings.Application.Features.Sync.Handlers
                 try
                 {
                     // 查找商家
-                    var merchants = await _merchantRepository.SearchAsync(
+                    var merchantsResult = await _merchantRepository.SearchAsync(
                         new Domain.Specifications.MerchantSearchParams
                         {
                             Keyword = dto.MerchantName,
                             PageSize = 10
                         }, cancellationToken);
 
-                    var merchant = merchants.FirstOrDefault();
+                    // ✅ 修改：使用 merchantsResult.Items
+                    var merchant = merchantsResult.Items.FirstOrDefault();
                     if (merchant == null)
                     {
                         result.AddFailed($"{dto.MerchantName}-{dto.BearingPartNumber}", $"商家不存在: {dto.MerchantName}");
@@ -75,8 +76,8 @@ namespace OpenFindBearings.Application.Features.Sync.Handlers
                     if (exists)
                     {
                         // 更新现有关联
-                        var existing = (await _merchantBearingRepository.GetByMerchantAsync(merchant.Id, cancellationToken))
-                            .FirstOrDefault(mb => mb.BearingId == bearing.Id);
+                        var merchantBearings = await _merchantBearingRepository.GetByMerchantAsync(merchant.Id, cancellationToken);
+                        var existing = merchantBearings.FirstOrDefault(mb => mb.BearingId == bearing.Id);
 
                         if (existing != null)
                         {

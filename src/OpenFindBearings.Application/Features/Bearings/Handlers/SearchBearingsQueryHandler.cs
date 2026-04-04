@@ -2,14 +2,11 @@
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.Features.Bearings.DTOs;
 using OpenFindBearings.Application.Features.Bearings.Queries;
-using OpenFindBearings.Domain.Interfaces;
+using OpenFindBearings.Domain.Repositories;
 using OpenFindBearings.Domain.Specifications;
 
 namespace OpenFindBearings.Application.Features.Bearings.Handlers
 {
-    /// <summary>
-    /// 搜索轴承查询处理器
-    /// </summary>
     public class SearchBearingsQueryHandler : IRequestHandler<SearchBearingsQuery, PagedResult<BearingDto>>
     {
         private readonly IBearingRepository _bearingRepository;
@@ -27,7 +24,8 @@ namespace OpenFindBearings.Application.Features.Bearings.Handlers
         {
             var searchParams = new BearingSearchParams
             {
-                PartNumber = request.PartNumber,
+                CurrentCode = request.CurrentCode,
+                FormerCode = request.FormerCode,
                 Keyword = request.Keyword,
                 MinInnerDiameter = request.MinInnerDiameter,
                 MaxInnerDiameter = request.MaxInnerDiameter,
@@ -39,23 +37,23 @@ namespace OpenFindBearings.Application.Features.Bearings.Handlers
                 Category = request.Category,
                 BrandId = request.BrandId,
                 BearingTypeId = request.BearingTypeId,
+                IsStandard = request.IsStandard,
                 SortBy = request.SortBy,
                 SortOrder = request.SortOrder,
                 Page = request.Page,
                 PageSize = request.PageSize
             };
 
-            var bearings = await _bearingRepository.SearchAsync(searchParams, cancellationToken);
+            var result = await _bearingRepository.SearchAsync(searchParams, cancellationToken);
 
-            // TODO: 需要实现 CountAsync 方法
-            var totalCount = bearings.Count();
-
-            var items = bearings.Select(b => new BearingDto
+            var items = result.Items.Select(b => new BearingDto
             {
                 Id = b.Id,
-                PartNumber = b.PartNumber,
+                CurrentCode = b.CurrentCode,
+                FormerCode = b.FormerCode,          
                 Name = b.Name,
                 Description = b.Description,
+                BearingType = b.BearingType,
                 InnerDiameter = b.Dimensions.InnerDiameter,
                 OuterDiameter = b.Dimensions.OuterDiameter,
                 Width = b.Dimensions.Width,
@@ -63,19 +61,20 @@ namespace OpenFindBearings.Application.Features.Bearings.Handlers
                 BrandId = b.BrandId,
                 BrandName = b.Brand?.Name ?? string.Empty,
                 BearingTypeId = b.BearingTypeId,
-                BearingTypeName = b.BearingType?.Name ?? string.Empty,
+                BearingTypeName = b.BearingType,
                 ViewCount = b.ViewCount,
                 FavoriteCount = b.FavoriteCount,
                 OriginCountry = b.OriginCountry,
-                Category = b.Category.ToString()
+                Category = b.Category.ToString(),
+                IsStandard = b.IsStandard           
             }).ToList();
 
             return new PagedResult<BearingDto>
             {
                 Items = items,
-                TotalCount = totalCount,
-                Page = request.Page,
-                PageSize = request.PageSize
+                TotalCount = result.TotalCount,
+                Page = result.Page,
+                PageSize = result.PageSize
             };
         }
     }

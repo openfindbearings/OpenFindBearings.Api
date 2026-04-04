@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.Features.Merchants.Commands;
 using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Enums;
-using OpenFindBearings.Domain.Interfaces;
+using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Features.Merchants.Handlers
 {

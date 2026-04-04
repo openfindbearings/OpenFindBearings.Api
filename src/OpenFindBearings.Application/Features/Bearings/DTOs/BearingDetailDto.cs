@@ -18,6 +18,23 @@ namespace OpenFindBearings.Application.Features.Bearings.DTOs
         public decimal? StaticLoadRating { get; set; }
         public decimal? LimitingSpeed { get; set; }
 
+        // 结构信息
+        public string? StructureType { get; set; }
+        public string? SizeSeries { get; set; }
+        public bool IsStandard { get; set; }
+
+        // 倒角尺寸
+        public decimal? ChamferRmin { get; set; }
+        public decimal? ChamferRmax { get; set; }
+
+        // 商标
+        public string? Trademark { get; set; }
+
+        // 数据来源
+        public string? DataSourceType { get; set; }
+        public int? ReliabilityScore { get; set; }
+        public bool IsDataVerified { get; set; }
+
         // 在售商家列表
         public List<MerchantBearingDto> Merchants { get; set; } = [];
 

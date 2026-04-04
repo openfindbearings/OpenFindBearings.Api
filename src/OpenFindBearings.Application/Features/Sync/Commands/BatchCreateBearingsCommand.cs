@@ -6,7 +6,7 @@ namespace OpenFindBearings.Application.Features.Sync.Commands
     /// <summary>
     /// 批量创建轴承命令
     /// </summary>
-    public class BatchCreateBearingsCommand : IRequest<BatchResult>
+    public record BatchCreateBearingsCommand : IRequest<BatchResult>
     {
         /// <summary>
         /// 轴承列表

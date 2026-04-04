@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using OpenFindBearings.Domain.Aggregates;
 using OpenFindBearings.Domain.Entities;
 
 namespace OpenFindBearings.Infrastructure.Persistence.Configurations

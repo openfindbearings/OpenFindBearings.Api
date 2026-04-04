@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.Features.Admin.DTOs;
 using OpenFindBearings.Application.Features.Admin.Queries;
 using OpenFindBearings.Domain.Entities;
-using OpenFindBearings.Domain.Interfaces;
+using OpenFindBearings.Domain.Repositories;
 using OpenFindBearings.Domain.Specifications;
 
 namespace OpenFindBearings.Application.Features.Admin.Handlers
@@ -25,16 +25,16 @@ namespace OpenFindBearings.Application.Features.Admin.Handlers
         private readonly ILogger<GetAuditLogsQueryHandler> _logger;
 
         public GetAuditLogsQueryHandler(
-     IAuditLogRepository auditLogRepository,
-     IUserRepository userRepository,
-     IBearingRepository bearingRepository,
-     IMerchantRepository merchantRepository,
-     IRoleRepository roleRepository,
-     IBrandRepository brandRepository,
-     IBearingTypeRepository bearingTypeRepository,
-     ICorrectionRequestRepository correctionRequestRepository, 
-     IMerchantBearingRepository merchantBearingRepository,     
-     ILogger<GetAuditLogsQueryHandler> logger)
+            IAuditLogRepository auditLogRepository,
+            IUserRepository userRepository,
+            IBearingRepository bearingRepository,
+            IMerchantRepository merchantRepository,
+            IRoleRepository roleRepository,
+            IBrandRepository brandRepository,
+            IBearingTypeRepository bearingTypeRepository,
+            ICorrectionRequestRepository correctionRequestRepository,
+            IMerchantBearingRepository merchantBearingRepository,
+            ILogger<GetAuditLogsQueryHandler> logger)
         {
             _auditLogRepository = auditLogRepository;
             _userRepository = userRepository;
@@ -43,8 +43,8 @@ namespace OpenFindBearings.Application.Features.Admin.Handlers
             _roleRepository = roleRepository;
             _brandRepository = brandRepository;
             _bearingTypeRepository = bearingTypeRepository;
-            _correctionRequestRepository = correctionRequestRepository; 
-            _merchantBearingRepository = merchantBearingRepository;    
+            _correctionRequestRepository = correctionRequestRepository;
+            _merchantBearingRepository = merchantBearingRepository;
             _logger = logger;
         }
 
@@ -70,13 +70,11 @@ namespace OpenFindBearings.Application.Features.Admin.Handlers
             {
                 try
                 {
-                    // 获取实体名称
                     string entityName = await GetEntityNameAsync(
                         log.EntityType,
                         log.EntityId,
                         cancellationToken);
 
-                    // 获取操作人名称
                     string operatorName = await GetOperatorNameAsync(log.OperatorId, cancellationToken);
 
                     items.Add(new AuditLogDto
@@ -89,14 +87,13 @@ namespace OpenFindBearings.Application.Features.Admin.Handlers
                         OperatorId = log.OperatorId,
                         OperatorName = operatorName,
                         OperatedAt = log.OperatedAt,
-                        Details = FormatAuditDetails(log), // 格式化详情
+                        Details = FormatAuditDetails(log),
                         Remarks = log.Remarks
                     });
                 }
                 catch (Exception ex)
                 {
                     _logger.LogWarning(ex, "处理审核日志项失败: {LogId}", log.Id);
-                    // 添加一个基本项，避免完全丢失
                     items.Add(new AuditLogDto
                     {
                         Id = log.Id,
@@ -121,9 +118,6 @@ namespace OpenFindBearings.Application.Features.Admin.Handlers
             };
         }
 
-        /// <summary>
-        /// 获取操作人名称
-        /// </summary>
         private async Task<string> GetOperatorNameAsync(Guid operatorId, CancellationToken cancellationToken)
         {
             if (operatorId == Guid.Empty)
@@ -136,19 +130,11 @@ namespace OpenFindBearings.Application.Features.Admin.Handlers
             return operatorUser.Nickname ?? operatorUser.AuthUserId;
         }
 
-        /// <summary>
-        /// 格式化审计详情
-        /// </summary>
         private string? FormatAuditDetails(AuditLog log)
         {
-            // 根据操作类型和实体类型格式化详情
-            // 这里简单返回 AfterData，实际项目中可能需要更友好的格式化
             return log.AfterData;
         }
 
-        /// <summary>
-        /// 根据实体类型和ID获取实体名称
-        /// </summary>
         private async Task<string> GetEntityNameAsync(
             string entityType,
             Guid entityId,
@@ -188,21 +174,16 @@ namespace OpenFindBearings.Application.Features.Admin.Handlers
             if (bearing == null)
                 return id.ToString();
 
-            return $"{bearing.PartNumber} - {bearing.Name}";
+            // ✅ 修改：PartNumber → CurrentCode
+            return $"{bearing.CurrentCode} - {bearing.Name}";
         }
 
-        /// <summary>
-        /// 获取商家名称
-        /// </summary>
         private async Task<string> GetMerchantNameAsync(Guid id, CancellationToken cancellationToken)
         {
             var merchant = await _merchantRepository.GetByIdAsync(id, cancellationToken);
             return merchant?.Name ?? id.ToString();
         }
 
-        /// <summary>
-        /// 获取用户名称
-        /// </summary>
         private async Task<string> GetUserNameAsync(Guid id, CancellationToken cancellationToken)
         {
             var user = await _userRepository.GetByIdAsync(id, cancellationToken);
@@ -212,43 +193,30 @@ namespace OpenFindBearings.Application.Features.Admin.Handlers
             return user.Nickname ?? user.AuthUserId;
         }
 
-        /// <summary>
-        /// 获取角色名称
-        /// </summary>
         private async Task<string> GetRoleNameAsync(Guid id, CancellationToken cancellationToken)
         {
             var role = await _roleRepository.GetByIdAsync(id, cancellationToken);
             return role?.Name ?? id.ToString();
         }
 
-        /// <summary>
-        /// 获取品牌名称
-        /// </summary>
         private async Task<string> GetBrandNameAsync(Guid id, CancellationToken cancellationToken)
         {
             var brand = await _brandRepository.GetByIdAsync(id, cancellationToken);
             return brand?.Name ?? id.ToString();
         }
 
-        /// <summary>
-        /// 获取轴承类型名称
-        /// </summary>
         private async Task<string> GetBearingTypeNameAsync(Guid id, CancellationToken cancellationToken)
         {
             var bearingType = await _bearingTypeRepository.GetByIdAsync(id, cancellationToken);
             return bearingType?.Name ?? id.ToString();
         }
 
-        /// <summary>
-        /// 获取纠错请求标识
-        /// </summary>
         private async Task<string> GetCorrectionRequestNameAsync(Guid id, CancellationToken cancellationToken)
         {
             var correction = await _correctionRequestRepository.GetByIdAsync(id, cancellationToken);
             if (correction == null)
                 return id.ToString();
 
-            // 根据目标类型获取目标名称
             string targetName = await GetEntityNameAsync(
                 correction.TargetType,
                 correction.TargetId,
@@ -257,9 +225,6 @@ namespace OpenFindBearings.Application.Features.Admin.Handlers
             return $"纠错请求 - {correction.GetFieldDisplayName()}: {correction.SuggestedValue} (目标: {targetName})";
         }
 
-        /// <summary>
-        /// 获取商家-轴承关联标识
-        /// </summary>
         private async Task<string> GetMerchantBearingNameAsync(Guid id, CancellationToken cancellationToken)
         {
             var merchantBearing = await _merchantBearingRepository.GetByIdAsync(id, cancellationToken);
@@ -280,12 +245,14 @@ namespace OpenFindBearings.Application.Features.Admin.Handlers
             string bearingName = "未知轴承";
             if (merchantBearing.Bearing != null)
             {
-                bearingName = $"{merchantBearing.Bearing.PartNumber} - {merchantBearing.Bearing.Name}";
+                // ✅ 修改：PartNumber → CurrentCode
+                bearingName = $"{merchantBearing.Bearing.CurrentCode} - {merchantBearing.Bearing.Name}";
             }
             else if (merchantBearing.BearingId != Guid.Empty)
             {
                 var bearing = await _bearingRepository.GetByIdAsync(merchantBearing.BearingId, cancellationToken);
-                bearingName = bearing != null ? $"{bearing.PartNumber} - {bearing.Name}" : merchantBearing.BearingId.ToString();
+                // ✅ 修改：PartNumber → CurrentCode
+                bearingName = bearing != null ? $"{bearing.CurrentCode} - {bearing.Name}" : merchantBearing.BearingId.ToString();
             }
 
             string status = merchantBearing.IsOnSale ? "在售" : "已下架";

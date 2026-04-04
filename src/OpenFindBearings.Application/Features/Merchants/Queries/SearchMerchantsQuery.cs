@@ -1,14 +1,14 @@
 ﻿using MediatR;
 using OpenFindBearings.Application.Features.Merchants.DTOs;
 using OpenFindBearings.Domain.Enums;
-using OpenFindBearings.Domain.Interfaces;
+using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Features.Merchants.Queries
 {
     /// <summary>
     /// 搜索商家查询
     /// </summary>
-    public class SearchMerchantsQuery : IRequest<PagedResult<MerchantDto>>
+    public record SearchMerchantsQuery : IRequest<PagedResult<MerchantDto>>
     {
         /// <summary>
         /// 关键词（搜索名称和公司名）

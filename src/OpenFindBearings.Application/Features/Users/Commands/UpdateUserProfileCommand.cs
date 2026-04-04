@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using OpenFindBearings.Domain.Enums;
 
 namespace OpenFindBearings.Application.Features.Users.Commands
 {
@@ -26,5 +27,22 @@ namespace OpenFindBearings.Application.Features.Users.Commands
         /// 地址
         /// </summary>
         public string? Address { get; init; }
+
+        // ============ 用户画像字段 ============
+
+        /// <summary>
+        /// 用户职业（采购员/销售员/工程师/其他）
+        /// </summary>
+        public UserOccupation? Occupation { get; init; }
+
+        /// <summary>
+        /// 公司名称
+        /// </summary>
+        public string? CompanyName { get; init; }
+
+        /// <summary>
+        /// 所属行业
+        /// </summary>
+        public string? Industry { get; init; }
     }
 }

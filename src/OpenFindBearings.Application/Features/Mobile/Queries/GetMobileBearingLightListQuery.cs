@@ -1,13 +1,13 @@
 ﻿using MediatR;
 using OpenFindBearings.Application.Features.Mobile.DTOs;
-using OpenFindBearings.Domain.Interfaces;
+using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Features.Mobile.Queries
 {
     /// <summary>
     /// 获取移动端轴承轻量列表查询
     /// </summary>
-    public class GetMobileBearingLightListQuery : IRequest<PagedResult<MobileBearingLightDto>>
+    public record GetMobileBearingLightListQuery : IRequest<PagedResult<MobileBearingLightDto>>
     {
         public string? Keyword { get; set; }
         public decimal? MinInnerDiameter { get; set; }

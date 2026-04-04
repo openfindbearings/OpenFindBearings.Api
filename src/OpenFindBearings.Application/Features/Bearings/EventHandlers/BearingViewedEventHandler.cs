@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.Constants;
 using OpenFindBearings.Application.Interfaces;
 using OpenFindBearings.Domain.Events;
-using OpenFindBearings.Domain.Interfaces;
+using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Features.Bearings.EventHandlers
 {

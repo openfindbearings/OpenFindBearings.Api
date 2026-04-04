@@ -2,7 +2,7 @@
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.Features.MerchantBearings.DTOs;
 using OpenFindBearings.Application.Features.MerchantBearings.Queries;
-using OpenFindBearings.Domain.Interfaces;
+using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Features.MerchantBearings.Handlers
 {
@@ -26,8 +26,8 @@ namespace OpenFindBearings.Application.Features.MerchantBearings.Handlers
             GetMerchantBearingsByMerchantQuery request,
             CancellationToken cancellationToken)
         {
-            _logger.LogInformation("获取商家轴承列表: MerchantId={MerchantId}, Page={Page}, PageSize={PageSize}",
-                request.MerchantId, request.Page, request.PageSize);
+            _logger.LogInformation("获取商家轴承列表: MerchantId={MerchantId}, IsAuthenticated={IsAuthenticated}",
+                request.MerchantId, request.IsAuthenticated);
 
             var merchantBearings = await _merchantBearingRepository.GetByMerchantAsync(request.MerchantId, cancellationToken);
 
@@ -44,20 +44,49 @@ namespace OpenFindBearings.Application.Features.MerchantBearings.Handlers
                 {
                     Id = mb.Id,
                     MerchantId = mb.MerchantId,
-                    MerchantName = mb.Merchant?.Name ?? string.Empty,
+
+                    // ========== 敏感信息控制 ==========
+                    // 规则1：商家名称 - 仅登录用户可见
+                    MerchantName = request.IsAuthenticated ? mb.Merchant?.Name : null,
+
+                    // 规则2：商家等级 - 所有人可见
                     MerchantGrade = mb.Merchant?.Grade.ToString() ?? string.Empty,
+
+                    // 规则3：商家认证状态 - 所有人可见
                     MerchantIsVerified = mb.Merchant?.IsVerified ?? false,
+
+                    // 规则4：商家所在城市 - 所有人可见（从地址提取）
+                    MerchantCity = ExtractCityFromAddress(mb.Merchant?.Contact?.Address),
+
+                    // 规则5：商家电话 - 仅登录用户可见
+                    MerchantPhone = request.IsAuthenticated ? mb.Merchant?.Contact?.Phone : null,
+
+                    // 规则6：商家详细地址 - 仅登录用户可见
+                    MerchantAddress = request.IsAuthenticated ? mb.Merchant?.Contact?.Address : null,
+
+                    // ========== 轴承信息 ==========
                     BearingId = mb.BearingId,
-                    BearingPartNumber = mb.Bearing?.PartNumber ?? string.Empty,
+                    BearingCurrentCode = mb.Bearing?.CurrentCode ?? string.Empty,
+                    BearingFormerCode = mb.Bearing?.FormerCode,
                     BearingName = mb.Bearing?.Name ?? string.Empty,
+                    BearingTypeName = mb.Bearing?.BearingType,
+
+                    // ========== 品牌信息 ==========
                     BrandName = mb.Bearing?.Brand?.Name,
                     BrandLevel = mb.Bearing?.Brand?.Level.ToString(),
+
+                    // ========== 尺寸信息 ==========
                     Dimensions = mb.Bearing != null
                         ? $"{mb.Bearing.Dimensions.InnerDiameter}×{mb.Bearing.Dimensions.OuterDiameter}×{mb.Bearing.Dimensions.Width}"
                         : null,
+
+                    // ========== 价格信息 ==========
                     PriceDescription = mb.PriceDescription,
                     PriceVisibility = mb.PriceVisibility,
                     NumericPrice = mb.NumericPrice,
+                    IsPriceVisible = mb.IsPriceVisible(request.IsAuthenticated),
+
+                    // ========== 其他业务信息 ==========
                     StockDescription = mb.StockDescription,
                     MinOrderDescription = mb.MinOrderDescription,
                     Remarks = mb.Remarks,
@@ -66,10 +95,7 @@ namespace OpenFindBearings.Application.Features.MerchantBearings.Handlers
                     IsPendingApproval = mb.IsPendingApproval,
                     ViewCount = mb.ViewCount,
                     CreatedAt = mb.CreatedAt,
-                    UpdatedAt = mb.UpdatedAt,
-
-                    // 使用传入的登录状态计算价格可见性
-                    IsPriceVisible = mb.IsPriceVisible(request.IsAuthenticated)
+                    UpdatedAt = mb.UpdatedAt
                 })
                 .ToList();
 
@@ -80,6 +106,30 @@ namespace OpenFindBearings.Application.Features.MerchantBearings.Handlers
                 Page = request.Page,
                 PageSize = request.PageSize
             };
+        }
+
+        /// <summary>
+        /// 从完整地址中提取城市
+        /// </summary>
+        private string? ExtractCityFromAddress(string? fullAddress)
+        {
+            if (string.IsNullOrWhiteSpace(fullAddress))
+                return null;
+
+            // 简单实现：取地址中的城市部分
+            // 实际项目中可以用正则或地址解析库
+            var parts = fullAddress.Split(new[] { '省', '市', '区', '县' }, StringSplitOptions.RemoveEmptyEntries);
+
+            if (parts.Length >= 2)
+            {
+                // 返回第二个部分作为城市
+                var city = parts[1].Trim();
+                if (city.Length > 10) city = city.Substring(0, 10);
+                return city;
+            }
+
+            // 如果无法解析，返回地址前6个字符
+            return fullAddress.Length > 6 ? fullAddress.Substring(0, 6) : fullAddress;
         }
     }
 }
