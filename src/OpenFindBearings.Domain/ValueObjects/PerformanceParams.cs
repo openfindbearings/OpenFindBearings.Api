@@ -1,4 +1,6 @@
-﻿namespace OpenFindBearings.Domain.ValueObjects
+﻿using OpenFindBearings.Domain.Abstractions;
+
+namespace OpenFindBearings.Domain.ValueObjects
 {
     /// <summary>
     /// 性能参数值对象
@@ -7,7 +9,7 @@
     public class PerformanceParams : ValueObject
     {
         /// <summary>
-        /// 是否存在性能数据（用于EF Core表共享识别）
+        /// 是否存在性能数据
         /// </summary>
         public bool HasData { get; private set; }
 
@@ -39,14 +41,20 @@
         /// </summary>
         public PerformanceParams(decimal? dynamicLoad, decimal? staticLoad, decimal? speed)
         {
-            if (dynamicLoad.HasValue && staticLoad.HasValue && dynamicLoad > staticLoad)
-                throw new ArgumentException("动载荷不能大于静载荷");
+            // 宽松校验：只禁止明显不合理的情况
+            if (dynamicLoad.HasValue && staticLoad.HasValue && dynamicLoad > staticLoad * 1.5m)
+                throw new ArgumentException("动载荷异常大于静载荷，请核对数据");
 
             DynamicLoadRating = dynamicLoad;
             StaticLoadRating = staticLoad;
             LimitingSpeed = speed;
-            HasData = true;
+            HasData = dynamicLoad.HasValue || staticLoad.HasValue || speed.HasValue;
         }
+
+        /// <summary>
+        /// 是否有任何性能数据
+        /// </summary>
+        public bool HasAnyValue => HasData;
 
         /// <summary>
         /// 获取用于相等性比较的组件
@@ -60,8 +68,20 @@
         }
 
         /// <summary>
-        /// 是否有任何性能数据
+        /// 获取性能摘要
         /// </summary>
-        public bool HasAnyValue => HasData;
+        public string GetSummary()
+        {
+            var parts = new List<string>();
+            if (DynamicLoadRating.HasValue) parts.Add($"C={DynamicLoadRating}kN");
+            if (StaticLoadRating.HasValue) parts.Add($"C0={StaticLoadRating}kN");
+            if (LimitingSpeed.HasValue) parts.Add($"n={LimitingSpeed}rpm");
+            return parts.Count > 0 ? string.Join(", ", parts) : "无性能数据";
+        }
+
+        /// <summary>
+        /// 返回字符串表示
+        /// </summary>
+        public override string ToString() => GetSummary();
     }
 }

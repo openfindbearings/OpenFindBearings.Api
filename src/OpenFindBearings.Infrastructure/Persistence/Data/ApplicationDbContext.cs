@@ -1,5 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using OpenFindBearings.Domain.Abstractions;
+using OpenFindBearings.Domain.Aggregates;
 using OpenFindBearings.Domain.Entities;
 
 namespace OpenFindBearings.Infrastructure.Persistence.Data
@@ -29,12 +31,22 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
         public DbSet<UserBearingHistory> UserBearingHistories { get; set; }
         public DbSet<UserMerchantHistory> UserMerchantHistories { get; set; }
 
+        // ============ 行为日志与API调用 ============
+        public DbSet<UserBehaviorLog> UserBehaviorLogs { get; set; }
+        public DbSet<ApiCallLog> ApiCallLogs { get; set; }
+
         // ============ 审计与配置 ============
         public DbSet<AuditLog> AuditLogs { get; set; }
         public DbSet<SystemConfig> SystemConfigs { get; set; }
 
         // ============ 邀请管理 ============
         public DbSet<StaffInvitation> StaffInvitations { get; set; }
+
+        // ============ 付费记录 ============
+        public DbSet<PaymentRecord> PaymentRecords { get; set; }
+
+        // ============ 用户偏好 ============
+        public DbSet<UserPreference> UserPreferences { get; set; }
 
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
 

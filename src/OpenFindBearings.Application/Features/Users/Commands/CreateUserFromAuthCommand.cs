@@ -20,6 +20,16 @@ namespace OpenFindBearings.Application.Features.Users.Commands
         public UserType UserType { get; init; } = UserType.Individual;
 
         /// <summary>
+        /// 注册来源
+        /// </summary>
+        public RegistrationSource RegistrationSource { get; init; } = RegistrationSource.Web;
+
+        /// <summary>
+        /// 注册IP
+        /// </summary>
+        public string? RegisterIp { get; init; }
+
+        /// <summary>
         /// 用户昵称
         /// </summary>
         public string? Nickname { get; init; }

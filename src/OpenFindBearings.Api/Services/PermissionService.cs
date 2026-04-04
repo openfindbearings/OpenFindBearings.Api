@@ -1,6 +1,6 @@
 ﻿using MediatR;
 using OpenFindBearings.Application.Features.Permissions.Queries;
-using OpenFindBearings.Domain.Interfaces;
+using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Api.Services
 {

@@ -1,4 +1,6 @@
-﻿namespace OpenFindBearings.Domain.Entities
+﻿using OpenFindBearings.Domain.Abstractions;
+
+namespace OpenFindBearings.Domain.Entities
 {
     /// <summary>
     /// 角色-权限关联实体

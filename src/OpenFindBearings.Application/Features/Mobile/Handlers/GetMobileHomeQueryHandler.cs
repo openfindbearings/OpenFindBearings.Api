@@ -2,7 +2,7 @@
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.Features.Mobile.DTOs;
 using OpenFindBearings.Application.Features.Mobile.Queries;
-using OpenFindBearings.Domain.Interfaces;
+using OpenFindBearings.Domain.Repositories;
 using OpenFindBearings.Domain.Specifications;
 
 namespace OpenFindBearings.Application.Features.Mobile.Handlers
@@ -44,45 +44,43 @@ namespace OpenFindBearings.Application.Features.Mobile.Handlers
         {
             _logger.LogInformation("获取移动端首页数据, IsAuthenticated={IsAuthenticated}", request.IsAuthenticated);
 
-            // 获取配置中的轮播图和分类
             var configs = await _systemConfigRepository.GetAllAsync(cancellationToken);
-
-            // 获取热门轴承
             var hotBearings = await _bearingRepository.GetHotBearingsAsync(6, cancellationToken);
 
-            // 获取推荐商家（已认证、等级高的优先）
             var merchantSearch = new MerchantSearchParams
             {
                 VerifiedOnly = true,
                 PageSize = 4
             };
-            var merchants = await _merchantRepository.SearchAsync(merchantSearch, cancellationToken);
+            var merchantsResult = await _merchantRepository.SearchAsync(merchantSearch, cancellationToken);
+
+            // ✅ 转为 List 避免类型推断问题
+            var hotBearingList = hotBearings.ToList();
+            var merchantList = merchantsResult.Items.ToList();
 
             var result = new MobileHomeDto
             {
-                // 轮播图（从配置读取）
                 Banners = await GetBannersAsync(configs, cancellationToken),
-
-                // 分类（从配置读取）
                 Categories = await GetCategoriesAsync(configs, cancellationToken),
 
-                // 热门轴承
-                HotBearings = hotBearings.Select(b => new MobileBearingLightDto
+                HotBearings = hotBearingList.Select(b => new MobileBearingLightDto
                 {
                     Id = b.Id,
-                    PartNumber = b.PartNumber,
+                    CurrentCode = b.CurrentCode,
+                    FormerCode = b.FormerCode,
+                    Name = b.Name,
                     BrandName = b.Brand?.Name ?? string.Empty,
+                    BearingTypeName = b.BearingType,
                     InnerDiameter = b.Dimensions.InnerDiameter,
                     OuterDiameter = b.Dimensions.OuterDiameter,
                     Width = b.Dimensions.Width,
                     ThumbnailUrl = GetBearingThumbnailUrl(b.Id, b.Brand?.Code),
-                    MinPrice = null, // 可以后续计算
+                    MinPrice = null,
                     OriginCountry = b.OriginCountry,
                     Category = b.Category.ToString()
                 }).ToList(),
 
-                // 推荐商家
-                RecommendedMerchants = merchants.Select(m => new MerchantSimpleDto
+                RecommendedMerchants = merchantList.Select(m => new MerchantSimpleDto
                 {
                     Id = m.Id,
                     Name = m.Name,
@@ -106,16 +104,12 @@ namespace OpenFindBearings.Application.Features.Mobile.Handlers
             return result;
         }
 
-        /// <summary>
-        /// 获取轮播图配置
-        /// </summary>
         private async Task<List<BannerDto>> GetBannersAsync(
             List<Domain.Entities.SystemConfig> configs,
             CancellationToken cancellationToken)
         {
             var banners = new List<BannerDto>();
 
-            // 从配置读取轮播图数量
             var bannerCount = configs.FirstOrDefault(c => c.Key == "Mobile.BannerCount")?.Value ?? "3";
             if (!int.TryParse(bannerCount, out var count)) count = 3;
 
@@ -137,16 +131,12 @@ namespace OpenFindBearings.Application.Features.Mobile.Handlers
             return banners;
         }
 
-        /// <summary>
-        /// 获取分类配置
-        /// </summary>
         private async Task<List<CategoryDto>> GetCategoriesAsync(
             List<Domain.Entities.SystemConfig> configs,
             CancellationToken cancellationToken)
         {
             var categories = new List<CategoryDto>();
 
-            // 从配置读取分类
             var categoryIds = configs.FirstOrDefault(c => c.Key == "Mobile.Categories")?.Value ?? "dgb,acb,trb,srb";
             var ids = categoryIds.Split(',');
 
@@ -180,13 +170,11 @@ namespace OpenFindBearings.Application.Features.Mobile.Handlers
 
         private string GetBearingThumbnailUrl(Guid bearingId, string? brandCode)
         {
-            // 可以根据品牌代码返回不同的默认图
             return $"/images/bearings/{bearingId}.jpg";
         }
 
         private string GetMerchantLogoUrl(Guid merchantId, string merchantName)
         {
-            // 返回商家Logo，如果没有则返回默认图
             return $"/images/merchants/{merchantId}.jpg";
         }
     }

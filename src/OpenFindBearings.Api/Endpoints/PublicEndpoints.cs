@@ -66,7 +66,7 @@ namespace OpenFindBearings.Api.Endpoints
             {
                 var result = await mediator.Send(query);
                 return ApiResponseHelper.Paged(
-                    result.Items,
+                    result.Items.ToList(),
                     result.TotalCount,
                     result.Page,
                     result.PageSize,
@@ -125,24 +125,24 @@ namespace OpenFindBearings.Api.Endpoints
             .WithDescription("获取轴承详细信息，包括技术参数、在售商家等");
 
             /// <summary>
-            /// 型号查询
-            /// 通过轴承型号精确查询轴承信息
+            /// 通过型号查询轴承
+            /// 通过轴承现行代号精确查询轴承信息
             /// </summary>
-            group.MapGet("/bearings/by-part/{partNumber}", async (
-                string partNumber,
+            group.MapGet("/bearings/by-code/{currentCode}", async (
+                string currentCode,
                 IMediator mediator,
                 HttpContext httpContext) =>
             {
-                var query = new GetBearingByPartNumberQuery(partNumber);
+                var query = new GetBearingByCodeQuery(currentCode);
                 var result = await mediator.Send(query);
 
                 return result == null
                     ? ApiResponseHelper.NotFound("轴承型号不存在", httpContext)
                     : ApiResponseHelper.Ok(result, httpContext: httpContext);
             })
-            .WithName("GetBearingByPartNumber")
+            .WithName("GetBearingByCurrentCode")
             .WithSummary("通过型号查询轴承")
-            .WithDescription("通过轴承型号精确查询轴承信息");
+            .WithDescription("通过轴承现行代号精确查询轴承信息");
 
             /// <summary>
             /// 轴承替代品
@@ -199,7 +199,6 @@ namespace OpenFindBearings.Api.Endpoints
 
             /// <summary>
             /// 商家搜索
-            /// 多条件搜索商家，支持名称、城市、类型等
             /// </summary>
             group.MapGet("/merchants/search", async (
                 [AsParameters] SearchMerchantsQuery query,
@@ -208,7 +207,7 @@ namespace OpenFindBearings.Api.Endpoints
             {
                 var result = await mediator.Send(query);
                 return ApiResponseHelper.Paged(
-                    result.Items,
+                    result.Items.ToList(),
                     result.TotalCount,
                     result.Page,
                     result.PageSize,
@@ -228,7 +227,13 @@ namespace OpenFindBearings.Api.Endpoints
                 IMediator mediator,
                 HttpContext httpContext) =>
             {
-                var query = new GetMerchantQuery(id);
+                var isAuthenticated = httpContext.GetUserId().HasValue;  // ✅ 获取登录状态
+
+                var query = new GetMerchantQuery
+                {
+                    Id = id,
+                    IsAuthenticated = isAuthenticated  // ✅ 传递登录状态
+                };
                 var result = await mediator.Send(query);
 
                 if (result == null)
@@ -254,7 +259,6 @@ namespace OpenFindBearings.Api.Endpoints
 
             /// <summary>
             /// 商家轴承列表
-            /// 获取指定商家销售的所有轴承，可按在售状态筛选
             /// </summary>
             group.MapGet("/merchants/{id:guid}/bearings", async (
                 Guid id,
@@ -277,7 +281,7 @@ namespace OpenFindBearings.Api.Endpoints
 
                 var result = await mediator.Send(query);
                 return ApiResponseHelper.Paged(
-                    result.Items,
+                    result.Items.ToList(),
                     result.TotalCount,
                     result.Page,
                     result.PageSize,

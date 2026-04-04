@@ -1,7 +1,7 @@
 ﻿using MediatR;
 using OpenFindBearings.Application.Features.Bearings.DTOs;
 using OpenFindBearings.Domain.Enums;
-using OpenFindBearings.Domain.Interfaces;
+using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Features.Bearings.Queries
 {
@@ -11,9 +11,14 @@ namespace OpenFindBearings.Application.Features.Bearings.Queries
     public class SearchBearingsQuery : IRequest<PagedResult<BearingDto>>
     {
         /// <summary>
-        /// 型号（模糊搜索）
+        /// 现行代号（模糊搜索）
         /// </summary>
-        public string? PartNumber { get; set; }
+        public string? CurrentCode { get; set; }
+
+        /// <summary>
+        /// 曾用代号（模糊搜索）
+        /// </summary>
+        public string? FormerCode { get; set; }
 
         /// <summary>
         /// 关键词
@@ -58,7 +63,7 @@ namespace OpenFindBearings.Application.Features.Bearings.Queries
         /// <summary>
         /// 产品类别筛选
         /// </summary>
-        public ProductCategory? Category { get; set; }
+        public BearingCategory? Category { get; set; }
 
         /// <summary>
         /// 品牌ID
@@ -69,6 +74,11 @@ namespace OpenFindBearings.Application.Features.Bearings.Queries
         /// 轴承类型ID
         /// </summary>
         public Guid? BearingTypeId { get; set; }
+
+        /// <summary>
+        /// 是否标准轴承
+        /// </summary>
+        public bool? IsStandard { get; set; }
 
         /// <summary>
         /// 排序字段

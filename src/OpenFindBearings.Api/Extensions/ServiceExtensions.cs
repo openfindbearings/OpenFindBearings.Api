@@ -5,7 +5,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using OpenFindBearings.Api.Services;
 using OpenFindBearings.Application.Interfaces;
-using OpenFindBearings.Domain.Interfaces;
+using OpenFindBearings.Domain.Repositories;
 using OpenFindBearings.Infrastructure.Persistence.Data;
 using OpenFindBearings.Infrastructure.Persistence.Repositories;
 using OpenFindBearings.Infrastructure.Services;
@@ -26,6 +26,9 @@ namespace OpenFindBearings.Api.Extensions
             // 添加自定义服务
             services.AddScoped<ICurrentUserService, CurrentUserService>();
             services.AddScoped<IPermissionService, PermissionService>();
+            services.AddScoped<IApiCallLogRepository, ApiCallLogRepository>();
+            services.AddScoped<IStaffInvitationRepository, StaffInvitationRepository>();
+
             // ============ 认证服务客户端 ============
             //// 从配置获取认证服务地址
             //var authBaseUrl = configuration["Authentication:Authority"] ?? "https://localhost:7201";
@@ -38,9 +41,6 @@ namespace OpenFindBearings.Api.Extensions
                 client.DefaultRequestHeaders.Add("Accept", "application/json");
                 client.Timeout = TimeSpan.FromSeconds(30);
             });
-
-            // ============ 邀请仓储 ============
-            services.AddScoped<IStaffInvitationRepository, StaffInvitationRepository>();
 
             // 添加响应压缩
             services.AddResponseCompression(options =>

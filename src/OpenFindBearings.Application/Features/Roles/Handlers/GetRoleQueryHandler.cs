@@ -2,7 +2,7 @@
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.Features.Roles.DTOs;
 using OpenFindBearings.Application.Features.Roles.Queries;
-using OpenFindBearings.Domain.Interfaces;
+using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Features.Roles.Handlers
 {

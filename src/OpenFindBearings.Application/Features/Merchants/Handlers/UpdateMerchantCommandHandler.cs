@@ -1,7 +1,7 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.Features.Merchants.Commands;
-using OpenFindBearings.Domain.Interfaces;
+using OpenFindBearings.Domain.Repositories;
 using OpenFindBearings.Domain.ValueObjects;
 
 namespace OpenFindBearings.Application.Features.Merchants.Handlers
@@ -32,15 +32,26 @@ namespace OpenFindBearings.Application.Features.Merchants.Handlers
                 throw new InvalidOperationException($"商家不存在: {request.Id}");
             }
 
-            // 更新基本信息
+            // ✅ 修改：更新基本信息 - 传递所有6个参数
             if (request.Name != null || request.CompanyName != null ||
-                request.Description != null || request.BusinessScope != null)
+                request.UnifiedSocialCreditCode != null ||
+                request.Description != null || request.BusinessScope != null ||
+                request.LogoUrl != null || request.Website != null)
             {
                 merchant.UpdateBasicInfo(
-                    request.CompanyName,
-                    request.Description,
-                    request.BusinessScope
+                    companyName: request.CompanyName ?? merchant.CompanyName,
+                    unifiedSocialCreditCode: request.UnifiedSocialCreditCode ?? merchant.UnifiedSocialCreditCode,
+                    description: request.Description ?? merchant.Description,
+                    businessScope: request.BusinessScope ?? merchant.BusinessScope,
+                    logoUrl: request.LogoUrl ?? merchant.LogoUrl,
+                    website: request.Website ?? merchant.Website
                 );
+            }
+
+            // 更新名称（如果有单独更新名称的方法）
+            if (request.Name != null)
+            {
+                merchant.UpdateName(request.Name);
             }
 
             // 更新联系方式
@@ -48,11 +59,11 @@ namespace OpenFindBearings.Application.Features.Merchants.Handlers
                 request.Mobile != null || request.Email != null || request.Address != null)
             {
                 var newContact = new ContactInfo(
-                    request.ContactPerson ?? merchant.Contact?.ContactPerson,
-                    request.Phone ?? merchant.Contact?.Phone,
-                    request.Mobile ?? merchant.Contact?.Mobile,
-                    request.Email ?? merchant.Contact?.Email,
-                    request.Address ?? merchant.Contact?.Address
+                    contactPerson: request.ContactPerson ?? merchant.Contact?.ContactPerson,
+                    phone: request.Phone ?? merchant.Contact?.Phone,
+                    mobile: request.Mobile ?? merchant.Contact?.Mobile,
+                    email: request.Email ?? merchant.Contact?.Email,
+                    address: request.Address ?? merchant.Contact?.Address
                 );
                 merchant.UpdateContact(newContact);
             }

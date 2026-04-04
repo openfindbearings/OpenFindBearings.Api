@@ -2,7 +2,7 @@
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.Features.Mobile.DTOs;
 using OpenFindBearings.Application.Features.Mobile.Queries;
-using OpenFindBearings.Domain.Interfaces;
+using OpenFindBearings.Domain.Repositories;
 using OpenFindBearings.Domain.Specifications;
 
 namespace OpenFindBearings.Application.Features.Mobile.Handlers
@@ -43,23 +43,23 @@ namespace OpenFindBearings.Application.Features.Mobile.Handlers
                 PageSize = request.PageSize
             };
 
-            // 获取当前页的数据
-            var bearings = await _bearingRepository.SearchAsync(searchParams, cancellationToken);
-
-            // 获取总记录数
-            var totalCount = await _bearingRepository.GetTotalCountAsync(searchParams, cancellationToken);
+            // ✅ SearchAsync 返回 PagedResult<Bearing>
+            var result = await _bearingRepository.SearchAsync(searchParams, cancellationToken);
 
             var items = new List<MobileBearingLightDto>();
-            foreach (var bearing in bearings)
+            // ✅ 遍历 result.Items，而不是 result 本身
+            foreach (var bearing in result.Items)
             {
-                // 获取该轴承的最低价格
                 var minPrice = await GetMinPriceAsync(bearing.Id, cancellationToken);
 
                 items.Add(new MobileBearingLightDto
                 {
                     Id = bearing.Id,
-                    PartNumber = bearing.PartNumber,
+                    CurrentCode = bearing.CurrentCode,           // ✅ 修改
+                    FormerCode = bearing.FormerCode,             // ✅ 新增
+                    Name = bearing.Name,                         // ✅ 新增
                     BrandName = bearing.Brand?.Name ?? string.Empty,
+                    BearingTypeName = bearing.BearingType,       // ✅ 新增
                     InnerDiameter = bearing.Dimensions.InnerDiameter,
                     OuterDiameter = bearing.Dimensions.OuterDiameter,
                     Width = bearing.Dimensions.Width,
@@ -73,7 +73,7 @@ namespace OpenFindBearings.Application.Features.Mobile.Handlers
             return new PagedResult<MobileBearingLightDto>
             {
                 Items = items,
-                TotalCount = totalCount,
+                TotalCount = result.TotalCount,    // ✅ 使用 result.TotalCount
                 Page = request.Page,
                 PageSize = request.PageSize
             };
@@ -86,7 +86,6 @@ namespace OpenFindBearings.Application.Features.Mobile.Handlers
         {
             var merchantBearings = await _merchantBearingRepository.GetByBearingAsync(bearingId, cancellationToken);
 
-            // 只考虑在售且有数值化价格的商品
             var prices = merchantBearings
                 .Where(mb => mb.IsOnSale && mb.NumericPrice.HasValue)
                 .Select(mb => mb.NumericPrice.GetValueOrDefault());
@@ -94,4 +93,5 @@ namespace OpenFindBearings.Application.Features.Mobile.Handlers
             return prices.Any() ? prices.Min() : null;
         }
     }
+
 }

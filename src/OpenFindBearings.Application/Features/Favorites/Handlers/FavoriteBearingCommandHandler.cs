@@ -2,7 +2,7 @@
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.Features.Favorites.Commands;
 using OpenFindBearings.Domain.Events;
-using OpenFindBearings.Domain.Interfaces;
+using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Features.Favorites.Handlers
 {

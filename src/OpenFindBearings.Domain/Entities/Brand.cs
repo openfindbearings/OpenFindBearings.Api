@@ -1,4 +1,5 @@
-﻿using OpenFindBearings.Domain.Enums;
+﻿using OpenFindBearings.Domain.Abstractions;
+using OpenFindBearings.Domain.Enums;
 
 namespace OpenFindBearings.Domain.Entities
 {

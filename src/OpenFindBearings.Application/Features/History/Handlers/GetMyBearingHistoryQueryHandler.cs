@@ -2,7 +2,7 @@
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.Features.History.DTOs;
 using OpenFindBearings.Application.Features.History.Queries;
-using OpenFindBearings.Domain.Interfaces;
+using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Features.History.Handlers
 {
@@ -43,7 +43,7 @@ namespace OpenFindBearings.Application.Features.History.Handlers
                 {
                     Id = h.Id,
                     BearingId = h.BearingId,
-                    BearingPartNumber = h.Bearing!.PartNumber,
+                    BearingCurrentCode = h.Bearing!.CurrentCode,
                     BearingName = h.Bearing.Name,
                     BrandName = h.Bearing.Brand?.Name,
                     ViewedAt = h.ViewedAt,

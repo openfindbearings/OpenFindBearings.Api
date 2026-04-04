@@ -1,4 +1,7 @@
-﻿namespace OpenFindBearings.Domain.Entities
+﻿using OpenFindBearings.Domain.Abstractions;
+using OpenFindBearings.Domain.Aggregates;
+
+namespace OpenFindBearings.Domain.Entities
 {
     /// <summary>
     /// 系统配置实体

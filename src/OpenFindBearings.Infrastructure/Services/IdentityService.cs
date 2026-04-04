@@ -4,7 +4,7 @@ using Microsoft.Extensions.Options;
 using OpenFindBearings.Application.Common.Models;
 using OpenFindBearings.Application.Interfaces;
 using OpenFindBearings.Domain.Entities;
-using OpenFindBearings.Domain.Interfaces;
+using OpenFindBearings.Domain.Repositories;
 using System.Text.Json;
 
 namespace OpenFindBearings.Infrastructure.Services
@@ -341,6 +341,35 @@ namespace OpenFindBearings.Infrastructure.Services
             {
                 _logger.LogError(ex, "更新邮箱失败: AuthUserId={AuthUserId}", authUserId);
                 return false;
+            }
+        }
+
+        /// <summary>
+        /// 通知业务服务用户已登录（用于记录业务数据）
+        /// </summary>
+        public async Task NotifyUserLoginAsync(string authUserId, string loginMethod, string? loginIp = null, string? userAgent = null)
+        {
+            try
+            {
+                var request = new { authUserId, loginMethod, loginIp, userAgent };
+                var content = new StringContent(
+                    JsonSerializer.Serialize(request, _jsonOptions),
+                    System.Text.Encoding.UTF8,
+                    "application/json");
+
+                var response = await _httpClient.PostAsync(
+                    $"{_configuration["Authentication:Authority"] ?? "https://localhost:7201"}/api/users/login-notify",
+                    content,
+                    CancellationToken.None);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning("通知用户登录失败: {AuthUserId}", authUserId);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "通知用户登录异常: {AuthUserId}", authUserId);
             }
         }
 

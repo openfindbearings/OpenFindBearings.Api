@@ -1,7 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using OpenFindBearings.Domain.Entities;
+using OpenFindBearings.Domain.Aggregates;
 using OpenFindBearings.Domain.Enums;
-using OpenFindBearings.Domain.Interfaces;
+using OpenFindBearings.Domain.Repositories;
 using OpenFindBearings.Infrastructure.Persistence.Data;
 
 namespace OpenFindBearings.Infrastructure.Persistence.Repositories
@@ -142,6 +142,83 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
         {
             return await _context.Users.AnyAsync(u => u.Id == id, cancellationToken);
+        }
+
+        // ============ ✅ 新增方法 ============
+
+        /// <summary>
+        /// 更新用户搜索统计
+        /// </summary>
+        public async Task UpdateSearchStatsAsync(Guid userId, CancellationToken cancellationToken = default)
+        {
+            var user = await GetByIdAsync(userId, cancellationToken);
+            if (user != null)
+            {
+                user.RecordSearch();
+                await UpdateAsync(user, cancellationToken);
+            }
+        }
+
+        /// <summary>
+        /// 更新用户查询统计
+        /// </summary>
+        public async Task UpdateQueryStatsAsync(Guid userId, CancellationToken cancellationToken = default)
+        {
+            var user = await GetByIdAsync(userId, cancellationToken);
+            if (user != null)
+            {
+                user.RecordQuery();
+                await UpdateAsync(user, cancellationToken);
+            }
+        }
+
+        /// <summary>
+        /// 更新最后活跃时间
+        /// </summary>
+        public async Task UpdateLastActiveAsync(Guid userId, CancellationToken cancellationToken = default)
+        {
+            var user = await GetByIdAsync(userId, cancellationToken);
+            if (user != null)
+            {
+                user.UpdateLastActive();
+                await UpdateAsync(user, cancellationToken);
+            }
+        }
+
+        /// <summary>
+        /// 根据等级获取用户
+        /// </summary>
+        public async Task<IEnumerable<User>> GetByLevelAsync(UserLevel level, CancellationToken cancellationToken = default)
+        {
+            return await _context.Users
+                .Where(u => u.Level == level && u.IsActive)
+                .ToListAsync(cancellationToken);
+        }
+
+        /// <summary>
+        /// 获取即将过期的付费用户
+        /// </summary>
+        public async Task<IEnumerable<User>> GetExpiringSubscriptionsAsync(DateTime threshold, CancellationToken cancellationToken = default)
+        {
+            return await _context.Users
+                .Where(u => u.Level == UserLevel.Premium &&
+                       u.SubscriptionExpiry != null &&
+                       u.SubscriptionExpiry <= threshold &&
+                       u.IsActive)
+                .ToListAsync(cancellationToken);
+        }
+
+        /// <summary>
+        /// 软删除用户
+        /// </summary>
+        public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
+        {
+            var user = await GetByIdAsync(id, cancellationToken);
+            if (user != null)
+            {
+                user.Disable();
+                await UpdateAsync(user, cancellationToken);
+            }
         }
     }
 }

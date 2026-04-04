@@ -1,8 +1,8 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.Features.Merchants.Commands;
-using OpenFindBearings.Domain.Entities;
-using OpenFindBearings.Domain.Interfaces;
+using OpenFindBearings.Domain.Aggregates;
+using OpenFindBearings.Domain.Repositories;
 using OpenFindBearings.Domain.ValueObjects;
 
 namespace OpenFindBearings.Application.Features.Merchants.Handlers
@@ -41,10 +41,14 @@ namespace OpenFindBearings.Application.Features.Merchants.Handlers
                 contact
             );
 
+            // ✅ 修改：传递所有6个参数
             merchant.UpdateBasicInfo(
-                request.CompanyName,
-                request.Description,
-                request.BusinessScope
+                companyName: request.CompanyName,
+                unifiedSocialCreditCode: request.UnifiedSocialCreditCode,  // 统一社会信用代码
+                description: request.Description,
+                businessScope: request.BusinessScope,
+                logoUrl: request.LogoUrl,
+                website: request.Website
             );
 
             await _merchantRepository.AddAsync(merchant, cancellationToken);

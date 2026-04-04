@@ -43,7 +43,7 @@ namespace OpenFindBearings.Api.Endpoints
                 var result = await mediator.Send(query);
 
                 return ApiResponseHelper.Paged(
-                    result.Items,
+                    result.Items.ToList(),
                     result.TotalCount,
                     result.Page,
                     result.PageSize,

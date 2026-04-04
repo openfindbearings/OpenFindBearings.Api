@@ -2,13 +2,10 @@
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.Features.Bearings.DTOs;
 using OpenFindBearings.Application.Features.Bearings.Queries;
-using OpenFindBearings.Domain.Interfaces;
+using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Features.Bearings.Handlers
 {
-    /// <summary>
-    /// 获取轴承替代品查询处理器
-    /// </summary>
     public class GetBearingInterchangesQueryHandler : IRequestHandler<GetBearingInterchangesQuery, List<BearingDto>>
     {
         private readonly IBearingInterchangeRepository _interchangeRepository;
@@ -39,7 +36,8 @@ namespace OpenFindBearings.Application.Features.Bearings.Handlers
                     result.Add(new BearingDto
                     {
                         Id = bearing.Id,
-                        PartNumber = bearing.PartNumber,
+                        CurrentCode = bearing.CurrentCode,
+                        FormerCode = bearing.FormerCode,           // ✅ 新增
                         Name = bearing.Name,
                         Description = bearing.Description,
                         InnerDiameter = bearing.Dimensions.InnerDiameter,
@@ -48,10 +46,12 @@ namespace OpenFindBearings.Application.Features.Bearings.Handlers
                         BrandId = bearing.BrandId,
                         BrandName = bearing.Brand?.Name ?? string.Empty,
                         BearingTypeId = bearing.BearingTypeId,
-                        BearingTypeName = bearing.BearingType?.Name ?? string.Empty,
+                        BearingTypeName = bearing.BearingType,
                         ViewCount = bearing.ViewCount,
                         OriginCountry = bearing.OriginCountry,
-                        Category = bearing.Category.ToString()
+                        Category = bearing.Category.ToString(),
+                        IsStandard = bearing.IsStandard,           // ✅ 新增
+                        Weight = bearing.Weight                    // ✅ 新增（可选）
                     });
                 }
             }

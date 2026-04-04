@@ -8,15 +8,25 @@ namespace OpenFindBearings.Application.Features.Merchants.Commands
     /// </summary>
     public record CreateMerchantCommand : IRequest<Guid>
     {
-        public string Name { get; init; } = string.Empty;
-        public string? CompanyName { get; init; }
-        public MerchantType Type { get; init; }
-        public string? ContactPerson { get; init; }
-        public string? Phone { get; init; }
-        public string? Mobile { get; init; }
-        public string? Email { get; init; }
-        public string? Address { get; init; }
-        public string? Description { get; init; }
-        public string? BusinessScope { get; init; }
+        // 基本信息
+        public string Name { get; set; } = string.Empty;
+        public string? CompanyName { get; set; }
+        public string? UnifiedSocialCreditCode { get; set; } 
+        public MerchantType Type { get; set; }
+
+        // 描述信息
+        public string? Description { get; set; }
+        public string? BusinessScope { get; set; }
+
+        // 联系方式
+        public string? ContactPerson { get; set; }
+        public string? Phone { get; set; }
+        public string? Mobile { get; set; }
+        public string? Email { get; set; }
+        public string? Address { get; set; }
+
+        // 品牌形象
+        public string? LogoUrl { get; set; }
+        public string? Website { get; set; }
     }
 }

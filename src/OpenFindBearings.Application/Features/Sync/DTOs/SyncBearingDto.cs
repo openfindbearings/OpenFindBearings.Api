@@ -8,9 +8,19 @@ namespace OpenFindBearings.Application.Features.Sync.DTOs
     public class SyncBearingDto
     {
         /// <summary>
-        /// 轴承型号
+        /// 现行代号
         /// </summary>
-        public string PartNumber { get; set; } = string.Empty;
+        public string CurrentCode { get; set; } = string.Empty;
+
+        /// <summary>
+        /// 曾用代号
+        /// </summary>
+        public string? FormerCode { get; set; }
+
+        /// <summary>
+        /// 代号来源
+        /// </summary>
+        public string? CodeSource { get; set; }
 
         /// <summary>
         /// 产品名称
@@ -21,6 +31,26 @@ namespace OpenFindBearings.Application.Features.Sync.DTOs
         /// 产品描述
         /// </summary>
         public string? Description { get; set; }
+
+        /// <summary>
+        /// 轴承类型名称（冗余）
+        /// </summary>
+        public string BearingTypeName { get; set; } = string.Empty;
+
+        /// <summary>
+        /// 结构类型
+        /// </summary>
+        public string? StructureType { get; set; }
+
+        /// <summary>
+        /// 尺寸系列
+        /// </summary>
+        public string? SizeSeries { get; set; }
+
+        /// <summary>
+        /// 是否为标准轴承
+        /// </summary>
+        public bool IsStandard { get; set; } = true;
 
         /// <summary>
         /// 内径 (mm)
@@ -36,6 +66,16 @@ namespace OpenFindBearings.Application.Features.Sync.DTOs
         /// 宽度 (mm)
         /// </summary>
         public decimal Width { get; set; }
+
+        /// <summary>
+        /// 最小倒角 (mm)
+        /// </summary>
+        public decimal? ChamferRmin { get; set; }
+
+        /// <summary>
+        /// 最大倒角 (mm)
+        /// </summary>
+        public decimal? ChamferRmax { get; set; }
 
         /// <summary>
         /// 重量 (kg)
@@ -88,15 +128,18 @@ namespace OpenFindBearings.Application.Features.Sync.DTOs
         public string BearingTypeCode { get; set; } = string.Empty;
 
         /// <summary>
+        /// 商标
+        /// </summary>
+        public string? Trademark { get; set; }
+
+        /// <summary>
         /// 产地（原产国/地区）
-        /// 如：瑞典、德国、日本、中国
         /// </summary>
         public string? OriginCountry { get; set; }
 
         /// <summary>
         /// 产品类别
-        /// 1: 进口, 2: 国产, 3: 合资, 4: 其他
         /// </summary>
-        public ProductCategory Category { get; set; } = ProductCategory.Domestic;
+        public BearingCategory Category { get; set; } = BearingCategory.Domestic;
     }
 }

@@ -1,7 +1,7 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.Features.Corrections.Commands;
-using OpenFindBearings.Domain.Interfaces;
+using OpenFindBearings.Domain.Repositories;
 using OpenFindBearings.Domain.ValueObjects;
 
 namespace OpenFindBearings.Application.Features.Corrections.Handlers
@@ -39,7 +39,6 @@ namespace OpenFindBearings.Application.Features.Corrections.Handlers
                 throw new InvalidOperationException($"纠错不存在: {request.CorrectionId}");
             }
 
-            // 更新对应实体的字段
             if (correction.TargetType == "Bearing")
             {
                 await ApplyBearingCorrection(correction, cancellationToken);
@@ -89,32 +88,40 @@ namespace OpenFindBearings.Application.Features.Corrections.Handlers
             var merchant = await _merchantRepository.GetByIdAsync(correction.TargetId, cancellationToken);
             if (merchant == null) return;
 
-            // 根据字段名更新商家信息
             switch (correction.FieldName.ToLower())
             {
                 case "name":
-                    // 需要 Merchant 实体添加 UpdateName 方法
-                    // merchant.UpdateName(correction.SuggestedValue);
+                    merchant.UpdateName(correction.SuggestedValue);
                     break;
                 case "companyname":
+                    // ✅ 修改：需要传递所有6个参数
                     merchant.UpdateBasicInfo(
-                        correction.SuggestedValue,
-                        merchant.Description,
-                        merchant.BusinessScope
+                        companyName: correction.SuggestedValue,
+                        unifiedSocialCreditCode: merchant.UnifiedSocialCreditCode,
+                        description: merchant.Description,
+                        businessScope: merchant.BusinessScope,
+                        logoUrl: merchant.LogoUrl,
+                        website: merchant.Website
                     );
                     break;
                 case "description":
                     merchant.UpdateBasicInfo(
-                        merchant.CompanyName,
-                        correction.SuggestedValue,
-                        merchant.BusinessScope
+                        companyName: merchant.CompanyName,
+                        unifiedSocialCreditCode: merchant.UnifiedSocialCreditCode,
+                        description: correction.SuggestedValue,
+                        businessScope: merchant.BusinessScope,
+                        logoUrl: merchant.LogoUrl,
+                        website: merchant.Website
                     );
                     break;
                 case "businessscope":
                     merchant.UpdateBasicInfo(
-                        merchant.CompanyName,
-                        merchant.Description,
-                        correction.SuggestedValue
+                        companyName: merchant.CompanyName,
+                        unifiedSocialCreditCode: merchant.UnifiedSocialCreditCode,
+                        description: merchant.Description,
+                        businessScope: correction.SuggestedValue,
+                        logoUrl: merchant.LogoUrl,
+                        website: merchant.Website
                     );
                     break;
                 case "contactperson":
@@ -122,14 +129,13 @@ namespace OpenFindBearings.Application.Features.Corrections.Handlers
                 case "mobile":
                 case "email":
                 case "address":
-                    // 更新联系方式
                     var currentContact = merchant.Contact ?? new ContactInfo();
                     var newContact = new ContactInfo(
-                        correction.FieldName.ToLower() == "contactperson" ? correction.SuggestedValue : currentContact.ContactPerson,
-                        correction.FieldName.ToLower() == "phone" ? correction.SuggestedValue : currentContact.Phone,
-                        correction.FieldName.ToLower() == "mobile" ? correction.SuggestedValue : currentContact.Mobile,
-                        correction.FieldName.ToLower() == "email" ? correction.SuggestedValue : currentContact.Email,
-                        correction.FieldName.ToLower() == "address" ? correction.SuggestedValue : currentContact.Address
+                        contactPerson: correction.FieldName.ToLower() == "contactperson" ? correction.SuggestedValue : currentContact.ContactPerson,
+                        phone: correction.FieldName.ToLower() == "phone" ? correction.SuggestedValue : currentContact.Phone,
+                        mobile: correction.FieldName.ToLower() == "mobile" ? correction.SuggestedValue : currentContact.Mobile,
+                        email: correction.FieldName.ToLower() == "email" ? correction.SuggestedValue : currentContact.Email,
+                        address: correction.FieldName.ToLower() == "address" ? correction.SuggestedValue : currentContact.Address
                     );
                     merchant.UpdateContact(newContact);
                     break;

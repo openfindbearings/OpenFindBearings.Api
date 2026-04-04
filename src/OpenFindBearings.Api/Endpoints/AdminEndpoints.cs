@@ -77,7 +77,7 @@ namespace OpenFindBearings.Api.Endpoints
                 };
                 var result = await mediator.Send(query);
                 return ApiResponseHelper.Paged(
-                    result.Items,
+                    result.Items.ToList(),
                     result.TotalCount,
                     result.Page,
                     result.PageSize,
@@ -238,7 +238,7 @@ namespace OpenFindBearings.Api.Endpoints
                 };
                 var result = await mediator.Send(query);
                 return ApiResponseHelper.Paged(
-                    result.Items,
+                    result.Items.ToList(),
                     result.TotalCount,
                     result.Page,
                     result.PageSize,
@@ -267,7 +267,7 @@ namespace OpenFindBearings.Api.Endpoints
                 };
                 var result = await mediator.Send(query);
                 return ApiResponseHelper.Paged(
-                    result.Items,
+                    result.Items.ToList(),
                     result.TotalCount,
                     result.Page,
                     result.PageSize,
@@ -350,7 +350,7 @@ namespace OpenFindBearings.Api.Endpoints
                 };
                 var result = await mediator.Send(query);  // result 是 PagedResult<CorrectionDto>
                 return ApiResponseHelper.Paged(
-                    result.Items,
+                    result.Items.ToList(),
                     result.TotalCount,
                     result.Page,
                     result.PageSize,
@@ -530,7 +530,13 @@ namespace OpenFindBearings.Api.Endpoints
                     PageSize = pageSize
                 };
                 var result = await mediator.Send(query);
-                return ApiResponseHelper.Paged(result.Items, result.TotalCount, result.Page, result.PageSize, httpContext);
+
+                return ApiResponseHelper.Paged(
+                    result.Items.ToList(), 
+                    result.TotalCount, 
+                    result.Page, 
+                    result.PageSize, 
+                    httpContext);
             })
             .WithName("GetPendingLicenses")
             .WithSummary("获取待审核营业执照")
@@ -608,7 +614,7 @@ namespace OpenFindBearings.Api.Endpoints
                     Keyword = keyword
                 };
                 var result = await mediator.Send(query);
-                return ApiResponseHelper.Paged(result.Items, result.TotalCount, result.Page, result.PageSize, httpContext);
+                return ApiResponseHelper.Paged(result.Items.ToList(), result.TotalCount, result.Page, result.PageSize, httpContext);
             })
             .WithName("GetRoles")
             .WithSummary("获取角色列表")
@@ -770,7 +776,7 @@ namespace OpenFindBearings.Api.Endpoints
                     Group = group
                 };
                 var result = await mediator.Send(query);
-                return ApiResponseHelper.Paged(result.Items, result.TotalCount, result.Page, result.PageSize, httpContext);
+                return ApiResponseHelper.Paged(result.Items.ToList(), result.TotalCount, result.Page, result.PageSize, httpContext);
             })
             .WithName("GetPermissions")
             .WithSummary("获取权限列表")

@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.Features.MerchantBearings.DTOs;
 using OpenFindBearings.Application.Features.MerchantBearings.Queries;
 using OpenFindBearings.Domain.Entities;
-using OpenFindBearings.Domain.Interfaces;
+using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Features.MerchantBearings.Handlers
 {
@@ -33,8 +33,8 @@ namespace OpenFindBearings.Application.Features.MerchantBearings.Handlers
             SearchMerchantBearingsQuery request,
             CancellationToken cancellationToken)
         {
-            _logger.LogInformation("搜索商家-轴承关联: Keyword={Keyword}, Page={Page}, PageSize={PageSize}",
-                request.Keyword, request.Page, request.PageSize);
+            _logger.LogInformation("搜索商家-轴承关联: Keyword={Keyword}, IsAuthenticated={IsAuthenticated}",
+                request.Keyword, request.IsAuthenticated);
 
             // 获取所有关联
             IEnumerable<MerchantBearing> merchantBearings = new List<MerchantBearing>();
@@ -49,8 +49,6 @@ namespace OpenFindBearings.Application.Features.MerchantBearings.Handlers
             }
             else
             {
-                // 如果没有指定商家或轴承，返回空列表
-                // 实际项目中可能需要更复杂的搜索逻辑
                 return new PagedResult<MerchantBearingDto>
                 {
                     Items = new List<MerchantBearingDto>(),
@@ -75,7 +73,7 @@ namespace OpenFindBearings.Application.Features.MerchantBearings.Handlers
             {
                 merchantBearings = merchantBearings.Where(mb =>
                     (mb.Merchant?.Name?.Contains(request.Keyword, StringComparison.OrdinalIgnoreCase) == true) ||
-                    (mb.Bearing?.PartNumber?.Contains(request.Keyword, StringComparison.OrdinalIgnoreCase) == true) ||
+                    (mb.Bearing?.CurrentCode?.Contains(request.Keyword, StringComparison.OrdinalIgnoreCase) == true) ||
                     (mb.Bearing?.Name?.Contains(request.Keyword, StringComparison.OrdinalIgnoreCase) == true));
             }
 
@@ -102,12 +100,20 @@ namespace OpenFindBearings.Application.Features.MerchantBearings.Handlers
                 {
                     Id = mb.Id,
                     MerchantId = mb.MerchantId,
-                    MerchantName = mb.Merchant?.Name ?? string.Empty,
+
+                    // ========== 敏感信息控制 ==========
+                    MerchantName = request.IsAuthenticated ? mb.Merchant?.Name : null,
                     MerchantGrade = mb.Merchant?.Grade.ToString() ?? string.Empty,
                     MerchantIsVerified = mb.Merchant?.IsVerified ?? false,
+                    MerchantCity = ExtractCityFromAddress(mb.Merchant?.Contact?.Address),
+                    MerchantPhone = request.IsAuthenticated ? mb.Merchant?.Contact?.Phone : null,
+                    MerchantAddress = request.IsAuthenticated ? mb.Merchant?.Contact?.Address : null,
+
                     BearingId = mb.BearingId,
-                    BearingPartNumber = mb.Bearing?.PartNumber ?? string.Empty,
+                    BearingCurrentCode = mb.Bearing?.CurrentCode ?? string.Empty,
+                    BearingFormerCode = mb.Bearing?.FormerCode,
                     BearingName = mb.Bearing?.Name ?? string.Empty,
+                    BearingTypeName = mb.Bearing?.BearingType,
                     BrandName = mb.Bearing?.Brand?.Name,
                     BrandLevel = mb.Bearing?.Brand?.Level.ToString(),
                     Dimensions = mb.Bearing != null
@@ -125,8 +131,6 @@ namespace OpenFindBearings.Application.Features.MerchantBearings.Handlers
                     ViewCount = mb.ViewCount,
                     CreatedAt = mb.CreatedAt,
                     UpdatedAt = mb.UpdatedAt,
-
-                    // 使用传入的登录状态计算价格可见性
                     IsPriceVisible = mb.IsPriceVisible(request.IsAuthenticated)
                 })
                 .ToList();
@@ -138,6 +142,26 @@ namespace OpenFindBearings.Application.Features.MerchantBearings.Handlers
                 Page = request.Page,
                 PageSize = request.PageSize
             };
+        }
+
+        /// <summary>
+        /// 从完整地址中提取城市
+        /// </summary>
+        private string? ExtractCityFromAddress(string? fullAddress)
+        {
+            if (string.IsNullOrWhiteSpace(fullAddress))
+                return null;
+
+            var parts = fullAddress.Split(new[] { '省', '市', '区', '县' }, StringSplitOptions.RemoveEmptyEntries);
+
+            if (parts.Length >= 2)
+            {
+                var city = parts[1].Trim();
+                if (city.Length > 10) city = city.Substring(0, 10);
+                return city;
+            }
+
+            return fullAddress.Length > 6 ? fullAddress.Substring(0, 6) : fullAddress;
         }
     }
 }

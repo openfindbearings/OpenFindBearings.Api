@@ -319,11 +319,11 @@ namespace OpenFindBearings.Api.Endpoints
                 if (pendingOnly == true)
                 {
                     result.Items = result.Items.Where(x => x.IsPendingApproval).ToList();
-                    result.TotalCount = result.Items.Count;
+                    result.TotalCount = result.Items.Count();
                 }
 
                 return ApiResponseHelper.Paged(
-                    result.Items,
+                    result.Items.ToList(),
                     result.TotalCount,
                     result.Page,
                     result.PageSize,

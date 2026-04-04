@@ -1,6 +1,6 @@
 ﻿using MediatR;
 using OpenFindBearings.Application.Features.Corrections.DTOs;
-using OpenFindBearings.Domain.Interfaces;
+using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Features.Corrections.Queries
 {

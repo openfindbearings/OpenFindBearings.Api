@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using OpenFindBearings.Domain.Entities;
+using OpenFindBearings.Domain.Aggregates;
+using OpenFindBearings.Domain.Enums;
 
 namespace OpenFindBearings.Infrastructure.Persistence.Configurations
 {
@@ -12,6 +13,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
 
             builder.HasKey(u => u.Id);
 
+            // ============ 关联字段 ============
             builder.Property(u => u.AuthUserId)
                 .IsRequired()
                 .HasMaxLength(450);
@@ -19,10 +21,14 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             builder.HasIndex(u => u.AuthUserId)
                 .IsUnique();
 
+            // ============ 基础信息 ============
             builder.Property(u => u.Nickname)
                 .HasMaxLength(100);
 
             builder.Property(u => u.Avatar)
+                .HasMaxLength(500);
+
+            builder.Property(u => u.Address)
                 .HasMaxLength(500);
 
             // 用户类型枚举存为字符串
@@ -33,6 +39,55 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             builder.Property(u => u.GuestSessionId)
                 .HasMaxLength(100);
 
+            // ============ 会员信息 ============
+            builder.Property(u => u.Level)
+                .HasConversion<int>()
+                .HasDefaultValue(UserLevel.Free);
+
+            builder.Property(u => u.SubscriptionExpiry);
+
+            // ============ 注册信息 ============
+            builder.Property(u => u.RegistrationSource)
+                .HasConversion<int>()
+                .HasDefaultValue(RegistrationSource.Guest);
+
+            builder.Property(u => u.RegisterIp)
+                .HasMaxLength(50);
+
+            builder.Property(u => u.RegisteredAt);
+
+            // ============ 用户画像 ============
+            builder.Property(u => u.Occupation)
+                .HasConversion<int?>();
+
+            builder.Property(u => u.CompanyName)
+                .HasMaxLength(200);
+
+            builder.Property(u => u.Industry)
+                .HasMaxLength(100);
+
+            // ============ 行为统计 ============
+            builder.Property(u => u.SearchCount)
+                .HasDefaultValue(0);
+
+            builder.Property(u => u.QueryCount)
+                .HasDefaultValue(0);
+
+            builder.Property(u => u.FirstSearchAt);
+            builder.Property(u => u.LastSearchAt);
+            builder.Property(u => u.LastActiveAt);
+            builder.Property(u => u.LastLoginAt);
+
+            // ============ 状态字段 ============
+            builder.Property(u => u.IsActive)
+                .HasDefaultValue(true);
+
+            builder.Property(u => u.IsMerged)
+                .HasDefaultValue(false);
+
+            builder.Property(u => u.MergedToUserId);
+
+            // ============ 关系配置 ============
             builder.HasOne(u => u.Merchant)
                 .WithMany(m => m.Staff)
                 .HasForeignKey(u => u.MerchantId)
@@ -74,10 +129,19 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
                 .HasForeignKey(c => c.SubmittedBy)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // 索引
+            // ============ 索引 ============
             builder.HasIndex(u => u.UserType);
             builder.HasIndex(u => u.MerchantId);
             builder.HasIndex(u => u.GuestSessionId);
+
+            builder.HasIndex(u => u.Level);
+            builder.HasIndex(u => u.RegistrationSource);
+            builder.HasIndex(u => u.IsActive);
+            builder.HasIndex(u => u.LastActiveAt);
+
+            // 组合索引
+            builder.HasIndex(u => new { u.UserType, u.IsActive });
+            builder.HasIndex(u => new { u.Level, u.IsActive });
         }
     }
 }

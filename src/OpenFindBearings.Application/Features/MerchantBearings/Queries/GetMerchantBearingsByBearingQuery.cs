@@ -1,6 +1,6 @@
 ﻿using MediatR;
 using OpenFindBearings.Application.Features.MerchantBearings.DTOs;
-using OpenFindBearings.Domain.Interfaces;
+using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Features.MerchantBearings.Queries
 {

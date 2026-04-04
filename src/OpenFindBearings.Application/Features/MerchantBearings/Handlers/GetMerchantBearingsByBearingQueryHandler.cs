@@ -2,7 +2,7 @@
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.Features.MerchantBearings.DTOs;
 using OpenFindBearings.Application.Features.MerchantBearings.Queries;
-using OpenFindBearings.Domain.Interfaces;
+using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Features.MerchantBearings.Handlers
 {
@@ -46,8 +46,13 @@ namespace OpenFindBearings.Application.Features.MerchantBearings.Handlers
                     MerchantGrade = mb.Merchant?.Grade.ToString() ?? string.Empty,
                     MerchantIsVerified = mb.Merchant?.IsVerified ?? false,
                     BearingId = mb.BearingId,
-                    BearingPartNumber = mb.Bearing?.PartNumber ?? string.Empty,
+                    // ✅ 修改：PartNumber → CurrentCode
+                    BearingCurrentCode = mb.Bearing?.CurrentCode ?? string.Empty,
+                    // ✅ 新增：曾用代号
+                    BearingFormerCode = mb.Bearing?.FormerCode,
                     BearingName = mb.Bearing?.Name ?? string.Empty,
+                    // ✅ 新增：轴承类型名称
+                    BearingTypeName = mb.Bearing?.BearingType,
                     BrandName = mb.Bearing?.Brand?.Name,
                     BrandLevel = mb.Bearing?.Brand?.Level.ToString(),
                     Dimensions = mb.Bearing != null
@@ -65,8 +70,6 @@ namespace OpenFindBearings.Application.Features.MerchantBearings.Handlers
                     ViewCount = mb.ViewCount,
                     CreatedAt = mb.CreatedAt,
                     UpdatedAt = mb.UpdatedAt,
-
-                    // 使用传入的登录状态计算价格可见性
                     IsPriceVisible = mb.IsPriceVisible(request.IsAuthenticated)
                 })
                 .ToList();

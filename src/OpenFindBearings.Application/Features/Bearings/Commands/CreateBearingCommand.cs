@@ -9,9 +9,19 @@ namespace OpenFindBearings.Application.Features.Bearings.Commands
     public record CreateBearingCommand : IRequest<Guid>
     {
         /// <summary>
-        /// 轴承型号
+        /// 轴承型号（现行代号）
         /// </summary>
-        public string PartNumber { get; init; } = string.Empty;
+        public string CurrentCode { get; init; } = string.Empty;
+
+        /// <summary>
+        /// 曾用代号
+        /// </summary>
+        public string? FormerCode { get; init; }
+
+        /// <summary>
+        /// 代号来源
+        /// </summary>
+        public string? CodeSource { get; init; }
 
         /// <summary>
         /// 产品名称
@@ -22,6 +32,26 @@ namespace OpenFindBearings.Application.Features.Bearings.Commands
         /// 产品描述
         /// </summary>
         public string? Description { get; init; }
+
+        /// <summary>
+        /// 轴承类型（名称）
+        /// </summary>
+        public string BearingType { get; init; } = string.Empty;
+
+        /// <summary>
+        /// 结构类型
+        /// </summary>
+        public string? StructureType { get; init; }
+
+        /// <summary>
+        /// 尺寸系列
+        /// </summary>
+        public string? SizeSeries { get; init; }
+
+        /// <summary>
+        /// 是否为标准轴承
+        /// </summary>
+        public bool IsStandard { get; init; } = true;
 
         /// <summary>
         /// 内径 (mm)
@@ -37,6 +67,16 @@ namespace OpenFindBearings.Application.Features.Bearings.Commands
         /// 宽度 (mm)
         /// </summary>
         public decimal Width { get; init; }
+
+        /// <summary>
+        /// 最小倒角 (mm)
+        /// </summary>
+        public decimal? ChamferRmin { get; init; }
+
+        /// <summary>
+        /// 最大倒角 (mm)
+        /// </summary>
+        public decimal? ChamferRmax { get; init; }
 
         /// <summary>
         /// 重量 (kg)
@@ -89,6 +129,11 @@ namespace OpenFindBearings.Application.Features.Bearings.Commands
         public Guid BrandId { get; init; }
 
         /// <summary>
+        /// 商标
+        /// </summary>
+        public string? Trademark { get; init; }
+
+        /// <summary>
         /// 产地（原产国/地区）
         /// </summary>
         public string? OriginCountry { get; init; }
@@ -96,6 +141,6 @@ namespace OpenFindBearings.Application.Features.Bearings.Commands
         /// <summary>
         /// 产品类别
         /// </summary>
-        public ProductCategory Category { get; init; } = ProductCategory.Domestic;
+        public BearingCategory Category { get; init; } = BearingCategory.Domestic;
     }
 }

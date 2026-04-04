@@ -2,7 +2,7 @@
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.Features.Corrections.DTOs;
 using OpenFindBearings.Application.Features.Corrections.Queries;
-using OpenFindBearings.Domain.Interfaces;
+using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Features.Corrections.Handlers
 {
@@ -46,7 +46,7 @@ namespace OpenFindBearings.Application.Features.Corrections.Handlers
             if (correction.TargetType == "Bearing")
             {
                 var bearing = await _bearingRepository.GetByIdAsync(correction.TargetId, cancellationToken);
-                targetDisplay = bearing != null ? $"{bearing.PartNumber} - {bearing.Name}" : string.Empty;
+                targetDisplay = bearing != null ? $"{bearing.CurrentCode} - {bearing.Name}" : string.Empty;
             }
             else if (correction.TargetType == "Merchant")
             {

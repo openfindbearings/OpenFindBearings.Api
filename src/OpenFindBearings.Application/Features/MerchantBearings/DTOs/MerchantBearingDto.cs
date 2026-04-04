@@ -19,34 +19,63 @@ namespace OpenFindBearings.Application.Features.MerchantBearings.DTOs
         public Guid MerchantId { get; set; }
 
         /// <summary>
-        /// 商家名称
+        /// 商家名称（仅登录用户可见）
         /// </summary>
-        public string MerchantName { get; set; } = string.Empty;
+        public string? MerchantName { get; set; }
 
         /// <summary>
-        /// 商家等级
+        /// 商家等级（所有人可见）
         /// </summary>
-        public string MerchantGrade { get; set; } = string.Empty;
+        public string? MerchantGrade { get; set; }
 
         /// <summary>
-        /// 商家是否已认证
+        /// 商家是否已认证（所有人可见）
         /// </summary>
         public bool MerchantIsVerified { get; set; }
+
+        /// <summary>
+        /// 商家所在城市（所有人可见，从地址提取）
+        /// </summary>
+        public string? MerchantCity { get; set; }
+
+        /// <summary>
+        /// 商家电话（仅登录用户可见）
+        /// </summary>
+        public string? MerchantPhone { get; set; }
+
+        /// <summary>
+        /// 商家地址（仅登录用户可见）
+        /// </summary>
+        public string? MerchantAddress { get; set; }
 
         /// <summary>
         /// 轴承ID
         /// </summary>
         public Guid BearingId { get; set; }
 
+        // ============ 轴承信息 ============
+
         /// <summary>
-        /// 轴承型号
+        /// 轴承现行代号
         /// </summary>
-        public string BearingPartNumber { get; set; } = string.Empty;
+        public string BearingCurrentCode { get; set; } = string.Empty;
+
+        /// <summary>
+        /// 轴承曾用代号
+        /// </summary>
+        public string? BearingFormerCode { get; set; }
 
         /// <summary>
         /// 轴承名称
         /// </summary>
         public string BearingName { get; set; } = string.Empty;
+
+        /// <summary>
+        /// 轴承类型名称
+        /// </summary>
+        public string? BearingTypeName { get; set; }
+
+        // ============ 品牌信息 ============
 
         /// <summary>
         /// 品牌名称
@@ -57,6 +86,8 @@ namespace OpenFindBearings.Application.Features.MerchantBearings.DTOs
         /// 品牌档次
         /// </summary>
         public string? BrandLevel { get; set; }
+
+        // ============ 尺寸信息 ============
 
         /// <summary>
         /// 尺寸描述（如 "25×52×15"）
@@ -72,20 +103,16 @@ namespace OpenFindBearings.Application.Features.MerchantBearings.DTOs
 
         /// <summary>
         /// 价格可见性
-        /// Public: 所有人都可见
-        /// LoginRequired: 仅登录用户可见
         /// </summary>
         public PriceVisibility PriceVisibility { get; set; } = PriceVisibility.Public;
 
         /// <summary>
         /// 是否对当前用户可见
-        /// 由API层根据用户登录状态和PriceVisibility计算
         /// </summary>
         public bool IsPriceVisible { get; set; }
 
         /// <summary>
-        /// 数值化价格（用于排序和筛选）
-        /// 当PriceDescription为"电议"时可设为null
+        /// 数值化价格
         /// </summary>
         public decimal? NumericPrice { get; set; }
 
@@ -136,8 +163,10 @@ namespace OpenFindBearings.Application.Features.MerchantBearings.DTOs
         /// </summary>
         public DateTime? UpdatedAt { get; set; }
 
+        // ============ 辅助属性 ============
+
         /// <summary>
-        /// 判断是否为议价商品（电议、面议）
+        /// 判断是否为议价商品
         /// </summary>
         public bool IsNegotiable =>
             !string.IsNullOrWhiteSpace(PriceDescription) &&
