@@ -22,6 +22,501 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("OpenFindBearings.Domain.Aggregates.Bearing", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("BearingType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("BearingType");
+
+                    b.Property<Guid>("BearingTypeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BrandId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CageType")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("CageType");
+
+                    b.Property<int>("Category")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(2)
+                        .HasColumnName("Category");
+
+                    b.Property<decimal?>("ChamferRmax")
+                        .HasPrecision(8, 2)
+                        .HasColumnType("numeric(8,2)")
+                        .HasColumnName("ChamferRmax");
+
+                    b.Property<decimal?>("ChamferRmin")
+                        .HasPrecision(8, 2)
+                        .HasColumnType("numeric(8,2)")
+                        .HasColumnName("ChamferRmin");
+
+                    b.Property<string>("CodeSource")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("CodeSource");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CurrentCode")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("CurrentCode");
+
+                    b.Property<string>("DataRemark")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("DataRemark");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("Description");
+
+                    b.Property<string>("FormerCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("FormerCode");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsStandard")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("IsStandard");
+
+                    b.Property<bool>("IsVerified")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("IsVerified");
+
+                    b.Property<DateTime?>("LastVerifiedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("LastVerifiedAt");
+
+                    b.Property<string>("Material")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("Material");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("Name");
+
+                    b.Property<string>("OriginCountry")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("OriginCountry");
+
+                    b.Property<string>("PrecisionGrade")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("PrecisionGrade");
+
+                    b.Property<string>("SealType")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("SealType");
+
+                    b.Property<string>("SizeSeries")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("SizeSeries");
+
+                    b.Property<string>("StructureType")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("StructureType");
+
+                    b.Property<string>("Trademark")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("Trademark");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("VerifiedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("VerifiedBy");
+
+                    b.Property<int>("ViewCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("ViewCount");
+
+                    b.Property<decimal?>("Weight")
+                        .HasPrecision(12, 4)
+                        .HasColumnType("numeric(12,4)")
+                        .HasColumnName("Weight");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BearingType")
+                        .HasDatabaseName("IX_Bearings_BearingType");
+
+                    b.HasIndex("BearingTypeId")
+                        .HasDatabaseName("IX_Bearings_BearingTypeId");
+
+                    b.HasIndex("BrandId")
+                        .HasDatabaseName("IX_Bearings_BrandId");
+
+                    b.HasIndex("Category")
+                        .HasDatabaseName("IX_Bearings_Category");
+
+                    b.HasIndex("IsStandard")
+                        .HasDatabaseName("IX_Bearings_IsStandard");
+
+                    b.HasIndex("IsVerified")
+                        .HasDatabaseName("IX_Bearings_IsVerified");
+
+                    b.HasIndex("SizeSeries")
+                        .HasDatabaseName("IX_Bearings_SizeSeries");
+
+                    b.HasIndex("StructureType")
+                        .HasDatabaseName("IX_Bearings_StructureType");
+
+                    b.HasIndex("BearingType", "IsStandard")
+                        .HasDatabaseName("IX_Bearings_Type_IsStandard");
+
+                    b.HasIndex("CurrentCode", "BearingType")
+                        .HasDatabaseName("IX_Bearings_Code_Type");
+
+                    b.HasIndex("CurrentCode", "BrandId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Bearings_CurrentCode_BrandId");
+
+                    b.ToTable("Bearings", (string)null);
+                });
+
+            modelBuilder.Entity("OpenFindBearings.Domain.Aggregates.Merchant", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("BusinessScope")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("CompanyName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DataRemark")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("DataRemark");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<int>("FollowerCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("FollowerCount");
+
+                    b.Property<int>("Grade")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1)
+                        .HasColumnName("Grade");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDataVerified")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("IsDataVerified");
+
+                    b.Property<bool>("IsVerified")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<DateTime?>("LastVerifiedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("LastVerifiedAt");
+
+                    b.Property<string>("LogoUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("LogoUrl");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("ProductCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("ProductCount");
+
+                    b.Property<int>("Status")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(2)
+                        .HasColumnName("Status");
+
+                    b.Property<string>("SuspensionReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("SuspensionReason");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("UnifiedSocialCreditCode")
+                        .HasMaxLength(18)
+                        .HasColumnType("character varying(18)")
+                        .HasColumnName("UnifiedSocialCreditCode");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("VerifiedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("VerifiedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("VerifiedBy");
+
+                    b.Property<int>("ViewCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("ViewCount");
+
+                    b.Property<string>("Website")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("Website");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Grade");
+
+                    b.HasIndex("IsVerified");
+
+                    b.HasIndex("Name");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("Type");
+
+                    b.HasIndex("UnifiedSocialCreditCode");
+
+                    b.ToTable("Merchants", (string)null);
+                });
+
+            modelBuilder.Entity("OpenFindBearings.Domain.Aggregates.User", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("AuthUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
+
+                    b.Property<string>("Avatar")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("CompanyName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("FirstSearchAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("GuestSessionId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Industry")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("IsMerged")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<DateTime?>("LastActiveAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("LastLoginAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("LastSearchAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Level")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1);
+
+                    b.Property<Guid?>("MerchantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("MergedToUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Nickname")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int?>("Occupation")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("QueryCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<string>("RegisterIp")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime?>("RegisteredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("RegistrationSource")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(5);
+
+                    b.Property<int>("SearchCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<DateTime?>("SubscriptionExpiry")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UserType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AuthUserId")
+                        .IsUnique();
+
+                    b.HasIndex("GuestSessionId");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("LastActiveAt");
+
+                    b.HasIndex("Level");
+
+                    b.HasIndex("MerchantId");
+
+                    b.HasIndex("RegistrationSource");
+
+                    b.HasIndex("UserType");
+
+                    b.HasIndex("Level", "IsActive");
+
+                    b.HasIndex("UserType", "IsActive");
+
+                    b.ToTable("Users", (string)null);
+                });
+
+            modelBuilder.Entity("OpenFindBearings.Domain.Entities.ApiCallLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ApiPath")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ClientIp")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("DurationMs")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("HttpMethod")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("SessionId")
+                        .HasColumnType("text");
+
+                    b.Property<int>("StatusCode")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UserAgent")
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ApiCallLogs");
+                });
+
             modelBuilder.Entity("OpenFindBearings.Domain.Entities.AuditLog", b =>
                 {
                     b.Property<Guid>("Id")
@@ -79,91 +574,6 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     b.HasIndex("EntityType", "EntityId");
 
                     b.ToTable("AuditLogs", (string)null);
-                });
-
-            modelBuilder.Entity("OpenFindBearings.Domain.Entities.Bearing", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("BearingTypeId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("BrandId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("CageType")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<int>("Category")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(2)
-                        .HasColumnName("Category");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Description")
-                        .HasColumnType("text");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Material")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<string>("OriginCountry")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("OriginCountry");
-
-                    b.Property<string>("PartNumber")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<string>("PrecisionGrade")
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<string>("SealType")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("ViewCount")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(0);
-
-                    b.Property<decimal?>("Weight")
-                        .HasPrecision(10, 3)
-                        .HasColumnType("numeric(10,3)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("BearingTypeId")
-                        .HasDatabaseName("IX_Bearings_BearingTypeId");
-
-                    b.HasIndex("BrandId")
-                        .HasDatabaseName("IX_Bearings_BrandId");
-
-                    b.HasIndex("PartNumber", "BrandId")
-                        .IsUnique()
-                        .HasDatabaseName("IX_Bearings_PartNumber_BrandId");
-
-                    b.ToTable("Bearings", (string)null);
                 });
 
             modelBuilder.Entity("OpenFindBearings.Domain.Entities.BearingInterchange", b =>
@@ -410,15 +820,13 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
 
                     b.Property<string>("LicenseUrl")
                         .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
+                        .HasColumnType("text");
 
                     b.Property<Guid>("MerchantId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("ReviewComment")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
+                        .HasColumnType("text");
 
                     b.Property<DateTime?>("ReviewedAt")
                         .HasColumnType("timestamp with time zone");
@@ -426,10 +834,10 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     b.Property<Guid?>("ReviewedBy")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
+                    b.Property<int>("Status")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
 
                     b.Property<DateTime>("SubmittedAt")
                         .HasColumnType("timestamp with time zone");
@@ -453,68 +861,6 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     b.HasIndex("SubmittedBy");
 
                     b.ToTable("LicenseVerifications", (string)null);
-                });
-
-            modelBuilder.Entity("OpenFindBearings.Domain.Entities.Merchant", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("BusinessScope")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<string>("CompanyName")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<int>("Grade")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(1)
-                        .HasColumnName("Grade");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsVerified")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false);
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<int>("Type")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("VerifiedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Grade");
-
-                    b.HasIndex("IsVerified");
-
-                    b.HasIndex("Name");
-
-                    b.HasIndex("Type");
-
-                    b.ToTable("Merchants", (string)null);
                 });
 
             modelBuilder.Entity("OpenFindBearings.Domain.Entities.MerchantBearing", b =>
@@ -598,6 +944,56 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("MerchantBearings", (string)null);
+                });
+
+            modelBuilder.Entity("OpenFindBearings.Domain.Entities.PaymentRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Amount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("OrderNo")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("PaidAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PaymentMethod")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Plan")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("TransactionId")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("PaymentRecords");
                 });
 
             modelBuilder.Entity("OpenFindBearings.Domain.Entities.Permission", b =>
@@ -832,72 +1228,6 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     b.ToTable("SystemConfigs", (string)null);
                 });
 
-            modelBuilder.Entity("OpenFindBearings.Domain.Entities.User", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Address")
-                        .HasColumnType("text");
-
-                    b.Property<string>("AuthUserId")
-                        .IsRequired()
-                        .HasMaxLength(450)
-                        .HasColumnType("character varying(450)");
-
-                    b.Property<string>("Avatar")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("GuestSessionId")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsMerged")
-                        .HasColumnType("boolean");
-
-                    b.Property<DateTime?>("LastLoginAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("MerchantId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("MergedToUserId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Nickname")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("UserType")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AuthUserId")
-                        .IsUnique();
-
-                    b.HasIndex("GuestSessionId");
-
-                    b.HasIndex("MerchantId");
-
-                    b.HasIndex("UserType");
-
-                    b.ToTable("Users", (string)null);
-                });
-
             modelBuilder.Entity("OpenFindBearings.Domain.Entities.UserBearingFavorite", b =>
                 {
                     b.Property<Guid>("Id")
@@ -965,6 +1295,58 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     b.HasIndex("ViewedAt");
 
                     b.ToTable("UserBearingHistories", (string)null);
+                });
+
+            modelBuilder.Entity("OpenFindBearings.Domain.Entities.UserBehaviorLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ActionType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ClientIp")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("DurationMs")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ExtraData")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Keyword")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SessionId")
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("TargetId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("TargetType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UserAgent")
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("UserBehaviorLogs");
                 });
 
             modelBuilder.Entity("OpenFindBearings.Domain.Entities.UserMerchantFollow", b =>
@@ -1036,6 +1418,49 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     b.ToTable("UserMerchantHistories", (string)null);
                 });
 
+            modelBuilder.Entity("OpenFindBearings.Domain.Entities.UserPreference", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("EmailNotificationEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("PreferredBearingTypeIds")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PreferredBrandIds")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PriceRangePreference")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("SmsNotificationEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("WeChatNotificationEnabled")
+                        .HasColumnType("boolean");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("UserPreferences");
+                });
+
             modelBuilder.Entity("OpenFindBearings.Domain.Entities.UserRole", b =>
                 {
                     b.Property<Guid>("UserId")
@@ -1063,20 +1488,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     b.ToTable("UserRoles", (string)null);
                 });
 
-            modelBuilder.Entity("OpenFindBearings.Domain.Entities.AuditLog", b =>
+            modelBuilder.Entity("OpenFindBearings.Domain.Aggregates.Bearing", b =>
                 {
-                    b.HasOne("OpenFindBearings.Domain.Entities.User", "Operator")
-                        .WithMany()
-                        .HasForeignKey("OperatorId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Operator");
-                });
-
-            modelBuilder.Entity("OpenFindBearings.Domain.Entities.Bearing", b =>
-                {
-                    b.HasOne("OpenFindBearings.Domain.Entities.BearingType", "BearingType")
+                    b.HasOne("OpenFindBearings.Domain.Entities.BearingType", "BearingTypeNavigation")
                         .WithMany()
                         .HasForeignKey("BearingTypeId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -1087,6 +1501,59 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                         .HasForeignKey("BrandId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.OwnsOne("OpenFindBearings.Domain.ValueObjects.DataSource", "DataSource", b1 =>
+                        {
+                            b1.Property<Guid>("BearingId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<int?>("CrawlerSite")
+                                .HasColumnType("integer")
+                                .HasColumnName("CrawlerSite");
+
+                            b1.Property<DateTime>("ImportedAt")
+                                .HasColumnType("timestamp with time zone")
+                                .HasColumnName("ImportedAt");
+
+                            b1.Property<string>("ImportedBy")
+                                .HasMaxLength(100)
+                                .HasColumnType("character varying(100)")
+                                .HasColumnName("ImportedBy");
+
+                            b1.Property<int?>("ReliabilityScore")
+                                .HasColumnType("integer")
+                                .HasColumnName("ReliabilityScore");
+
+                            b1.Property<string>("SourceDetail")
+                                .HasMaxLength(500)
+                                .HasColumnType("character varying(500)")
+                                .HasColumnName("SourceDetail");
+
+                            b1.Property<string>("SourceId")
+                                .HasMaxLength(200)
+                                .HasColumnType("character varying(200)")
+                                .HasColumnName("SourceId");
+
+                            b1.Property<string>("SourceType")
+                                .HasMaxLength(50)
+                                .HasColumnType("character varying(50)")
+                                .HasColumnName("DataSourceType");
+
+                            b1.Property<string>("SourceUrl")
+                                .HasMaxLength(1000)
+                                .HasColumnType("character varying(1000)")
+                                .HasColumnName("SourceUrl");
+
+                            b1.HasKey("BearingId");
+
+                            b1.HasIndex("SourceType")
+                                .HasDatabaseName("IX_Bearings_DataSourceType");
+
+                            b1.ToTable("Bearings");
+
+                            b1.WithOwner()
+                                .HasForeignKey("BearingId");
+                        });
 
                     b.OwnsOne("OpenFindBearings.Domain.ValueObjects.Dimensions", "Dimensions", b1 =>
                         {
@@ -1131,8 +1598,8 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                                 .HasColumnType("uuid");
 
                             b1.Property<decimal?>("DynamicLoadRating")
-                                .HasPrecision(10, 2)
-                                .HasColumnType("numeric(10,2)")
+                                .HasPrecision(12, 2)
+                                .HasColumnType("numeric(12,2)")
                                 .HasColumnName("DynamicLoadRating");
 
                             b1.Property<bool>("HasData")
@@ -1142,12 +1609,13 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                                 .HasColumnName("PerformanceHasData");
 
                             b1.Property<decimal?>("LimitingSpeed")
-                                .HasColumnType("numeric")
+                                .HasPrecision(10)
+                                .HasColumnType("numeric(10,0)")
                                 .HasColumnName("LimitingSpeed");
 
                             b1.Property<decimal?>("StaticLoadRating")
-                                .HasPrecision(10, 2)
-                                .HasColumnType("numeric(10,2)")
+                                .HasPrecision(12, 2)
+                                .HasColumnType("numeric(12,2)")
                                 .HasColumnName("StaticLoadRating");
 
                             b1.HasKey("BearingId");
@@ -1158,9 +1626,11 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                                 .HasForeignKey("BearingId");
                         });
 
-                    b.Navigation("BearingType");
+                    b.Navigation("BearingTypeNavigation");
 
                     b.Navigation("Brand");
+
+                    b.Navigation("DataSource");
 
                     b.Navigation("Dimensions")
                         .IsRequired();
@@ -1168,95 +1638,58 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     b.Navigation("Performance");
                 });
 
-            modelBuilder.Entity("OpenFindBearings.Domain.Entities.BearingInterchange", b =>
+            modelBuilder.Entity("OpenFindBearings.Domain.Aggregates.Merchant", b =>
                 {
-                    b.HasOne("OpenFindBearings.Domain.Entities.Bearing", "SourceBearing")
-                        .WithMany("SourceInterchanges")
-                        .HasForeignKey("SourceBearingId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                    b.OwnsOne("OpenFindBearings.Domain.ValueObjects.DataSource", "DataSource", b1 =>
+                        {
+                            b1.Property<Guid>("MerchantId")
+                                .HasColumnType("uuid");
 
-                    b.HasOne("OpenFindBearings.Domain.Entities.Bearing", "TargetBearing")
-                        .WithMany("TargetInterchanges")
-                        .HasForeignKey("TargetBearingId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                            b1.Property<int?>("CrawlerSite")
+                                .HasColumnType("integer")
+                                .HasColumnName("CrawlerSite");
 
-                    b.Navigation("SourceBearing");
+                            b1.Property<DateTime>("ImportedAt")
+                                .HasColumnType("timestamp with time zone")
+                                .HasColumnName("ImportedAt");
 
-                    b.Navigation("TargetBearing");
-                });
+                            b1.Property<string>("ImportedBy")
+                                .HasMaxLength(100)
+                                .HasColumnType("character varying(100)")
+                                .HasColumnName("ImportedBy");
 
-            modelBuilder.Entity("OpenFindBearings.Domain.Entities.CorrectionRequest", b =>
-                {
-                    b.HasOne("OpenFindBearings.Domain.Entities.Bearing", "Bearing")
-                        .WithMany()
-                        .HasForeignKey("BearingId");
+                            b1.Property<int?>("ReliabilityScore")
+                                .HasColumnType("integer")
+                                .HasColumnName("ReliabilityScore");
 
-                    b.HasOne("OpenFindBearings.Domain.Entities.Merchant", "Merchant")
-                        .WithMany()
-                        .HasForeignKey("MerchantId");
+                            b1.Property<string>("SourceDetail")
+                                .HasMaxLength(500)
+                                .HasColumnType("character varying(500)")
+                                .HasColumnName("SourceDetail");
 
-                    b.HasOne("OpenFindBearings.Domain.Entities.User", "Reviewer")
-                        .WithMany()
-                        .HasForeignKey("ReviewedBy")
-                        .OnDelete(DeleteBehavior.Restrict);
+                            b1.Property<string>("SourceId")
+                                .HasMaxLength(200)
+                                .HasColumnType("character varying(200)")
+                                .HasColumnName("SourceId");
 
-                    b.HasOne("OpenFindBearings.Domain.Entities.User", "Submitter")
-                        .WithMany("SubmittedCorrections")
-                        .HasForeignKey("SubmittedBy")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                            b1.Property<string>("SourceType")
+                                .HasMaxLength(50)
+                                .HasColumnType("character varying(50)")
+                                .HasColumnName("DataSourceType");
 
-                    b.HasOne("OpenFindBearings.Domain.Entities.Bearing", null)
-                        .WithMany()
-                        .HasForeignKey("TargetId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .HasConstraintName("FK_CorrectionRequests_Bearings_TargetId");
+                            b1.Property<string>("SourceUrl")
+                                .HasMaxLength(1000)
+                                .HasColumnType("character varying(1000)")
+                                .HasColumnName("SourceUrl");
 
-                    b.HasOne("OpenFindBearings.Domain.Entities.Merchant", null)
-                        .WithMany()
-                        .HasForeignKey("TargetId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .HasConstraintName("FK_CorrectionRequests_Merchants_TargetId");
+                            b1.HasKey("MerchantId");
 
-                    b.Navigation("Bearing");
+                            b1.ToTable("Merchants");
 
-                    b.Navigation("Merchant");
+                            b1.WithOwner()
+                                .HasForeignKey("MerchantId");
+                        });
 
-                    b.Navigation("Reviewer");
-
-                    b.Navigation("Submitter");
-                });
-
-            modelBuilder.Entity("OpenFindBearings.Domain.Entities.LicenseVerification", b =>
-                {
-                    b.HasOne("OpenFindBearings.Domain.Entities.Merchant", "Merchant")
-                        .WithMany()
-                        .HasForeignKey("MerchantId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("OpenFindBearings.Domain.Entities.User", "Reviewer")
-                        .WithMany()
-                        .HasForeignKey("ReviewedBy")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("OpenFindBearings.Domain.Entities.User", "Submitter")
-                        .WithMany()
-                        .HasForeignKey("SubmittedBy")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Merchant");
-
-                    b.Navigation("Reviewer");
-
-                    b.Navigation("Submitter");
-                });
-
-            modelBuilder.Entity("OpenFindBearings.Domain.Entities.Merchant", b =>
-                {
                     b.OwnsOne("OpenFindBearings.Domain.ValueObjects.ContactInfo", "Contact", b1 =>
                         {
                             b1.Property<Guid>("MerchantId")
@@ -1297,17 +1730,127 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
 
                     b.Navigation("Contact")
                         .IsRequired();
+
+                    b.Navigation("DataSource");
+                });
+
+            modelBuilder.Entity("OpenFindBearings.Domain.Aggregates.User", b =>
+                {
+                    b.HasOne("OpenFindBearings.Domain.Aggregates.Merchant", "Merchant")
+                        .WithMany("Staff")
+                        .HasForeignKey("MerchantId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Merchant");
+                });
+
+            modelBuilder.Entity("OpenFindBearings.Domain.Entities.AuditLog", b =>
+                {
+                    b.HasOne("OpenFindBearings.Domain.Aggregates.User", "Operator")
+                        .WithMany()
+                        .HasForeignKey("OperatorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Operator");
+                });
+
+            modelBuilder.Entity("OpenFindBearings.Domain.Entities.BearingInterchange", b =>
+                {
+                    b.HasOne("OpenFindBearings.Domain.Aggregates.Bearing", "SourceBearing")
+                        .WithMany("SourceInterchanges")
+                        .HasForeignKey("SourceBearingId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("OpenFindBearings.Domain.Aggregates.Bearing", "TargetBearing")
+                        .WithMany("TargetInterchanges")
+                        .HasForeignKey("TargetBearingId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("SourceBearing");
+
+                    b.Navigation("TargetBearing");
+                });
+
+            modelBuilder.Entity("OpenFindBearings.Domain.Entities.CorrectionRequest", b =>
+                {
+                    b.HasOne("OpenFindBearings.Domain.Aggregates.Bearing", "Bearing")
+                        .WithMany()
+                        .HasForeignKey("BearingId");
+
+                    b.HasOne("OpenFindBearings.Domain.Aggregates.Merchant", "Merchant")
+                        .WithMany()
+                        .HasForeignKey("MerchantId");
+
+                    b.HasOne("OpenFindBearings.Domain.Aggregates.User", "Reviewer")
+                        .WithMany()
+                        .HasForeignKey("ReviewedBy")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("OpenFindBearings.Domain.Aggregates.User", "Submitter")
+                        .WithMany("SubmittedCorrections")
+                        .HasForeignKey("SubmittedBy")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("OpenFindBearings.Domain.Aggregates.Bearing", null)
+                        .WithMany()
+                        .HasForeignKey("TargetId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("FK_CorrectionRequests_Bearings_TargetId");
+
+                    b.HasOne("OpenFindBearings.Domain.Aggregates.Merchant", null)
+                        .WithMany()
+                        .HasForeignKey("TargetId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("FK_CorrectionRequests_Merchants_TargetId");
+
+                    b.Navigation("Bearing");
+
+                    b.Navigation("Merchant");
+
+                    b.Navigation("Reviewer");
+
+                    b.Navigation("Submitter");
+                });
+
+            modelBuilder.Entity("OpenFindBearings.Domain.Entities.LicenseVerification", b =>
+                {
+                    b.HasOne("OpenFindBearings.Domain.Aggregates.Merchant", "Merchant")
+                        .WithMany("LicenseVerifications")
+                        .HasForeignKey("MerchantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("OpenFindBearings.Domain.Aggregates.User", "Reviewer")
+                        .WithMany()
+                        .HasForeignKey("ReviewedBy")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("OpenFindBearings.Domain.Aggregates.User", "Submitter")
+                        .WithMany()
+                        .HasForeignKey("SubmittedBy")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Merchant");
+
+                    b.Navigation("Reviewer");
+
+                    b.Navigation("Submitter");
                 });
 
             modelBuilder.Entity("OpenFindBearings.Domain.Entities.MerchantBearing", b =>
                 {
-                    b.HasOne("OpenFindBearings.Domain.Entities.Bearing", "Bearing")
+                    b.HasOne("OpenFindBearings.Domain.Aggregates.Bearing", "Bearing")
                         .WithMany("MerchantBearings")
                         .HasForeignKey("BearingId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("OpenFindBearings.Domain.Entities.Merchant", "Merchant")
+                    b.HasOne("OpenFindBearings.Domain.Aggregates.Merchant", "Merchant")
                         .WithMany("MerchantBearings")
                         .HasForeignKey("MerchantId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1316,6 +1859,17 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     b.Navigation("Bearing");
 
                     b.Navigation("Merchant");
+                });
+
+            modelBuilder.Entity("OpenFindBearings.Domain.Entities.PaymentRecord", b =>
+                {
+                    b.HasOne("OpenFindBearings.Domain.Aggregates.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("OpenFindBearings.Domain.Entities.RolePermission", b =>
@@ -1339,7 +1893,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
 
             modelBuilder.Entity("OpenFindBearings.Domain.Entities.SystemConfig", b =>
                 {
-                    b.HasOne("OpenFindBearings.Domain.Entities.User", "Updater")
+                    b.HasOne("OpenFindBearings.Domain.Aggregates.User", "Updater")
                         .WithMany()
                         .HasForeignKey("UpdatedBy")
                         .OnDelete(DeleteBehavior.SetNull);
@@ -1347,25 +1901,15 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     b.Navigation("Updater");
                 });
 
-            modelBuilder.Entity("OpenFindBearings.Domain.Entities.User", b =>
-                {
-                    b.HasOne("OpenFindBearings.Domain.Entities.Merchant", "Merchant")
-                        .WithMany("Staff")
-                        .HasForeignKey("MerchantId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("Merchant");
-                });
-
             modelBuilder.Entity("OpenFindBearings.Domain.Entities.UserBearingFavorite", b =>
                 {
-                    b.HasOne("OpenFindBearings.Domain.Entities.Bearing", "Bearing")
+                    b.HasOne("OpenFindBearings.Domain.Aggregates.Bearing", "Bearing")
                         .WithMany("FavoritedByUsers")
                         .HasForeignKey("BearingId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("OpenFindBearings.Domain.Entities.User", "User")
+                    b.HasOne("OpenFindBearings.Domain.Aggregates.User", "User")
                         .WithMany("FavoriteBearings")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1378,13 +1922,13 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
 
             modelBuilder.Entity("OpenFindBearings.Domain.Entities.UserBearingHistory", b =>
                 {
-                    b.HasOne("OpenFindBearings.Domain.Entities.Bearing", "Bearing")
+                    b.HasOne("OpenFindBearings.Domain.Aggregates.Bearing", "Bearing")
                         .WithMany()
                         .HasForeignKey("BearingId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("OpenFindBearings.Domain.Entities.User", "User")
+                    b.HasOne("OpenFindBearings.Domain.Aggregates.User", "User")
                         .WithMany("BearingHistory")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1397,13 +1941,13 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
 
             modelBuilder.Entity("OpenFindBearings.Domain.Entities.UserMerchantFollow", b =>
                 {
-                    b.HasOne("OpenFindBearings.Domain.Entities.Merchant", "Merchant")
+                    b.HasOne("OpenFindBearings.Domain.Aggregates.Merchant", "Merchant")
                         .WithMany("FollowedByUsers")
                         .HasForeignKey("MerchantId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("OpenFindBearings.Domain.Entities.User", "User")
+                    b.HasOne("OpenFindBearings.Domain.Aggregates.User", "User")
                         .WithMany("FollowedMerchants")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1416,19 +1960,30 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
 
             modelBuilder.Entity("OpenFindBearings.Domain.Entities.UserMerchantHistory", b =>
                 {
-                    b.HasOne("OpenFindBearings.Domain.Entities.Merchant", "Merchant")
+                    b.HasOne("OpenFindBearings.Domain.Aggregates.Merchant", "Merchant")
                         .WithMany()
                         .HasForeignKey("MerchantId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("OpenFindBearings.Domain.Entities.User", "User")
+                    b.HasOne("OpenFindBearings.Domain.Aggregates.User", "User")
                         .WithMany("MerchantHistory")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Merchant");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("OpenFindBearings.Domain.Entities.UserPreference", b =>
+                {
+                    b.HasOne("OpenFindBearings.Domain.Aggregates.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("User");
                 });
@@ -1441,7 +1996,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("OpenFindBearings.Domain.Entities.User", "User")
+                    b.HasOne("OpenFindBearings.Domain.Aggregates.User", "User")
                         .WithMany("UserRoles")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1452,7 +2007,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("OpenFindBearings.Domain.Entities.Bearing", b =>
+            modelBuilder.Entity("OpenFindBearings.Domain.Aggregates.Bearing", b =>
                 {
                     b.Navigation("FavoritedByUsers");
 
@@ -1463,28 +2018,18 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     b.Navigation("TargetInterchanges");
                 });
 
-            modelBuilder.Entity("OpenFindBearings.Domain.Entities.Merchant", b =>
+            modelBuilder.Entity("OpenFindBearings.Domain.Aggregates.Merchant", b =>
                 {
                     b.Navigation("FollowedByUsers");
+
+                    b.Navigation("LicenseVerifications");
 
                     b.Navigation("MerchantBearings");
 
                     b.Navigation("Staff");
                 });
 
-            modelBuilder.Entity("OpenFindBearings.Domain.Entities.Permission", b =>
-                {
-                    b.Navigation("RolePermissions");
-                });
-
-            modelBuilder.Entity("OpenFindBearings.Domain.Entities.Role", b =>
-                {
-                    b.Navigation("RolePermissions");
-
-                    b.Navigation("UserRoles");
-                });
-
-            modelBuilder.Entity("OpenFindBearings.Domain.Entities.User", b =>
+            modelBuilder.Entity("OpenFindBearings.Domain.Aggregates.User", b =>
                 {
                     b.Navigation("BearingHistory");
 
@@ -1495,6 +2040,18 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     b.Navigation("MerchantHistory");
 
                     b.Navigation("SubmittedCorrections");
+
+                    b.Navigation("UserRoles");
+                });
+
+            modelBuilder.Entity("OpenFindBearings.Domain.Entities.Permission", b =>
+                {
+                    b.Navigation("RolePermissions");
+                });
+
+            modelBuilder.Entity("OpenFindBearings.Domain.Entities.Role", b =>
+                {
+                    b.Navigation("RolePermissions");
 
                     b.Navigation("UserRoles");
                 });

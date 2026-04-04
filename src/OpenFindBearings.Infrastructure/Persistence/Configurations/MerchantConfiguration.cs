@@ -107,6 +107,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             builder.Property(m => m.Status)
                 .HasConversion<int>()
                 .HasDefaultValue(MerchantStatus.Pending)
+                .HasSentinel(MerchantStatus.Pending)
                 .HasColumnName("Status");
 
             builder.Property(m => m.SuspensionReason)

@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using OpenFindBearings.Domain.Entities;
+using OpenFindBearings.Domain.Enums;
 
 namespace OpenFindBearings.Infrastructure.Persistence.Configurations
 {
@@ -10,37 +11,36 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
         {
             builder.ToTable("LicenseVerifications");
 
-            builder.HasKey(l => l.Id);
+            builder.HasKey(lv => lv.Id);
 
-            builder.Property(l => l.LicenseUrl)
-                .IsRequired()
-                .HasMaxLength(500);
+            //// 商家关系（只配置一次）
+            //builder.HasOne(lv => lv.Merchant)
+            //    .WithMany()
+            //    .HasForeignKey(lv => lv.MerchantId)
+            //    .OnDelete(DeleteBehavior.Restrict);
 
-            builder.Property(l => l.Status)
-                .HasConversion<string>()
-                .HasMaxLength(20);
-
-            builder.Property(l => l.ReviewComment)
-                .HasMaxLength(500);
-
-            builder.HasIndex(l => l.Status);
-            builder.HasIndex(l => l.MerchantId);
-            builder.HasIndex(l => l.SubmittedAt);
-
-            builder.HasOne(l => l.Merchant)
+            // 提交人关系
+            builder.HasOne(lv => lv.Submitter)
                 .WithMany()
-                .HasForeignKey(l => l.MerchantId)
+                .HasForeignKey(lv => lv.SubmittedBy)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            builder.HasOne(l => l.Submitter)
+            // 审核人关系
+            builder.HasOne(lv => lv.Reviewer)
                 .WithMany()
-                .HasForeignKey(l => l.SubmittedBy)
+                .HasForeignKey(lv => lv.ReviewedBy)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            builder.HasOne(l => l.Reviewer)
-                .WithMany()
-                .HasForeignKey(l => l.ReviewedBy)
-                .OnDelete(DeleteBehavior.Restrict);
+            // Status 枚举配置
+            builder.Property(lv => lv.Status)
+                .HasConversion<int>()
+                .HasDefaultValue(LicenseVerificationStatus.Pending)
+                .IsRequired();
+
+            // 索引
+            builder.HasIndex(lv => lv.MerchantId);
+            builder.HasIndex(lv => lv.Status);
+            builder.HasIndex(lv => lv.SubmittedAt);
         }
     }
 }

@@ -3,6 +3,7 @@ using OpenFindBearings.Api.Helpers;
 using OpenFindBearings.Api.Services;
 using OpenFindBearings.Application.Features.ApiLogs.Commands;
 using OpenFindBearings.Application.Features.Users.Commands;
+using OpenFindBearings.Application.Interfaces;
 using OpenFindBearings.Domain.Entities;
 using System.Diagnostics;
 
@@ -16,11 +17,16 @@ namespace OpenFindBearings.Api.Middleware
     {
         private readonly RequestDelegate _next;
         private readonly ILogger<UserBehaviorMiddleware> _logger;
+        private readonly IBackgroundTaskQueue _taskQueue;
 
-        public UserBehaviorMiddleware(RequestDelegate next, ILogger<UserBehaviorMiddleware> logger)
+        public UserBehaviorMiddleware(
+            RequestDelegate next,
+            ILogger<UserBehaviorMiddleware> logger,
+            IBackgroundTaskQueue taskQueue)
         {
             _next = next;
             _logger = logger;
+            _taskQueue = taskQueue;
         }
 
         /// <summary>
@@ -50,43 +56,67 @@ namespace OpenFindBearings.Api.Middleware
             {
                 stopwatch.Stop();
 
-                // 创建 API 调用日志
-                var apiLog = new ApiCallLog(
-                    userId: userId,
-                    sessionId: sessionId,
-                    apiPath: context.Request.Path,
-                    httpMethod: context.Request.Method,
-                    statusCode: context.Response.StatusCode,
-                    durationMs: (int)stopwatch.ElapsedMilliseconds,
-                    clientIp: clientIp,
-                    userAgent: userAgent);
+                // 保存当前请求的响应信息（在 finally 块中捕获）
+                var apiPath = context.Request.Path;
+                var httpMethod = context.Request.Method;
+                var statusCode = context.Response.StatusCode;
+                var durationMs = (int)stopwatch.ElapsedMilliseconds;
+                var currentUserId = userId;
+                var currentSessionId = sessionId;
+                var currentClientIp = clientIp;
+                var currentUserAgent = userAgent;
+                var isSearchOrView = IsSearchOrViewAction(apiPath);
+                var currentUserIdValue = userId;
 
-                // 异步记录 API 调用日志，不阻塞响应
-                _ = Task.Run(() => mediator.Send(new AddApiCallLogCommand { Log = apiLog }));
-
-                // 记录用户地区偏好（仅登录用户，且是搜索或查看行为）
-                if (userId.HasValue && IsSearchOrViewAction(context.Request.Path))
+                // 使用后台任务队列记录 API 调用日志
+                _taskQueue.QueueBackgroundWorkItem(async (serviceProvider, token) =>
                 {
-                    _ = Task.Run(async () =>
+                    try
+                    {
+                        var scopedMediator = serviceProvider.GetRequiredService<IMediator>();
+
+                        var apiLog = new ApiCallLog(
+                            userId: currentUserId,
+                            sessionId: currentSessionId,
+                            apiPath: apiPath,
+                            httpMethod: httpMethod,
+                            statusCode: statusCode,
+                            durationMs: durationMs,
+                            clientIp: currentClientIp,
+                            userAgent: currentUserAgent);
+
+                        await scopedMediator.Send(new AddApiCallLogCommand { Log = apiLog }, token);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "记录 API 调用日志失败");
+                    }
+                });
+
+                // 使用后台任务队列记录地区偏好
+                if (currentUserId.HasValue && isSearchOrView)
+                {
+                    _taskQueue.QueueBackgroundWorkItem(async (serviceProvider, token) =>
                     {
                         try
                         {
-                            // 解析 IP 对应的地区
-                            var region = await regionService.GetRegionByIpAsync(clientIp ?? "unknown");
+                            var scopedMediator = serviceProvider.GetRequiredService<IMediator>();
+                            var scopedRegionService = serviceProvider.GetRequiredService<IIpRegionService>();
+
+                            var region = await scopedRegionService.GetRegionByIpAsync(currentClientIp ?? "unknown");
                             if (region.HasValue && (region.Value.Province != null || region.Value.City != null))
                             {
-                                // 更新用户地区偏好
-                                await mediator.Send(new UpdateUserRegionPreferenceCommand
+                                await scopedMediator.Send(new UpdateUserRegionPreferenceCommand
                                 {
-                                    UserId = userId.Value,
+                                    UserId = currentUserIdValue!.Value,
                                     Province = region.Value.Province,
                                     City = region.Value.City
-                                });
+                                }, token);
                             }
                         }
                         catch (Exception ex)
                         {
-                            _logger.LogWarning(ex, "记录地区偏好失败: UserId={UserId}", userId);
+                            _logger.LogWarning(ex, "记录地区偏好失败: UserId={UserId}", currentUserId);
                         }
                     });
                 }
@@ -98,17 +128,16 @@ namespace OpenFindBearings.Api.Middleware
 
         /// <summary>
         /// 判断是否是搜索或查看行为
-        /// 这些行为需要记录地区偏好
         /// </summary>
         private bool IsSearchOrViewAction(string path)
         {
-            return path.Contains("/bearings/search") ||           // 搜索轴承
-                   path.Contains("/bearings/by-code") ||          // 通过型号查询
+            return path.Contains("/bearings/search") ||
+                   path.Contains("/bearings/by-code") ||
                    (path.Contains("/bearings/") &&
                     !path.Contains("/search") &&
-                    !path.Contains("/hot")) ||                    // 查看轴承详情
+                    !path.Contains("/hot")) ||
                    path.Contains("/merchants/") &&
-                    path.Contains("/bearings");                   // 查看商家轴承列表
+                    path.Contains("/bearings");
         }
     }
 }
