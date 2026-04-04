@@ -12,6 +12,28 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
+                name: "ApiCallLogs",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: true),
+                    SessionId = table.Column<string>(type: "text", nullable: true),
+                    ApiPath = table.Column<string>(type: "text", nullable: false),
+                    HttpMethod = table.Column<string>(type: "text", nullable: false),
+                    StatusCode = table.Column<int>(type: "integer", nullable: false),
+                    DurationMs = table.Column<int>(type: "integer", nullable: false),
+                    ClientIp = table.Column<string>(type: "text", nullable: true),
+                    UserAgent = table.Column<string>(type: "text", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ApiCallLogs", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "BearingTypes",
                 columns: table => new
                 {
@@ -54,6 +76,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     Name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
                     CompanyName = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
+                    UnifiedSocialCreditCode = table.Column<string>(type: "character varying(18)", maxLength: 18, nullable: true),
                     Type = table.Column<int>(type: "integer", nullable: false),
                     ContactPerson = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
                     Phone = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
@@ -62,9 +85,28 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     Address = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
                     Description = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
                     BusinessScope = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    LogoUrl = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    Website = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
                     IsVerified = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
                     VerifiedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     Grade = table.Column<int>(type: "integer", nullable: false, defaultValue: 1),
+                    Status = table.Column<int>(type: "integer", nullable: false, defaultValue: 2),
+                    SuspensionReason = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    ProductCount = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    FollowerCount = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    ViewCount = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    DataSourceType = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    CrawlerSite = table.Column<int>(type: "integer", nullable: true),
+                    SourceUrl = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
+                    SourceDetail = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    SourceId = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
+                    ImportedBy = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    ImportedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    ReliabilityScore = table.Column<int>(type: "integer", nullable: true),
+                    LastVerifiedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    VerifiedBy = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    IsDataVerified = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    DataRemark = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     IsActive = table.Column<bool>(type: "boolean", nullable: false)
@@ -130,29 +172,74 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "UserBehaviorLogs",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: true),
+                    SessionId = table.Column<string>(type: "text", nullable: true),
+                    ActionType = table.Column<string>(type: "text", nullable: false),
+                    TargetType = table.Column<string>(type: "text", nullable: false),
+                    TargetId = table.Column<Guid>(type: "uuid", nullable: true),
+                    Keyword = table.Column<string>(type: "text", nullable: true),
+                    ClientIp = table.Column<string>(type: "text", nullable: true),
+                    UserAgent = table.Column<string>(type: "text", nullable: true),
+                    DurationMs = table.Column<int>(type: "integer", nullable: true),
+                    ExtraData = table.Column<string>(type: "text", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_UserBehaviorLogs", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Bearings",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    PartNumber = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    CurrentCode = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    FormerCode = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    CodeSource = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
                     Name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
-                    Description = table.Column<string>(type: "text", nullable: true),
+                    Description = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
+                    BearingType = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    StructureType = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    SizeSeries = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    IsStandard = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
                     InnerDiameter = table.Column<decimal>(type: "numeric(10,3)", precision: 10, scale: 3, nullable: false),
                     OuterDiameter = table.Column<decimal>(type: "numeric(10,3)", precision: 10, scale: 3, nullable: false),
                     Width = table.Column<decimal>(type: "numeric(10,3)", precision: 10, scale: 3, nullable: false),
-                    Weight = table.Column<decimal>(type: "numeric(10,3)", precision: 10, scale: 3, nullable: true),
-                    PrecisionGrade = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
+                    ChamferRmin = table.Column<decimal>(type: "numeric(8,2)", precision: 8, scale: 2, nullable: true),
+                    ChamferRmax = table.Column<decimal>(type: "numeric(8,2)", precision: 8, scale: 2, nullable: true),
+                    Weight = table.Column<decimal>(type: "numeric(12,4)", precision: 12, scale: 4, nullable: true),
+                    PrecisionGrade = table.Column<string>(type: "character varying(10)", maxLength: 10, nullable: true),
                     Material = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
-                    SealType = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    SealType = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
                     CageType = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
                     PerformanceHasData = table.Column<bool>(type: "boolean", nullable: true, defaultValue: false),
-                    DynamicLoadRating = table.Column<decimal>(type: "numeric(10,2)", precision: 10, scale: 2, nullable: true),
-                    StaticLoadRating = table.Column<decimal>(type: "numeric(10,2)", precision: 10, scale: 2, nullable: true),
-                    LimitingSpeed = table.Column<decimal>(type: "numeric", nullable: true),
+                    DynamicLoadRating = table.Column<decimal>(type: "numeric(12,2)", precision: 12, scale: 2, nullable: true),
+                    StaticLoadRating = table.Column<decimal>(type: "numeric(12,2)", precision: 12, scale: 2, nullable: true),
+                    LimitingSpeed = table.Column<decimal>(type: "numeric(10,0)", precision: 10, scale: 0, nullable: true),
                     OriginCountry = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    Trademark = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
                     Category = table.Column<int>(type: "integer", nullable: false, defaultValue: 2),
                     BearingTypeId = table.Column<Guid>(type: "uuid", nullable: false),
                     BrandId = table.Column<Guid>(type: "uuid", nullable: false),
+                    DataSourceType = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    CrawlerSite = table.Column<int>(type: "integer", nullable: true),
+                    SourceUrl = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
+                    SourceDetail = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    SourceId = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
+                    ImportedBy = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    ImportedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    ReliabilityScore = table.Column<int>(type: "integer", nullable: true),
+                    LastVerifiedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    VerifiedBy = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    IsVerified = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    DataRemark = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
                     ViewCount = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
@@ -184,11 +271,24 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     Nickname = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
                     Avatar = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
                     UserType = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
-                    Address = table.Column<string>(type: "text", nullable: true),
+                    Address = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
                     GuestSessionId = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    Level = table.Column<int>(type: "integer", nullable: false, defaultValue: 1),
+                    SubscriptionExpiry = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    RegistrationSource = table.Column<int>(type: "integer", nullable: false, defaultValue: 5),
+                    RegisterIp = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    RegisteredAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    Occupation = table.Column<int>(type: "integer", nullable: true),
+                    CompanyName = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
+                    Industry = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    SearchCount = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    QueryCount = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    FirstSearchAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    LastSearchAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    LastActiveAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     LastLoginAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    IsActive = table.Column<bool>(type: "boolean", nullable: false),
-                    IsMerged = table.Column<bool>(type: "boolean", nullable: false),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
+                    IsMerged = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
                     MergedToUserId = table.Column<Guid>(type: "uuid", nullable: true),
                     MerchantId = table.Column<Guid>(type: "uuid", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
@@ -401,13 +501,13 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     MerchantId = table.Column<Guid>(type: "uuid", nullable: false),
-                    LicenseUrl = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
-                    Status = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    LicenseUrl = table.Column<string>(type: "text", nullable: false),
+                    Status = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
                     SubmittedBy = table.Column<Guid>(type: "uuid", nullable: false),
                     SubmittedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     ReviewedBy = table.Column<Guid>(type: "uuid", nullable: true),
                     ReviewedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    ReviewComment = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    ReviewComment = table.Column<string>(type: "text", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     IsActive = table.Column<bool>(type: "boolean", nullable: false)
@@ -420,7 +520,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                         column: x => x.MerchantId,
                         principalTable: "Merchants",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_LicenseVerifications_Users_ReviewedBy",
                         column: x => x.ReviewedBy,
@@ -433,6 +533,34 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                         principalTable: "Users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "PaymentRecords",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    OrderNo = table.Column<string>(type: "text", nullable: false),
+                    Amount = table.Column<int>(type: "integer", nullable: false),
+                    PaymentMethod = table.Column<string>(type: "text", nullable: false),
+                    Plan = table.Column<string>(type: "text", nullable: false),
+                    Status = table.Column<string>(type: "text", nullable: false),
+                    PaidAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    TransactionId = table.Column<string>(type: "text", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PaymentRecords", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_PaymentRecords_Users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -577,6 +705,33 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "UserPreferences",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    PreferredBrandIds = table.Column<string>(type: "text", nullable: true),
+                    PreferredBearingTypeIds = table.Column<string>(type: "text", nullable: true),
+                    PriceRangePreference = table.Column<string>(type: "text", nullable: true),
+                    EmailNotificationEnabled = table.Column<bool>(type: "boolean", nullable: false),
+                    SmsNotificationEnabled = table.Column<bool>(type: "boolean", nullable: false),
+                    WeChatNotificationEnabled = table.Column<bool>(type: "boolean", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_UserPreferences", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_UserPreferences_Users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "UserRoles",
                 columns: table => new
                 {
@@ -646,6 +801,11 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                 column: "TargetBearingId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Bearings_BearingType",
+                table: "Bearings",
+                column: "BearingType");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Bearings_BearingTypeId",
                 table: "Bearings",
                 column: "BearingTypeId");
@@ -656,9 +816,40 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                 column: "BrandId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Bearings_Category",
+                table: "Bearings",
+                column: "Category");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Bearings_Code_Type",
+                table: "Bearings",
+                columns: new[] { "CurrentCode", "BearingType" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Bearings_CurrentCode_BrandId",
+                table: "Bearings",
+                columns: new[] { "CurrentCode", "BrandId" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Bearings_DataSourceType",
+                table: "Bearings",
+                column: "DataSourceType");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Bearings_InnerDiameter",
                 table: "Bearings",
                 column: "InnerDiameter");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Bearings_IsStandard",
+                table: "Bearings",
+                column: "IsStandard");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Bearings_IsVerified",
+                table: "Bearings",
+                column: "IsVerified");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Bearings_OuterDiameter",
@@ -666,10 +857,19 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                 column: "OuterDiameter");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Bearings_PartNumber_BrandId",
+                name: "IX_Bearings_SizeSeries",
                 table: "Bearings",
-                columns: new[] { "PartNumber", "BrandId" },
-                unique: true);
+                column: "SizeSeries");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Bearings_StructureType",
+                table: "Bearings",
+                column: "StructureType");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Bearings_Type_IsStandard",
+                table: "Bearings",
+                columns: new[] { "BearingType", "IsStandard" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_Bearings_Width",
@@ -795,9 +995,24 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                 column: "Name");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Merchants_Status",
+                table: "Merchants",
+                column: "Status");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Merchants_Type",
                 table: "Merchants",
                 column: "Type");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Merchants_UnifiedSocialCreditCode",
+                table: "Merchants",
+                column: "UnifiedSocialCreditCode");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PaymentRecords_UserId",
+                table: "PaymentRecords",
+                column: "UserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Permissions_Name",
@@ -921,6 +1136,11 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                 column: "ViewedAt");
 
             migrationBuilder.CreateIndex(
+                name: "IX_UserPreferences_UserId",
+                table: "UserPreferences",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_UserRoles_RoleId",
                 table: "UserRoles",
                 column: "RoleId");
@@ -937,19 +1157,52 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                 column: "GuestSessionId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Users_IsActive",
+                table: "Users",
+                column: "IsActive");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Users_LastActiveAt",
+                table: "Users",
+                column: "LastActiveAt");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Users_Level",
+                table: "Users",
+                column: "Level");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Users_Level_IsActive",
+                table: "Users",
+                columns: new[] { "Level", "IsActive" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Users_MerchantId",
                 table: "Users",
                 column: "MerchantId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Users_RegistrationSource",
+                table: "Users",
+                column: "RegistrationSource");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Users_UserType",
                 table: "Users",
                 column: "UserType");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Users_UserType_IsActive",
+                table: "Users",
+                columns: new[] { "UserType", "IsActive" });
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTable(
+                name: "ApiCallLogs");
+
             migrationBuilder.DropTable(
                 name: "AuditLogs");
 
@@ -964,6 +1217,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
 
             migrationBuilder.DropTable(
                 name: "MerchantBearings");
+
+            migrationBuilder.DropTable(
+                name: "PaymentRecords");
 
             migrationBuilder.DropTable(
                 name: "RolePermissions");
@@ -981,10 +1237,16 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                 name: "UserBearingHistories");
 
             migrationBuilder.DropTable(
+                name: "UserBehaviorLogs");
+
+            migrationBuilder.DropTable(
                 name: "UserMerchantFollows");
 
             migrationBuilder.DropTable(
                 name: "UserMerchantHistories");
+
+            migrationBuilder.DropTable(
+                name: "UserPreferences");
 
             migrationBuilder.DropTable(
                 name: "UserRoles");

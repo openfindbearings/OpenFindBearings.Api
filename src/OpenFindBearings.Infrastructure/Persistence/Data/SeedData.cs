@@ -10,9 +10,10 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
     {
         public static async Task SeedAsync(ApplicationDbContext context, bool isDevelopment)
         {
-            // 检查是否已有数据
             if (await context.SystemConfigs.AnyAsync())
+            {
                 return;
+            }
 
             // ============ 1. 基础字典数据 ============
 

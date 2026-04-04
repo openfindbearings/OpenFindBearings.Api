@@ -13,7 +13,7 @@ namespace OpenFindBearings.Domain.ValueObjects
         /// <summary>
         /// 来源类型
         /// </summary>
-        public DataSourceType SourceType { get; private set; }
+        public DataSourceType? SourceType { get; private set; }
 
         /// <summary>
         /// 爬虫来源网站（仅当 SourceType = Crawler 时有效）

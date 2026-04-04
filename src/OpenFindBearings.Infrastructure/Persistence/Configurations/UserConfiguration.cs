@@ -42,14 +42,16 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             // ============ 会员信息 ============
             builder.Property(u => u.Level)
                 .HasConversion<int>()
-                .HasDefaultValue(UserLevel.Free);
+                .HasDefaultValue(UserLevel.Free)
+                .HasSentinel(UserLevel.Free);
 
             builder.Property(u => u.SubscriptionExpiry);
 
             // ============ 注册信息 ============
             builder.Property(u => u.RegistrationSource)
                 .HasConversion<int>()
-                .HasDefaultValue(RegistrationSource.Guest);
+                .HasDefaultValue(RegistrationSource.Guest)
+                .HasSentinel(RegistrationSource.Web);
 
             builder.Property(u => u.RegisterIp)
                 .HasMaxLength(50);

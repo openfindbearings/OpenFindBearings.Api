@@ -150,6 +150,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             builder.Property(b => b.Category)
                 .HasConversion<int>()
                 .HasDefaultValue(BearingCategory.Domestic)
+                .HasSentinel(BearingCategory.Unknown)
                 .HasColumnName("Category");
 
             // ============ 值对象 - DataSource ============
@@ -252,11 +253,6 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
                 .OnDelete(DeleteBehavior.Cascade);
 
             // ============ 索引 ============
-            // 唯一索引：现行代号
-            builder.HasIndex(b => b.CurrentCode)
-                .IsUnique()
-                .HasDatabaseName("IX_Bearings_CurrentCode");
-
             // 组合索引：型号 + 品牌ID
             builder.HasIndex(b => new { b.CurrentCode, b.BrandId })
                 .IsUnique()
@@ -296,7 +292,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
 
             // ============ 全局查询过滤器 ============
             // 如果需要软删除，请添加 IsActive 字段
-            // builder.HasQueryFilter(b => b.IsActive);
+            builder.HasQueryFilter(b => b.IsActive);
         }
     }
 }
