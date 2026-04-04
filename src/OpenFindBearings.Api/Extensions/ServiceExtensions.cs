@@ -29,12 +29,13 @@ namespace OpenFindBearings.Api.Extensions
             services.AddScoped<IApiCallLogRepository, ApiCallLogRepository>();
             services.AddScoped<IStaffInvitationRepository, StaffInvitationRepository>();
 
-            // ============ 认证服务客户端 ============
-            //// 从配置获取认证服务地址
-            //var authBaseUrl = configuration["Authentication:Authority"] ?? "https://localhost:7201";
-            //var webAppUrl = configuration["Authentication:WebAppUrl"] ?? "https://localhost:7201/api";
+            // ============ IP 地区解析服务 ============
+            services.AddHttpClient();                           // 用于 HTTP 请求
+            services.AddMemoryCache();                          // 用于缓存 IP 地区信息
+            services.AddScoped<IIpRegionService, IpRegionService>();
 
-            // 注册认证服务 HTTP 客户端
+            // ============ 认证服务客户端 ============
+            // 注册认证服务 HTTP 客户端，用于与 OpenIddict 认证服务通信
             services.AddHttpClient<IIdentityService, IdentityService>(client =>
             {
                 client.BaseAddress = new Uri(configuration["Authentication:Authority"] ?? "https://localhost:7201");
