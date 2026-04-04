@@ -18,11 +18,17 @@ namespace OpenFindBearings.Api.Middleware
         // 各用户类型的限流配置（每分钟最大请求数）
         private static readonly Dictionary<string, int> _limits = new()
         {
-            ["guest"] = 10,      // 游客：10次/分钟
-            ["user"] = 30,       // 普通用户：30次/分钟
-            ["vip"] = 100,       // VIP用户：100次/分钟
-            ["merchant"] = 200,  // 商家：200次/分钟
-            ["admin"] = 500      // 管理员：500次/分钟
+            //["guest"] = 10,      // 游客：10次/分钟
+            //["user"] = 30,       // 普通用户：30次/分钟
+            //["vip"] = 100,       // VIP用户：100次/分钟
+            //["merchant"] = 200,  // 商家：200次/分钟
+            //["admin"] = 500      // 管理员：500次/分钟
+
+            ["guest"] = 60,      // 游客：60 次/分钟
+            ["user"] = 120,      // 普通用户：120 次/分钟
+            ["vip"] = 300,       // VIP用户：300 次/分钟
+            ["merchant"] = 500,  // 商家：500 次/分钟
+            ["admin"] = 1000     // 管理员：1000 次/分钟
         };
 
         public RateLimitingMiddleware(RequestDelegate next, ILogger<RateLimitingMiddleware> logger)
