@@ -51,11 +51,17 @@ else
     app.UseHsts();
 }
 
-// 全局异常处理中间件（必须放在最前面）
-app.UseMiddleware<ExceptionHandlingMiddleware>();
+// ============ 中间件顺序（重要：从上到下执行）============
 
-// 请求日志中间件
+// 1. 全局异常处理（必须最前面，捕获所有异常）
+app.UseMiddleware<ExceptionHandlingMiddleware>();
+// 2. 限流中间件（在请求进入业务逻辑前拦截）
+app.UseMiddleware<RateLimitingMiddleware>();
+// 3. 请求日志中间件
 app.UseMiddleware<RequestLoggingMiddleware>();
+// 4. 用户行为收集中间件（记录通过的请求）
+app.UseMiddleware<UserBehaviorMiddleware>();
+
 
 // HTTPS 重定向
 app.UseHttpsRedirection();
