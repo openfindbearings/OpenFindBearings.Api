@@ -33,6 +33,16 @@ namespace OpenFindBearings.Api.Middleware
 
         public async Task InvokeAsync(HttpContext context, ICurrentUserService currentUser)
         {
+            // 健康检查路径白名单（不限流）
+            var path = context.Request.Path.Value?.ToLower();
+            var whitelistPaths = new[] { "/health", "/ready", "/live", "/healthz", "/readyz" };
+
+            if (whitelistPaths.Contains(path))
+            {
+                await _next(context);
+                return;
+            }
+
             // 获取用户标识
             var userKey = GetUserKey(context, currentUser);
 
