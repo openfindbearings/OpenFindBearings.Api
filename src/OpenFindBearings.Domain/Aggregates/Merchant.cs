@@ -160,7 +160,11 @@ namespace OpenFindBearings.Domain.Aggregates
         /// <summary>
         /// 私有构造函数，仅供EF Core使用
         /// </summary>
-        private Merchant() { }
+        private Merchant() 
+        {
+            Name = string.Empty;
+            Contact = null!;
+        }
 
         /// <summary>
         /// 创建新商家

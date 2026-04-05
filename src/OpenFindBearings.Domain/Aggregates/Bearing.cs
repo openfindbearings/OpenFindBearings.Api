@@ -206,7 +206,13 @@ namespace OpenFindBearings.Domain.Aggregates
         /// <summary>
         /// 私有构造函数，仅供EF Core使用
         /// </summary>
-        private Bearing() { }
+        private Bearing() 
+        {
+            Name = string.Empty;
+            CurrentCode = string.Empty;
+            BearingType = string.Empty;
+            Dimensions = null!;
+        }
 
         /// <summary>
         /// 创建标准轴承产品

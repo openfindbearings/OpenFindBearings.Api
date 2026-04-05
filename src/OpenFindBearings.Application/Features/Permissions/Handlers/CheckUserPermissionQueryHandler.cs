@@ -32,8 +32,9 @@ namespace OpenFindBearings.Application.Features.Permissions.Handlers
                 return false;
             }
 
-            // 管理员拥有所有权限
-            if (user.UserType == Domain.Enums.UserType.Admin)
+            // 通过角色判断是否是管理员
+            var isAdmin = user.UserRoles.Any(ur => ur.Role.Name == "Admin");
+            if (isAdmin)
             {
                 return true;
             }

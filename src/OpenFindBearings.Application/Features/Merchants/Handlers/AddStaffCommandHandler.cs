@@ -99,10 +99,9 @@ namespace OpenFindBearings.Application.Features.Merchants.Handlers
             if (user == null)
             {
                 var nickname = oidcUser.GetDisplayName();
-                // ✅ 修改：添加 RegistrationSource 参数
+                // ✅ 修改：移除 userType 参数
                 user = new User(
                     authUserId: oidcUser.Sub,
-                    userType: UserType.MerchantStaff,
                     registrationSource: RegistrationSource.Admin,  // 管理员添加的员工
                     registerIp: null,
                     nickname: nickname);

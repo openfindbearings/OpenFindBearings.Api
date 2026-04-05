@@ -380,6 +380,12 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                         .HasColumnType("boolean")
                         .HasDefaultValue(true);
 
+                    b.Property<bool>("IsGuest")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("IsGuest");
+
                     b.Property<bool>("IsMerged")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
@@ -440,11 +446,6 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("UserType")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
                     b.HasKey("Id");
 
                     b.HasIndex("AuthUserId")
@@ -454,6 +455,8 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
 
                     b.HasIndex("IsActive");
 
+                    b.HasIndex("IsGuest");
+
                     b.HasIndex("LastActiveAt");
 
                     b.HasIndex("Level");
@@ -462,11 +465,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
 
                     b.HasIndex("RegistrationSource");
 
-                    b.HasIndex("UserType");
+                    b.HasIndex("IsGuest", "IsActive");
 
                     b.HasIndex("Level", "IsActive");
-
-                    b.HasIndex("UserType", "IsActive");
 
                     b.ToTable("Users", (string)null);
                 });
@@ -1044,6 +1045,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("IsSystem")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -1437,6 +1441,12 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("PreferredBrandIds")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PreferredCity")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PreferredProvince")
                         .HasColumnType("text");
 
                     b.Property<string>("PriceRangePreference")

@@ -69,16 +69,17 @@ namespace OpenFindBearings.Api.Middleware
 
                 if (user == null)
                 {
-                    // 首次登录，创建业务用户
+                    // ✅ 修改：移除 UserType
                     var createCommand = new CreateUserFromAuthCommand
                     {
                         AuthUserId = authUserId,
-                        UserType = Domain.Enums.UserType.Individual,
+                        RegistrationSource = Domain.Enums.RegistrationSource.Web,
                         Nickname = context.User?.FindFirst(ClaimTypes.Name)?.Value
                     };
                     var userId = await mediator.Send(createCommand);
                     context.Items["UserId"] = userId;
-                    context.Items["UserType"] = Domain.Enums.UserType.Individual.ToString();
+                    // ✅ 删除 UserType 设置
+                    // context.Items["UserType"] = Domain.Enums.UserType.Individual.ToString();
 
                     _logger.LogInformation("首次登录，创建业务用户: AuthUserId={AuthUserId}, UserId={UserId}", authUserId, userId);
 
@@ -91,7 +92,8 @@ namespace OpenFindBearings.Api.Middleware
                 else
                 {
                     context.Items["UserId"] = user.Id;
-                    context.Items["UserType"] = user.UserType;
+                    // ✅ 删除 UserType 设置
+                    // context.Items["UserType"] = user.UserType;
 
                     // 如果还有未迁移的游客数据，自动迁移
                     if (!string.IsNullOrEmpty(sessionId))

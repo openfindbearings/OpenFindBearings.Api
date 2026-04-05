@@ -34,11 +34,6 @@ namespace OpenFindBearings.Domain.Aggregates
         public string? Avatar { get; private set; }
 
         /// <summary>
-        /// 用户类型：Admin/MerchantStaff/Individual/Guest
-        /// </summary>
-        public UserType UserType { get; private set; }
-
-        /// <summary>
         /// 地址（业务数据）
         /// </summary>
         public string? Address { get; private set; }
@@ -129,9 +124,9 @@ namespace OpenFindBearings.Domain.Aggregates
         // ============ 状态字段 ============
 
         /// <summary>
-        /// 是否启用（软删除）
+        /// 是否是游客用户（区别于角色，游客未登录）
         /// </summary>
-        public bool IsActive { get; private set; } = true;
+        public bool IsGuest { get; private set; }
 
         /// <summary>
         /// 是否已合并（游客数据已迁移到正式账户）
@@ -196,9 +191,15 @@ namespace OpenFindBearings.Domain.Aggregates
         public int FavoriteCount => _favoriteBearings.Count;
         public int FollowCount => _followedMerchants.Count;
 
-        public bool IsMerchantStaff => UserType == UserType.MerchantStaff && MerchantId.HasValue;
-        public bool IsAdmin => UserType == UserType.Admin;
-        public bool IsGuest => UserType == UserType.Guest;
+        /// <summary>
+        /// 是否为商家员工（通过角色和商家ID判断）
+        /// </summary>
+        public bool IsMerchantStaff => MerchantId.HasValue && _userRoles.Any(r => r.Role?.Name == "MerchantStaff");
+
+        /// <summary>
+        /// 是否为管理员（通过角色判断）
+        /// </summary>
+        public bool IsAdmin => _userRoles.Any(r => r.Role?.Name == "Admin");
 
         // ============ 构造函数 ============
 
@@ -211,13 +212,11 @@ namespace OpenFindBearings.Domain.Aggregates
         /// 创建正式用户（认证服务已创建认证用户后调用）
         /// </summary>
         /// <param name="authUserId">认证系统用户ID</param>
-        /// <param name="userType">用户类型</param>
         /// <param name="registrationSource">注册来源</param>
         /// <param name="registerIp">注册IP</param>
         /// <param name="nickname">昵称</param>
         public User(
             string authUserId,
-            UserType userType,
             RegistrationSource registrationSource,
             string? registerIp = null,
             string? nickname = null)
@@ -226,12 +225,12 @@ namespace OpenFindBearings.Domain.Aggregates
                 throw new ArgumentException("认证用户ID不能为空", nameof(authUserId));
 
             AuthUserId = authUserId;
-            UserType = userType;
             RegistrationSource = registrationSource;
             RegisterIp = registerIp;
             Nickname = nickname;
             RegisteredAt = DateTime.UtcNow;
             LastActiveAt = DateTime.UtcNow;
+            IsGuest = false;
         }
 
         /// <summary>
@@ -245,11 +244,11 @@ namespace OpenFindBearings.Domain.Aggregates
                 throw new ArgumentException("游客会话ID不能为空", nameof(guestSessionId));
 
             GuestSessionId = guestSessionId;
-            UserType = UserType.Guest;
             RegistrationSource = RegistrationSource.Guest;
             RegisterIp = registerIp;
             RegisteredAt = DateTime.UtcNow;
             LastActiveAt = DateTime.UtcNow;
+            IsGuest = true;
         }
 
         // ============ 业务方法 ============
@@ -273,7 +272,7 @@ namespace OpenFindBearings.Domain.Aggregates
         public static User CreateFromAuth(string authUserId, RegistrationSource source,
             string? registerIp = null, string? nickname = null)
         {
-            var user = new User(authUserId, UserType.Individual, source, registerIp, nickname);
+            var user = new User(authUserId, source, registerIp, nickname);
             user.AddDomainEvent(new UserRegisteredEvent(user.Id, authUserId, source, registerIp));
             return user;
         }
@@ -373,7 +372,6 @@ namespace OpenFindBearings.Domain.Aggregates
         public void AssignToMerchant(Guid merchantId)
         {
             MerchantId = merchantId;
-            UserType = UserType.MerchantStaff;
             UpdateTimestamp();
         }
 
@@ -383,7 +381,6 @@ namespace OpenFindBearings.Domain.Aggregates
         public void RemoveFromMerchant()
         {
             MerchantId = null;
-            UserType = UserType.Individual;
             UpdateTimestamp();
         }
 
@@ -394,16 +391,6 @@ namespace OpenFindBearings.Domain.Aggregates
         {
             IsMerged = true;
             MergedToUserId = mergedToUserId;
-            UpdateTimestamp();
-        }
-
-        /// <summary>
-        /// 更新用户类型
-        /// </summary>
-        public void UpdateUserType(UserType newType)
-        {
-            if (UserType == newType) return;
-            UserType = newType;
             UpdateTimestamp();
         }
 

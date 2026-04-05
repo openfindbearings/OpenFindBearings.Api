@@ -1,6 +1,7 @@
 ﻿using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
+using OpenFindBearings.Application.Shared.Services;
 using System.Reflection;
 
 namespace OpenFindBearings.Application
@@ -21,6 +22,9 @@ namespace OpenFindBearings.Application
 
             // 添加验证行为
             services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+
+            // 业务自定义权限检查
+            services.AddScoped<PermissionChecker>();
 
             return services;
         }

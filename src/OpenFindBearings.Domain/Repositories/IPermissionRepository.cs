@@ -34,6 +34,11 @@ namespace OpenFindBearings.Domain.Repositories
         Task<List<Permission>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// 检查用户是否有指定权限
+        /// </summary>
+        Task<bool> UserHasPermissionAsync(Guid userId, string permissionName, CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// 添加权限
         /// </summary>
         Task AddAsync(Permission permission, CancellationToken cancellationToken = default);

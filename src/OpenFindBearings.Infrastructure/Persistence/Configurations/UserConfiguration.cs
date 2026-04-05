@@ -31,10 +31,10 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             builder.Property(u => u.Address)
                 .HasMaxLength(500);
 
-            // 用户类型枚举存为字符串
-            builder.Property(u => u.UserType)
-                .HasConversion<string>()
-                .HasMaxLength(20);
+            // IsGuest 字段配置
+            builder.Property(u => u.IsGuest)
+                .HasDefaultValue(false)
+                .HasColumnName("IsGuest");
 
             builder.Property(u => u.GuestSessionId)
                 .HasMaxLength(100);
@@ -132,7 +132,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
                 .OnDelete(DeleteBehavior.Restrict);
 
             // ============ 索引 ============
-            builder.HasIndex(u => u.UserType);
+            builder.HasIndex(u => u.IsGuest);
             builder.HasIndex(u => u.MerchantId);
             builder.HasIndex(u => u.GuestSessionId);
 
@@ -142,7 +142,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             builder.HasIndex(u => u.LastActiveAt);
 
             // 组合索引
-            builder.HasIndex(u => new { u.UserType, u.IsActive });
+            builder.HasIndex(u => new { u.IsGuest, u.IsActive });
             builder.HasIndex(u => new { u.Level, u.IsActive });
         }
     }

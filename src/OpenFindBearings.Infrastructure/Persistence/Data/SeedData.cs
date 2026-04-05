@@ -15,8 +15,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
                 return;
             }
 
-            // ============ 1. 基础字典数据 ============
+            // ============ 1. 基础字典数据（开发环境） ============
 
+            #region 基础字典数据
             var brands = new List<Brand>();
             var bearingTypes = new List<BearingType>();
 
@@ -48,32 +49,25 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
                 await context.BearingTypes.AddRangeAsync(bearingTypes);
                 await context.SaveChangesAsync();
             }
+            #endregion
 
-            // ============ 2. 角色和权限 ============
+            // ============ 2. 角色和权限（必须，无论开发/生产） ============
 
+            #region 角色和权限
             // 创建权限
             var permissions = new List<Permission>
             {
-                // 产品管理
                 new("product.view", "查看产品"),
                 new("product.create", "创建产品"),
                 new("product.edit", "编辑产品"),
                 new("product.delete", "删除产品"),
-                
-                // 商家管理
                 new("merchant.view", "查看商家"),
                 new("merchant.verify", "认证商家"),
                 new("merchant.manage", "管理商家"),
-                
-                // 纠错管理
                 new("correction.submit", "提交纠错"),
                 new("correction.review", "审核纠错"),
-                
-                // 收藏关注
                 new("favorite.bearing", "收藏轴承"),
                 new("favorite.merchant", "关注商家"),
-                
-                // 用户管理
                 new("user.manage", "管理用户"),
                 new("role.manage", "管理角色"),
             };
@@ -84,105 +78,105 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
             // 创建角色
             var roles = new List<Role>
             {
-                new("GlobalAdmin", "平台超级管理员"),
-                new("MerchantAdmin", "商家管理员"),
-                new("MerchantStaff", "商家员工"),
-                new("Customer", "普通用户")
+                new("Admin", "平台管理员", true),
+                new("MerchantAdmin", "商家管理员", true),
+                new("MerchantStaff", "商家员工", true),
+                new("Individual", "个人用户", true)
             };
 
             await context.Roles.AddRangeAsync(roles);
             await context.SaveChangesAsync();
 
             // 分配权限给角色
-            var globalAdmin = roles.First(r => r.Name == "GlobalAdmin");
-            var merchantAdmin = roles.First(r => r.Name == "MerchantAdmin");
-            var merchantStaff = roles.First(r => r.Name == "MerchantStaff");
-            var customer = roles.First(r => r.Name == "Customer");
+            var adminRole = roles.First(r => r.Name == "Admin");
+            var merchantAdminRole = roles.First(r => r.Name == "MerchantAdmin");
+            var merchantStaffRole = roles.First(r => r.Name == "MerchantStaff");
+            var individualRole = roles.First(r => r.Name == "Individual");
 
-            var rolePermissions = new List<RolePermission>
+            var rolePermissions = new List<RolePermission>();
+
+            // Admin 拥有所有权限
+            foreach (var permission in permissions)
             {
-                // GlobalAdmin 拥有所有权限
-                new(globalAdmin.Id, permissions.First(p => p.Name == "product.view").Id),
-                new(globalAdmin.Id, permissions.First(p => p.Name == "product.create").Id),
-                new(globalAdmin.Id, permissions.First(p => p.Name == "product.edit").Id),
-                new(globalAdmin.Id, permissions.First(p => p.Name == "product.delete").Id),
-                new(globalAdmin.Id, permissions.First(p => p.Name == "merchant.view").Id),
-                new(globalAdmin.Id, permissions.First(p => p.Name == "merchant.verify").Id),
-                new(globalAdmin.Id, permissions.First(p => p.Name == "merchant.manage").Id),
-                new(globalAdmin.Id, permissions.First(p => p.Name == "correction.review").Id),
-                new(globalAdmin.Id, permissions.First(p => p.Name == "favorite.bearing").Id),
-                new(globalAdmin.Id, permissions.First(p => p.Name == "favorite.merchant").Id),
-                new(globalAdmin.Id, permissions.First(p => p.Name == "user.manage").Id),
-                new(globalAdmin.Id, permissions.First(p => p.Name == "role.manage").Id),
+                rolePermissions.Add(new RolePermission(adminRole.Id, permission.Id));
+            }
 
-                // MerchantAdmin 拥有商家管理权限
-                new(merchantAdmin.Id, permissions.First(p => p.Name == "product.view").Id),
-                new(merchantAdmin.Id, permissions.First(p => p.Name == "product.create").Id),
-                new(merchantAdmin.Id, permissions.First(p => p.Name == "product.edit").Id),
-                new(merchantAdmin.Id, permissions.First(p => p.Name == "merchant.view").Id),
+            // MerchantAdmin 拥有商家管理权限
+            rolePermissions.AddRange([
+                new(merchantAdminRole.Id, permissions.First(p => p.Name == "product.view").Id),
+                new(merchantAdminRole.Id, permissions.First(p => p.Name == "product.create").Id),
+                new(merchantAdminRole.Id, permissions.First(p => p.Name == "product.edit").Id),
+                new(merchantAdminRole.Id, permissions.First(p => p.Name == "merchant.view").Id),
+                new(merchantAdminRole.Id, permissions.First(p => p.Name == "merchant.manage").Id),
+            ]);
 
-                // MerchantStaff 拥有查看权限
-                new(merchantStaff.Id, permissions.First(p => p.Name == "product.view").Id),
-                new(merchantStaff.Id, permissions.First(p => p.Name == "merchant.view").Id),
+            // MerchantStaff 拥有查看权限
+            rolePermissions.AddRange([
+                new(merchantStaffRole.Id, permissions.First(p => p.Name == "product.view").Id),
+                new(merchantStaffRole.Id, permissions.First(p => p.Name == "merchant.view").Id),
+            ]);
 
-                // Customer 拥有基本权限
-                new(customer.Id, permissions.First(p => p.Name == "product.view").Id),
-                new(customer.Id, permissions.First(p => p.Name == "correction.submit").Id),
-                new(customer.Id, permissions.First(p => p.Name == "favorite.bearing").Id),
-                new(customer.Id, permissions.First(p => p.Name == "favorite.merchant").Id),
-            };
+            // Individual 拥有基本权限
+            rolePermissions.AddRange([
+                new(individualRole.Id, permissions.First(p => p.Name == "product.view").Id),
+                new(individualRole.Id, permissions.First(p => p.Name == "correction.submit").Id),
+                new(individualRole.Id, permissions.First(p => p.Name == "favorite.bearing").Id),
+                new(individualRole.Id, permissions.First(p => p.Name == "favorite.merchant").Id),
+            ]);
 
             await context.RolePermissions.AddRangeAsync(rolePermissions);
             await context.SaveChangesAsync();
+            #endregion
 
             // ============ 3. 用户数据 ============
 
-            // 创建测试用户
-            var users = new List<User>
-            {
-                new("auth-admin-001", UserType.Admin, RegistrationSource.Admin, null, "系统管理员")
-            };
+            #region 用户数据
+            var users = new List<User>();
+            var userRoles = new List<UserRole>();
 
+            // 3.1 默认超级管理员（无论开发/生产都需要）
+            var adminUser = new User(
+                authUserId: "admin-default",
+                registrationSource: RegistrationSource.Admin,
+                registerIp: null,
+                nickname: "系统管理员"
+            );
+            users.Add(adminUser);
+            userRoles.Add(new UserRole(adminUser.Id, adminRole.Id));
+
+            // 3.2 开发环境额外测试用户
             if (isDevelopment)
             {
-                users.AddRange(
-                [
-                    new("auth-merchant-001", UserType.MerchantStaff, RegistrationSource.Mobile, null, "张经理"),
-                    new("auth-merchant-002", UserType.MerchantStaff, RegistrationSource.Mobile, null, "李经理"),
-                    new("auth-customer-001", UserType.Individual, RegistrationSource.Mobile, null, "王先生"),
-                    new("auth-customer-002", UserType.Individual, RegistrationSource.Mobile, null, "赵女士"),
+                var merchant1 = new User("auth-merchant-001", RegistrationSource.Mobile, null, "张经理");
+                var merchant2 = new User("auth-merchant-002", RegistrationSource.Mobile, null, "李经理");
+                var customer1 = new User("auth-customer-001", RegistrationSource.Mobile, null, "王先生");
+                var customer2 = new User("auth-customer-002", RegistrationSource.Mobile, null, "赵女士");
+
+                users.AddRange([merchant1, merchant2, customer1, customer2]);
+
+                userRoles.AddRange([
+                    new UserRole(merchant1.Id, merchantStaffRole.Id),
+                    new UserRole(merchant2.Id, merchantStaffRole.Id),
+                    new UserRole(customer1.Id, individualRole.Id),
+                    new UserRole(customer2.Id, individualRole.Id),
                 ]);
             }
 
             await context.Users.AddRangeAsync(users);
             await context.SaveChangesAsync();
 
-            // 分配用户角色
-            var userRoles = new List<UserRole>
-            {
-                new(users[0].Id, globalAdmin.Id)
-            };
-
-            if (isDevelopment)
-            {
-                userRoles.AddRange(
-                [
-                    new(users[1].Id, merchantStaff.Id),
-                    new(users[2].Id, merchantStaff.Id),
-                    new(users[3].Id, customer.Id),
-                    new(users[4].Id, customer.Id),
-                ]);
-            }
-
             await context.UserRoles.AddRangeAsync(userRoles);
             await context.SaveChangesAsync();
+            #endregion
+
+            // ============ 4. 轴承产品数据（仅开发环境） ============
+
+            #region 轴承产品数据
+
+            var bearings = new List<Bearing>();
 
             if (isDevelopment && bearingTypes.Any() && brands.Any())
             {
-                // ============ 4. 轴承产品数据 ============
-
-                var bearings = new List<Bearing>();
-
                 // SKF 品牌的产品
                 bearings.Add(CreateBearing(
                     currentCode: "6205",
@@ -339,9 +333,16 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
                 bearings[bearingIndex++].SetOrigin("中国", BearingCategory.Domestic);
 
                 await context.SaveChangesAsync();
+            }
 
-                // ============ 5. 替代品关系 ============
+            #endregion
 
+            // ============ 5. 替代品关系（仅开发环境） ============
+
+            #region 替代品关系
+
+            if (isDevelopment && bearings.Count >= 16)
+            {
                 var skf6205 = bearings[0];
                 var fag6205 = bearings[4];
                 var nsk6205 = bearings[7];
@@ -362,11 +363,17 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
 
                 await context.BearingInterchanges.AddRangeAsync(interchanges);
                 await context.SaveChangesAsync();
+            }
+            #endregion
 
-                // ============ 6. 商家数据 ============
+            // ============ 6. 商家数据（仅开发环境） ============
 
-                var merchants = new List<Merchant>
-                {
+            #region 商家数据
+            var merchants = new List<Merchant>();
+            if (isDevelopment)
+            {
+                merchants.AddRange(
+                [
                     new("上海轴承公司", MerchantType.Distributor,
                         new ContactInfo("张经理", "021-12345678", "13912345678",
                             "sh@bearing.com", "上海市浦东新区")),
@@ -382,31 +389,56 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
                     new("西安进口轴承", MerchantType.AuthorizedDealer,
                         new ContactInfo("陈经理", "029-87654321", "13887654322",
                             "xa@bearing.com", "西安市高新区"))
-                };
+                ]);
 
                 await context.Merchants.AddRangeAsync(merchants);
                 await context.SaveChangesAsync();
 
-                // 将商家员工关联到商家
-                users[1].AssignToMerchant(merchants[0].Id);
-                users[2].AssignToMerchant(merchants[1].Id);
+                // 将商家员工关联到商家（确保索引存在）
+                if (users.Count >= 3 && merchants.Count >= 2)
+                {
+                    var merchant1 = merchants[0];
+                    var merchant2 = merchants[1];
+                    var merchantStaff1 = users.FirstOrDefault(u => u.Nickname == "张经理");
+                    var merchantStaff2 = users.FirstOrDefault(u => u.Nickname == "李经理");
 
-                await context.SaveChangesAsync();
+                    if (merchantStaff1 != null) merchantStaff1.AssignToMerchant(merchant1.Id);
+                    if (merchantStaff2 != null) merchantStaff2.AssignToMerchant(merchant2.Id);
 
-                // ============ 7. 商家-产品关联 ============
+                    await context.SaveChangesAsync();
+                }
+            }
+            #endregion
+
+            // ============ 7. 商家-产品关联（仅开发环境） ============
+
+            #region 商家-产品关联
+
+            if (isDevelopment && merchants.Count >= 5 && bearings.Count >= 15)
+            {
+                var skf6205 = bearings[0];
+                var fag6205 = bearings[4];
+                var nsk6205 = bearings[7];
+                var hrb6205_2rs = bearings[10];
+                var zwz6205 = bearings[13];
+                var lyc6205 = bearings[15];
+                var bearing6206 = bearings[1];
+                var bearing6305 = bearings[2];
+                var bearing6205DU = bearings[8];
+                var bearing7205 = bearings[9];
 
                 var merchantBearings = new List<MerchantBearing>
                 {
                     // 上海轴承公司
                     new(merchants[0].Id, skf6205.Id, "¥55-60", "现货"),
-                    new(merchants[0].Id, bearings[1].Id, "¥65-70", "现货"),
-                    new(merchants[0].Id, bearings[2].Id, "¥85-95", "现货"),
+                    new(merchants[0].Id, bearing6206.Id, "¥65-70", "现货"),
+                    new(merchants[0].Id, bearing6305.Id, "¥85-95", "现货"),
                     new(merchants[0].Id, fag6205.Id, "¥58-65", "期货"),
                 
                     // 广州进口轴承
                     new(merchants[1].Id, skf6205.Id, "¥58-65", "现货"),
                     new(merchants[1].Id, nsk6205.Id, "¥56-62", "现货"),
-                    new(merchants[1].Id, bearings[2].Id, "¥80-90", "需预订"),
+                    new(merchants[1].Id, bearing6305.Id, "¥80-90", "需预订"),
                 
                     // 天津贸易商行
                     new(merchants[2].Id, skf6205.Id, "电议", "期货"),
@@ -432,81 +464,103 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
                 merchantBearings[4].SetFeatured(true);
 
                 await context.SaveChangesAsync();
-
-                // ============ 8. 用户收藏数据 ============
-
-                var userFavorites = new List<UserBearingFavorite>
-                {
-                    new(users[3].Id, skf6205.Id),
-                    new(users[3].Id, nsk6205.Id),
-                    new(users[4].Id, fag6205.Id),
-                    new(users[4].Id, hrb6205_2rs.Id),
-                };
-
-                await context.UserFavorites.AddRangeAsync(userFavorites);
-                await context.SaveChangesAsync();
-
-                // ============ 9. 用户关注数据 ============
-
-                var userFollows = new List<UserMerchantFollow>
-                {
-                    new(users[3].Id, merchants[0].Id),
-                    new(users[3].Id, merchants[1].Id),
-                    new(users[4].Id, merchants[2].Id),
-                };
-
-                await context.UserFollows.AddRangeAsync(userFollows);
-                await context.SaveChangesAsync();
-
-                // ============ 10. 浏览历史数据 ============
-
-                await context.UserBearingHistories.AddRangeAsync([
-                    new(users[3].Id, skf6205.Id),
-                    new(users[3].Id, bearings[2].Id),
-                    new(users[3].Id, fag6205.Id),
-                    new(users[4].Id, nsk6205.Id),
-                    new(users[4].Id, hrb6205_2rs.Id),
-                ]);
-
-                await context.UserMerchantHistories.AddRangeAsync([
-                    new(users[3].Id, merchants[0].Id),
-                    new(users[3].Id, merchants[1].Id),
-                ]);
-
-                await context.SaveChangesAsync();
             }
 
-            // ============ 11. 系统配置 ============
-            if (!await context.SystemConfigs.AnyAsync())
+            #endregion
+
+            // ============ 8. 用户个人数据（仅开发环境） ============
+
+            #region 用户个人数据
+
+            if (isDevelopment && users.Count >= 5 && merchants.Count >= 3 && bearings.Count >= 10)
             {
-                var configs = new List<SystemConfig>
-                {
-                    // 基础配置
-                    new("SiteName", "OpenFindBearings", "General", "网站名称", "string", true),
-                    new("SiteDescription", "轴承信息平台", "General", "网站描述", "string", true),
-                    new("ItemsPerPage", "20", "Pagination", "默认每页条数", "int", true),
-                    new("EnableRegistration", "true", "User", "是否允许注册", "bool", true),
-                    new("RequireEmailVerification", "false", "User", "是否需要邮箱验证", "bool", true),
-                    new("DefaultUserRole", "Customer", "User", "默认用户角色", "string", true),
-                    
-                    // 价格配置
-                    new("Price.DefaultVisibility", "LoginRequired", "Price", "价格默认可见性", "string", true),
-                    new("Price.ShowNegotiableLabel", "true", "Price", "是否显示议价标签", "bool", true),
-                    new("Price.NumericForSorting", "true", "Price", "是否启用数值化价格", "bool", true),
-                    
-                    // 缓存配置
-                    new("Cache.DefaultExpirationMinutes", "60", "Performance", "缓存默认过期时间", "int", true),
-                    new("Cache.EnableRedis", "false", "Performance", "是否启用Redis缓存", "bool", true),
-                    
-                    // 限流配置
-                    new("RateLimit.Guest.RequestsPerMinute", "30", "RateLimit", "游客每分钟请求数", "int", true),
-                    new("RateLimit.User.RequestsPerMinute", "60", "RateLimit", "用户每分钟请求数", "int", true),
-                    new("RateLimit.Premium.RequestsPerMinute", "120", "RateLimit", "付费用户每分钟请求数", "int", true),
-                };
+                var customer1 = users.FirstOrDefault(u => u.Nickname == "王先生");
+                var customer2 = users.FirstOrDefault(u => u.Nickname == "赵女士");
 
-                await context.SystemConfigs.AddRangeAsync(configs);
-                await context.SaveChangesAsync();
+                if (customer1 != null && customer2 != null)
+                {
+                    var skf6205 = bearings[0];
+                    var fag6205 = bearings[4];
+                    var nsk6205 = bearings[7];
+                    var hrb6205_2rs = bearings[10];
+                    var bearing6305 = bearings[2];
+
+                    // 收藏数据
+                    var userFavorites = new List<UserBearingFavorite>
+                    {
+                        new(customer1.Id, skf6205.Id),
+                        new(customer1.Id, nsk6205.Id),
+                        new(customer2.Id, fag6205.Id),
+                        new(customer2.Id, hrb6205_2rs.Id),
+                    };
+
+                    await context.UserFavorites.AddRangeAsync(userFavorites);
+                    await context.SaveChangesAsync();
+
+                    // 关注数据
+                    var userFollows = new List<UserMerchantFollow>
+                    {
+                        new(customer1.Id, merchants[0].Id),
+                        new(customer1.Id, merchants[1].Id),
+                        new(customer2.Id, merchants[2].Id),
+                    };
+
+                    await context.UserFollows.AddRangeAsync(userFollows);
+                    await context.SaveChangesAsync();
+
+                    // 浏览历史数据
+                    await context.UserBearingHistories.AddRangeAsync([
+                        new(customer1.Id, skf6205.Id),
+                        new(customer1.Id, bearing6305.Id),
+                        new(customer1.Id, fag6205.Id),
+                        new(customer2.Id, nsk6205.Id),
+                        new(customer2.Id, hrb6205_2rs.Id),
+                    ]);
+
+                    await context.UserMerchantHistories.AddRangeAsync([
+                        new(customer1.Id, merchants[0].Id),
+                        new(customer1.Id, merchants[1].Id),
+                    ]);
+
+                    await context.SaveChangesAsync();
+                }
             }
+
+            #endregion
+
+            // ============ 9. 系统配置（必须） ============
+
+            #region 系统配置
+            var configs = new List<SystemConfig>
+            {
+                // 基础配置
+                new("SiteName", "OpenFindBearings", "General", "网站名称", "string", true),
+                new("SiteDescription", "轴承信息平台", "General", "网站描述", "string", true),
+                new("ItemsPerPage", "20", "Pagination", "默认每页条数", "int", true),
+                new("EnableRegistration", "true", "User", "是否允许注册", "bool", true),
+                new("RequireEmailVerification", "false", "User", "是否需要邮箱验证", "bool", true),
+                // ✅ 修正：角色名改为 Individual
+                new("DefaultUserRole", "Individual", "User", "默认用户角色", "string", true),
+                    
+                // 价格配置
+                new("Price.DefaultVisibility", "LoginRequired", "Price", "价格默认可见性", "string", true),
+                new("Price.ShowNegotiableLabel", "true", "Price", "是否显示议价标签", "bool", true),
+                new("Price.NumericForSorting", "true", "Price", "是否启用数值化价格", "bool", true),
+                    
+                // 缓存配置
+                new("Cache.DefaultExpirationMinutes", "60", "Performance", "缓存默认过期时间", "int", true),
+                new("Cache.EnableRedis", "false", "Performance", "是否启用Redis缓存", "bool", true),
+                    
+                // 限流配置
+                new("RateLimit.Guest.RequestsPerMinute", "30", "RateLimit", "游客每分钟请求数", "int", true),
+                new("RateLimit.User.RequestsPerMinute", "60", "RateLimit", "用户每分钟请求数", "int", true),
+                new("RateLimit.Premium.RequestsPerMinute", "120", "RateLimit", "付费用户每分钟请求数", "int", true),
+            };
+
+            await context.SystemConfigs.AddRangeAsync(configs);
+            await context.SaveChangesAsync();
+
+            #endregion
         }
 
         // ============ 辅助方法 ============

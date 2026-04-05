@@ -21,7 +21,6 @@ namespace OpenFindBearings.Application.Features.Bearings.DTOs
         // 结构信息
         public string? StructureType { get; set; }
         public string? SizeSeries { get; set; }
-        public bool IsStandard { get; set; }
 
         // 倒角尺寸
         public decimal? ChamferRmin { get; set; }

@@ -32,7 +32,8 @@ namespace OpenFindBearings.Application.Features.Users.Handlers
                 AuthUserId = user.AuthUserId,
                 Nickname = user.Nickname,
                 Avatar = user.Avatar,
-                UserType = user.UserType.ToString(),
+                // ✅ 修改：游客直接返回 Guest
+                UserType = "Guest",
                 MerchantId = user.MerchantId,
                 MerchantName = user.Merchant?.Name,
                 CreatedAt = user.CreatedAt,

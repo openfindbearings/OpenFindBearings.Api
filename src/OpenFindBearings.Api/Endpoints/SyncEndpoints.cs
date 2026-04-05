@@ -1,9 +1,7 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using OpenFindBearings.Api.DTOs.Responses;
 using OpenFindBearings.Api.Helpers;
 using OpenFindBearings.Application.Features.Sync.Commands;
-using OpenFindBearings.Application.Features.Sync.DTOs;
 using OpenFindBearings.Application.Features.Sync.Queries;
 
 namespace OpenFindBearings.Api.Endpoints
@@ -17,7 +15,7 @@ namespace OpenFindBearings.Api.Endpoints
         {
             var group = app.MapGroup("/api/sync")
                 .WithTags("数据同步接口")
-                .RequireAuthorization("SyncClient"); // 使用策略认证，不需要自定义 Filter
+                .RequireAuthorization("SyncClient");
 
             // 批量同步品牌
             group.MapPost("/brands/batch", async (BatchCreateBrandsCommand command, IMediator mediator) =>
@@ -27,11 +25,7 @@ namespace OpenFindBearings.Api.Endpoints
             })
             .WithName("SyncBrands")
             .WithSummary("批量同步品牌")
-            .WithDescription("批量同步品牌数据")
-            .Produces<ApiResponse<SyncResultDto>>(StatusCodes.Status200OK)
-            .Produces<ApiResponse<BatchResult>>(StatusCodes.Status202Accepted)
-            .Produces(StatusCodes.Status400BadRequest)
-            .Produces(StatusCodes.Status401Unauthorized);
+            .WithDescription("批量同步品牌数据");
 
             // 批量同步轴承类型
             group.MapPost("/bearingtypes/batch", async (BatchCreateBearingTypesCommand command, IMediator mediator) =>
@@ -41,11 +35,7 @@ namespace OpenFindBearings.Api.Endpoints
             })
             .WithName("SyncBearingTypes")
             .WithSummary("批量同步轴承类型")
-            .WithDescription("批量同步轴承类型数据")
-            .Produces<ApiResponse<SyncResultDto>>(StatusCodes.Status200OK)
-            .Produces<ApiResponse<BatchResult>>(StatusCodes.Status202Accepted)
-            .Produces(StatusCodes.Status400BadRequest)
-            .Produces(StatusCodes.Status401Unauthorized);
+            .WithDescription("批量同步轴承类型数据");
 
             // 批量同步轴承
             group.MapPost("/bearings/batch", async (
@@ -55,7 +45,6 @@ namespace OpenFindBearings.Api.Endpoints
             {
                 var result = await mediator.Send(command);
 
-                // 记录客户端信息到日志
                 var clientId = httpContext.User.FindFirst("client_id")?.Value ?? "unknown";
                 httpContext.Items["ClientId"] = clientId;
 
@@ -66,10 +55,7 @@ namespace OpenFindBearings.Api.Endpoints
             })
             .WithName("BatchCreateBearings")
             .WithSummary("批量同步轴承")
-            .WithDescription("批量创建/更新轴承数据（需客户端认证）")
-            .Produces<ApiResponse<BatchResult>>(StatusCodes.Status202Accepted)
-            .Produces(StatusCodes.Status400BadRequest)
-            .Produces(StatusCodes.Status401Unauthorized);
+            .WithDescription("批量创建/更新轴承数据（需客户端认证）");
 
             // 批量同步商家
             group.MapPost("/merchants/batch", async (
@@ -86,8 +72,7 @@ namespace OpenFindBearings.Api.Endpoints
             })
             .WithName("BatchCreateMerchants")
             .WithSummary("批量同步商家")
-            .WithDescription("批量创建/更新商家数据（需客户端认证）")
-            .Produces<ApiResponse<BatchResult>>(StatusCodes.Status202Accepted);
+            .WithDescription("批量创建/更新商家数据（需客户端认证）");
 
             // 批量同步商家-轴承关联
             group.MapPost("/merchantbearings/batch", async (
@@ -104,8 +89,7 @@ namespace OpenFindBearings.Api.Endpoints
             })
             .WithName("BatchCreateMerchantBearings")
             .WithSummary("批量同步关联")
-            .WithDescription("批量创建/更新商家-轴承关联数据（需客户端认证）")
-            .Produces<ApiResponse<BatchResult>>(StatusCodes.Status202Accepted);
+            .WithDescription("批量创建/更新商家-轴承关联数据（需客户端认证）");
 
             // 批量同步替代品关系
             group.MapPost("/interchanges/batch", async (
@@ -122,8 +106,7 @@ namespace OpenFindBearings.Api.Endpoints
             })
             .WithName("BatchCreateInterchanges")
             .WithSummary("批量同步替代品")
-            .WithDescription("批量创建/更新轴承替代品关系（需客户端认证）")
-            .Produces<ApiResponse<BatchResult>>(StatusCodes.Status202Accepted);
+            .WithDescription("批量创建/更新轴承替代品关系（需客户端认证）");
 
             // 获取同步任务状态
             group.MapGet("/tasks/{taskId}", async (
@@ -131,13 +114,12 @@ namespace OpenFindBearings.Api.Endpoints
                 [FromServices] IMediator mediator,
                 HttpContext httpContext) =>
             {
-                // 将 string 类型的 taskId 转换为 Guid
                 if (!Guid.TryParse(taskId, out var taskGuid))
                 {
                     return ApiResponseHelper.BadRequest("无效的任务ID格式", httpContext: httpContext);
                 }
 
-                var query = new GetSyncTaskStatusQuery { TaskId = taskGuid }; // 使用 Guid 构造函数
+                var query = new GetSyncTaskStatusQuery { TaskId = taskGuid };
                 var result = await mediator.Send(query);
 
                 return result == null
@@ -146,9 +128,7 @@ namespace OpenFindBearings.Api.Endpoints
             })
             .WithName("GetSyncTaskStatus")
             .WithSummary("获取同步任务状态")
-            .WithDescription("获取批量任务的处理状态")
-            .Produces<ApiResponse<SyncResultDto>>(StatusCodes.Status200OK)
-            .Produces(StatusCodes.Status404NotFound);
+            .WithDescription("获取批量任务的处理状态");
         }
     }
 }

@@ -100,46 +100,6 @@ namespace OpenFindBearings.Api.Extensions
             return services;
         }
 
-        public static IServiceCollection AddSwagger(this IServiceCollection services)
-        {
-            services.AddEndpointsApiExplorer();
-
-            // 只使用 Swashbuckle 的 Swagger UI
-            services.AddSwaggerGen(options =>
-            {
-                options.SwaggerDoc("v1", new OpenApiInfo
-                {
-                    Title = "OpenFindBearings API",
-                    Version = "v1",
-                    Description = "轴承信息平台API",
-                    Contact = new OpenApiContact
-                    {
-                        Name = "OpenFindBearings",
-                        Email = "support@openfindbearings.com"
-                    }
-                });
-
-                // 添加JWT认证定义
-                options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-                {
-                    In = ParameterLocation.Header,
-                    Description = "请输入JWT令牌，格式：Bearer {token}",
-                    Name = "Authorization",
-                    Type = SecuritySchemeType.Http,
-                    Scheme = "bearer",
-                    BearerFormat = "JWT"
-                });
-
-                // 添加安全需求 - 使用标准方式
-                options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
-                {
-                    [new OpenApiSecuritySchemeReference("Bearer", document)] = []
-                });
-            });
-
-            return services;
-        }
-
         public static IServiceCollection AddAuthenticationAndAuthorization(this IServiceCollection services, IConfiguration configuration)
         {
             // JWT 认证配置
