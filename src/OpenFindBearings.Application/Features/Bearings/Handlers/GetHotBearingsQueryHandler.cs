@@ -1,9 +1,9 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
-using OpenFindBearings.Application.Constants;
 using OpenFindBearings.Application.Features.Bearings.DTOs;
 using OpenFindBearings.Application.Features.Bearings.Queries;
 using OpenFindBearings.Application.Interfaces;
+using OpenFindBearings.Application.Shared.Constants;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Features.Bearings.Handlers

@@ -13,9 +13,9 @@ namespace OpenFindBearings.Domain.Specifications
         public string? Keyword { get; set; }
 
         /// <summary>
-        /// 用户类型
+        /// 角色名称（如 Admin、MerchantStaff、Individual）
         /// </summary>
-        public UserType? UserType { get; set; }
+        public string? RoleName { get; set; }
 
         /// <summary>
         /// 是否活跃
@@ -26,6 +26,11 @@ namespace OpenFindBearings.Domain.Specifications
         /// 是否已合并（游客）
         /// </summary>
         public bool? IsMerged { get; set; }
+
+        /// <summary>
+        /// 是否是游客（IsGuest = true）
+        /// </summary>
+        public bool? IsGuest { get; set; }
 
         /// <summary>
         /// 页码

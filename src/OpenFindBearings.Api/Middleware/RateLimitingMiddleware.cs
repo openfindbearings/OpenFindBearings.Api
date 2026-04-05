@@ -1,4 +1,5 @@
 ﻿using OpenFindBearings.Api.Services;
+using OpenFindBearings.Domain.Repositories;
 using System.Collections.Concurrent;
 
 namespace OpenFindBearings.Api.Middleware
@@ -6,35 +7,31 @@ namespace OpenFindBearings.Api.Middleware
     /// <summary>
     /// 限流中间件
     /// 根据用户类型限制 API 请求频率，防止滥用
+    /// 限流配置从 SystemConfig 表读取，支持动态更新
     /// </summary>
     public class RateLimitingMiddleware
     {
         private readonly RequestDelegate _next;
         private readonly ILogger<RateLimitingMiddleware> _logger;
+        private readonly IServiceProvider _serviceProvider;
+
+        // 缓存限流配置，避免每次请求都查数据库
+        private static Dictionary<string, int>? _cachedLimits;
+        private static DateTime _cacheExpireTime;
+        private static readonly SemaphoreSlim _cacheLock = new(1, 1);
+        private static readonly TimeSpan _cacheDuration = TimeSpan.FromMinutes(5); // 5分钟刷新一次
 
         // 存储限流记录：Key = 用户标识, Value = 请求记录列表
         private static readonly ConcurrentDictionary<string, Queue<DateTime>> _requestRecords = new();
 
-        // 各用户类型的限流配置（每分钟最大请求数）
-        private static readonly Dictionary<string, int> _limits = new()
-        {
-            //["guest"] = 10,      // 游客：10次/分钟
-            //["user"] = 30,       // 普通用户：30次/分钟
-            //["vip"] = 100,       // VIP用户：100次/分钟
-            //["merchant"] = 200,  // 商家：200次/分钟
-            //["admin"] = 500      // 管理员：500次/分钟
-
-            ["guest"] = 60,      // 游客：60 次/分钟
-            ["user"] = 120,      // 普通用户：120 次/分钟
-            ["vip"] = 300,       // VIP用户：300 次/分钟
-            ["merchant"] = 500,  // 商家：500 次/分钟
-            ["admin"] = 1000     // 管理员：1000 次/分钟
-        };
-
-        public RateLimitingMiddleware(RequestDelegate next, ILogger<RateLimitingMiddleware> logger)
+        public RateLimitingMiddleware(
+            RequestDelegate next,
+            ILogger<RateLimitingMiddleware> logger,
+            IServiceProvider serviceProvider)
         {
             _next = next;
             _logger = logger;
+            _serviceProvider = serviceProvider;
         }
 
         public async Task InvokeAsync(HttpContext context, ICurrentUserService currentUser)
@@ -49,6 +46,9 @@ namespace OpenFindBearings.Api.Middleware
                 return;
             }
 
+            // 获取限流配置
+            var limits = await GetLimitsAsync();
+
             // 获取用户标识
             var userKey = GetUserKey(context, currentUser);
 
@@ -56,7 +56,7 @@ namespace OpenFindBearings.Api.Middleware
             var userType = GetUserType(currentUser);
 
             // 获取该用户类型的限流阈值
-            var limit = _limits.GetValueOrDefault(userType, 30);
+            var limit = limits.GetValueOrDefault(userType, 30);
 
             // 检查是否超过限流
             if (IsRateLimitExceeded(userKey, limit, out var retryAfter))
@@ -81,6 +81,68 @@ namespace OpenFindBearings.Api.Middleware
             AddRequestRecord(userKey);
 
             await _next(context);
+        }
+
+        /// <summary>
+        /// 获取限流配置（带缓存）
+        /// </summary>
+        private async Task<Dictionary<string, int>> GetLimitsAsync()
+        {
+            // 检查缓存是否有效
+            if (_cachedLimits != null && DateTime.UtcNow < _cacheExpireTime)
+            {
+                return _cachedLimits;
+            }
+
+            await _cacheLock.WaitAsync();
+            try
+            {
+                // 双重检查
+                if (_cachedLimits != null && DateTime.UtcNow < _cacheExpireTime)
+                {
+                    return _cachedLimits;
+                }
+
+                using var scope = _serviceProvider.CreateScope();
+                var configRepo = scope.ServiceProvider.GetRequiredService<ISystemConfigRepository>();
+
+                // 从数据库读取限流配置
+                var guestLimit = await configRepo.GetValueAsync("RateLimit.Guest.RequestsPerMinute", 30);
+                var userLimit = await configRepo.GetValueAsync("RateLimit.User.RequestsPerMinute", 60);
+                var premiumLimit = await configRepo.GetValueAsync("RateLimit.Premium.RequestsPerMinute", 120);
+
+                _cachedLimits = new Dictionary<string, int>
+                {
+                    ["guest"] = guestLimit,
+                    ["user"] = userLimit,
+                    ["vip"] = premiumLimit,
+                    ["merchant"] = 200,
+                    ["admin"] = 500
+                };
+
+                _cacheExpireTime = DateTime.UtcNow.Add(_cacheDuration);
+
+                _logger.LogDebug("限流配置已刷新: Guest={Guest}, User={User}, Premium={Premium}",
+                    guestLimit, userLimit, premiumLimit);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "读取限流配置失败，使用默认值");
+                _cachedLimits ??= new Dictionary<string, int>
+                {
+                    ["guest"] = 30,
+                    ["user"] = 60,
+                    ["vip"] = 120,
+                    ["merchant"] = 200,
+                    ["admin"] = 500
+                };
+            }
+            finally
+            {
+                _cacheLock.Release();
+            }
+
+            return _cachedLimits;
         }
 
         /// <summary>
@@ -166,6 +228,15 @@ namespace OpenFindBearings.Api.Middleware
                     records.Dequeue();
                 }
             }
+        }
+
+        /// <summary>
+        /// 静态缓存刷新方法（供管理接口调用）
+        /// </summary>
+        public static void RefreshCache()
+        {
+            _cachedLimits = null;
+            _cacheExpireTime = DateTime.MinValue;
         }
     }
 }

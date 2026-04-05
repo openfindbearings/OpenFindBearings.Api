@@ -1,5 +1,5 @@
 ﻿using OpenFindBearings.Domain.Aggregates;
-using OpenFindBearings.Domain.Enums;
+using OpenFindBearings.Domain.Specifications;
 
 namespace OpenFindBearings.Domain.Repositories
 {
@@ -34,14 +34,10 @@ namespace OpenFindBearings.Domain.Repositories
         Task<IEnumerable<User>> GetAdminsAsync(CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// 分页获取用户列表
+        /// 搜索用户
         /// </summary>
-        Task<PagedResult<User>> GetPagedAsync(
-            string? keyword = null,
-            UserType? userType = null,
-            bool? isActive = null,
-            int page = 1,
-            int pageSize = 20,
+        Task<PagedResult<User>> SearchAsync(
+            SearchUserParams searchParams,
             CancellationToken cancellationToken = default);
 
         /// <summary>

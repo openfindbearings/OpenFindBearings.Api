@@ -139,6 +139,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     Name = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     Description = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
+                    IsSystem = table.Column<bool>(type: "boolean", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     IsActive = table.Column<bool>(type: "boolean", nullable: false)
@@ -270,7 +271,6 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     AuthUserId = table.Column<string>(type: "character varying(450)", maxLength: 450, nullable: false),
                     Nickname = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
                     Avatar = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
-                    UserType = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
                     Address = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
                     GuestSessionId = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
                     Level = table.Column<int>(type: "integer", nullable: false, defaultValue: 1),
@@ -287,12 +287,13 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     LastSearchAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     LastActiveAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     LastLoginAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    IsActive = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
+                    IsGuest = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
                     IsMerged = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
                     MergedToUserId = table.Column<Guid>(type: "uuid", nullable: true),
                     MerchantId = table.Column<Guid>(type: "uuid", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true)
                 },
                 constraints: table =>
                 {
@@ -713,6 +714,8 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     PreferredBrandIds = table.Column<string>(type: "text", nullable: true),
                     PreferredBearingTypeIds = table.Column<string>(type: "text", nullable: true),
                     PriceRangePreference = table.Column<string>(type: "text", nullable: true),
+                    PreferredProvince = table.Column<string>(type: "text", nullable: true),
+                    PreferredCity = table.Column<string>(type: "text", nullable: true),
                     EmailNotificationEnabled = table.Column<bool>(type: "boolean", nullable: false),
                     SmsNotificationEnabled = table.Column<bool>(type: "boolean", nullable: false),
                     WeChatNotificationEnabled = table.Column<bool>(type: "boolean", nullable: false),
@@ -1162,6 +1165,16 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                 column: "IsActive");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Users_IsGuest",
+                table: "Users",
+                column: "IsGuest");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Users_IsGuest_IsActive",
+                table: "Users",
+                columns: new[] { "IsGuest", "IsActive" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Users_LastActiveAt",
                 table: "Users",
                 column: "LastActiveAt");
@@ -1185,16 +1198,6 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                 name: "IX_Users_RegistrationSource",
                 table: "Users",
                 column: "RegistrationSource");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Users_UserType",
-                table: "Users",
-                column: "UserType");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Users_UserType_IsActive",
-                table: "Users",
-                columns: new[] { "UserType", "IsActive" });
         }
 
         /// <inheritdoc />

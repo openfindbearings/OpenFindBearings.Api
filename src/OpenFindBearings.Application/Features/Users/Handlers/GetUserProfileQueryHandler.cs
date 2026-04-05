@@ -43,12 +43,10 @@ namespace OpenFindBearings.Application.Features.Users.Handlers
                 return null;
             }
 
-            // 获取统计信息
             var favoriteCount = await _favoriteRepository.CountByUserIdAsync(user.Id, cancellationToken);
             var followCount = await _followRepository.CountByUserIdAsync(user.Id, cancellationToken);
             var corrections = await _correctionRepository.GetByUserAsync(user.Id, cancellationToken);
 
-            // 获取角色和权限
             var roles = user.UserRoles.Select(ur => ur.Role.Name).ToList();
             var permissions = user.UserRoles
                 .SelectMany(ur => ur.Role.RolePermissions)
@@ -62,7 +60,8 @@ namespace OpenFindBearings.Application.Features.Users.Handlers
                 AuthUserId = user.AuthUserId,
                 Nickname = user.Nickname,
                 Avatar = user.Avatar,
-                UserType = user.UserType.ToString(),
+                // ✅ 修改：UserType 改为通过角色和 IsGuest 判断
+                UserType = user.IsGuest ? "Guest" : (user.IsAdmin ? "Admin" : (user.MerchantId.HasValue ? "MerchantStaff" : "Individual")),
                 MerchantId = user.MerchantId,
                 MerchantName = user.Merchant?.Name,
                 Roles = roles,
@@ -72,7 +71,6 @@ namespace OpenFindBearings.Application.Features.Users.Handlers
                 CorrectionCount = corrections.Count,
                 CreatedAt = user.CreatedAt,
                 LastLoginAt = user.LastLoginAt,
-
                 Occupation = user.Occupation,
                 CompanyName = user.CompanyName,
                 Industry = user.Industry

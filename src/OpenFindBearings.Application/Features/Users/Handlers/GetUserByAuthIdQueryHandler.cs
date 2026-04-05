@@ -40,7 +40,8 @@ namespace OpenFindBearings.Application.Features.Users.Handlers
                 AuthUserId = user.AuthUserId,
                 Nickname = user.Nickname,
                 Avatar = user.Avatar,
-                UserType = user.UserType.ToString(),
+                // ✅ 修改：UserType 改为通过角色判断
+                UserType = user.IsAdmin ? "Admin" : (user.MerchantId.HasValue ? "MerchantStaff" : "Individual"),
                 MerchantId = user.MerchantId,
                 MerchantName = user.Merchant?.Name,
                 Roles = roles,

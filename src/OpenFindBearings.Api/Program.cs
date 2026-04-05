@@ -21,8 +21,11 @@ builder.Services.AddCorsService(builder.Configuration);
 // 添加认证和授权
 builder.Services.AddAuthenticationAndAuthorization(builder.Configuration);
 
-// 添加 Swagger/OpenAPI
-builder.Services.AddSwagger();
+// 添加 OpenAPI
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddOpenApi();
+}
 
 // 添加健康检查
 builder.Services.AddHealthChecksService(builder.Configuration);
@@ -37,12 +40,7 @@ app.UseForwardedHeaders();
 // 开发环境特定配置
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "OpenFindBearings API V1");
-        c.RoutePrefix = "swagger";
-    });
+    app.MapOpenApi();
 
     app.UseDeveloperExceptionPage();
 }
@@ -57,10 +55,8 @@ else
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 // 2. 限流中间件（在请求进入业务逻辑前拦截）
 app.UseMiddleware<RateLimitingMiddleware>();
-// 3. 请求日志中间件
-app.UseMiddleware<RequestLoggingMiddleware>();
-// 4. 用户行为收集中间件（记录通过的请求）
-app.UseMiddleware<UserBehaviorMiddleware>();
+// 3. 日志中间件（请求日志和用户行为收集）
+app.UseMiddleware<ApiLoggingMiddleware>();
 
 
 // HTTPS 重定向

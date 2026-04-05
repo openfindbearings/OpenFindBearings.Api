@@ -24,8 +24,9 @@ namespace OpenFindBearings.Application.Features.Users.Handlers
 
         public async Task<Guid> Handle(CreateUserFromAuthCommand request, CancellationToken cancellationToken)
         {
-            _logger.LogInformation("创建业务用户: AuthUserId={AuthUserId}, UserType={UserType}, RegistrationSource={RegistrationSource}, Nickname={Nickname}",
-                request.AuthUserId, request.UserType, request.RegistrationSource, request.Nickname);
+            // ✅ 修改：移除 UserType
+            _logger.LogInformation("创建业务用户: AuthUserId={AuthUserId}, RegistrationSource={RegistrationSource}, Nickname={Nickname}",
+                request.AuthUserId, request.RegistrationSource, request.Nickname);
 
             // 检查是否已存在
             var existingUser = await _userRepository.GetByAuthUserIdAsync(request.AuthUserId, cancellationToken);
@@ -36,10 +37,9 @@ namespace OpenFindBearings.Application.Features.Users.Handlers
                 return existingUser.Id;
             }
 
-            // 创建新用户
+            // ✅ 修改：移除 userType 参数
             var user = new User(
                 authUserId: request.AuthUserId,
-                userType: request.UserType,
                 registrationSource: request.RegistrationSource,
                 registerIp: request.RegisterIp,
                 nickname: request.Nickname

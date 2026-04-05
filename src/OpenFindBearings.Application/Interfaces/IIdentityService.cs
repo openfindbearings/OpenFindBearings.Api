@@ -108,6 +108,8 @@ namespace OpenFindBearings.Application.Interfaces
         #endregion
     }
 
+    #region DTOs
+
     /// <summary>
     /// 邀请完成结果
     /// </summary>
@@ -150,5 +152,7 @@ namespace OpenFindBearings.Application.Interfaces
 
         public static IdentityRegisterResult Failed(string message) =>
             new() { Success = false, Message = message };
-    }
+    } 
+
+    #endregion
 }

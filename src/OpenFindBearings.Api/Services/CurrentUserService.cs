@@ -61,20 +61,28 @@ namespace OpenFindBearings.Api.Services
             _httpContextAccessor = httpContextAccessor;
         }
 
+        /// <inheritdoc/>
         public Guid? UserId => _httpContextAccessor.HttpContext?.GetUserId();
 
+        /// <inheritdoc/>
         public string? AuthUserId => _httpContextAccessor.HttpContext?.GetAuthUserId();
 
+        /// <inheritdoc/>
         public string? SessionId => _httpContextAccessor.HttpContext?.GetSessionId();
 
+        /// <inheritdoc/>
         public bool IsAuthenticated => !string.IsNullOrEmpty(AuthUserId);
 
+        /// <inheritdoc/>
         public bool IsGuest => _httpContextAccessor.HttpContext?.Items["IsGuest"] as bool? ?? false;
 
+        /// <inheritdoc/>
         public string? UserType => _httpContextAccessor.HttpContext?.Items["UserType"] as string;
 
+        /// <inheritdoc/>
         public string? ClientIp => _httpContextAccessor.HttpContext?.GetClientIp();
 
+        /// <inheritdoc/>
         public string? UserAgent => _httpContextAccessor.HttpContext?.GetUserAgent();
     }
 }

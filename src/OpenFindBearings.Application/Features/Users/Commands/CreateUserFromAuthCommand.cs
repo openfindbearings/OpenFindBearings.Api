@@ -15,11 +15,6 @@ namespace OpenFindBearings.Application.Features.Users.Commands
         public string AuthUserId { get; init; } = string.Empty;
 
         /// <summary>
-        /// 用户类型
-        /// </summary>
-        public UserType UserType { get; init; } = UserType.Individual;
-
-        /// <summary>
         /// 注册来源
         /// </summary>
         public RegistrationSource RegistrationSource { get; init; } = RegistrationSource.Web;

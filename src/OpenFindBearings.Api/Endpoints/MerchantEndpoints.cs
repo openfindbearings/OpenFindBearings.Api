@@ -93,19 +93,16 @@ namespace OpenFindBearings.Api.Endpoints
                 if (file == null || file.Length == 0)
                     return ApiResponseHelper.BadRequest("请上传文件", httpContext: httpContext);
 
-                // 检查文件类型
                 var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".pdf" };
                 var fileExtension = Path.GetExtension(file.FileName).ToLowerInvariant();
                 if (!allowedExtensions.Contains(fileExtension))
                     return ApiResponseHelper.BadRequest("只支持 JPG、PNG、PDF 格式", httpContext: httpContext);
 
-                // 检查文件大小（最大5MB）
                 if (file.Length > 5 * 1024 * 1024)
                     return ApiResponseHelper.BadRequest("文件大小不能超过5MB", httpContext: httpContext);
 
                 try
                 {
-                    // 获取商家信息
                     var merchantQuery = new GetMerchantByUserIdQuery
                     {
                         UserId = currentUser.UserId.Value
@@ -115,7 +112,6 @@ namespace OpenFindBearings.Api.Endpoints
                     if (merchant == null)
                         return ApiResponseHelper.NotFound("未找到所属商家", httpContext: httpContext);
 
-                    // 保存文件
                     var uploadsFolder = Path.Combine(environment.WebRootPath, "uploads", "licenses");
                     Directory.CreateDirectory(uploadsFolder);
 
@@ -129,7 +125,6 @@ namespace OpenFindBearings.Api.Endpoints
 
                     var fileUrl = $"/uploads/licenses/{fileName}";
 
-                    // ✅ 放开注释：调用命令更新商家认证信息并提交审核
                     var licenseCommand = new SubmitLicenseCommand
                     {
                         MerchantId = merchant.Id,
@@ -181,11 +176,9 @@ namespace OpenFindBearings.Api.Endpoints
                 if (merchant == null)
                     return ApiResponseHelper.NotFound("未找到所属商家", httpContext);
 
-                // 获取员工列表（返回 List<MerchantStaffDto>）
                 var staffList = await mediator.Send(new GetMerchantStaffQuery(merchant.Id));
 
-                // 手动分页
-                var totalCount = staffList.Count;
+                var totalCount = staffList.Count();
                 var pagedItems = staffList
                     .Skip((page - 1) * pageSize)
                     .Take(pageSize)
@@ -216,7 +209,6 @@ namespace OpenFindBearings.Api.Endpoints
                 if (!currentUser.UserId.HasValue)
                     return ApiResponseHelper.Unauthorized(httpContext: httpContext);
 
-                // 获取商家ID
                 var merchantQuery = new GetMerchantByUserIdQuery
                 {
                     UserId = currentUser.UserId.Value
@@ -226,8 +218,7 @@ namespace OpenFindBearings.Api.Endpoints
                 if (merchant == null)
                     return ApiResponseHelper.NotFound("未找到所属商家", httpContext);
 
-                // 检查权限（只有管理员可以添加员工）
-                var isAdmin = permissionService.IsMerchantAdminAsync(); // 注意：这是同步方法
+                var isAdmin = permissionService.IsMerchantAdminAsync();
                 if (!isAdmin)
                 {
                     return ApiResponseHelper.Forbidden("需要商家管理员权限", httpContext);
@@ -259,8 +250,7 @@ namespace OpenFindBearings.Api.Endpoints
                 if (!currentUser.UserId.HasValue)
                     return ApiResponseHelper.Unauthorized(httpContext: httpContext);
 
-                // 检查权限（只有管理员可以移除员工）
-                var isAdmin = permissionService.IsMerchantAdminAsync(); // 注意：这是同步方法
+                var isAdmin = permissionService.IsMerchantAdminAsync();
                 if (!isAdmin)
                 {
                     return ApiResponseHelper.Forbidden("需要商家管理员权限", httpContext);

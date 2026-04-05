@@ -22,6 +22,11 @@ namespace OpenFindBearings.Domain.Entities
         public string? Description { get; private set; }
 
         /// <summary>
+        /// 是否系统角色（系统角色不可删除）
+        /// </summary>
+        public bool IsSystem { get; private set; }
+
+        /// <summary>
         /// 用户-角色关联导航属性
         /// 一个角色可以分配给多个用户
         /// </summary>
@@ -36,7 +41,10 @@ namespace OpenFindBearings.Domain.Entities
         /// <summary>
         /// 无参构造函数，仅供EF Core使用
         /// </summary>
-        private Role() { }
+        private Role() 
+        {
+            Name = string.Empty;
+        }
 
         /// <summary>
         /// 创建新角色
@@ -51,6 +59,16 @@ namespace OpenFindBearings.Domain.Entities
 
             Name = name;
             Description = description;
+        }
+
+        public Role(string name, string? description = null, bool isSystem = false)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                throw new ArgumentException("角色名称不能为空", nameof(name));
+
+            Name = name;
+            Description = description;
+            IsSystem = isSystem;
         }
 
         /// <summary>
