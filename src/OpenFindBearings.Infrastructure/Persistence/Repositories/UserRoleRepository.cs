@@ -28,7 +28,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                 // 使用带参数的构造函数
                 var userRole = new UserRole(userId, roleId);
                 await _context.UserRoles.AddAsync(userRole, cancellationToken);
-                await _context.SaveChangesAsync(cancellationToken);
+                
             }
         }
 
@@ -48,7 +48,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
             if (userRole != null)
             {
                 _context.UserRoles.Remove(userRole);
-                await _context.SaveChangesAsync(cancellationToken);
+                
             }
         }
 
@@ -61,7 +61,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
             if (userRoles.Any())
             {
                 _context.UserRoles.RemoveRange(userRoles);
-                await _context.SaveChangesAsync(cancellationToken);
+                
             }
         }
 

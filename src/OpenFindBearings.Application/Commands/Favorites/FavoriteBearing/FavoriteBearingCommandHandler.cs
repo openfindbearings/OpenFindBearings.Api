@@ -1,0 +1,67 @@
+﻿using MediatR;
+using Microsoft.Extensions.Logging;
+using OpenFindBearings.Domain.Repositories;
+
+namespace OpenFindBearings.Application.Commands.Favorites.FavoriteBearing
+{
+    /// <summary>
+    /// 收藏轴承命令处理器
+    /// </summary>
+    public class FavoriteBearingCommandHandler : IRequestHandler<FavoriteBearingCommand, bool>
+    {
+        private readonly IUserBearingFavoriteRepository _favoriteRepository;
+        private readonly IUserRepository _userRepository;
+        private readonly IBearingRepository _bearingRepository;
+        private readonly ILogger<FavoriteBearingCommandHandler> _logger;
+
+        public FavoriteBearingCommandHandler(
+            IUserBearingFavoriteRepository favoriteRepository,
+            IUserRepository userRepository,
+            IBearingRepository bearingRepository,
+            ILogger<FavoriteBearingCommandHandler> logger)
+        {
+            _favoriteRepository = favoriteRepository;
+            _userRepository = userRepository;
+            _bearingRepository = bearingRepository;
+            _logger = logger;
+        }
+
+        public async Task<bool> Handle(FavoriteBearingCommand request, CancellationToken cancellationToken)
+        {
+            _logger.LogInformation("用户收藏轴承: UserId={UserId}, BearingId={BearingId}",
+                request.UserId, request.BearingId);
+
+            // 检查轴承是否存在
+            var bearing = await _bearingRepository.GetByIdAsync(request.BearingId, cancellationToken);
+            if (bearing == null)
+            {
+                throw new InvalidOperationException($"轴承不存在: {request.BearingId}");
+            }
+
+            // 检查是否已收藏
+            var exists = await _favoriteRepository.ExistsAsync(request.UserId, request.BearingId, cancellationToken);
+            if (exists)
+            {
+                _logger.LogWarning("用户已收藏该轴承: UserId={UserId}, BearingId={BearingId}",
+                    request.UserId, request.BearingId);
+                return false;
+            }
+
+            // 获取用户实体
+            var user = await _userRepository.GetByIdAsync(request.UserId, cancellationToken);
+            if (user == null)
+            {
+                throw new InvalidOperationException($"用户不存在: {request.UserId}");
+            }
+
+            // 执行收藏
+            user.FavoriteBearing(request.BearingId);
+            await _userRepository.UpdateAsync(user, cancellationToken);
+
+            _logger.LogInformation("用户收藏轴承成功: UserId={UserId}, BearingId={BearingId}",
+                request.UserId, request.BearingId);
+
+            return true;
+        }
+    }
+}

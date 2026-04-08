@@ -32,7 +32,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         public async Task AddAsync(StaffInvitation invitation, CancellationToken cancellationToken = default)
         {
             await _context.StaffInvitations.AddAsync(invitation, cancellationToken);
-            await _context.SaveChangesAsync(cancellationToken);
+            
         }
 
         /// <summary>
@@ -41,7 +41,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         public async Task UpdateAsync(StaffInvitation invitation, CancellationToken cancellationToken = default)
         {
             _context.StaffInvitations.Update(invitation);
-            await _context.SaveChangesAsync(cancellationToken);
+            
         }
     }
 }

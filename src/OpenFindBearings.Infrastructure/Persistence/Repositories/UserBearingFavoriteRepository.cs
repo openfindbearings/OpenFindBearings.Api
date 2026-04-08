@@ -58,7 +58,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         public async Task AddAsync(UserBearingFavorite favorite, CancellationToken cancellationToken = default)
         {
             await _context.UserFavorites.AddAsync(favorite, cancellationToken);
-            await _context.SaveChangesAsync(cancellationToken);
+            
         }
 
         public async Task DeleteAsync(Guid userId, Guid bearingId, CancellationToken cancellationToken = default)
@@ -67,7 +67,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
             if (favorite != null)
             {
                 _context.UserFavorites.Remove(favorite);
-                await _context.SaveChangesAsync(cancellationToken);
+                
             }
         }
     }

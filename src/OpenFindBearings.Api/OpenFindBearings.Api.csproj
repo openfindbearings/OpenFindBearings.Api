@@ -10,13 +10,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="robots.txt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-			<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-    </Content>
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="AspNetCore.HealthChecks.Uris" Version="9.0.0" />
     <PackageReference Include="FluentValidation" Version="12.1.1" />
     <PackageReference Include="MediatR" Version="14.1.0" />
@@ -33,6 +26,16 @@
   <ItemGroup>
     <ProjectReference Include="..\OpenFindBearings.Application\OpenFindBearings.Application.csproj" />
     <ProjectReference Include="..\OpenFindBearings.Infrastructure\OpenFindBearings.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="wwwroot\robots.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="wwwroot\robots.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>

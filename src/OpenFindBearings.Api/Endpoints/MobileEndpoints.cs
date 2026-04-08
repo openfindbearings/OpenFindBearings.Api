@@ -2,7 +2,10 @@
 using Microsoft.AspNetCore.Mvc;
 using OpenFindBearings.Api.Helpers;
 using OpenFindBearings.Api.Services;
-using OpenFindBearings.Application.Features.Mobile.Queries;
+using OpenFindBearings.Application.Queries.Mobile.CheckVersion;
+using OpenFindBearings.Application.Queries.Mobile.GetMobileBearingLightList;
+using OpenFindBearings.Application.Queries.Mobile.GetMobileConfig;
+using OpenFindBearings.Application.Queries.Mobile.GetMobileHome;
 
 namespace OpenFindBearings.Api.Endpoints
 {

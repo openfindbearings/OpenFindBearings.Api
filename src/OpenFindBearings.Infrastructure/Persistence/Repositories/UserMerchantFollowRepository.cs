@@ -63,7 +63,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         public async Task AddAsync(UserMerchantFollow follow, CancellationToken cancellationToken = default)
         {
             await _context.UserFollows.AddAsync(follow, cancellationToken);
-            await _context.SaveChangesAsync(cancellationToken);
+            
         }
 
         public async Task DeleteAsync(Guid userId, Guid merchantId, CancellationToken cancellationToken = default)
@@ -72,7 +72,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
             if (follow != null)
             {
                 _context.UserFollows.Remove(follow);
-                await _context.SaveChangesAsync(cancellationToken);
+                
             }
         }
     }

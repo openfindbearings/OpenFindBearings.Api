@@ -450,6 +450,7 @@ namespace OpenFindBearings.Domain.Aggregates
                 throw new InvalidOperationException("已经收藏过该轴承");
 
             _favoriteBearings.Add(new UserBearingFavorite(Id, bearingId));
+            AddDomainEvent(new BearingFavoritedEvent(Id, bearingId));
             UpdateTimestamp();
         }
 
@@ -462,6 +463,7 @@ namespace OpenFindBearings.Domain.Aggregates
             if (favorite != null)
             {
                 _favoriteBearings.Remove(favorite);
+                AddDomainEvent(new BearingUnfavoritedEvent(Id, bearingId));
                 UpdateTimestamp();
             }
         }
@@ -483,6 +485,7 @@ namespace OpenFindBearings.Domain.Aggregates
                 throw new InvalidOperationException("已经关注过该商家");
 
             _followedMerchants.Add(new UserMerchantFollow(Id, merchantId));
+            AddDomainEvent(new MerchantFollowedEvent(Id, merchantId));
             UpdateTimestamp();
         }
 
@@ -495,6 +498,7 @@ namespace OpenFindBearings.Domain.Aggregates
             if (follow != null)
             {
                 _followedMerchants.Remove(follow);
+                AddDomainEvent(new MerchantUnfollowedEvent(Id, merchantId));
                 UpdateTimestamp();
             }
         }

@@ -32,7 +32,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         public async Task AddAsync(UserPreference preference, CancellationToken cancellationToken = default)
         {
             await _context.UserPreferences.AddAsync(preference, cancellationToken);
-            await _context.SaveChangesAsync(cancellationToken);
+            
         }
 
         /// <summary>
@@ -41,7 +41,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         public async Task UpdateAsync(UserPreference preference, CancellationToken cancellationToken = default)
         {
             _context.UserPreferences.Update(preference);
-            await _context.SaveChangesAsync(cancellationToken);
+            
         }
     }
 }

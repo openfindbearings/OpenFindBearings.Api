@@ -1,6 +1,9 @@
 ﻿using MediatR;
-using OpenFindBearings.Application.Features.Users.Commands;
-using OpenFindBearings.Application.Features.Users.Queries;
+using OpenFindBearings.Application.Commands.Users.Commands;
+using OpenFindBearings.Application.Commands.Users.CreateUserFromAuth;
+using OpenFindBearings.Application.Commands.Users.MigrateGuestData;
+using OpenFindBearings.Application.Queries.Users.GetUserByAuthId;
+using OpenFindBearings.Application.Queries.Users.GetUserBySessionId;
 using System.Security.Claims;
 
 namespace OpenFindBearings.Api.Middleware

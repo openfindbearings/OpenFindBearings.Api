@@ -40,13 +40,11 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         public async Task AddAsync(BearingType bearingType, CancellationToken cancellationToken = default)
         {
             await _context.BearingTypes.AddAsync(bearingType, cancellationToken);
-            await _context.SaveChangesAsync(cancellationToken);
         }
 
         public async Task UpdateAsync(BearingType bearingType, CancellationToken cancellationToken = default)
         {
             _context.BearingTypes.Update(bearingType);
-            await _context.SaveChangesAsync(cancellationToken);
         }
     }
 }

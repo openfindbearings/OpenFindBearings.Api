@@ -243,6 +243,8 @@ namespace OpenFindBearings.Domain.Aggregates
             Performance = performance;
             Weight = weight;
             IsStandard = true;
+
+            AddDomainEvent(new BearingCreatedEvent(Id, CurrentCode, BrandId));
         }
 
         /// <summary>
@@ -279,6 +281,7 @@ namespace OpenFindBearings.Domain.Aggregates
         {
             Description = description;
             Weight = weight;
+            AddDomainEvent(new BearingUpdatedEvent(Id, CurrentCode, ["Description", "Weight"]));
             UpdateTimestamp();
         }
 

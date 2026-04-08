@@ -66,13 +66,11 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         public async Task AddAsync(CorrectionRequest correction, CancellationToken cancellationToken = default)
         {
             await _context.CorrectionRequests.AddAsync(correction, cancellationToken);
-            await _context.SaveChangesAsync(cancellationToken);
         }
 
         public async Task UpdateAsync(CorrectionRequest correction, CancellationToken cancellationToken = default)
         {
             _context.CorrectionRequests.Update(correction);
-            await _context.SaveChangesAsync(cancellationToken);
         }
 
         public async Task<List<CorrectionRequest>> GetAllAsync(CancellationToken cancellationToken = default)

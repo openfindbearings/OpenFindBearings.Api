@@ -57,7 +57,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                 var history = new UserMerchantHistory(userId, merchantId);
                 await _context.UserMerchantHistories.AddAsync(history, cancellationToken);
             }
-            await _context.SaveChangesAsync(cancellationToken);
+            
         }
 
         public async Task ClearByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
@@ -69,7 +69,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
             if (histories.Any())
             {
                 _context.UserMerchantHistories.RemoveRange(histories);
-                await _context.SaveChangesAsync(cancellationToken);
+                
             }
         }
 
@@ -79,7 +79,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
             if (history != null)
             {
                 _context.UserMerchantHistories.Remove(history);
-                await _context.SaveChangesAsync(cancellationToken);
+                
             }
         }
     }

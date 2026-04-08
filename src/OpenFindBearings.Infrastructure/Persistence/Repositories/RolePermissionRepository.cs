@@ -28,7 +28,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                 // 使用带参数的构造函数
                 var rolePermission = new RolePermission(roleId, permissionId);
                 await _context.RolePermissions.AddAsync(rolePermission, cancellationToken);
-                await _context.SaveChangesAsync(cancellationToken);
+                
             }
         }
 
@@ -48,7 +48,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
             if (rolePermission != null)
             {
                 _context.RolePermissions.Remove(rolePermission);
-                await _context.SaveChangesAsync(cancellationToken);
+                
             }
         }
 
@@ -61,7 +61,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
             if (rolePermissions.Any())
             {
                 _context.RolePermissions.RemoveRange(rolePermissions);
-                await _context.SaveChangesAsync(cancellationToken);
+                
             }
         }
 

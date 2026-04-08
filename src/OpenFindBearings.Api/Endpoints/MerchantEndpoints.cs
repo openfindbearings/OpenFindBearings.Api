@@ -2,10 +2,18 @@
 using Microsoft.AspNetCore.Mvc;
 using OpenFindBearings.Api.Helpers;
 using OpenFindBearings.Api.Services;
-using OpenFindBearings.Application.Features.MerchantBearings.Commands;
-using OpenFindBearings.Application.Features.MerchantBearings.Queries;
-using OpenFindBearings.Application.Features.Merchants.Commands;
-using OpenFindBearings.Application.Features.Merchants.Queries;
+using OpenFindBearings.Application.Commands.MerchantBearings.Commands;
+using OpenFindBearings.Application.Commands.MerchantBearings.PutOnShelf;
+using OpenFindBearings.Application.Commands.MerchantBearings.SetPriceVisibility;
+using OpenFindBearings.Application.Commands.MerchantBearings.TakeOffShelf;
+using OpenFindBearings.Application.Commands.MerchantBearings.UpdateMerchantBearing;
+using OpenFindBearings.Application.Commands.Merchants.AddStaff;
+using OpenFindBearings.Application.Commands.Merchants.Commands;
+using OpenFindBearings.Application.Commands.Merchants.RemoveStaff;
+using OpenFindBearings.Application.Commands.Merchants.SubmitLicense;
+using OpenFindBearings.Application.Queries.MerchantBearings.GetMerchantBearingsByMerchant;
+using OpenFindBearings.Application.Queries.Merchants.GetMerchantByUserId;
+using OpenFindBearings.Application.Queries.Merchants.GetMerchantStaff;
 
 namespace OpenFindBearings.Api.Endpoints
 {

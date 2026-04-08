@@ -56,13 +56,13 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         public async Task AddAsync(Role role, CancellationToken cancellationToken = default)
         {
             await _context.Roles.AddAsync(role, cancellationToken);
-            await _context.SaveChangesAsync(cancellationToken);
+            
         }
 
         public async Task UpdateAsync(Role role, CancellationToken cancellationToken = default)
         {
             _context.Roles.Update(role);
-            await _context.SaveChangesAsync(cancellationToken);
+            
         }
 
         public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)

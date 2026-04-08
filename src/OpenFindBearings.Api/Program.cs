@@ -73,6 +73,8 @@ app.UseAuthorization();       // 授权
 // 响应压缩
 app.UseResponseCompression();
 
+app.UseStaticFiles();
+
 // 映射所有 API 端点
 app.MapApiEndpoints();
 

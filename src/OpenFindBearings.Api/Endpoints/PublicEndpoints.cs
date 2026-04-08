@@ -1,12 +1,17 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using OpenFindBearings.Api.Helpers;
-using OpenFindBearings.Application.Features.Bearings.Queries;
-using OpenFindBearings.Application.Features.BearingTypes.Queries;
-using OpenFindBearings.Application.Features.Brands.Queries;
-using OpenFindBearings.Application.Features.Follows.Queries;
-using OpenFindBearings.Application.Features.MerchantBearings.Queries;
-using OpenFindBearings.Application.Features.Merchants.Queries;
+using OpenFindBearings.Application.Queries.Bearings.GetBearingByCode;
+using OpenFindBearings.Application.Queries.Bearings.GetBearingInterchanges;
+using OpenFindBearings.Application.Queries.Bearings.GetBearingQuery;
+using OpenFindBearings.Application.Queries.Bearings.GetHotBearings;
+using OpenFindBearings.Application.Queries.Bearings.SearchBearings;
+using OpenFindBearings.Application.Queries.BearingTypes.GetAllBearingTypes;
+using OpenFindBearings.Application.Queries.Brands.GetAllBrands;
+using OpenFindBearings.Application.Queries.Follows.CheckMerchantFollow;
+using OpenFindBearings.Application.Queries.MerchantBearings.GetMerchantBearingsByMerchant;
+using OpenFindBearings.Application.Queries.Merchants.GetMerchant;
+using OpenFindBearings.Application.Queries.Merchants.SearchMerchants;
 
 namespace OpenFindBearings.Api.Endpoints
 {
@@ -86,7 +91,10 @@ namespace OpenFindBearings.Api.Endpoints
                 HttpContext httpContext,
                 [FromQuery] int count = 10) =>
             {
-                var query = new GetHotBearingsQuery(count);
+                var query = new GetHotBearingsQuery
+                {
+                    Count = count
+                };
                 var result = await mediator.Send(query);
                 return ApiResponseHelper.Ok(result, httpContext: httpContext);
             })
@@ -133,7 +141,10 @@ namespace OpenFindBearings.Api.Endpoints
                 IMediator mediator,
                 HttpContext httpContext) =>
             {
-                var query = new GetBearingByCodeQuery(currentCode);
+                var query = new GetBearingByCodeQuery 
+                { 
+                    CurrentCode = currentCode 
+                };
                 var result = await mediator.Send(query);
 
                 return result == null
@@ -153,7 +164,10 @@ namespace OpenFindBearings.Api.Endpoints
                 IMediator mediator,
                 HttpContext httpContext) =>
             {
-                var query = new GetBearingInterchangesQuery(id);
+                var query = new GetBearingInterchangesQuery
+                {
+                    BearingId = id
+                };
                 var result = await mediator.Send(query);
                 return ApiResponseHelper.Ok(result, httpContext: httpContext);
             })

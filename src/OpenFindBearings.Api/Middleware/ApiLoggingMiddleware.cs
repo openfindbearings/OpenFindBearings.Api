@@ -1,8 +1,8 @@
 ﻿using MediatR;
 using OpenFindBearings.Api.Helpers;
 using OpenFindBearings.Api.Services;
-using OpenFindBearings.Application.Features.ApiLogs.Commands;
-using OpenFindBearings.Application.Features.Users.Commands;
+using OpenFindBearings.Application.Commands.ApiLogs.AddApiCallLog;
+using OpenFindBearings.Application.Commands.Users.UpdateUserPreference;
 using OpenFindBearings.Application.Interfaces;
 using OpenFindBearings.Domain.Entities;
 using System.Diagnostics;

@@ -21,7 +21,6 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         public async Task AddAsync(AuditLog auditLog, CancellationToken cancellationToken = default)
         {
             await _context.AuditLogs.AddAsync(auditLog, cancellationToken);
-            await _context.SaveChangesAsync(cancellationToken);
         }
 
         public async Task<List<AuditLog>> GetByEntityAsync(string entityType, Guid entityId, CancellationToken cancellationToken = default)

@@ -227,13 +227,11 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         public async Task AddAsync(Bearing bearing, CancellationToken cancellationToken = default)
         {
             await _context.Bearings.AddAsync(bearing, cancellationToken);
-            await _context.SaveChangesAsync(cancellationToken);
         }
 
         public async Task UpdateAsync(Bearing bearing, CancellationToken cancellationToken = default)
         {
             _context.Bearings.Update(bearing);
-            await _context.SaveChangesAsync(cancellationToken);
         }
 
         public async Task<bool> ExistsByPartNumberAsync(string partNumber, CancellationToken cancellationToken = default)
