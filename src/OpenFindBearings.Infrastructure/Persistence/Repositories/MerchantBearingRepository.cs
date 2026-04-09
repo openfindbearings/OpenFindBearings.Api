@@ -39,7 +39,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                 .Include(mb => mb.Bearing)
                     .ThenInclude(b => b.Brand)
                 .Include(mb => mb.Bearing)
-                    .ThenInclude(b => b.BearingType)
+                    .ThenInclude(b => b.BearingTypeNavigation)
                 .Where(mb => mb.MerchantId == merchantId)
                 .ToListAsync(cancellationToken);
         }
@@ -55,7 +55,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                 .Include(mb => mb.Bearing)
                     .ThenInclude(b => b.Brand)
                 .Include(mb => mb.Bearing)
-                    .ThenInclude(b => b.BearingType)
+                    .ThenInclude(b => b.BearingTypeNavigation)
                 .Where(mb => mb.MerchantId == merchantId && mb.IsOnSale)
                 .ToListAsync(cancellationToken);
         }

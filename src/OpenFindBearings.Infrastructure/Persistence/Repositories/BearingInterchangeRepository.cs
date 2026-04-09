@@ -28,7 +28,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                 .Include(bi => bi.TargetBearing)
                     .ThenInclude(b => b.Brand)
                 .Include(bi => bi.TargetBearing)
-                    .ThenInclude(b => b.BearingType)
+                    .ThenInclude(b => b.BearingTypeNavigation)
                 .Where(bi => bi.SourceBearingId == bearingId && bi.IsActive)
                 .OrderByDescending(bi => bi.Confidence)
                 .ToListAsync(cancellationToken);
@@ -40,7 +40,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                 .Include(bi => bi.SourceBearing)
                     .ThenInclude(b => b.Brand)
                 .Include(bi => bi.SourceBearing)
-                    .ThenInclude(b => b.BearingType)
+                    .ThenInclude(b => b.BearingTypeNavigation)
                 .Where(bi => bi.TargetBearingId == bearingId && bi.IsActive)
                 .OrderByDescending(bi => bi.Confidence)
                 .ToListAsync(cancellationToken);
