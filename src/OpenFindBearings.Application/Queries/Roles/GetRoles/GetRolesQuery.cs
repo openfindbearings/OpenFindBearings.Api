@@ -1,0 +1,28 @@
+﻿using MediatR;
+using OpenFindBearings.Application.Behaviors;
+using OpenFindBearings.Application.DTOs;
+using OpenFindBearings.Domain.Repositories;
+
+namespace OpenFindBearings.Application.Queries.Roles.GetRoles
+{
+    /// <summary>
+    /// 获取角色列表（分页）查询
+    /// </summary>
+    public record GetRolesQuery : IRequest<PagedResult<RoleDto>>, IQuery
+    {
+        /// <summary>
+        /// 页码
+        /// </summary>
+        public int Page { get; init; } = 1;
+
+        /// <summary>
+        /// 每页条数
+        /// </summary>
+        public int PageSize { get; init; } = 20;
+
+        /// <summary>
+        /// 关键词（搜索角色名称）
+        /// </summary>
+        public string? Keyword { get; init; }
+    }
+}

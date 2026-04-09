@@ -89,13 +89,13 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         public async Task AddAsync(Merchant merchant, CancellationToken cancellationToken = default)
         {
             await _context.Merchants.AddAsync(merchant, cancellationToken);
-            await _context.SaveChangesAsync(cancellationToken);
+            
         }
 
         public async Task UpdateAsync(Merchant merchant, CancellationToken cancellationToken = default)
         {
             _context.Merchants.Update(merchant);
-            await _context.SaveChangesAsync(cancellationToken);
+            
         }
     }
 }

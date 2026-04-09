@@ -76,21 +76,21 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         public async Task AddAsync(Permission permission, CancellationToken cancellationToken = default)
         {
             await _context.Permissions.AddAsync(permission, cancellationToken);
-            await _context.SaveChangesAsync(cancellationToken);
+            
         }
 
         /// <inheritdoc/>
         public async Task AddRangeAsync(IEnumerable<Permission> permissions, CancellationToken cancellationToken = default)
         {
             await _context.Permissions.AddRangeAsync(permissions, cancellationToken);
-            await _context.SaveChangesAsync(cancellationToken);
+            
         }
 
         /// <inheritdoc/>
         public async Task UpdateAsync(Permission permission, CancellationToken cancellationToken = default)
         {
             _context.Permissions.Update(permission);
-            await _context.SaveChangesAsync(cancellationToken);
+            
         }
 
         /// <inheritdoc/>

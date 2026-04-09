@@ -46,7 +46,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         public async Task UpdateAsync(SystemConfig config, CancellationToken cancellationToken = default)
         {
             _context.SystemConfigs.Update(config);
-            await _context.SaveChangesAsync(cancellationToken);
+            
         }
     }
 }

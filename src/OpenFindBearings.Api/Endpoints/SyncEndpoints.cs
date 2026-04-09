@@ -1,8 +1,13 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using OpenFindBearings.Api.Helpers;
-using OpenFindBearings.Application.Features.Sync.Commands;
-using OpenFindBearings.Application.Features.Sync.Queries;
+using OpenFindBearings.Application.Commands.Sync.BatchCreateBearings;
+using OpenFindBearings.Application.Commands.Sync.BatchCreateBearingTypes;
+using OpenFindBearings.Application.Commands.Sync.BatchCreateInterchanges;
+using OpenFindBearings.Application.Commands.Sync.BatchCreateMerchantBearings;
+using OpenFindBearings.Application.Commands.Sync.BatchCreateMerchants;
+using OpenFindBearings.Application.Commands.Sync.Commands;
+using OpenFindBearings.Application.Queries.Sync.GetSyncTaskStatus;
 
 namespace OpenFindBearings.Api.Endpoints
 {

@@ -93,7 +93,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         public async Task AddAsync(MerchantBearing merchantBearing, CancellationToken cancellationToken = default)
         {
             await _context.MerchantBearings.AddAsync(merchantBearing, cancellationToken);
-            await _context.SaveChangesAsync(cancellationToken);
+            
         }
 
         /// <summary>
@@ -104,13 +104,13 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
             CancellationToken cancellationToken = default)
         {
             await _context.MerchantBearings.AddRangeAsync(merchantBearings, cancellationToken);
-            await _context.SaveChangesAsync(cancellationToken);
+            
         }
 
         public async Task UpdateAsync(MerchantBearing merchantBearing, CancellationToken cancellationToken = default)
         {
             _context.MerchantBearings.Update(merchantBearing);
-            await _context.SaveChangesAsync(cancellationToken);
+            
         }
 
         public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
@@ -119,7 +119,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
             if (merchantBearing != null)
             {
                 _context.MerchantBearings.Remove(merchantBearing);
-                await _context.SaveChangesAsync(cancellationToken);
+                
             }
         }
     }

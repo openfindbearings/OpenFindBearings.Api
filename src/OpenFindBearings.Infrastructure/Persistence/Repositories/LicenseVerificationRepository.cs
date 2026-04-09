@@ -55,13 +55,13 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         public async Task AddAsync(LicenseVerification verification, CancellationToken cancellationToken = default)
         {
             await _context.LicenseVerifications.AddAsync(verification, cancellationToken);
-            await _context.SaveChangesAsync(cancellationToken);
+            
         }
 
         public async Task UpdateAsync(LicenseVerification verification, CancellationToken cancellationToken = default)
         {
             _context.LicenseVerifications.Update(verification);
-            await _context.SaveChangesAsync(cancellationToken);
+            
         }
     }
 }

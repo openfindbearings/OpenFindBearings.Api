@@ -17,7 +17,6 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         public async Task AddAsync(ApiCallLog log, CancellationToken cancellationToken = default)
         {
             await _context.ApiCallLogs.AddAsync(log, cancellationToken);
-            await _context.SaveChangesAsync(cancellationToken);
         }
 
         public async Task<int> GetCountByUserIdAsync(Guid userId, DateTime startTime, DateTime endTime, CancellationToken cancellationToken = default)

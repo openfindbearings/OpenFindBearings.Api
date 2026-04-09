@@ -55,19 +55,16 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         public async Task AddAsync(BearingInterchange interchange, CancellationToken cancellationToken = default)
         {
             await _context.BearingInterchanges.AddAsync(interchange, cancellationToken);
-            await _context.SaveChangesAsync(cancellationToken);
         }
 
         public async Task AddRangeAsync(List<BearingInterchange> interchanges, CancellationToken cancellationToken = default)
         {
             await _context.BearingInterchanges.AddRangeAsync(interchanges, cancellationToken);
-            await _context.SaveChangesAsync(cancellationToken);
         }
 
         public async Task UpdateAsync(BearingInterchange interchange, CancellationToken cancellationToken = default)
         {
             _context.BearingInterchanges.Update(interchange);
-            await _context.SaveChangesAsync(cancellationToken);
         }
 
         public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
@@ -76,7 +73,6 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
             if (interchange != null)
             {
                 interchange.Deactivate();
-                await _context.SaveChangesAsync(cancellationToken);
             }
         }
     }

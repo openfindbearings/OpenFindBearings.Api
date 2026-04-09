@@ -2,16 +2,26 @@
 using Microsoft.AspNetCore.Mvc;
 using OpenFindBearings.Api.Helpers;
 using OpenFindBearings.Api.Services;
-using OpenFindBearings.Application.Features.Corrections.Commands;
-using OpenFindBearings.Application.Features.Corrections.Queries;
-using OpenFindBearings.Application.Features.Favorites.Commands;
-using OpenFindBearings.Application.Features.Favorites.Queries;
-using OpenFindBearings.Application.Features.Follows.Commands;
-using OpenFindBearings.Application.Features.Follows.Queries;
-using OpenFindBearings.Application.Features.History.Commands;
-using OpenFindBearings.Application.Features.History.Queries;
-using OpenFindBearings.Application.Features.Users.Commands;
-using OpenFindBearings.Application.Features.Users.Queries;
+using OpenFindBearings.Application.Commands.Corrections.Commands;
+using OpenFindBearings.Application.Commands.Corrections.SubmitMerchantCorrection;
+using OpenFindBearings.Application.Commands.Favorites.FavoriteBearing;
+using OpenFindBearings.Application.Commands.Favorites.UnfavoriteBearing;
+using OpenFindBearings.Application.Commands.Follows.FollowMerchant;
+using OpenFindBearings.Application.Commands.Follows.UnfollowMerchant;
+using OpenFindBearings.Application.Commands.History.ClearHistory;
+using OpenFindBearings.Application.Commands.History.RecordBearingView;
+using OpenFindBearings.Application.Commands.History.RecordMerchantView;
+using OpenFindBearings.Application.Commands.Users.UpdateUserProfile;
+using OpenFindBearings.Application.Queries.Corrections.GetMyCorrectionDetail;
+using OpenFindBearings.Application.Queries.Corrections.Queries;
+using OpenFindBearings.Application.Queries.Favorites.CheckBearingFavorite;
+using OpenFindBearings.Application.Queries.Favorites.GetMyFavoriteBearings;
+using OpenFindBearings.Application.Queries.Follows.CheckMerchantFollow;
+using OpenFindBearings.Application.Queries.Follows.GetMyFollowedMerchants;
+using OpenFindBearings.Application.Queries.History.GetMyMerchantHistory;
+using OpenFindBearings.Application.Queries.Queries;
+using OpenFindBearings.Application.Queries.Users.GetUserPermissions;
+using OpenFindBearings.Application.Queries.Users.GetUserRoles;
 
 namespace OpenFindBearings.Api.Endpoints
 {
@@ -597,7 +607,7 @@ namespace OpenFindBearings.Api.Endpoints
             })
             .WithName("SubmitMerchantCorrection")
             .WithSummary("提交商家纠错")
-            .WithDescription("对商家信息提交纠错请求"); 
+            .WithDescription("对商家信息提交纠错请求");
             #endregion
         }
     }

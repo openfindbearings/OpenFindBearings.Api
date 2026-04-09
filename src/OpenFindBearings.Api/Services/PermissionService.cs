@@ -1,5 +1,5 @@
 ﻿using MediatR;
-using OpenFindBearings.Application.Features.Permissions.Queries;
+using OpenFindBearings.Application.Queries.Permissions.CheckUserPermission;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Api.Services
