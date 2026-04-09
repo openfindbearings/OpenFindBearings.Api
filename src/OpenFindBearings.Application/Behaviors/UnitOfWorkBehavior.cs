@@ -1,5 +1,5 @@
 ﻿using MediatR;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Domain.Abstractions;
 
@@ -13,16 +13,16 @@ namespace OpenFindBearings.Application.Behaviors
     public class UnitOfWorkBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
     where TRequest : IRequest<TResponse>
     {
-        private readonly DbContext _dbContext;
-        private readonly IMediator _mediator;  // ⭐ 需要注入 Mediator
+        private readonly IServiceProvider _serviceProvider;
+        private readonly IMediator _mediator;
         private readonly ILogger _logger;
 
         public UnitOfWorkBehavior(
-            DbContext dbContext,
-            IMediator mediator,  // ⭐ 注入 Mediator
+            IServiceProvider serviceProvider,
+            IMediator mediator,
             ILogger<UnitOfWorkBehavior<TRequest, TResponse>> logger)
         {
-            _dbContext = dbContext;
+            _serviceProvider = serviceProvider;
             _mediator = mediator;
             _logger = logger;
         }
@@ -37,27 +37,30 @@ namespace OpenFindBearings.Application.Behaviors
                 return await next();
             }
 
+            using var scope = _serviceProvider.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<Microsoft.EntityFrameworkCore.DbContext>();
+
             var requestName = typeof(TRequest).Name;
             _logger.LogDebug("UnitOfWork 开始处理 {RequestName}", requestName);
 
-            await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+            await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
 
             try
             {
                 var response = await next();
 
-                var domainEvents = _dbContext.ChangeTracker
+                var domainEvents = context.ChangeTracker
                     .Entries<BaseEntity>()
                     .Where(x => x.Entity.DomainEvents != null && x.Entity.DomainEvents.Any())
                     .SelectMany(x => x.Entity.DomainEvents)
                     .ToList();
 
-                foreach (var entry in _dbContext.ChangeTracker.Entries<BaseEntity>())
+                foreach (var entry in context.ChangeTracker.Entries<BaseEntity>())
                 {
                     entry.Entity.ClearDomainEvents();
                 }
 
-                var savedCount = await _dbContext.SaveChangesAsync(cancellationToken);
+                var savedCount = await context.SaveChangesAsync(cancellationToken);
 
                 await transaction.CommitAsync(cancellationToken);
 
