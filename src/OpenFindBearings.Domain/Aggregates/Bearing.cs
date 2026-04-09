@@ -272,6 +272,32 @@ namespace OpenFindBearings.Domain.Aggregates
             return bearing;
         }
 
+        /// <summary>
+        /// 创建轴承
+        /// </summary>
+        public static Bearing CreateBearing(
+            string currentCode,
+            string name,
+            Guid bearingTypeId,
+            string bearingType,
+            decimal innerDiameter,
+            decimal outerDiameter,
+            decimal width,
+            Guid brandId,
+            decimal? weight = null)
+        {
+            var dimensions = new Dimensions(innerDiameter, outerDiameter, width);
+            return new Bearing(
+                currentCode: currentCode,
+                name: name,
+                bearingTypeId: bearingTypeId,
+                bearingType: bearingType,
+                dimensions: dimensions,
+                brandId: brandId,
+                performance: null,
+                weight: weight);
+        }
+
         // ============ 公共方法 ============
 
         /// <summary>

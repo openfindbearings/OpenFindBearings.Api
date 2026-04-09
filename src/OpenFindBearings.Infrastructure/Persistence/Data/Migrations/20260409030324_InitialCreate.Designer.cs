@@ -12,7 +12,7 @@ using OpenFindBearings.Infrastructure.Persistence.Data;
 namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260405135135_InitialCreate")]
+    [Migration("20260409030324_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />

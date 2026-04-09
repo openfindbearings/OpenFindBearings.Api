@@ -1,14 +1,42 @@
-﻿using OpenFindBearings.Domain.Entities;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using OpenFindBearings.Domain.Aggregates;
+using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.ValueObjects;
-using Microsoft.EntityFrameworkCore;
-using OpenFindBearings.Domain.Aggregates;
 
 namespace OpenFindBearings.Infrastructure.Persistence.Data
 {
     public static class SeedData
     {
-        public static async Task SeedAsync(ApplicationDbContext context, bool isDevelopment)
+        public static async Task SeedAsync(IServiceProvider provider, ILogger logger, bool isDevelopment)
+        {
+            isDevelopment = true; // TODO: 正式发布的时候取消，目前测试期间isDevelopment始终为true
+
+            try
+            {
+                await using var context = provider.GetRequiredService<ApplicationDbContext>();
+                await using var scope = provider.CreateAsyncScope();
+
+                if (isDevelopment)
+                {
+                    await context.Database.EnsureDeletedAsync();  // 测试期间每次删除，节省每次手动删库的操作
+                }
+
+                await context.Database.MigrateAsync();
+
+                await ExecuteAsync(context, logger, isDevelopment);
+
+                logger.LogInformation("数据库初始化成功");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "数据库初始化失败");
+            }
+        }
+
+        private static async Task ExecuteAsync(ApplicationDbContext context, ILogger logger, bool isDevelopment)
         {
             if (await context.SystemConfigs.AnyAsync())
             {
@@ -178,7 +206,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
             if (isDevelopment && bearingTypes.Any() && brands.Any())
             {
                 // SKF 品牌的产品
-                bearings.Add(CreateBearing(
+                bearings.Add(Bearing.CreateBearing(
                     currentCode: "6205",
                     name: "SKF 深沟球轴承 6205",
                     bearingTypeId: bearingTypes[0].Id,
@@ -187,87 +215,87 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
                     brandId: brands[0].Id,
                     weight: 0.12m));
 
-                bearings.Add(CreateBearing(
+                bearings.Add(Bearing.CreateBearing(
                     "6206", "SKF 深沟球轴承 6206",
                     bearingTypes[0].Id, bearingTypes[0].Name,
                     30, 62, 16, brands[0].Id, 0.15m));
 
-                bearings.Add(CreateBearing(
+                bearings.Add(Bearing.CreateBearing(
                     "6305", "SKF 深沟球轴承 6305",
                     bearingTypes[0].Id, bearingTypes[0].Name,
                     25, 62, 17, brands[0].Id, 0.17m));
 
-                bearings.Add(CreateBearing(
+                bearings.Add(Bearing.CreateBearing(
                     "6310", "SKF 深沟球轴承 6310",
                     bearingTypes[0].Id, bearingTypes[0].Name,
                     50, 110, 27, brands[0].Id, 0.85m));
 
                 // FAG 品牌的产品
-                bearings.Add(CreateBearing(
+                bearings.Add(Bearing.CreateBearing(
                     "6205", "FAG 深沟球轴承 6205",
                     bearingTypes[0].Id, bearingTypes[0].Name,
                     25, 52, 15, brands[1].Id, 0.12m));
 
-                bearings.Add(CreateBearing(
+                bearings.Add(Bearing.CreateBearing(
                     "6305", "FAG 深沟球轴承 6305",
                     bearingTypes[0].Id, bearingTypes[0].Name,
                     25, 62, 17, brands[1].Id, 0.17m));
 
-                bearings.Add(CreateBearing(
+                bearings.Add(Bearing.CreateBearing(
                     "7205-B", "FAG 角接触球轴承 7205-B",
                     bearingTypes[1].Id, bearingTypes[1].Name,
                     25, 52, 15, brands[1].Id, 0.13m));
 
                 // NSK 品牌的产品
-                bearings.Add(CreateBearing(
+                bearings.Add(Bearing.CreateBearing(
                     "6205", "NSK 深沟球轴承 6205",
                     bearingTypes[0].Id, bearingTypes[0].Name,
                     25, 52, 15, brands[2].Id, 0.12m));
 
-                bearings.Add(CreateBearing(
+                bearings.Add(Bearing.CreateBearing(
                     "6205DU", "NSK 深沟球轴承 6205DU",
                     bearingTypes[0].Id, bearingTypes[0].Name,
                     25, 52, 15, brands[2].Id, 0.12m));
 
-                bearings.Add(CreateBearing(
+                bearings.Add(Bearing.CreateBearing(
                     "7205", "NSK 角接触球轴承 7205",
                     bearingTypes[1].Id, bearingTypes[1].Name,
                     25, 52, 15, brands[2].Id, 0.13m));
 
                 // HRB 品牌的产品
-                bearings.Add(CreateBearing(
+                bearings.Add(Bearing.CreateBearing(
                     "6205-2RS", "HRB 深沟球轴承 6205-2RS",
                     bearingTypes[0].Id, bearingTypes[0].Name,
                     25, 52, 15, brands[3].Id, 0.12m));
 
-                bearings.Add(CreateBearing(
+                bearings.Add(Bearing.CreateBearing(
                     "6205-Z", "HRB 深沟球轴承 6205-Z",
                     bearingTypes[0].Id, bearingTypes[0].Name,
                     25, 52, 15, brands[3].Id, 0.12m));
 
-                bearings.Add(CreateBearing(
+                bearings.Add(Bearing.CreateBearing(
                     "6305", "HRB 深沟球轴承 6305",
                     bearingTypes[0].Id, bearingTypes[0].Name,
                     25, 62, 17, brands[3].Id, 0.17m));
 
                 // ZWZ 品牌的产品
-                bearings.Add(CreateBearing(
+                bearings.Add(Bearing.CreateBearing(
                     "6205", "ZWZ 深沟球轴承 6205",
                     bearingTypes[0].Id, bearingTypes[0].Name,
                     25, 52, 15, brands[4].Id, 0.12m));
 
-                bearings.Add(CreateBearing(
+                bearings.Add(Bearing.CreateBearing(
                     "6206", "ZWZ 深沟球轴承 6206",
                     bearingTypes[0].Id, bearingTypes[0].Name,
                     30, 62, 16, brands[4].Id, 0.15m));
 
                 // LYC 品牌的产品
-                bearings.Add(CreateBearing(
+                bearings.Add(Bearing.CreateBearing(
                     "6205", "LYC 深沟球轴承 6205",
                     bearingTypes[0].Id, bearingTypes[0].Name,
                     25, 52, 15, brands[5].Id, 0.12m));
 
-                bearings.Add(CreateBearing(
+                bearings.Add(Bearing.CreateBearing(
                     "6310", "LYC 深沟球轴承 6310",
                     bearingTypes[0].Id, bearingTypes[0].Name,
                     50, 110, 27, brands[5].Id, 0.85m));
@@ -561,34 +589,6 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
             await context.SaveChangesAsync();
 
             #endregion
-        }
-
-        // ============ 辅助方法 ============
-
-        /// <summary>
-        /// 创建轴承
-        /// </summary>
-        private static Bearing CreateBearing(
-            string currentCode,
-            string name,
-            Guid bearingTypeId,
-            string bearingType,
-            decimal innerDiameter,
-            decimal outerDiameter,
-            decimal width,
-            Guid brandId,
-            decimal? weight = null)
-        {
-            var dimensions = new Dimensions(innerDiameter, outerDiameter, width);
-            return new Bearing(
-                currentCode: currentCode,
-                name: name,
-                bearingTypeId: bearingTypeId,
-                bearingType: bearingType,
-                dimensions: dimensions,
-                brandId: brandId,
-                performance: null,
-                weight: weight);
         }
     }
 }

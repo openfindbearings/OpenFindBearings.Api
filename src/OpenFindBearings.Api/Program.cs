@@ -58,7 +58,6 @@ app.UseMiddleware<RateLimitingMiddleware>();
 // 3. 日志中间件（请求日志和用户行为收集）
 app.UseMiddleware<ApiLoggingMiddleware>();
 
-
 // HTTPS 重定向
 app.UseHttpsRedirection();
 
@@ -73,6 +72,7 @@ app.UseAuthorization();       // 授权
 // 响应压缩
 app.UseResponseCompression();
 
+// 为了robots.txt，使用静态文件
 app.UseStaticFiles();
 
 // 映射所有 API 端点
@@ -81,32 +81,9 @@ app.MapApiEndpoints();
 // 健康检查
 app.MapAllMapHealthChecks();
 
-// ==========================================
 // 执行数据库初始化
-// TODO: 支持--init参数通过InitContainer实现单独的初始化工作
-// ==========================================
-await InitializeDatabaseAsync(app);
+using var scope = app.Services.CreateScope();
+await SeedData.SeedAsync(scope.ServiceProvider, app.Logger, app.Environment.IsDevelopment());
 
-// ============ 启动应用 ============
+// 启动
 app.Run();
-
-static async Task InitializeDatabaseAsync(WebApplication app)
-{
-    using var scope = app.Services.CreateScope();
-    var services = scope.ServiceProvider;
-    var context = services.GetRequiredService<ApplicationDbContext>();
-
-    try
-    {
-        // 使用迁移
-        await context.Database.MigrateAsync();
-        // 填充数据
-        await SeedData.SeedAsync(context, app.Environment.IsDevelopment());
-
-        app.Logger.LogInformation("数据库初始化成功");
-    }
-    catch (Exception ex)
-    {
-        app.Logger.LogError(ex, "数据库初始化失败");
-    }
-}
