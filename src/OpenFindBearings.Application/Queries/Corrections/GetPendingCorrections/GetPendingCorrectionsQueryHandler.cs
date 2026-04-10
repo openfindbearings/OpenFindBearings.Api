@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.DTOs;
+using OpenFindBearings.Application.Extensions;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Queries.Corrections.GetPendingCorrections
@@ -38,44 +39,11 @@ namespace OpenFindBearings.Application.Queries.Corrections.GetPendingCorrections
             var corrections = await _correctionRepository.GetPendingAsync(cancellationToken);
 
             var totalCount = corrections.Count;
-            var items = new List<CorrectionDto>();
-
-            foreach (var c in corrections.Skip((request.Page - 1) * request.PageSize).Take(request.PageSize))
-            {
-                var submitter = await _userRepository.GetByIdAsync(c.SubmittedBy, cancellationToken);
-
-                string targetDisplay = string.Empty;
-                if (c.TargetType == "Bearing")
-                {
-                    var bearing = await _bearingRepository.GetByIdAsync(c.TargetId, cancellationToken);
-                    targetDisplay = bearing != null ? $"{bearing.CurrentCode} - {bearing.Name}" : string.Empty;
-                }
-                else if (c.TargetType == "Merchant")
-                {
-                    var merchant = await _merchantRepository.GetByIdAsync(c.TargetId, cancellationToken);
-                    targetDisplay = merchant?.Name ?? string.Empty;
-                }
-
-                items.Add(new CorrectionDto
-                {
-                    Id = c.Id,
-                    TargetType = c.TargetType,
-                    TargetId = c.TargetId,
-                    TargetDisplay = targetDisplay,
-                    FieldName = c.FieldName,
-                    FieldDisplayName = c.GetFieldDisplayName(),
-                    OriginalValue = c.OriginalValue,
-                    SuggestedValue = c.SuggestedValue,
-                    Reason = c.Reason,
-                    SubmittedBy = c.SubmittedBy,
-                    SubmitterName = submitter?.Nickname ?? "未知用户",
-                    SubmittedAt = c.SubmittedAt,
-                    Status = c.Status.ToString(),
-                    ReviewerName = null,
-                    ReviewedAt = null,
-                    ReviewComment = null
-                });
-            }
+            var items = corrections
+                .Skip((request.Page - 1) * request.PageSize)
+                .Take(request.PageSize)
+                .Select(c => c.ToDto())
+                .ToList();
 
             return new PagedResult<CorrectionDto>
             {

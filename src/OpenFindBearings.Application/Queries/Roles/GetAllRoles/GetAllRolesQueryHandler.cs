@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.DTOs;
+using OpenFindBearings.Application.Extensions;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Queries.Roles.GetAllRoles
@@ -27,17 +28,7 @@ namespace OpenFindBearings.Application.Queries.Roles.GetAllRoles
 
             var roles = await _roleRepository.GetAllAsync(cancellationToken);
 
-            return roles.Select(r => new RoleDto
-            {
-                Id = r.Id,
-                Name = r.Name,
-                Description = r.Description,
-                Permissions = r.RolePermissions.Select(rp => rp.Permission.Name).ToList(),
-                UserCount = r.UserRoles.Count,
-                CreatedAt = r.CreatedAt,
-                IsSystemRole = r.Name == "GlobalAdmin" || r.Name == "MerchantAdmin" ||
-                               r.Name == "MerchantStaff" || r.Name == "Customer"
-            }).ToList();
+            return roles.Select(r => r.ToDto()).ToList();
         }
     }
 }

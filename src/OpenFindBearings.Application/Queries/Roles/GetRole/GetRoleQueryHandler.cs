@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.DTOs;
+using OpenFindBearings.Application.Extensions;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Queries.Queries
@@ -31,17 +32,7 @@ namespace OpenFindBearings.Application.Queries.Queries
                 return null;
             }
 
-            return new RoleDto
-            {
-                Id = role.Id,
-                Name = role.Name,
-                Description = role.Description,
-                Permissions = role.RolePermissions.Select(rp => rp.Permission.Name).ToList(),
-                UserCount = role.UserRoles.Count,
-                CreatedAt = role.CreatedAt,
-                IsSystemRole = role.Name == "GlobalAdmin" || role.Name == "MerchantAdmin" ||
-                               role.Name == "MerchantStaff" || role.Name == "Customer"
-            };
+            return role.ToDto();
         }
     }
 }

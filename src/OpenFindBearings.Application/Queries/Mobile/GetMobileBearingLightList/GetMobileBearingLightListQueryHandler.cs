@@ -42,11 +42,9 @@ namespace OpenFindBearings.Application.Queries.Mobile.GetMobileBearingLightList
                 PageSize = request.PageSize
             };
 
-            // ✅ SearchAsync 返回 PagedResult<Bearing>
             var result = await _bearingRepository.SearchAsync(searchParams, cancellationToken);
 
             var items = new List<MobileBearingLightDto>();
-            // ✅ 遍历 result.Items，而不是 result 本身
             foreach (var bearing in result.Items)
             {
                 var minPrice = await GetMinPriceAsync(bearing.Id, cancellationToken);
@@ -54,11 +52,11 @@ namespace OpenFindBearings.Application.Queries.Mobile.GetMobileBearingLightList
                 items.Add(new MobileBearingLightDto
                 {
                     Id = bearing.Id,
-                    CurrentCode = bearing.CurrentCode,           // ✅ 修改
-                    FormerCode = bearing.FormerCode,             // ✅ 新增
-                    Name = bearing.Name,                         // ✅ 新增
+                    CurrentCode = bearing.CurrentCode,           
+                    FormerCode = bearing.FormerCode,             
+                    Name = bearing.Name,                         
                     BrandName = bearing.Brand?.Name ?? string.Empty,
-                    BearingTypeName = bearing.BearingType,       // ✅ 新增
+                    BearingTypeName = bearing.BearingType,       
                     InnerDiameter = bearing.Dimensions.InnerDiameter,
                     OuterDiameter = bearing.Dimensions.OuterDiameter,
                     Width = bearing.Dimensions.Width,
@@ -72,7 +70,7 @@ namespace OpenFindBearings.Application.Queries.Mobile.GetMobileBearingLightList
             return new PagedResult<MobileBearingLightDto>
             {
                 Items = items,
-                TotalCount = result.TotalCount,    // ✅ 使用 result.TotalCount
+                TotalCount = result.TotalCount,    // 使用 result.TotalCount
                 Page = request.Page,
                 PageSize = request.PageSize
             };

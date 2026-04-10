@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.DTOs;
+using OpenFindBearings.Application.Extensions;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Queries.History.GetMyMerchantHistory
@@ -38,15 +39,7 @@ namespace OpenFindBearings.Application.Queries.History.GetMyMerchantHistory
 
             var items = histories
                 .Where(h => h.Merchant != null)
-                .Select(h => new MerchantHistoryDto
-                {
-                    Id = h.Id,
-                    MerchantId = h.MerchantId,
-                    MerchantName = h.Merchant!.Name,
-                    CompanyName = h.Merchant.CompanyName,
-                    ViewedAt = h.ViewedAt,
-                    ViewCount = 1
-                })
+                .Select(h => h.ToDto())
                 .ToList();
 
             return new PagedResult<MerchantHistoryDto>

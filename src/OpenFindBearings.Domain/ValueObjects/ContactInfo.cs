@@ -77,5 +77,27 @@ namespace OpenFindBearings.Domain.ValueObjects
             !string.IsNullOrWhiteSpace(Mobile) ||
             !string.IsNullOrWhiteSpace(Email) ||
             !string.IsNullOrWhiteSpace(Address);
+
+
+        /// <summary>
+        /// 获取所在城市
+        /// </summary>
+        /// <returns></returns>
+        public string? GetCity()
+        {
+            if (string.IsNullOrWhiteSpace(Address))
+                return null;
+
+            var parts = Address.Split(new[] { '省', '市', '区', '县' }, StringSplitOptions.RemoveEmptyEntries);
+
+            if (parts.Length >= 2)
+            {
+                var city = parts[1].Trim();
+                if (city.Length > 10) city = city.Substring(0, 10);
+                return city;
+            }
+
+            return Address.Length > 6 ? Address.Substring(0, 6) : Address;
+        }
     }
 }

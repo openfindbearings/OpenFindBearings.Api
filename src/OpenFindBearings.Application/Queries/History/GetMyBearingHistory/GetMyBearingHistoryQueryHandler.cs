@@ -1,9 +1,10 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.DTOs;
+using OpenFindBearings.Application.Extensions;
 using OpenFindBearings.Domain.Repositories;
 
-namespace OpenFindBearings.Application.Queries.Queries
+namespace OpenFindBearings.Application.Queries.History.GetMyBearingHistory
 {
     /// <summary>
     /// 获取我的轴承浏览历史查询处理器
@@ -38,16 +39,7 @@ namespace OpenFindBearings.Application.Queries.Queries
 
             var items = histories
                 .Where(h => h.Bearing != null)
-                .Select(h => new BearingHistoryDto
-                {
-                    Id = h.Id,
-                    BearingId = h.BearingId,
-                    BearingCurrentCode = h.Bearing!.CurrentCode,
-                    BearingName = h.Bearing.Name,
-                    BrandName = h.Bearing.Brand?.Name,
-                    ViewedAt = h.ViewedAt,
-                    ViewCount = h.Bearing.ViewCount
-                })
+                .Select(h => h.ToDto())
                 .ToList();
 
             return new PagedResult<BearingHistoryDto>

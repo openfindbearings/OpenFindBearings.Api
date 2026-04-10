@@ -35,13 +35,10 @@ namespace OpenFindBearings.Application.Queries.Merchants.GetMerchantStaff
                 Id = s.Id,
                 Nickname = s.Nickname ?? string.Empty,
                 Avatar = s.Avatar,
-                Role = GetUserRole(s)  // 从角色系统获取
+                Role = GetUserRole(s)
             }).ToList();
         }
 
-        /// <summary>
-        /// 获取用户在商家中的角色（按权限优先级）
-        /// </summary>
         private string GetUserRole(User user)
         {
             var roles = user.UserRoles
@@ -52,7 +49,6 @@ namespace OpenFindBearings.Application.Queries.Merchants.GetMerchantStaff
             if (!roles.Any())
                 return "员工";
 
-            // 按权限优先级排序：管理员 > 员工
             if (roles.Contains("MerchantAdmin"))
                 return "管理员";
 

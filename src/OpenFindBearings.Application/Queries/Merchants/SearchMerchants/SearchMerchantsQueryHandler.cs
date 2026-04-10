@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.DTOs;
+using OpenFindBearings.Application.Extensions;
 using OpenFindBearings.Domain.Repositories;
 using OpenFindBearings.Domain.Specifications;
 
@@ -34,25 +35,10 @@ namespace OpenFindBearings.Application.Queries.Merchants.SearchMerchants
                 PageSize = request.PageSize
             };
 
-            // ✅ 现在 SearchAsync 直接返回 PagedResult<Merchant>
+            // 现在 SearchAsync 直接返回 PagedResult<Merchant>
             var result = await _merchantRepository.SearchAsync(searchParams, cancellationToken);
 
-            var items = result.Items.Select(m => new MerchantDto
-            {
-                Id = m.Id,
-                Name = m.Name,
-                CompanyName = m.CompanyName,
-                Type = m.Type.ToString(),
-                ContactPerson = m.Contact?.ContactPerson,
-                Phone = m.Contact?.Phone,
-                Mobile = m.Contact?.Mobile,
-                Email = m.Contact?.Email,
-                Address = m.Contact?.Address,
-                IsVerified = m.IsVerified,
-                Grade = m.Grade.ToString(),
-                FollowerCount = m.FollowerCount,
-                ProductCount = m.MerchantBearings?.Count ?? 0
-            }).ToList();
+            var items = result.Items.Select(m => m.ToPublicDto()).ToList();
 
             return new PagedResult<MerchantDto>
             {

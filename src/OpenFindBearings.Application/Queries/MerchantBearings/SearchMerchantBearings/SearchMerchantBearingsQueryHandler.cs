@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.DTOs;
+using OpenFindBearings.Application.Extensions;
 using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Repositories;
 
@@ -12,8 +13,8 @@ namespace OpenFindBearings.Application.Queries.MerchantBearings.SearchMerchantBe
     public class SearchMerchantBearingsQueryHandler : IRequestHandler<SearchMerchantBearingsQuery, PagedResult<MerchantBearingDto>>
     {
         private readonly IMerchantBearingRepository _merchantBearingRepository;
-        private readonly IBearingRepository _bearingRepository;
-        private readonly IMerchantRepository _merchantRepository;
+        //private readonly IBearingRepository _bearingRepository;
+        //private readonly IMerchantRepository _merchantRepository;
         private readonly ILogger<SearchMerchantBearingsQueryHandler> _logger;
 
         public SearchMerchantBearingsQueryHandler(
@@ -23,8 +24,8 @@ namespace OpenFindBearings.Application.Queries.MerchantBearings.SearchMerchantBe
             ILogger<SearchMerchantBearingsQueryHandler> logger)
         {
             _merchantBearingRepository = merchantBearingRepository;
-            _bearingRepository = bearingRepository;
-            _merchantRepository = merchantRepository;
+            //_bearingRepository = bearingRepository;
+            //_merchantRepository = merchantRepository;
             _logger = logger;
         }
 
@@ -95,43 +96,7 @@ namespace OpenFindBearings.Application.Queries.MerchantBearings.SearchMerchantBe
             var items = merchantBearings
                 .Skip((request.Page - 1) * request.PageSize)
                 .Take(request.PageSize)
-                .Select(mb => new MerchantBearingDto
-                {
-                    Id = mb.Id,
-                    MerchantId = mb.MerchantId,
-
-                    // ========== 敏感信息控制 ==========
-                    MerchantName = request.IsAuthenticated ? mb.Merchant?.Name : null,
-                    MerchantGrade = mb.Merchant?.Grade.ToString() ?? string.Empty,
-                    MerchantIsVerified = mb.Merchant?.IsVerified ?? false,
-                    MerchantCity = ExtractCityFromAddress(mb.Merchant?.Contact?.Address),
-                    MerchantPhone = request.IsAuthenticated ? mb.Merchant?.Contact?.Phone : null,
-                    MerchantAddress = request.IsAuthenticated ? mb.Merchant?.Contact?.Address : null,
-
-                    BearingId = mb.BearingId,
-                    BearingCurrentCode = mb.Bearing?.CurrentCode ?? string.Empty,
-                    BearingFormerCode = mb.Bearing?.FormerCode,
-                    BearingName = mb.Bearing?.Name ?? string.Empty,
-                    BearingTypeName = mb.Bearing?.BearingType,
-                    BrandName = mb.Bearing?.Brand?.Name,
-                    BrandLevel = mb.Bearing?.Brand?.Level.ToString(),
-                    Dimensions = mb.Bearing != null
-                        ? $"{mb.Bearing.Dimensions.InnerDiameter}×{mb.Bearing.Dimensions.OuterDiameter}×{mb.Bearing.Dimensions.Width}"
-                        : null,
-                    PriceDescription = mb.PriceDescription,
-                    PriceVisibility = mb.PriceVisibility,
-                    NumericPrice = mb.NumericPrice,
-                    StockDescription = mb.StockDescription,
-                    MinOrderDescription = mb.MinOrderDescription,
-                    Remarks = mb.Remarks,
-                    IsOnSale = mb.IsOnSale,
-                    IsFeatured = mb.IsFeatured,
-                    IsPendingApproval = mb.IsPendingApproval,
-                    ViewCount = mb.ViewCount,
-                    CreatedAt = mb.CreatedAt,
-                    UpdatedAt = mb.UpdatedAt,
-                    IsPriceVisible = mb.IsPriceVisible(request.IsAuthenticated)
-                })
+                .Select(mb => mb.ToDto(request.IsAuthenticated))
                 .ToList();
 
             return new PagedResult<MerchantBearingDto>
@@ -141,26 +106,6 @@ namespace OpenFindBearings.Application.Queries.MerchantBearings.SearchMerchantBe
                 Page = request.Page,
                 PageSize = request.PageSize
             };
-        }
-
-        /// <summary>
-        /// 从完整地址中提取城市
-        /// </summary>
-        private string? ExtractCityFromAddress(string? fullAddress)
-        {
-            if (string.IsNullOrWhiteSpace(fullAddress))
-                return null;
-
-            var parts = fullAddress.Split(new[] { '省', '市', '区', '县' }, StringSplitOptions.RemoveEmptyEntries);
-
-            if (parts.Length >= 2)
-            {
-                var city = parts[1].Trim();
-                if (city.Length > 10) city = city.Substring(0, 10);
-                return city;
-            }
-
-            return fullAddress.Length > 6 ? fullAddress.Substring(0, 6) : fullAddress;
         }
     }
 }

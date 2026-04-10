@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.DTOs;
+using OpenFindBearings.Application.Extensions;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Queries.Queries
@@ -33,20 +34,7 @@ namespace OpenFindBearings.Application.Queries.Queries
 
             var roles = user.UserRoles.Select(ur => ur.Role.Name).ToList();
 
-            return new UserDto
-            {
-                Id = user.Id,
-                AuthUserId = user.AuthUserId,
-                Nickname = user.Nickname,
-                Avatar = user.Avatar,
-                // ✅ 修改：UserType 改为通过角色判断
-                UserType = user.IsAdmin ? "Admin" : (user.MerchantId.HasValue ? "MerchantStaff" : "Individual"),
-                MerchantId = user.MerchantId,
-                MerchantName = user.Merchant?.Name,
-                Roles = roles,
-                CreatedAt = user.CreatedAt,
-                LastLoginAt = user.LastLoginAt
-            };
+            return user.ToDto(roles);
         }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.DTOs;
+using OpenFindBearings.Application.Extensions;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Queries.Brands
@@ -34,16 +35,7 @@ namespace OpenFindBearings.Application.Queries.Brands
             var bearingCountByBrand = await _bearingRepository.GetBearingCountByBrandAsync(cancellationToken);
             var bearingCount = bearingCountByBrand.GetValueOrDefault(brand.Id, 0);
 
-            return new BrandDto
-            {
-                Id = brand.Id,
-                Code = brand.Code,
-                Name = brand.Name,
-                Country = brand.Country,
-                LogoUrl = brand.LogoUrl,
-                Level = brand.Level.ToString(),
-                BearingCount = bearingCount
-            };
+            return brand.ToDto(bearingCount);
         }
     }
 }

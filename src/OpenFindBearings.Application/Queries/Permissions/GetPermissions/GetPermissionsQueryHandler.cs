@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.DTOs;
+using OpenFindBearings.Application.Extensions;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Queries.Permissions.GetPermissions
@@ -39,14 +40,7 @@ namespace OpenFindBearings.Application.Queries.Permissions.GetPermissions
             var items = filtered
                 .Skip((request.Page - 1) * request.PageSize)
                 .Take(request.PageSize)
-                .Select(p => new PermissionDto
-                {
-                    Id = p.Id,
-                    Name = p.Name,
-                    Description = p.Description,
-                    Group = p.Name.Split('.').FirstOrDefault() ?? "其他",
-                    CreatedAt = p.CreatedAt
-                })
+                .Select(p => p.ToDto())
                 .ToList();
 
             return new PagedResult<PermissionDto>
