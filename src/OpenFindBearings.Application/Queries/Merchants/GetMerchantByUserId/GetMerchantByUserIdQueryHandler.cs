@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.DTOs;
+using OpenFindBearings.Application.Extensions;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Queries.Merchants.GetMerchantByUserId
@@ -36,26 +37,7 @@ namespace OpenFindBearings.Application.Queries.Merchants.GetMerchantByUserId
             if (merchant == null)
                 return null;
 
-            // 映射到 DTO
-            return new MerchantDetailDto
-            {
-                Id = merchant.Id,
-                Name = merchant.Name,
-                CompanyName = merchant.CompanyName,
-                Type = merchant.Type.ToString(),
-                ContactPerson = merchant.Contact?.ContactPerson,
-                Phone = merchant.Contact?.Phone,
-                Mobile = merchant.Contact?.Mobile,
-                Email = merchant.Contact?.Email,
-                Address = merchant.Contact?.Address,
-                IsVerified = merchant.IsVerified,
-                Grade = merchant.Grade.ToString(),
-                FollowerCount = merchant.FollowerCount,
-                ProductCount = merchant.MerchantBearings?.Count ?? 0,
-                Description = merchant.Description,
-                BusinessScope = merchant.BusinessScope,
-                VerifiedAt = merchant.VerifiedAt
-            };
+            return merchant.ToDetailDto();
         }
     }
 }

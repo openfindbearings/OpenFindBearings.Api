@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.DTOs;
+using OpenFindBearings.Application.Extensions;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Queries.Corrections.GetMyCorrectionDetail
@@ -50,34 +51,7 @@ namespace OpenFindBearings.Application.Queries.Corrections.GetMyCorrectionDetail
                 return null;
             }
 
-            var submitter = await _userRepository.GetByIdAsync(correction.SubmittedBy, cancellationToken);
-            var reviewer = correction.ReviewedBy.HasValue
-                ? await _userRepository.GetByIdAsync(correction.ReviewedBy.Value, cancellationToken)
-                : null;
-
-            // 获取目标显示名称
-            string targetDisplay = await GetTargetDisplayAsync(correction.TargetType, correction.TargetId, cancellationToken);
-
-            return new CorrectionDto
-            {
-                Id = correction.Id,
-                TargetType = correction.TargetType,
-                TargetId = correction.TargetId,
-                TargetDisplay = targetDisplay,
-                FieldName = correction.FieldName,
-                FieldDisplayName = correction.GetFieldDisplayName(),
-                OriginalValue = correction.OriginalValue,
-                SuggestedValue = correction.SuggestedValue,
-                Reason = correction.Reason,
-                Status = correction.Status.ToString(),
-                SubmittedBy = correction.SubmittedBy,
-                SubmitterName = submitter?.Nickname ?? "未知",
-                SubmittedAt = correction.SubmittedAt,
-                ReviewedBy = correction.ReviewedBy,
-                ReviewerName = reviewer?.Nickname,
-                ReviewedAt = correction.ReviewedAt,
-                ReviewComment = correction.ReviewComment
-            };
+            return correction.ToDto();
         }
 
         /// <summary>

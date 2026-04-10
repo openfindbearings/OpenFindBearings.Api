@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.DTOs;
+using OpenFindBearings.Application.Extensions;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Queries.Follows.GetMyFollowedMerchants
@@ -36,27 +37,7 @@ namespace OpenFindBearings.Application.Queries.Follows.GetMyFollowedMerchants
 
             var totalCount = await _followRepository.CountByUserIdAsync(request.UserId, cancellationToken);
 
-            var items = follows.Select(f => new FollowedMerchantDto
-            {
-                Id = f.Id,
-                CreatedAt = f.CreatedAt,
-                Merchant = f.Merchant != null ? new MerchantDto
-                {
-                    Id = f.Merchant.Id,
-                    Name = f.Merchant.Name,
-                    CompanyName = f.Merchant.CompanyName,
-                    Type = f.Merchant.Type.ToString(),
-                    ContactPerson = f.Merchant.Contact?.ContactPerson,
-                    Phone = f.Merchant.Contact?.Phone,
-                    Mobile = f.Merchant.Contact?.Mobile,
-                    Email = f.Merchant.Contact?.Email,
-                    Address = f.Merchant.Contact?.Address,
-                    IsVerified = f.Merchant.IsVerified,
-                    Grade = f.Merchant.Grade.ToString(),
-                    FollowerCount = f.Merchant.FollowerCount,
-                    ProductCount = f.Merchant.MerchantBearings?.Count ?? 0
-                } : null!
-            }).ToList();
+            var items = follows.Select(f => f.ToDto()).ToList();
 
             return new PagedResult<FollowedMerchantDto>
             {

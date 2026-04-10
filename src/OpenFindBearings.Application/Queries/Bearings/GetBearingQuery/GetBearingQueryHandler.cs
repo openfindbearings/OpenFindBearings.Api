@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.DTOs;
+using OpenFindBearings.Application.Extensions;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Queries.Bearings.GetBearingQuery
@@ -71,26 +72,7 @@ namespace OpenFindBearings.Application.Queries.Bearings.GetBearingQuery
             var interchanges = await _interchangeRepository.GetBySourceBearingAsync(bearing.Id, cancellationToken);
             var interchangeBearings = interchanges
                 .Where(i => i.TargetBearing != null && i.TargetBearing.IsActive)
-                .Select(i => new BearingDto
-                {
-                    Id = i.TargetBearing!.Id,
-                    CurrentCode = i.TargetBearing.CurrentCode,
-                    FormerCode = i.TargetBearing.FormerCode,     // ✅ 新增
-                    Name = i.TargetBearing.Name,
-                    InnerDiameter = i.TargetBearing.Dimensions.InnerDiameter,
-                    OuterDiameter = i.TargetBearing.Dimensions.OuterDiameter,
-                    Width = i.TargetBearing.Dimensions.Width,
-                    Weight = i.TargetBearing.Weight,              // ✅ 新增
-                    BrandId = i.TargetBearing.BrandId,
-                    BrandName = i.TargetBearing.Brand?.Name ?? string.Empty,
-                    BearingTypeId = i.TargetBearing.BearingTypeId,
-                    BearingTypeName = i.TargetBearing.BearingType,
-                    ViewCount = i.TargetBearing.ViewCount,
-                    FavoriteCount = i.TargetBearing.FavoriteCount,
-                    OriginCountry = i.TargetBearing.OriginCountry,
-                    Category = i.TargetBearing.Category.ToString(),
-                    IsStandard = i.TargetBearing.IsStandard      // ✅ 新增
-                })
+                .Select(i => i.TargetBearing!.ToDto())
                 .ToList();
 
             return new BearingDetailDto

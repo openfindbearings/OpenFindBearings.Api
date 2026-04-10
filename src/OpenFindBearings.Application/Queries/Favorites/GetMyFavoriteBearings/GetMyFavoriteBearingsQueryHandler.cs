@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.DTOs;
+using OpenFindBearings.Application.Extensions;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Queries.Favorites.GetMyFavoriteBearings
@@ -31,37 +32,10 @@ namespace OpenFindBearings.Application.Queries.Favorites.GetMyFavoriteBearings
             var favorites = await _favoriteRepository.GetByUserIdAsync(request.UserId, request.Page, request.PageSize, cancellationToken);
             var totalCount = await _favoriteRepository.CountByUserIdAsync(request.UserId, cancellationToken);
 
-            var items = new List<FavoriteBearingDto>();
-            foreach (var favorite in favorites)
-            {
-                if (favorite.Bearing == null) continue;
-
-                items.Add(new FavoriteBearingDto
-                {
-                    Id = favorite.Id,
-                    CreatedAt = favorite.CreatedAt,
-                    Bearing = new BearingDto
-                    {
-                        Id = favorite.Bearing.Id,
-                        CurrentCode = favorite.Bearing.CurrentCode,      // ✅ 修改
-                        FormerCode = favorite.Bearing.FormerCode,        // ✅ 新增
-                        Name = favorite.Bearing.Name,
-                        InnerDiameter = favorite.Bearing.Dimensions.InnerDiameter,
-                        OuterDiameter = favorite.Bearing.Dimensions.OuterDiameter,
-                        Width = favorite.Bearing.Dimensions.Width,
-                        Weight = favorite.Bearing.Weight,                // ✅ 新增
-                        BrandId = favorite.Bearing.BrandId,
-                        BrandName = favorite.Bearing.Brand?.Name ?? string.Empty,
-                        BearingTypeId = favorite.Bearing.BearingTypeId,
-                        BearingTypeName = favorite.Bearing.BearingType,  // ✅ 修改（BearingType 是字符串）
-                        ViewCount = favorite.Bearing.ViewCount,
-                        FavoriteCount = favorite.Bearing.FavoriteCount,
-                        OriginCountry = favorite.Bearing.OriginCountry,  // ✅ 新增
-                        Category = favorite.Bearing.Category.ToString(), // ✅ 新增
-                        IsStandard = favorite.Bearing.IsStandard         // ✅ 新增
-                    }
-                });
-            }
+            var items = favorites
+                .Where(f => f.Bearing != null)
+                .Select(f => f.ToDto())
+                .ToList();
 
             return new PagedResult<FavoriteBearingDto>
             {

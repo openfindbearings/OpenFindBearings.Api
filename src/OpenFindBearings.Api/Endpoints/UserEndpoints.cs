@@ -19,6 +19,7 @@ using OpenFindBearings.Application.Queries.Favorites.GetMyFavoriteBearings;
 using OpenFindBearings.Application.Queries.Follows.CheckMerchantFollow;
 using OpenFindBearings.Application.Queries.Follows.GetMyFollowedMerchants;
 using OpenFindBearings.Application.Queries.History.GetMyMerchantHistory;
+using OpenFindBearings.Application.Queries.History.GetMyBearingHistory;
 using OpenFindBearings.Application.Queries.Queries;
 using OpenFindBearings.Application.Queries.Users.GetUserPermissions;
 using OpenFindBearings.Application.Queries.Users.GetUserRoles;

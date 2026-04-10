@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.DTOs;
+using OpenFindBearings.Application.Extensions;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Queries.Users.GetUserBySessionId
@@ -25,19 +26,7 @@ namespace OpenFindBearings.Application.Queries.Users.GetUserBySessionId
             var user = await _userRepository.GetByGuestSessionIdAsync(request.SessionId, cancellationToken);
             if (user == null) return null;
 
-            return new UserDto
-            {
-                Id = user.Id,
-                AuthUserId = user.AuthUserId,
-                Nickname = user.Nickname,
-                Avatar = user.Avatar,
-                // ✅ 修改：游客直接返回 Guest
-                UserType = "Guest",
-                MerchantId = user.MerchantId,
-                MerchantName = user.Merchant?.Name,
-                CreatedAt = user.CreatedAt,
-                LastLoginAt = user.LastLoginAt
-            };
+            return user.ToDto();
         }
     }
 }

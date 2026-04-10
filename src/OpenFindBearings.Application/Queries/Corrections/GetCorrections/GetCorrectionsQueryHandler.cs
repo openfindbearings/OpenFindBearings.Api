@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.DTOs;
+using OpenFindBearings.Application.Extensions;
 using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
 
@@ -64,46 +65,7 @@ namespace OpenFindBearings.Application.Queries.Corrections.GetCorrections
                 .OrderByDescending(c => c.SubmittedAt)
                 .Skip((request.Page - 1) * request.PageSize)
                 .Take(request.PageSize)
-                .Select(async c =>
-                {
-                    var submitter = await _userRepository.GetByIdAsync(c.SubmittedBy, cancellationToken);
-                    var reviewer = c.ReviewedBy.HasValue
-                        ? await _userRepository.GetByIdAsync(c.ReviewedBy.Value, cancellationToken)
-                        : null;
-
-                    string targetDisplay = string.Empty;
-                    if (c.TargetType == "Bearing")
-                    {
-                        var bearing = await _bearingRepository.GetByIdAsync(c.TargetId, cancellationToken);
-                        targetDisplay = bearing != null ? $"{bearing.CurrentCode} - {bearing.Name}" : string.Empty;
-                    }
-                    else if (c.TargetType == "Merchant")
-                    {
-                        var merchant = await _merchantRepository.GetByIdAsync(c.TargetId, cancellationToken);
-                        targetDisplay = merchant?.Name ?? string.Empty;
-                    }
-
-                    return new CorrectionDto
-                    {
-                        Id = c.Id,
-                        TargetType = c.TargetType,
-                        TargetId = c.TargetId,
-                        TargetDisplay = targetDisplay,
-                        FieldName = c.FieldName,
-                        FieldDisplayName = c.GetFieldDisplayName(),
-                        OriginalValue = c.OriginalValue,
-                        SuggestedValue = c.SuggestedValue,
-                        Reason = c.Reason,
-                        SubmittedBy = c.SubmittedBy,
-                        SubmitterName = submitter?.Nickname ?? "未知用户",
-                        SubmittedAt = c.SubmittedAt,
-                        Status = c.Status.ToString(),
-                        ReviewerName = reviewer?.Nickname,
-                        ReviewedAt = c.ReviewedAt,
-                        ReviewComment = c.ReviewComment
-                    };
-                })
-                .Select(t => t.Result)
+                .Select(c => c.ToDto())
                 .ToList();
 
             return new PagedResult<CorrectionDto>

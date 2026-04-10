@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.DTOs;
+using OpenFindBearings.Application.Extensions;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Queries.Corrections.GetCorrectionDetail
@@ -36,42 +37,7 @@ namespace OpenFindBearings.Application.Queries.Corrections.GetCorrectionDetail
             if (correction == null)
                 return null;
 
-            var submitter = await _userRepository.GetByIdAsync(correction.SubmittedBy, cancellationToken);
-            var reviewer = correction.ReviewedBy.HasValue
-                ? await _userRepository.GetByIdAsync(correction.ReviewedBy.Value, cancellationToken)
-                : null;
-
-            string targetDisplay = string.Empty;
-            if (correction.TargetType == "Bearing")
-            {
-                var bearing = await _bearingRepository.GetByIdAsync(correction.TargetId, cancellationToken);
-                targetDisplay = bearing != null ? $"{bearing.CurrentCode} - {bearing.Name}" : string.Empty;
-            }
-            else if (correction.TargetType == "Merchant")
-            {
-                var merchant = await _merchantRepository.GetByIdAsync(correction.TargetId, cancellationToken);
-                targetDisplay = merchant?.Name ?? string.Empty;
-            }
-
-            return new CorrectionDto
-            {
-                Id = correction.Id,
-                TargetType = correction.TargetType,
-                TargetId = correction.TargetId,
-                TargetDisplay = targetDisplay,
-                FieldName = correction.FieldName,
-                FieldDisplayName = correction.GetFieldDisplayName(),
-                OriginalValue = correction.OriginalValue,
-                SuggestedValue = correction.SuggestedValue,
-                Reason = correction.Reason,
-                SubmittedBy = correction.SubmittedBy,
-                SubmitterName = submitter?.Nickname ?? "未知用户",
-                SubmittedAt = correction.SubmittedAt,
-                Status = correction.Status.ToString(),
-                ReviewerName = reviewer?.Nickname,
-                ReviewedAt = correction.ReviewedAt,
-                ReviewComment = correction.ReviewComment
-            };
+            return correction?.ToDto();
         }
     }
 }

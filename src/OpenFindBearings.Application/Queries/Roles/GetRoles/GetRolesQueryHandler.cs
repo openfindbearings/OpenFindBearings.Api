@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.DTOs;
+using OpenFindBearings.Application.Extensions;
 using OpenFindBearings.Domain.Repositories;
 using System;
 using System.Collections.Generic;
@@ -42,16 +43,7 @@ namespace OpenFindBearings.Application.Queries.Roles.GetRoles
             var items = filtered
                 .Skip((request.Page - 1) * request.PageSize)
                 .Take(request.PageSize)
-                .Select(r => new RoleDto
-                {
-                    Id = r.Id,
-                    Name = r.Name,
-                    Description = r.Description,
-                    Permissions = r.RolePermissions.Select(rp => rp.Permission.Name).ToList(),
-                    UserCount = r.UserRoles.Count,
-                    CreatedAt = r.CreatedAt,
-                    IsSystemRole = IsSystemRole(r.Name)
-                })
+                .Select(r => r.ToDto())
                 .ToList();
 
             return new PagedResult<RoleDto>

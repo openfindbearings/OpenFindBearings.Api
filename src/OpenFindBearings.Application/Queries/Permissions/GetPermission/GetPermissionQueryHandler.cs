@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.DTOs;
+using OpenFindBearings.Application.Extensions;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Queries.Permissions.GetPermission
@@ -31,14 +32,7 @@ namespace OpenFindBearings.Application.Queries.Permissions.GetPermission
                 return null;
             }
 
-            return new PermissionDto
-            {
-                Id = permission.Id,
-                Name = permission.Name,
-                Description = permission.Description,
-                Group = permission.Name.Split('.').FirstOrDefault() ?? "其他",
-                CreatedAt = permission.CreatedAt
-            };
+            return permission.ToDto();
         }
     }
 }

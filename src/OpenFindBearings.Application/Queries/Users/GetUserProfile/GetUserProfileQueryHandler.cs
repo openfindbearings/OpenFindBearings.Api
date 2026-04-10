@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.DTOs;
+using OpenFindBearings.Application.Extensions;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Queries.Queries
@@ -53,27 +54,12 @@ namespace OpenFindBearings.Application.Queries.Queries
                 .Distinct()
                 .ToList();
 
-            return new UserDto
-            {
-                Id = user.Id,
-                AuthUserId = user.AuthUserId,
-                Nickname = user.Nickname,
-                Avatar = user.Avatar,
-                // ✅ 修改：UserType 改为通过角色和 IsGuest 判断
-                UserType = user.IsGuest ? "Guest" : (user.IsAdmin ? "Admin" : (user.MerchantId.HasValue ? "MerchantStaff" : "Individual")),
-                MerchantId = user.MerchantId,
-                MerchantName = user.Merchant?.Name,
-                Roles = roles,
-                Permissions = permissions,
-                FavoriteCount = favoriteCount,
-                FollowCount = followCount,
-                CorrectionCount = corrections.Count,
-                CreatedAt = user.CreatedAt,
-                LastLoginAt = user.LastLoginAt,
-                Occupation = user.Occupation,
-                CompanyName = user.CompanyName,
-                Industry = user.Industry
-            };
+            var dto = user.ToDto(roles, permissions);
+            dto.FavoriteCount = favoriteCount;
+            dto.FollowCount = followCount;
+            dto.CorrectionCount = corrections.Count;
+            dto.UserType = user.IsGuest ? "Guest" : (user.IsAdmin ? "Admin" : (user.MerchantId.HasValue ? "MerchantStaff" : "Individual"));
+            return dto;
         }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.DTOs;
+using OpenFindBearings.Application.Extensions;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Queries.Permissions.GetAllPermissions
@@ -29,14 +30,7 @@ namespace OpenFindBearings.Application.Queries.Permissions.GetAllPermissions
 
             // 按权限名分组（便于前端展示）
             var grouped = permissions
-                .Select(p => new PermissionDto
-                {
-                    Id = p.Id,
-                    Name = p.Name,
-                    Description = p.Description,
-                    Group = p.Name.Split('.').FirstOrDefault() ?? "其他",
-                    CreatedAt = p.CreatedAt
-                })
+                .Select(p => p.ToDto())
                 .OrderBy(p => p.Group)
                 .ThenBy(p => p.Name)
                 .ToList();

@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.DTOs;
+using OpenFindBearings.Application.Extensions;
 using OpenFindBearings.Application.Interfaces;
 using OpenFindBearings.Application.Shared.Constants;
 using OpenFindBearings.Domain.Repositories;
@@ -36,27 +37,7 @@ namespace OpenFindBearings.Application.Queries.Bearings.GetHotBearings
 
             var bearings = await _bearingRepository.GetHotBearingsAsync(request.Count, cancellationToken);
 
-            var result = bearings.Select(b => new BearingDto
-            {
-                Id = b.Id,
-                CurrentCode = b.CurrentCode,
-                FormerCode = b.FormerCode,                 // ✅ 新增
-                Name = b.Name,
-                Description = b.Description,
-                InnerDiameter = b.Dimensions.InnerDiameter,
-                OuterDiameter = b.Dimensions.OuterDiameter,
-                Width = b.Dimensions.Width,
-                Weight = b.Weight,
-                BrandId = b.BrandId,
-                BrandName = b.Brand?.Name ?? string.Empty,
-                BearingTypeId = b.BearingTypeId,
-                BearingTypeName = b.BearingType,
-                ViewCount = b.ViewCount,
-                FavoriteCount = b.FavoriteCount,
-                OriginCountry = b.OriginCountry,
-                Category = b.Category.ToString(),
-                IsStandard = b.IsStandard                  // ✅ 新增
-            }).ToList();
+            var result = bearings.Select(b => b.ToDto()).ToList();
 
             await _cacheService.SetAsync(cacheKey, result, TimeSpan.FromHours(1), cancellationToken);
 

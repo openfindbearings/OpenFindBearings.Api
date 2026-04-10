@@ -173,7 +173,6 @@ namespace OpenFindBearings.Application.Queries.Admin.GetAuditLogs
             if (bearing == null)
                 return id.ToString();
 
-            // ✅ 修改：PartNumber → CurrentCode
             return $"{bearing.CurrentCode} - {bearing.Name}";
         }
 
@@ -244,13 +243,11 @@ namespace OpenFindBearings.Application.Queries.Admin.GetAuditLogs
             string bearingName = "未知轴承";
             if (merchantBearing.Bearing != null)
             {
-                // ✅ 修改：PartNumber → CurrentCode
                 bearingName = $"{merchantBearing.Bearing.CurrentCode} - {merchantBearing.Bearing.Name}";
             }
             else if (merchantBearing.BearingId != Guid.Empty)
             {
                 var bearing = await _bearingRepository.GetByIdAsync(merchantBearing.BearingId, cancellationToken);
-                // ✅ 修改：PartNumber → CurrentCode
                 bearingName = bearing != null ? $"{bearing.CurrentCode} - {bearing.Name}" : merchantBearing.BearingId.ToString();
             }
 

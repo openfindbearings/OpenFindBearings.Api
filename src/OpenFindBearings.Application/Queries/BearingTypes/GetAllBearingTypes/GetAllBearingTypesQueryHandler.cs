@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.DTOs;
+using OpenFindBearings.Application.Extensions;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Queries.BearingTypes.GetAllBearingTypes
@@ -32,14 +33,7 @@ namespace OpenFindBearings.Application.Queries.BearingTypes.GetAllBearingTypes
 
             var bearingCountByType = await _bearingRepository.GetBearingCountByTypeAsync(cancellationToken);
 
-            return bearingTypes.Select(bt => new BearingTypeDto
-            {
-                Id = bt.Id,
-                Code = bt.Code,
-                Name = bt.Name,
-                Description = bt.Description,
-                BearingCount = bearingCountByType.GetValueOrDefault(bt.Id, 0)
-            }).ToList();
+            return bearingTypes.Select(bt => bt.ToDto(bearingCountByType.GetValueOrDefault(bt.Id))).ToList();
         }
     }
 }

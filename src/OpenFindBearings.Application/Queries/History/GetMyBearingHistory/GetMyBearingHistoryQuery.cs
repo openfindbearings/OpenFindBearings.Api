@@ -3,7 +3,7 @@ using OpenFindBearings.Application.Behaviors;
 using OpenFindBearings.Application.DTOs;
 using OpenFindBearings.Domain.Repositories;
 
-namespace OpenFindBearings.Application.Queries.Queries
+namespace OpenFindBearings.Application.Queries.History.GetMyBearingHistory
 {
     /// <summary>
     /// 获取我的轴承浏览历史查询

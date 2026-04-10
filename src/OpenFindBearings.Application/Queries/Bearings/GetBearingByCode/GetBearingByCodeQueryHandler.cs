@@ -1,7 +1,7 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.DTOs;
-using OpenFindBearings.Domain.Aggregates;
+using OpenFindBearings.Application.Extensions;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Queries.Bearings.GetBearingByCode
@@ -25,43 +25,24 @@ namespace OpenFindBearings.Application.Queries.Bearings.GetBearingByCode
             if (bearing == null)
                 return null;
 
-            return MapToDto(bearing);
-        }
-
-        private BearingDetailDto MapToDto(Bearing bearing)
-        {
-            return new BearingDetailDto
+            var dto = bearing.ToDto() as BearingDetailDto;
+            if (dto != null)
             {
-                Id = bearing.Id,
-                CurrentCode = bearing.CurrentCode,
-                FormerCode = bearing.FormerCode,          
-                Name = bearing.Name,
-                Description = bearing.Description,
-                InnerDiameter = bearing.Dimensions.InnerDiameter,
-                OuterDiameter = bearing.Dimensions.OuterDiameter,
-                Width = bearing.Dimensions.Width,
-                Weight = bearing.Weight,
-                BrandId = bearing.BrandId,
-                BrandName = bearing.Brand?.Name ?? string.Empty,
-                BearingTypeId = bearing.BearingTypeId,
-                BearingTypeName = bearing.BearingType,
-                PrecisionGrade = bearing.PrecisionGrade,
-                Material = bearing.Material,
-                SealType = bearing.SealType,
-                CageType = bearing.CageType,
-                DynamicLoadRating = bearing.Performance?.DynamicLoadRating,
-                StaticLoadRating = bearing.Performance?.StaticLoadRating,
-                LimitingSpeed = bearing.Performance?.LimitingSpeed,
-                ViewCount = bearing.ViewCount,
-                OriginCountry = bearing.OriginCountry,
-                Category = bearing.Category.ToString(),
-                IsStandard = bearing.IsStandard,              
-                StructureType = bearing.StructureType,        
-                SizeSeries = bearing.SizeSeries,              
-                ChamferRmin = bearing.ChamferRmin,            
-                ChamferRmax = bearing.ChamferRmax,            
-                Trademark = bearing.Trademark                 
-            };
+                dto.Description = bearing.Description;
+                dto.PrecisionGrade = bearing.PrecisionGrade;
+                dto.Material = bearing.Material;
+                dto.SealType = bearing.SealType;
+                dto.CageType = bearing.CageType;
+                dto.DynamicLoadRating = bearing.Performance?.DynamicLoadRating;
+                dto.StaticLoadRating = bearing.Performance?.StaticLoadRating;
+                dto.LimitingSpeed = bearing.Performance?.LimitingSpeed;
+                dto.StructureType = bearing.StructureType;
+                dto.SizeSeries = bearing.SizeSeries;
+                dto.ChamferRmin = bearing.ChamferRmin;
+                dto.ChamferRmax = bearing.ChamferRmax;
+                dto.Trademark = bearing.Trademark;
+            }
+            return dto;
         }
     }
 }

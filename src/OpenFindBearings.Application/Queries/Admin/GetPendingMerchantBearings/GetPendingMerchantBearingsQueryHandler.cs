@@ -1,7 +1,7 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.DTOs;
-using OpenFindBearings.Domain.Aggregates;
+using OpenFindBearings.Application.Extensions;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Queries.Admin.GetPendingMerchantBearings
@@ -40,14 +40,14 @@ namespace OpenFindBearings.Application.Queries.Admin.GetPendingMerchantBearings
 
             foreach (var item in items)
             {
-                var merchant = await _merchantRepository.GetByIdAsync(item.MerchantId, cancellationToken);
-                var bearing = await _bearingRepository.GetByIdAsync(item.BearingId, cancellationToken);
+                var merchant = item.Merchant ?? await _merchantRepository.GetByIdAsync(item.MerchantId, cancellationToken);
+                var bearing = item.Bearing ?? await _bearingRepository.GetByIdAsync(item.BearingId, cancellationToken);
 
                 result.Add(new PendingMerchantBearingDto
                 {
                     Id = item.Id,
-                    Merchant = merchant != null ? MapMerchantToDto(merchant) : null!,
-                    Bearing = bearing != null ? MapBearingToDto(bearing) : null!,
+                    Merchant = merchant?.ToPublicDto() ?? new MerchantDto(),
+                    Bearing = bearing?.ToDto() ?? new BearingDto(),
                     PriceDescription = item.PriceDescription,
                     StockDescription = item.StockDescription,
                     MinOrderDescription = item.MinOrderDescription,
@@ -63,51 +63,6 @@ namespace OpenFindBearings.Application.Queries.Admin.GetPendingMerchantBearings
                 TotalCount = pendingItems.Count(),
                 Page = request.Page,
                 PageSize = request.PageSize
-            };
-        }
-
-        private MerchantDto MapMerchantToDto(Merchant merchant)
-        {
-            return new MerchantDto
-            {
-                Id = merchant.Id,
-                Name = merchant.Name,
-                CompanyName = merchant.CompanyName,
-                Type = merchant.Type.ToString(),
-                ContactPerson = merchant.Contact?.ContactPerson,
-                Phone = merchant.Contact?.Phone,
-                Mobile = merchant.Contact?.Mobile,
-                Email = merchant.Contact?.Email,
-                Address = merchant.Contact?.Address,
-                IsVerified = merchant.IsVerified,
-                Grade = merchant.Grade.ToString(),
-                FollowerCount = merchant.FollowerCount,
-                ProductCount = merchant.MerchantBearings?.Count ?? 0
-            };
-        }
-
-        private BearingDto MapBearingToDto(Bearing bearing)
-        {
-            return new BearingDto
-            {
-                Id = bearing.Id,
-                CurrentCode = bearing.CurrentCode,
-                FormerCode = bearing.FormerCode,           // ✅ 新增
-                Name = bearing.Name,
-                Description = bearing.Description,
-                InnerDiameter = bearing.Dimensions.InnerDiameter,
-                OuterDiameter = bearing.Dimensions.OuterDiameter,
-                Width = bearing.Dimensions.Width,
-                Weight = bearing.Weight,
-                BrandId = bearing.BrandId,
-                BrandName = bearing.Brand?.Name ?? string.Empty,
-                BearingTypeId = bearing.BearingTypeId,
-                BearingTypeName = bearing.BearingType,
-                ViewCount = bearing.ViewCount,
-                FavoriteCount = bearing.FavoriteCount,
-                IsStandard = bearing.IsStandard,           // ✅ 新增
-                OriginCountry = bearing.OriginCountry,
-                Category = bearing.Category.ToString()
             };
         }
     }

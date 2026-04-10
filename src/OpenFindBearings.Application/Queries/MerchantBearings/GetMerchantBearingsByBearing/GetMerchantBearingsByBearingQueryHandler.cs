@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.DTOs;
+using OpenFindBearings.Application.Extensions;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Queries.MerchantBearings.GetMerchantBearingsByBearing
@@ -37,40 +38,7 @@ namespace OpenFindBearings.Application.Queries.MerchantBearings.GetMerchantBeari
             var items = merchantBearings
                 .Skip((request.Page - 1) * request.PageSize)
                 .Take(request.PageSize)
-                .Select(mb => new MerchantBearingDto
-                {
-                    Id = mb.Id,
-                    MerchantId = mb.MerchantId,
-                    MerchantName = mb.Merchant?.Name ?? string.Empty,
-                    MerchantGrade = mb.Merchant?.Grade.ToString() ?? string.Empty,
-                    MerchantIsVerified = mb.Merchant?.IsVerified ?? false,
-                    BearingId = mb.BearingId,
-                    // ✅ 修改：PartNumber → CurrentCode
-                    BearingCurrentCode = mb.Bearing?.CurrentCode ?? string.Empty,
-                    // ✅ 新增：曾用代号
-                    BearingFormerCode = mb.Bearing?.FormerCode,
-                    BearingName = mb.Bearing?.Name ?? string.Empty,
-                    // ✅ 新增：轴承类型名称
-                    BearingTypeName = mb.Bearing?.BearingType,
-                    BrandName = mb.Bearing?.Brand?.Name,
-                    BrandLevel = mb.Bearing?.Brand?.Level.ToString(),
-                    Dimensions = mb.Bearing != null
-                        ? $"{mb.Bearing.Dimensions.InnerDiameter}×{mb.Bearing.Dimensions.OuterDiameter}×{mb.Bearing.Dimensions.Width}"
-                        : null,
-                    PriceDescription = mb.PriceDescription,
-                    PriceVisibility = mb.PriceVisibility,
-                    NumericPrice = mb.NumericPrice,
-                    StockDescription = mb.StockDescription,
-                    MinOrderDescription = mb.MinOrderDescription,
-                    Remarks = mb.Remarks,
-                    IsOnSale = mb.IsOnSale,
-                    IsFeatured = mb.IsFeatured,
-                    IsPendingApproval = mb.IsPendingApproval,
-                    ViewCount = mb.ViewCount,
-                    CreatedAt = mb.CreatedAt,
-                    UpdatedAt = mb.UpdatedAt,
-                    IsPriceVisible = mb.IsPriceVisible(request.IsAuthenticated)
-                })
+                .Select(mb => mb.ToDto(request.IsAuthenticated))
                 .ToList();
 
             return new PagedResult<MerchantBearingDto>

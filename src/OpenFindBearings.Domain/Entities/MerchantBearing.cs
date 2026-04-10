@@ -299,5 +299,6 @@ namespace OpenFindBearings.Domain.Entities
         public bool IsPriceVisible(bool isAuthenticated) =>
             PriceVisibility == PriceVisibility.Public ||
             (PriceVisibility == PriceVisibility.LoginRequired && isAuthenticated);
+
     }
 }

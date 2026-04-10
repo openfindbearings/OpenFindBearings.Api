@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.DTOs;
+using OpenFindBearings.Application.Extensions;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Queries.Corrections.GetMerchantCorrections
@@ -32,35 +33,11 @@ namespace OpenFindBearings.Application.Queries.Corrections.GetMerchantCorrection
             var corrections = await _correctionRepository.GetByTargetAsync("Merchant", request.MerchantId, cancellationToken);
 
             var totalCount = corrections.Count;
-            var items = new List<CorrectionDto>();
-
-            foreach (var c in corrections.Skip((request.Page - 1) * request.PageSize).Take(request.PageSize))
-            {
-                var submitter = await _userRepository.GetByIdAsync(c.SubmittedBy, cancellationToken);
-                var reviewer = c.ReviewedBy.HasValue
-                    ? await _userRepository.GetByIdAsync(c.ReviewedBy.Value, cancellationToken)
-                    : null;
-
-                items.Add(new CorrectionDto
-                {
-                    Id = c.Id,
-                    TargetType = c.TargetType,
-                    TargetId = c.TargetId,
-                    TargetDisplay = request.MerchantId.ToString(),
-                    FieldName = c.FieldName,
-                    FieldDisplayName = c.GetFieldDisplayName(),
-                    OriginalValue = c.OriginalValue,
-                    SuggestedValue = c.SuggestedValue,
-                    Reason = c.Reason,
-                    SubmittedBy = c.SubmittedBy,
-                    SubmitterName = submitter?.Nickname ?? "未知用户",
-                    SubmittedAt = c.SubmittedAt,
-                    Status = c.Status.ToString(),
-                    ReviewerName = reviewer?.Nickname,
-                    ReviewedAt = c.ReviewedAt,
-                    ReviewComment = c.ReviewComment
-                });
-            }
+            var items = corrections
+                .Skip((request.Page - 1) * request.PageSize)
+                .Take(request.PageSize)
+                .Select(c => c.ToDto())
+                .ToList();
 
             return new PagedResult<CorrectionDto>
             {
