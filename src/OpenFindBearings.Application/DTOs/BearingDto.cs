@@ -57,5 +57,9 @@
         // 统计
         public int ViewCount { get; set; }
         public int FavoriteCount { get; set; }
+
+        // 图片
+        public string? Image3D { get; set; }
+        public string? Image2DCAD { get; set; }
     }
 }

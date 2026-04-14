@@ -120,6 +120,16 @@ namespace OpenFindBearings.Application.Commands.Bearings.CreateBearing
         public decimal? LimitingSpeed { get; init; }
 
         /// <summary>
+        /// 脂极限转速 (rpm)
+        /// </summary>
+        public decimal? LimitingSpeedGrease { get; init; }
+
+        /// <summary>
+        /// 油极限转速 (rpm)
+        /// </summary>
+        public decimal? LimitingSpeedOil { get; init; }
+
+        /// <summary>
         /// 轴承类型ID
         /// </summary>
         public Guid BearingTypeId { get; init; }
@@ -143,5 +153,15 @@ namespace OpenFindBearings.Application.Commands.Bearings.CreateBearing
         /// 产品类别
         /// </summary>
         public BearingCategory Category { get; init; } = BearingCategory.Domestic;
+
+        /// <summary>
+        /// 3D渲染图URL
+        /// </summary>
+        public string? Image3D { get; init; }
+
+        /// <summary>
+        /// 2D CAD尺寸图纸URL
+        /// </summary>
+        public string? Image2DCAD { get; init; }
     }
 }

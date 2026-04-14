@@ -29,6 +29,16 @@ namespace OpenFindBearings.Domain.ValueObjects
         public decimal? LimitingSpeed { get; private set; }
 
         /// <summary>
+        /// 脂极限转速 (rpm)
+        /// </summary>
+        public decimal? LimitingSpeedGrease { get; private set; }
+
+        /// <summary>
+        /// 油极限转速 (rpm)
+        /// </summary>
+        public decimal? LimitingSpeedOil { get; private set; }
+
+        /// <summary>
         /// 私有构造函数，供EF Core使用
         /// </summary>
         private PerformanceParams()
@@ -39,16 +49,17 @@ namespace OpenFindBearings.Domain.ValueObjects
         /// <summary>
         /// 创建性能参数值对象
         /// </summary>
-        public PerformanceParams(decimal? dynamicLoad, decimal? staticLoad, decimal? speed)
+        public PerformanceParams(decimal? dynamicLoad, decimal? staticLoad, decimal? speed, decimal? greaseSpeed = null, decimal? oilSpeed = null)
         {
-            // 宽松校验：只禁止明显不合理的情况
             if (dynamicLoad.HasValue && staticLoad.HasValue && dynamicLoad > staticLoad * 1.5m)
                 throw new ArgumentException("动载荷异常大于静载荷，请核对数据");
 
             DynamicLoadRating = dynamicLoad;
             StaticLoadRating = staticLoad;
             LimitingSpeed = speed;
-            HasData = dynamicLoad.HasValue || staticLoad.HasValue || speed.HasValue;
+            LimitingSpeedGrease = greaseSpeed;
+            LimitingSpeedOil = oilSpeed;
+            HasData = dynamicLoad.HasValue || staticLoad.HasValue || speed.HasValue || greaseSpeed.HasValue || oilSpeed.HasValue;
         }
 
         /// <summary>
@@ -65,6 +76,8 @@ namespace OpenFindBearings.Domain.ValueObjects
             yield return DynamicLoadRating ?? 0;
             yield return StaticLoadRating ?? 0;
             yield return LimitingSpeed ?? 0;
+            yield return LimitingSpeedGrease ?? 0;
+            yield return LimitingSpeedOil ?? 0;
         }
 
         /// <summary>
@@ -76,6 +89,8 @@ namespace OpenFindBearings.Domain.ValueObjects
             if (DynamicLoadRating.HasValue) parts.Add($"C={DynamicLoadRating}kN");
             if (StaticLoadRating.HasValue) parts.Add($"C0={StaticLoadRating}kN");
             if (LimitingSpeed.HasValue) parts.Add($"n={LimitingSpeed}rpm");
+            if (LimitingSpeedGrease.HasValue) parts.Add($"n(脂)={LimitingSpeedGrease}rpm");
+            if (LimitingSpeedOil.HasValue) parts.Add($"n(油)={LimitingSpeedOil}rpm");
             return parts.Count > 0 ? string.Join(", ", parts) : "无性能数据";
         }
 

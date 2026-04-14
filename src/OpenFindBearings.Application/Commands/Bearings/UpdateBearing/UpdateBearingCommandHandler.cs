@@ -81,12 +81,14 @@ namespace OpenFindBearings.Application.Commands.Bearings.UpdateBearing
             }
 
             // 更新性能参数
-            if (request.DynamicLoadRating.HasValue || request.StaticLoadRating.HasValue || request.LimitingSpeed.HasValue)
+            if (request.DynamicLoadRating.HasValue || request.StaticLoadRating.HasValue || request.LimitingSpeed.HasValue || request.LimitingSpeedGrease.HasValue || request.LimitingSpeedOil.HasValue)
             {
                 var performance = new PerformanceParams(
                     request.DynamicLoadRating,
                     request.StaticLoadRating,
-                    request.LimitingSpeed);
+                    request.LimitingSpeed,
+                    request.LimitingSpeedGrease,
+                    request.LimitingSpeedOil);
                 bearing.UpdatePerformance(performance);
                 changedFields.Add("Performance");
             }
@@ -108,6 +110,13 @@ namespace OpenFindBearings.Application.Commands.Bearings.UpdateBearing
             {
                 bearing.SetOrigin(bearing.OriginCountry, request.Category.Value);
                 changedFields.Add("Category");
+            }
+
+            // 更新图片
+            if (request.Image3D != null || request.Image2DCAD != null)
+            {
+                bearing.SetImages(request.Image3D, request.Image2DCAD);
+                changedFields.Add("Images");
             }
 
             await _bearingRepository.UpdateAsync(bearing, cancellationToken);

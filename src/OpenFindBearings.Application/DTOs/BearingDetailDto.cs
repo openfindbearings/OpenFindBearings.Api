@@ -15,6 +15,8 @@
         public decimal? DynamicLoadRating { get; set; }
         public decimal? StaticLoadRating { get; set; }
         public decimal? LimitingSpeed { get; set; }
+        public decimal? LimitingSpeedGrease { get; set; }
+        public decimal? LimitingSpeedOil { get; set; }
 
         // 结构信息
         public string? StructureType { get; set; }

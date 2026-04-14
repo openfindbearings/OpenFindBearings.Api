@@ -28,7 +28,9 @@ namespace OpenFindBearings.Application.Extensions
                 Category = bearing.Category.ToString(),
                 IsStandard = bearing.IsStandard,
                 ViewCount = bearing.ViewCount,
-                FavoriteCount = bearing.FavoriteCount
+                FavoriteCount = bearing.FavoriteCount,
+                Image3D = bearing.Image3D,
+                Image2DCAD = bearing.Image2DCAD
             };
         }
     }

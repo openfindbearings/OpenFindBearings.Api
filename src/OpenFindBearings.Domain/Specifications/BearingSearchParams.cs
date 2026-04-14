@@ -110,29 +110,5 @@ namespace OpenFindBearings.Domain.Specifications
         /// 每页条数，默认20，最大100
         /// </summary>
         public int PageSize { get; set; } = 20;
-
-        /// <summary>
-        /// 验证并修正参数
-        /// </summary>
-        public void Validate()
-        {
-            if (Page < 1) Page = 1;
-            if (PageSize < 1) PageSize = 20;
-            if (PageSize > 100) PageSize = 100;
-
-            if (!string.IsNullOrWhiteSpace(SortBy))
-            {
-                var allowedSortFields = new[] { "currentCode", "innerDiameter", "outerDiameter", "width", "viewCount" };
-                if (!allowedSortFields.Contains(SortBy.ToLower()))
-                {
-                    SortBy = "currentCode";
-                }
-            }
-
-            if (!string.IsNullOrWhiteSpace(SortOrder))
-            {
-                SortOrder = SortOrder.ToLower() == "desc" ? "desc" : "asc";
-            }
-        }
     }
 }

@@ -96,6 +96,8 @@ namespace OpenFindBearings.Application.Queries.Bearings.GetBearingQuery
                 DynamicLoadRating = bearing.Performance?.DynamicLoadRating,
                 StaticLoadRating = bearing.Performance?.StaticLoadRating,
                 LimitingSpeed = bearing.Performance?.LimitingSpeed,
+                LimitingSpeedGrease = bearing.Performance?.LimitingSpeedGrease,
+                LimitingSpeedOil = bearing.Performance?.LimitingSpeedOil,
                 ViewCount = bearing.ViewCount,
                 Merchants = onSaleMerchants,
                 Interchanges = interchangeBearings,
@@ -106,7 +108,9 @@ namespace OpenFindBearings.Application.Queries.Bearings.GetBearingQuery
                 SizeSeries = bearing.SizeSeries,
                 ChamferRmin = bearing.ChamferRmin,
                 ChamferRmax = bearing.ChamferRmax,
-                Trademark = bearing.Trademark
+                Trademark = bearing.Trademark,
+                Image3D = bearing.Image3D,
+                Image2DCAD = bearing.Image2DCAD
             };
         }
     }

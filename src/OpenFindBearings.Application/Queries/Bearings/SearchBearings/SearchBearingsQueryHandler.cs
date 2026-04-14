@@ -22,6 +22,11 @@ namespace OpenFindBearings.Application.Queries.Bearings.SearchBearings
 
         public async Task<PagedResult<BearingDto>> Handle(SearchBearingsQuery request, CancellationToken cancellationToken)
         {
+            if (!HasAtLeastOneSearchCondition(request))
+            {
+                throw new InvalidOperationException("请至少提供一个搜索条件");
+            }
+
             var searchParams = new BearingSearchParams
             {
                 CurrentCode = request.CurrentCode,
@@ -55,6 +60,24 @@ namespace OpenFindBearings.Application.Queries.Bearings.SearchBearings
                 Page = result.Page,
                 PageSize = result.PageSize
             };
+        }
+
+        private static bool HasAtLeastOneSearchCondition(SearchBearingsQuery request)
+        {
+            return !string.IsNullOrWhiteSpace(request.CurrentCode)
+                || !string.IsNullOrWhiteSpace(request.FormerCode)
+                || !string.IsNullOrWhiteSpace(request.Keyword)
+                || request.MinInnerDiameter.HasValue
+                || request.MaxInnerDiameter.HasValue
+                || request.MinOuterDiameter.HasValue
+                || request.MaxOuterDiameter.HasValue
+                || request.MinWidth.HasValue
+                || request.MaxWidth.HasValue
+                || !string.IsNullOrWhiteSpace(request.OriginCountry)
+                || request.Category.HasValue
+                || request.BrandId.HasValue
+                || request.BearingTypeId.HasValue
+                || request.IsStandard.HasValue;
         }
     }
 }

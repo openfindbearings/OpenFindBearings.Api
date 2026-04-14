@@ -201,6 +201,18 @@ namespace OpenFindBearings.Domain.Aggregates
         /// </summary>
         public int FavoriteCount => FavoritedByUsers.Count;
 
+        // ============ 图片字段 ============
+
+        /// <summary>
+        /// 3D渲染图URL
+        /// </summary>
+        public string? Image3D { get; private set; }
+
+        /// <summary>
+        /// 2D CAD尺寸图纸URL
+        /// </summary>
+        public string? Image2DCAD { get; private set; }
+
         // ============ 构造函数 ============
 
         /// <summary>
@@ -421,6 +433,16 @@ namespace OpenFindBearings.Domain.Aggregates
                 sessionId,
                 ViewCount));
 
+            UpdateTimestamp();
+        }
+
+        /// <summary>
+        /// 设置图片
+        /// </summary>
+        public void SetImages(string? image3D, string? image2DCAD)
+        {
+            Image3D = image3D;
+            Image2DCAD = image2DCAD;
             UpdateTimestamp();
         }
 

@@ -118,6 +118,26 @@ namespace OpenFindBearings.Application.DTOs
         public decimal? LimitingSpeed { get; set; }
 
         /// <summary>
+        /// 脂极限转速 (rpm)
+        /// </summary>
+        public decimal? LimitingSpeedGrease { get; set; }
+
+        /// <summary>
+        /// 油极限转速 (rpm)
+        /// </summary>
+        public decimal? LimitingSpeedOil { get; set; }
+
+        /// <summary>
+        /// 3D渲染图URL
+        /// </summary>
+        public string? Image3D { get; set; }
+
+        /// <summary>
+        /// 2D CAD尺寸图纸URL
+        /// </summary>
+        public string? Image2DCAD { get; set; }
+
+        /// <summary>
         /// 品牌代码（如 SKF、FAG）
         /// </summary>
         public string BrandCode { get; set; } = string.Empty;

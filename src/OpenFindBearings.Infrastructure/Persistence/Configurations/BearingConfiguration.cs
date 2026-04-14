@@ -135,6 +135,14 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
                 perf.Property(p => p.LimitingSpeed)
                     .HasColumnName("LimitingSpeed")
                     .HasPrecision(10, 0);
+
+                perf.Property(p => p.LimitingSpeedGrease)
+                    .HasColumnName("LimitingSpeedGrease")
+                    .HasPrecision(10, 0);
+
+                perf.Property(p => p.LimitingSpeedOil)
+                    .HasColumnName("LimitingSpeedOil")
+                    .HasPrecision(10, 0);
             });
 
             // ============ 产地和商标 ============
@@ -213,6 +221,15 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             builder.Property(b => b.ViewCount)
                 .HasDefaultValue(0)
                 .HasColumnName("ViewCount");
+
+            // ============ 图片字段 ============
+            builder.Property(b => b.Image3D)
+                .HasMaxLength(500)
+                .HasColumnName("Image3D");
+
+            builder.Property(b => b.Image2DCAD)
+                .HasMaxLength(500)
+                .HasColumnName("Image2DCAD");
 
             // ============ 关联配置 ============
             // 关联轴承类型

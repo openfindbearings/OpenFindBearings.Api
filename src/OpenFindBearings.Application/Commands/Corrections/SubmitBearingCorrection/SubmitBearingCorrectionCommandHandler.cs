@@ -54,6 +54,8 @@ namespace OpenFindBearings.Application.Commands.Corrections.SubmitBearingCorrect
                 "dynamicloadrating" => bearing.Performance?.DynamicLoadRating?.ToString(),
                 "staticloadrating" => bearing.Performance?.StaticLoadRating?.ToString(),
                 "limitingspeed" => bearing.Performance?.LimitingSpeed?.ToString(),
+                "limitingspeedgrease" => bearing.Performance?.LimitingSpeedGrease?.ToString(),
+                "limitingspeedoil" => bearing.Performance?.LimitingSpeedOil?.ToString(),
                 _ => null
             };
 

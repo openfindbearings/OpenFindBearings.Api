@@ -129,6 +129,10 @@ namespace OpenFindBearings.Infrastructure
             // 轴承统计服务
             services.AddScoped<IBearingViewStatsService, BearingViewStatsService>();
 
+            // 文件服务
+            services.Configure<FileStorageSettings>(configuration.GetSection("FileStorage"));
+            services.AddScoped<IFileService, LocalFileService>();
+
             // 添加后台任务队列服务
             services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
             services.AddHostedService<QueuedHostedService>();

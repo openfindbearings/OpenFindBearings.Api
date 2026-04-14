@@ -36,6 +36,10 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 
         public async Task<PagedResult<Bearing>> SearchAsync(BearingSearchParams searchParams, CancellationToken cancellationToken = default)
         {
+            if (searchParams.Page < 1) searchParams.Page = 1;
+            if (searchParams.PageSize < 1) searchParams.PageSize = 20;
+            if (searchParams.PageSize > 100) searchParams.PageSize = 100;
+
             var query = _context.Bearings
                 .Include(b => b.Brand)
                 .AsNoTracking()

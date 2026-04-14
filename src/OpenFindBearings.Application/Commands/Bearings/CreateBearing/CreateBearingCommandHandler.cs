@@ -40,6 +40,7 @@ namespace OpenFindBearings.Application.Commands.Bearings.CreateBearing
             SetTechnicalParameters(bearing, request);
             SetIdentification(bearing, request);
             bearing.SetOrigin(request.OriginCountry, request.Category);
+            bearing.SetImages(request.Image3D, request.Image2DCAD);
 
             await _bearingRepository.AddAsync(bearing, cancellationToken);
 
@@ -73,10 +74,10 @@ namespace OpenFindBearings.Application.Commands.Bearings.CreateBearing
 
         private PerformanceParams? CreatePerformanceParams(CreateBearingCommand request)
         {
-            if (!request.DynamicLoadRating.HasValue && !request.StaticLoadRating.HasValue && !request.LimitingSpeed.HasValue)
+            if (!request.DynamicLoadRating.HasValue && !request.StaticLoadRating.HasValue && !request.LimitingSpeed.HasValue && !request.LimitingSpeedGrease.HasValue && !request.LimitingSpeedOil.HasValue)
                 return null;
 
-            return new PerformanceParams(request.DynamicLoadRating, request.StaticLoadRating, request.LimitingSpeed);
+            return new PerformanceParams(request.DynamicLoadRating, request.StaticLoadRating, request.LimitingSpeed, request.LimitingSpeedGrease, request.LimitingSpeedOil);
         }
 
         private Bearing CreateBearingEntity(CreateBearingCommand request, Dimensions dimensions, PerformanceParams? performance)

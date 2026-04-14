@@ -39,6 +39,10 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         /// </summary>
         public async Task<PagedResult<Merchant>> SearchAsync(MerchantSearchParams searchParams, CancellationToken cancellationToken = default)
         {
+            if (searchParams.Page < 1) searchParams.Page = 1;
+            if (searchParams.PageSize < 1) searchParams.PageSize = 20;
+            if (searchParams.PageSize > 100) searchParams.PageSize = 100;
+
             var query = _context.Merchants.AsNoTracking();
 
             if (!string.IsNullOrWhiteSpace(searchParams.Keyword))

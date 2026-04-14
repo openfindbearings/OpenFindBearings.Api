@@ -36,11 +36,15 @@ namespace OpenFindBearings.Application.Queries.Bearings.GetBearingByCode
                 dto.DynamicLoadRating = bearing.Performance?.DynamicLoadRating;
                 dto.StaticLoadRating = bearing.Performance?.StaticLoadRating;
                 dto.LimitingSpeed = bearing.Performance?.LimitingSpeed;
+                dto.LimitingSpeedGrease = bearing.Performance?.LimitingSpeedGrease;
+                dto.LimitingSpeedOil = bearing.Performance?.LimitingSpeedOil;
                 dto.StructureType = bearing.StructureType;
                 dto.SizeSeries = bearing.SizeSeries;
                 dto.ChamferRmin = bearing.ChamferRmin;
                 dto.ChamferRmax = bearing.ChamferRmax;
                 dto.Trademark = bearing.Trademark;
+                dto.Image3D = bearing.Image3D;
+                dto.Image2DCAD = bearing.Image2DCAD;
             }
             return dto;
         }
