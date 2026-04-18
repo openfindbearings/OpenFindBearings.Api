@@ -1,8 +1,6 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using OpenFindBearings.Application.Common.Models;
-using OpenFindBearings.Application.Interfaces;
+using OpenFindBearings.Application.Services;
 using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Repositories;
 using System.Text.Json;

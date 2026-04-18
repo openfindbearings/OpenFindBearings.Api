@@ -125,7 +125,6 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                         .HasColumnName("Material");
 
                     b.Property<string>("Name")
-                        .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)")
                         .HasColumnName("Name");
@@ -1540,10 +1539,6 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                                 .HasColumnType("character varying(100)")
                                 .HasColumnName("ImportedBy");
 
-                            b1.Property<int?>("ReliabilityScore")
-                                .HasColumnType("integer")
-                                .HasColumnName("ReliabilityScore");
-
                             b1.Property<string>("SourceDetail")
                                 .HasMaxLength(500)
                                 .HasColumnType("character varying(500)")
@@ -1565,9 +1560,6 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                                 .HasColumnName("SourceUrl");
 
                             b1.HasKey("BearingId");
-
-                            b1.HasIndex("SourceType")
-                                .HasDatabaseName("IX_Bearings_DataSourceType");
 
                             b1.ToTable("Bearings");
 
@@ -1688,10 +1680,6 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                                 .HasColumnType("character varying(100)")
                                 .HasColumnName("ImportedBy");
 
-                            b1.Property<int?>("ReliabilityScore")
-                                .HasColumnType("integer")
-                                .HasColumnName("ReliabilityScore");
-
                             b1.Property<string>("SourceDetail")
                                 .HasMaxLength(500)
                                 .HasColumnType("character varying(500)")
@@ -1749,6 +1737,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                                 .HasMaxLength(20)
                                 .HasColumnType("character varying(20)")
                                 .HasColumnName("Phone");
+
+                            b1.Property<string>("QQ")
+                                .HasColumnType("text");
 
                             b1.HasKey("MerchantId");
 

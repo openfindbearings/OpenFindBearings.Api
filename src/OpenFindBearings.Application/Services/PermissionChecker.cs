@@ -1,6 +1,6 @@
 ﻿using OpenFindBearings.Domain.Repositories;
 
-namespace OpenFindBearings.Application.Shared.Services
+namespace OpenFindBearings.Application.Services
 {
     /// <summary>
     /// 权限检查器

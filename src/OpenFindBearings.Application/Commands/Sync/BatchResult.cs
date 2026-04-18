@@ -44,6 +44,14 @@
         }
 
         /// <summary>
+        /// 添加跳过项（非爬虫数据，跳过覆盖保护）
+        /// </summary>
+        public void AddSkipped(string identifier, string reason)
+        {
+            Items.Add(BatchItemResult.Skipped(identifier, reason));
+        }
+
+        /// <summary>
         /// 合并另一个结果
         /// </summary>
         public void Merge(BatchResult other)

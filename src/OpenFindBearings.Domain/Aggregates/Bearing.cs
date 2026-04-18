@@ -31,7 +31,7 @@ namespace OpenFindBearings.Domain.Aggregates
         /// <summary>
         /// 产品名称
         /// </summary>
-        public string Name { get; private set; }
+        public string? Name { get; private set; }
 
         /// <summary>
         /// 产品描述
@@ -220,10 +220,9 @@ namespace OpenFindBearings.Domain.Aggregates
         /// </summary>
         private Bearing() 
         {
-            Name = string.Empty;
             CurrentCode = string.Empty;
             BearingType = string.Empty;
-            Dimensions = null!;
+            Dimensions = new Dimensions(0, 0, 0); 
         }
 
         /// <summary>
@@ -231,7 +230,7 @@ namespace OpenFindBearings.Domain.Aggregates
         /// </summary>
         public Bearing(
             string currentCode,
-            string name,
+            string? name,
             Guid bearingTypeId,
             string bearingType,
             Dimensions dimensions,
@@ -241,8 +240,7 @@ namespace OpenFindBearings.Domain.Aggregates
         {
             if (string.IsNullOrWhiteSpace(currentCode))
                 throw new ArgumentException("现行代号不能为空", nameof(currentCode));
-            if (string.IsNullOrWhiteSpace(name))
-                throw new ArgumentException("产品名称不能为空", nameof(name));
+            // name 可以为空（爬虫数据可能没有名称）
             if (string.IsNullOrWhiteSpace(bearingType))
                 throw new ArgumentException("轴承类型不能为空", nameof(bearingType));
 

@@ -6,7 +6,8 @@ namespace OpenFindBearings.Domain.ValueObjects
 {
     /// <summary>
     /// 数据来源值对象
-    /// 记录轴承数据的来源信息，用于数据追溯和质量评估
+    /// 记录轴承数据的来源信息，用于判断是否允许爬虫数据覆盖
+    /// 可信度计算和同步决策由 Sync 服务维护
     /// </summary>
     public class DataSource : ValueObject
     {
@@ -36,7 +37,7 @@ namespace OpenFindBearings.Domain.ValueObjects
         public string? SourceId { get; private set; }
 
         /// <summary>
-        /// 数据录入人/系统
+        /// 录入人/系统
         /// </summary>
         public string? ImportedBy { get; private set; }
 
@@ -44,11 +45,6 @@ namespace OpenFindBearings.Domain.ValueObjects
         /// 录入时间
         /// </summary>
         public DateTime ImportedAt { get; private set; }
-
-        /// <summary>
-        /// 数据可信度（0-100）
-        /// </summary>
-        public int? ReliabilityScore { get; private set; }
 
         /// <summary>
         /// 私有构造函数，供EF Core使用
@@ -60,16 +56,14 @@ namespace OpenFindBearings.Domain.ValueObjects
         /// </summary>
         public static DataSource FromManual(
             string? importedBy = null,
-            string? sourceDetail = null,
-            int? reliabilityScore = 90)
+            string? sourceDetail = null)
         {
             return new DataSource
             {
                 SourceType = DataSourceType.Manual,
                 SourceDetail = sourceDetail ?? "手动录入",
                 ImportedBy = importedBy,
-                ImportedAt = DateTime.UtcNow,
-                ReliabilityScore = reliabilityScore ?? 90
+                ImportedAt = DateTime.UtcNow
             };
         }
 
@@ -80,8 +74,7 @@ namespace OpenFindBearings.Domain.ValueObjects
             CrawlerSourceSite site,
             string sourceUrl,
             string? sourceId = null,
-            string? importedBy = "CrawlerSystem",
-            int? reliabilityScore = null)
+            string? importedBy = "CrawlerSystem")
         {
             return new DataSource
             {
@@ -91,7 +84,6 @@ namespace OpenFindBearings.Domain.ValueObjects
                 SourceId = sourceId,
                 ImportedBy = importedBy,
                 ImportedAt = DateTime.UtcNow,
-                ReliabilityScore = reliabilityScore ?? site.GetReliabilityScore(),
                 SourceDetail = site.GetDisplayName()
             };
         }
@@ -101,16 +93,14 @@ namespace OpenFindBearings.Domain.ValueObjects
         /// </summary>
         public static DataSource FromFileImport(
             string fileName,
-            string? importedBy = null,
-            int? reliabilityScore = 85)
+            string? importedBy = null)
         {
             return new DataSource
             {
                 SourceType = DataSourceType.FileImport,
                 SourceDetail = fileName,
                 ImportedBy = importedBy,
-                ImportedAt = DateTime.UtcNow,
-                ReliabilityScore = reliabilityScore ?? 85
+                ImportedAt = DateTime.UtcNow
             };
         }
 
@@ -120,8 +110,7 @@ namespace OpenFindBearings.Domain.ValueObjects
         public static DataSource FromApi(
             string apiName,
             string? sourceId = null,
-            string? importedBy = "ApiSync",
-            int? reliabilityScore = 90)
+            string? importedBy = "ApiSync")
         {
             return new DataSource
             {
@@ -129,56 +118,14 @@ namespace OpenFindBearings.Domain.ValueObjects
                 SourceDetail = apiName,
                 SourceId = sourceId,
                 ImportedBy = importedBy,
-                ImportedAt = DateTime.UtcNow,
-                ReliabilityScore = reliabilityScore ?? 90
+                ImportedAt = DateTime.UtcNow
             };
         }
 
         /// <summary>
-        /// 创建OCR/截图识别的数据源
+        /// 是否为爬虫数据（可以被覆盖）
         /// </summary>
-        public static DataSource FromOcr(
-            string imageSource,
-            string? sourceId = null,
-            string? importedBy = null,
-            int? reliabilityScore = 80)
-        {
-            return new DataSource
-            {
-                SourceType = DataSourceType.OcrExtract,
-                SourceDetail = imageSource,
-                SourceId = sourceId,
-                ImportedBy = importedBy,
-                ImportedAt = DateTime.UtcNow,
-                ReliabilityScore = reliabilityScore ?? 80
-            };
-        }
-
-        /// <summary>
-        /// 创建用户提交的数据源
-        /// </summary>
-        public static DataSource FromUserSubmission(
-            string userId,
-            string? sourceDetail = null,
-            int? reliabilityScore = 70)
-        {
-            return new DataSource
-            {
-                SourceType = DataSourceType.UserSubmitted,
-                SourceDetail = sourceDetail ?? "用户提交",
-                ImportedBy = userId,
-                ImportedAt = DateTime.UtcNow,
-                ReliabilityScore = reliabilityScore ?? 70
-            };
-        }
-
-        /// <summary>
-        /// 是否为官方数据源
-        /// </summary>
-        public bool IsOfficialSource =>
-            SourceType == DataSourceType.Crawler &&
-            CrawlerSite.HasValue &&
-            CrawlerSite.Value.IsOfficial();
+        public bool IsCrawler => SourceType == DataSourceType.Crawler;
 
         /// <summary>
         /// 获取来源摘要
@@ -187,26 +134,23 @@ namespace OpenFindBearings.Domain.ValueObjects
         {
             if (SourceType == DataSourceType.Crawler && CrawlerSite.HasValue)
             {
-                return $"爬虫采集 - {CrawlerSite.Value.GetDisplayName()} - {SourceUrl}";
+                return $"爬虫采集 - {CrawlerSite.Value.GetDisplayName()}";
             }
 
             return $"{SourceType} - {SourceDetail}";
         }
 
         /// <summary>
-        /// 获取用于相等性比较的组件
+        /// 返回字符串表示
         /// </summary>
+        public override string ToString() => GetSummary();
+
         protected override IEnumerable<object> GetEqualityComponents()
         {
-            yield return SourceType;
+            yield return SourceType!;
             yield return CrawlerSite ?? CrawlerSourceSite.Unknown;
             yield return SourceUrl ?? string.Empty;
             yield return SourceId ?? string.Empty;
         }
-
-        /// <summary>
-        /// 返回字符串表示
-        /// </summary>
-        public override string ToString() => GetSummary();
     }
 }

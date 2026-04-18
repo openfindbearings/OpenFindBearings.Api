@@ -21,7 +21,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
 
                 if (isDevelopment)
                 {
-                    await context.Database.EnsureDeletedAsync();  // 测试期间每次删除，节省每次手动删库的操作
+                    //await context.Database.EnsureDeletedAsync();
                 }
 
                 await context.Database.MigrateAsync();

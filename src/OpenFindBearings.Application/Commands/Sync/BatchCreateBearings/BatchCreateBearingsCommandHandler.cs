@@ -63,6 +63,15 @@ namespace OpenFindBearings.Application.Commands.Sync.BatchCreateBearings
 
                     if (existingBearing != null && request.Mode == SyncMode.Create)
                     {
+                        // 已存在但不是爬虫数据，不覆盖（保护纠错/人工导入/Excel导入的数据）
+                        if (existingBearing.DataSource?.SourceType != OpenFindBearings.Domain.Enums.DataSourceType.Crawler)
+                        {
+                            result.AddSkipped(bearingDto.CurrentCode, "非爬虫数据，跳过覆盖保护");
+                            _logger.LogDebug("跳过覆盖: {Code}, 数据来源: {Source}",
+                                bearingDto.CurrentCode, existingBearing.DataSource?.SourceType);
+                            continue;
+                        }
+
                         result.AddFailed(bearingDto.CurrentCode, "轴承型号已存在");
                         continue;
                     }
@@ -70,6 +79,15 @@ namespace OpenFindBearings.Application.Commands.Sync.BatchCreateBearings
                     if (existingBearing == null && request.Mode == SyncMode.Update)
                     {
                         result.AddFailed(bearingDto.CurrentCode, "轴承型号不存在");
+                        continue;
+                    }
+
+                    // 更新时也要检查是否为非爬虫数据
+                    if (existingBearing != null && existingBearing.DataSource?.SourceType != OpenFindBearings.Domain.Enums.DataSourceType.Crawler)
+                    {
+                        result.AddSkipped(bearingDto.CurrentCode, "非爬虫数据，跳过覆盖保护");
+                        _logger.LogDebug("跳过更新: {Code}, 数据来源: {Source}",
+                            bearingDto.CurrentCode, existingBearing.DataSource?.SourceType);
                         continue;
                     }
 

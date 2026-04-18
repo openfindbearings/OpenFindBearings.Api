@@ -1,7 +1,6 @@
 ﻿using MediatR;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using OpenFindBearings.Domain.Abstractions;
+using OpenFindBearings.Application.Shared.Interfaces;
 
 namespace OpenFindBearings.Application.Behaviors
 {
@@ -13,16 +12,16 @@ namespace OpenFindBearings.Application.Behaviors
     public class UnitOfWorkBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
     where TRequest : IRequest<TResponse>
     {
-        private readonly IServiceProvider _serviceProvider;
+        private readonly IUnitOfWork _unitOfWork;
         private readonly IMediator _mediator;
-        private readonly ILogger _logger;
+        private readonly ILogger<UnitOfWorkBehavior<TRequest, TResponse>> _logger;
 
         public UnitOfWorkBehavior(
-            IServiceProvider serviceProvider,
+            IUnitOfWork unitOfWork,
             IMediator mediator,
             ILogger<UnitOfWorkBehavior<TRequest, TResponse>> logger)
         {
-            _serviceProvider = serviceProvider;
+            _unitOfWork = unitOfWork;
             _mediator = mediator;
             _logger = logger;
         }
@@ -32,60 +31,54 @@ namespace OpenFindBearings.Application.Behaviors
             RequestHandlerDelegate<TResponse> next,
             CancellationToken cancellationToken)
         {
+            // 查询请求不触发工作单元
             if (request is IQuery)
             {
                 return await next();
             }
 
-            using var scope = _serviceProvider.CreateScope();
-            var context = scope.ServiceProvider.GetRequiredService<Microsoft.EntityFrameworkCore.DbContext>();
-
             var requestName = typeof(TRequest).Name;
-            _logger.LogDebug("UnitOfWork 开始处理 {RequestName}", requestName);
-
-            await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
+            _logger.LogDebug("开始处理命令: {RequestName}", requestName);
 
             try
             {
+                // 执行实际的命令处理
                 var response = await next();
 
-                var domainEvents = context.ChangeTracker
-                    .Entries<BaseEntity>()
-                    .Where(x => x.Entity.DomainEvents != null && x.Entity.DomainEvents.Any())
-                    .SelectMany(x => x.Entity.DomainEvents)
-                    .ToList();
+                // 获取领域事件（在保存之前）
+                var domainEvents = _unitOfWork.GetDomainEvents();
 
-                foreach (var entry in context.ChangeTracker.Entries<BaseEntity>())
-                {
-                    entry.Entity.ClearDomainEvents();
-                }
+                // 保存更改到数据库
+                var savedCount = await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                var savedCount = await context.SaveChangesAsync(cancellationToken);
-
-                await transaction.CommitAsync(cancellationToken);
-
+                // 提交成功后，发布领域事件
                 foreach (var domainEvent in domainEvents)
                 {
                     await _mediator.Publish(domainEvent, cancellationToken);
                 }
 
-                _logger.LogDebug("UnitOfWork 完成 {RequestName}，提交了 {SavedCount} 条更改，发布了 {EventCount} 个事件",
+                // 清空已发布的事件
+                _unitOfWork.ClearDomainEvents();
+
+                _logger.LogDebug(
+                    "命令处理完成: {RequestName}, 保存了 {SavedCount} 条更改, 发布了 {EventCount} 个事件",
                     requestName, savedCount, domainEvents.Count);
 
                 return response;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "UnitOfWork 处理 {RequestName} 失败，准备回滚事务", requestName);
-                await transaction.RollbackAsync(cancellationToken);
+                _logger.LogError(ex, "命令处理失败: {RequestName}", requestName);
                 throw;
             }
         }
     }
+
     /// <summary>
     /// 标记接口：表示只读查询（不会触发 UnitOfWorkBehavior 的事务）
     /// </summary>
     public interface IQuery { }
+
     /// <summary>
     /// 标记接口：表示写操作（会触发 UnitOfWorkBehavior 的事务）
     /// </summary>

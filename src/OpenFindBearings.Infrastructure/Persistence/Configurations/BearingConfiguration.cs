@@ -29,7 +29,6 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
                 .HasColumnName("CodeSource");
 
             builder.Property(b => b.Name)
-                .IsRequired()
                 .HasMaxLength(200)
                 .HasColumnName("Name");
 
@@ -192,13 +191,6 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
 
                 ds.Property(d => d.ImportedAt)
                     .HasColumnName("ImportedAt");
-
-                ds.Property(d => d.ReliabilityScore)
-                    .HasColumnName("ReliabilityScore");
-
-                // 数据来源索引
-                ds.HasIndex(d => d.SourceType)
-                    .HasDatabaseName("IX_Bearings_DataSourceType");
             });
 
             // ============ 数据追溯字段 ============

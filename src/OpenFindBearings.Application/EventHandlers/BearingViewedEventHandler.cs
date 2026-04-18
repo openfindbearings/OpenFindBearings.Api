@@ -1,6 +1,6 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
-using OpenFindBearings.Application.Interfaces;
+using OpenFindBearings.Application.Services;
 using OpenFindBearings.Application.Shared.Constants;
 using OpenFindBearings.Domain.Events;
 using OpenFindBearings.Domain.Repositories;

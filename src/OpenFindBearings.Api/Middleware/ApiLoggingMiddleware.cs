@@ -3,7 +3,7 @@ using OpenFindBearings.Api.Helpers;
 using OpenFindBearings.Api.Services;
 using OpenFindBearings.Application.Commands.ApiLogs.AddApiCallLog;
 using OpenFindBearings.Application.Commands.Users.UpdateUserPreference;
-using OpenFindBearings.Application.Interfaces;
+using OpenFindBearings.Application.Shared.Interfaces;
 using OpenFindBearings.Domain.Entities;
 using System.Diagnostics;
 

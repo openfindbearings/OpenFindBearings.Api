@@ -2,7 +2,8 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using OpenFindBearings.Application.Interfaces;
+using OpenFindBearings.Application.Services;
+using OpenFindBearings.Application.Shared.Interfaces;
 using OpenFindBearings.Domain.Repositories;
 using OpenFindBearings.Infrastructure.Persistence.Data;
 using OpenFindBearings.Infrastructure.Persistence.Repositories;
@@ -23,6 +24,9 @@ namespace OpenFindBearings.Infrastructure
             {
                 options.UseNpgsql(configuration.GetConnectionString("DefaultConnection"), b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName));
             });
+
+            // 注册 UnitOfWork
+            services.AddScoped<IUnitOfWork, UnitOfWork>();
 
             // ============ 2. 注册所有仓储 ============
 

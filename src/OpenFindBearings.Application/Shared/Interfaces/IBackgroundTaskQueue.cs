@@ -1,4 +1,4 @@
-﻿namespace OpenFindBearings.Application.Interfaces
+﻿namespace OpenFindBearings.Application.Shared.Interfaces
 {
     /// <summary>
     /// 后台任务队列接口

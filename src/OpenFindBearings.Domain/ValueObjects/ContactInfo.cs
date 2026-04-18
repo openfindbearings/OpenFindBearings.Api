@@ -11,27 +11,37 @@ namespace OpenFindBearings.Domain.ValueObjects
         /// <summary>
         /// 联系人姓名
         /// </summary>
-        public string? ContactPerson { get; }
+        public string? ContactPerson { get; private set; }
 
         /// <summary>
         /// 固定电话
         /// </summary>
-        public string? Phone { get; }
+        public string? Phone { get; private set; }
 
         /// <summary>
         /// 手机号码
         /// </summary>
-        public string? Mobile { get; }
+        public string? Mobile { get; private set; }
+
+        /// <summary>
+        /// QQ号码
+        /// </summary>
+        public string? QQ { get; private set; }
 
         /// <summary>
         /// 电子邮箱
         /// </summary>
-        public string? Email { get; }
+        public string? Email { get; private set; }
 
         /// <summary>
         /// 地址
         /// </summary>
-        public string? Address { get; }
+        public string? Address { get; private set; }
+
+        /// <summary>
+        /// 私有构造函数，供EF Core使用
+        /// </summary>
+        private ContactInfo() { }
 
         /// <summary>
         /// 创建联系方式值对象
@@ -39,18 +49,21 @@ namespace OpenFindBearings.Domain.ValueObjects
         /// <param name="contactPerson">联系人姓名</param>
         /// <param name="phone">固定电话</param>
         /// <param name="mobile">手机号码</param>
+        /// <param name="qq">QQ号码</param>
         /// <param name="email">电子邮箱</param>
         /// <param name="address">地址</param>
         public ContactInfo(
             string? contactPerson = null,
             string? phone = null,
             string? mobile = null,
+            string? qq = null,
             string? email = null,
             string? address = null)
         {
             ContactPerson = contactPerson;
             Phone = phone;
             Mobile = mobile;
+            QQ = qq;
             Email = email;
             Address = address;
         }
@@ -64,6 +77,7 @@ namespace OpenFindBearings.Domain.ValueObjects
             yield return ContactPerson ?? string.Empty;
             yield return Phone ?? string.Empty;
             yield return Mobile ?? string.Empty;
+            yield return QQ ?? string.Empty;
             yield return Email ?? string.Empty;
             yield return Address ?? string.Empty;
         }
@@ -75,29 +89,32 @@ namespace OpenFindBearings.Domain.ValueObjects
             !string.IsNullOrWhiteSpace(ContactPerson) ||
             !string.IsNullOrWhiteSpace(Phone) ||
             !string.IsNullOrWhiteSpace(Mobile) ||
+            !string.IsNullOrWhiteSpace(QQ) ||
             !string.IsNullOrWhiteSpace(Email) ||
             !string.IsNullOrWhiteSpace(Address);
 
 
         /// <summary>
-        /// 获取所在城市
+        /// 城市（从地址提取）
         /// </summary>
-        /// <returns></returns>
-        public string? GetCity()
+        public string? City
         {
-            if (string.IsNullOrWhiteSpace(Address))
-                return null;
-
-            var parts = Address.Split(new[] { '省', '市', '区', '县' }, StringSplitOptions.RemoveEmptyEntries);
-
-            if (parts.Length >= 2)
+            get
             {
-                var city = parts[1].Trim();
-                if (city.Length > 10) city = city.Substring(0, 10);
-                return city;
-            }
+                if (string.IsNullOrWhiteSpace(Address))
+                    return null;
 
-            return Address.Length > 6 ? Address.Substring(0, 6) : Address;
+                var parts = Address.Split(new[] { '省', '市', '区', '县' }, StringSplitOptions.RemoveEmptyEntries);
+
+                if (parts.Length >= 2)
+                {
+                    var city = parts[1].Trim();
+                    if (city.Length > 10) city = city.Substring(0, 10);
+                    return city;
+                }
+
+                return Address.Length > 6 ? Address.Substring(0, 6) : Address;
+            }
         }
     }
 }

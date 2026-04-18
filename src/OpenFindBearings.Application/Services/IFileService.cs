@@ -1,4 +1,4 @@
-namespace OpenFindBearings.Application.Interfaces
+namespace OpenFindBearings.Application.Services
 {
     /// <summary>
     /// 文件上传结果

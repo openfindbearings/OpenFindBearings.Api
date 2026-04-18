@@ -81,6 +81,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     ContactPerson = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
                     Phone = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
                     Mobile = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
+                    Contact_QQ = table.Column<string>(type: "text", nullable: true),
                     Email = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
                     Address = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
                     Description = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
@@ -102,7 +103,6 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     SourceId = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
                     ImportedBy = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
                     ImportedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    ReliabilityScore = table.Column<int>(type: "integer", nullable: true),
                     LastVerifiedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     VerifiedBy = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
                     IsDataVerified = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
@@ -204,7 +204,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     CurrentCode = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     FormerCode = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
                     CodeSource = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
-                    Name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    Name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
                     Description = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
                     BearingType = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     StructureType = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
@@ -224,6 +224,8 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     DynamicLoadRating = table.Column<decimal>(type: "numeric(12,2)", precision: 12, scale: 2, nullable: true),
                     StaticLoadRating = table.Column<decimal>(type: "numeric(12,2)", precision: 12, scale: 2, nullable: true),
                     LimitingSpeed = table.Column<decimal>(type: "numeric(10,0)", precision: 10, scale: 0, nullable: true),
+                    LimitingSpeedGrease = table.Column<decimal>(type: "numeric(10,0)", precision: 10, scale: 0, nullable: true),
+                    LimitingSpeedOil = table.Column<decimal>(type: "numeric(10,0)", precision: 10, scale: 0, nullable: true),
                     OriginCountry = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
                     Trademark = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
                     Category = table.Column<int>(type: "integer", nullable: false, defaultValue: 2),
@@ -236,12 +238,13 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     SourceId = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
                     ImportedBy = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
                     ImportedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    ReliabilityScore = table.Column<int>(type: "integer", nullable: true),
                     LastVerifiedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     VerifiedBy = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
                     IsVerified = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
                     DataRemark = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
                     ViewCount = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    Image3D = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    Image2DCAD = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     IsActive = table.Column<bool>(type: "boolean", nullable: false)
@@ -833,11 +836,6 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                 table: "Bearings",
                 columns: new[] { "CurrentCode", "BrandId" },
                 unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Bearings_DataSourceType",
-                table: "Bearings",
-                column: "DataSourceType");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Bearings_InnerDiameter",

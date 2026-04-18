@@ -69,9 +69,6 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
 
                 ds.Property(d => d.ImportedAt)
                     .HasColumnName("ImportedAt");
-
-                ds.Property(d => d.ReliabilityScore)
-                    .HasColumnName("ReliabilityScore");
             });
 
             // ============ 数据追溯字段 ============

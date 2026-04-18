@@ -148,6 +148,12 @@ namespace OpenFindBearings.Application.DTOs
         public string BearingTypeCode { get; set; } = string.Empty;
 
         /// <summary>
+        /// 数据来源类型（Crawler, Manual, FileImport, Api, UserSubmitted, SeedData）
+        /// 爬虫同步时传递 Crawler，业务系统据此判断是否允许覆盖
+        /// </summary>
+        public string? DataSource { get; set; }
+
+        /// <summary>
         /// 商标
         /// </summary>
         public string? Trademark { get; set; }
