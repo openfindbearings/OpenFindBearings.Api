@@ -1,6 +1,5 @@
-﻿using MediatR;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using OpenFindBearings.Api.DTOs.Requests;
 using OpenFindBearings.Api.Extensions;
 using OpenFindBearings.Api.Helpers;
 using OpenFindBearings.Api.Middleware;
@@ -645,7 +644,7 @@ namespace OpenFindBearings.Api.Endpoints
             /// </summary>
             group.MapPost("/licenses/{id:guid}/reject", async (
                 Guid id,
-                RejectLicenseRequest request,
+                RejectLicenseCommand command,
                 [FromServices] ICurrentUserService currentUser,
                 [FromServices] IMediator mediator,
                 HttpContext httpContext) =>
@@ -653,11 +652,10 @@ namespace OpenFindBearings.Api.Endpoints
                 if (!currentUser.UserId.HasValue)
                     return ApiResponseHelper.Unauthorized(httpContext: httpContext);
 
-                var command = new RejectLicenseCommand
+                command = command with
                 {
                     VerificationId = id,
-                    ReviewedBy = currentUser.UserId.Value,
-                    Reason = request.Reason
+                    ReviewedBy = currentUser.UserId.Value
                 };
                 await mediator.Send(command);
                 return ApiResponseHelper.Ok("已拒绝", httpContext);
@@ -736,15 +734,10 @@ namespace OpenFindBearings.Api.Endpoints
             /// 创建角色
             /// </summary>
             group.MapPost("/roles", async (
-                CreateRoleRequest request,
+                CreateRoleCommand command,
                 [FromServices] IMediator mediator,
                 HttpContext httpContext) =>
             {
-                var command = new CreateRoleCommand
-                {
-                    Name = request.Name,
-                    Description = request.Description
-                };
                 var id = await mediator.Send(command);
                 return ApiResponseHelper.Ok(new { id }, "角色创建成功", httpContext);
             })
@@ -759,16 +752,11 @@ namespace OpenFindBearings.Api.Endpoints
             /// </summary>
             group.MapPut("/roles/{id:guid}", async (
                 Guid id,
-                UpdateRoleRequest request,
+                UpdateRoleCommand command,
                 [FromServices] IMediator mediator,
                 HttpContext httpContext) =>
             {
-                var command = new UpdateRoleCommand
-                {
-                    Id = id,
-                    Name = request.Name,
-                    Description = request.Description
-                };
+                command = command with { Id = id };
                 await mediator.Send(command);
                 return ApiResponseHelper.Ok("角色更新成功", httpContext);
             })
@@ -801,15 +789,11 @@ namespace OpenFindBearings.Api.Endpoints
             /// </summary>
             group.MapPost("/roles/{id:guid}/permissions", async (
                 Guid id,
-                AssignPermissionsRequest request,
+                AssignPermissionsToRoleCommand command,
                 [FromServices] IMediator mediator,
                 HttpContext httpContext) =>
             {
-                var command = new AssignPermissionsToRoleCommand
-                {
-                    RoleId = id,
-                    PermissionNames = request.PermissionNames
-                };
+                command = command with { RoleId = id };
                 await mediator.Send(command);
                 return ApiResponseHelper.Ok("权限分配成功", httpContext);
             })
@@ -888,15 +872,10 @@ namespace OpenFindBearings.Api.Endpoints
             /// 创建权限
             /// </summary>
             group.MapPost("/permissions", async (
-                CreatePermissionRequest request,
+                CreatePermissionCommand command,
                 [FromServices] IMediator mediator,
                 HttpContext httpContext) =>
             {
-                var command = new CreatePermissionCommand
-                {
-                    Name = request.Name,
-                    Description = request.Description
-                };
                 var id = await mediator.Send(command);
                 return ApiResponseHelper.Ok(new { id }, "权限创建成功", httpContext);
             })
@@ -911,16 +890,11 @@ namespace OpenFindBearings.Api.Endpoints
             /// </summary>
             group.MapPut("/permissions/{id:guid}", async (
                 Guid id,
-                UpdatePermissionRequest request,
+                UpdatePermissionCommand command,
                 [FromServices] IMediator mediator,
                 HttpContext httpContext) =>
             {
-                var command = new UpdatePermissionCommand
-                {
-                    Id = id,
-                    Name = request.Name,
-                    Description = request.Description
-                };
+                command = command with { Id = id };
                 await mediator.Send(command);
                 return ApiResponseHelper.Ok("权限更新成功", httpContext);
             })
@@ -955,15 +929,10 @@ namespace OpenFindBearings.Api.Endpoints
             /// </summary>
             group.MapPost("/users/{userId:guid}/roles", async (
                 Guid userId,
-                AssignUserRoleRequest request,
+                AssignRoleToUserCommand command,
                 [FromServices] IMediator mediator,
                 HttpContext httpContext) =>
             {
-                var command = new AssignRoleToUserCommand
-                {
-                    UserId = userId,
-                    RoleName = request.RoleName
-                };
                 await mediator.Send(command);
                 return ApiResponseHelper.Ok("角色分配成功", httpContext);
             })

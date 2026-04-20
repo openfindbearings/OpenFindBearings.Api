@@ -1,4 +1,4 @@
-﻿namespace OpenFindBearings.Api.Helpers
+﻿namespace OpenFindBearings.Api.Extensions
 {
     /// <summary>
     /// HttpContext扩展方法

@@ -1,4 +1,4 @@
-﻿using OpenFindBearings.Api.DTOs.Responses;
+﻿using OpenFindBearings.Api.Shared;
 
 namespace OpenFindBearings.Api.Helpers
 {

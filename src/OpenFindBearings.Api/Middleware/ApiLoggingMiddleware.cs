@@ -1,5 +1,5 @@
 ﻿using MediatR;
-using OpenFindBearings.Api.Helpers;
+using OpenFindBearings.Api.Extensions;
 using OpenFindBearings.Api.Services;
 using OpenFindBearings.Application.Commands.ApiLogs.AddApiCallLog;
 using OpenFindBearings.Application.Commands.Users.UpdateUserPreference;

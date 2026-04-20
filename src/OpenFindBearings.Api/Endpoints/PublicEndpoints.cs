@@ -1,5 +1,6 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using OpenFindBearings.Api.Extensions;
 using OpenFindBearings.Api.Helpers;
 using OpenFindBearings.Application.Queries.Bearings.GetBearingByCode;
 using OpenFindBearings.Application.Queries.Bearings.GetBearingInterchanges;
