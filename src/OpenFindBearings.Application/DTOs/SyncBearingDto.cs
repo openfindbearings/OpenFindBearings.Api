@@ -1,4 +1,4 @@
-﻿using OpenFindBearings.Domain.Enums;
+using OpenFindBearings.Domain.Enums;
 
 namespace OpenFindBearings.Application.DTOs
 {
@@ -152,6 +152,12 @@ namespace OpenFindBearings.Application.DTOs
         /// 爬虫同步时传递 Crawler，业务系统据此判断是否允许覆盖
         /// </summary>
         public string? DataSource { get; set; }
+
+        /// <summary>
+        /// 爬虫来源站点名称（如 zhaoshang、nsk、skf）
+        /// 仅当 DataSource = Crawler 时有效
+        /// </summary>
+        public string? SourceSite { get; set; }
 
         /// <summary>
         /// 商标

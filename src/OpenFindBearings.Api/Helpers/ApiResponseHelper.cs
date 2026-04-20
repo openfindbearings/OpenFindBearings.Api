@@ -161,5 +161,21 @@ namespace OpenFindBearings.Api.Helpers
             };
             return TypedResults.Ok(response);
         }
+
+        /// <summary>
+        /// 异步任务已接受响应（202 Accepted）
+        /// </summary>
+        public static IResult Accepted<T>(string locationUri, T data, string message = "任务已接受，请轮询 Location 地址获取结果", HttpContext? httpContext = null)
+        {
+            return TypedResults.Accepted(locationUri, ApiResponse<T>.AcceptedResult(data, message, httpContext: httpContext));
+        }
+
+        /// <summary>
+        /// 异步任务已接受响应（仅 Location，无数据体）
+        /// </summary>
+        public static IResult Accepted(string locationUri, HttpContext? httpContext = null)
+        {
+            return TypedResults.Accepted(locationUri);
+        }
     }
 }

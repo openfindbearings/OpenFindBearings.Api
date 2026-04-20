@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.Commands.Bearings.CreateBearing;
 using OpenFindBearings.Application.Commands.Bearings.UpdateBearing;
@@ -127,7 +127,8 @@ namespace OpenFindBearings.Application.Commands.Sync.BatchCreateBearings
                             BrandId = brand.Id,
                             Trademark = bearingDto.Trademark,
                             OriginCountry = bearingDto.OriginCountry,
-                            Category = bearingDto.Category
+                            Category = bearingDto.Category,
+                            SourceSite = bearingDto.SourceSite
                         };
 
                         var id = await _mediator.Send(createCommand, cancellationToken);

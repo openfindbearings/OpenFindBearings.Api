@@ -1,5 +1,4 @@
 ﻿using MediatR;
-using Microsoft.AspNetCore.Mvc;
 using OpenFindBearings.Api.Helpers;
 using OpenFindBearings.Application.Commands.Sync.BatchCreateBearings;
 using OpenFindBearings.Application.Commands.Sync.BatchCreateBearingTypes;
@@ -22,30 +21,35 @@ namespace OpenFindBearings.Api.Endpoints
                 .WithTags("数据同步接口")
                 .RequireAuthorization("SyncClient");
 
-            // 批量同步品牌
-            group.MapPost("/brands/batch", async (BatchCreateBrandsCommand command, IMediator mediator) =>
+            // ============ 同步操作（使用 ApiResponseHelper） ============
+
+            group.MapPost("/brands/batch", async (
+                BatchCreateBrandsCommand command,
+                IMediator mediator,
+                HttpContext httpContext) =>
             {
                 var result = await mediator.Send(command);
-                return Results.Ok(result);
+                return ApiResponseHelper.Ok(result, "品牌批量同步完成", httpContext);
             })
             .WithName("SyncBrands")
-            .WithSummary("批量同步品牌")
-            .WithDescription("批量同步品牌数据");
+            .WithSummary("批量同步品牌");
 
-            // 批量同步轴承类型
-            group.MapPost("/bearingtypes/batch", async (BatchCreateBearingTypesCommand command, IMediator mediator) =>
+            group.MapPost("/bearingtypes/batch", async (
+                BatchCreateBearingTypesCommand command,
+                IMediator mediator,
+                HttpContext httpContext) =>
             {
                 var result = await mediator.Send(command);
-                return Results.Ok(result);
+                return ApiResponseHelper.Ok(result, "轴承类型批量同步完成", httpContext);
             })
             .WithName("SyncBearingTypes")
-            .WithSummary("批量同步轴承类型")
-            .WithDescription("批量同步轴承类型数据");
+            .WithSummary("批量同步轴承类型");
 
-            // 批量同步轴承
+            // ============ 异步操作（不使用 ApiResponseHelper） ============
+
             group.MapPost("/bearings/batch", async (
                 BatchCreateBearingsCommand command,
-                [FromServices] IMediator mediator,
+                IMediator mediator,
                 HttpContext httpContext) =>
             {
                 var result = await mediator.Send(command);
@@ -53,70 +57,53 @@ namespace OpenFindBearings.Api.Endpoints
                 var clientId = httpContext.User.FindFirst("client_id")?.Value ?? "unknown";
                 httpContext.Items["ClientId"] = clientId;
 
-                return Results.Accepted(
-                    $"/api/sync/tasks/{Guid.NewGuid()}",
-                    ApiResponseHelper.Ok(result, "批量同步任务已接受", httpContext)
-                );
+                var taskId = Guid.NewGuid();
+                return ApiResponseHelper.Accepted($"/api/sync/tasks/{taskId}", new { taskId }, httpContext: httpContext);
             })
             .WithName("BatchCreateBearings")
-            .WithSummary("批量同步轴承")
-            .WithDescription("批量创建/更新轴承数据（需客户端认证）");
+            .WithSummary("批量同步轴承");
 
-            // 批量同步商家
             group.MapPost("/merchants/batch", async (
                 BatchCreateMerchantsCommand command,
-                [FromServices] IMediator mediator,
+                IMediator mediator,
                 HttpContext httpContext) =>
             {
                 var result = await mediator.Send(command);
-
-                return Results.Accepted(
-                    $"/api/sync/tasks/{Guid.NewGuid()}",
-                    ApiResponseHelper.Ok(result, "批量同步任务已接受", httpContext)
-                );
+                var taskId = Guid.NewGuid();
+                return ApiResponseHelper.Accepted($"/api/sync/tasks/{taskId}", new { taskId }, httpContext: httpContext);
             })
             .WithName("BatchCreateMerchants")
-            .WithSummary("批量同步商家")
-            .WithDescription("批量创建/更新商家数据（需客户端认证）");
+            .WithSummary("批量同步商家");
 
-            // 批量同步商家-轴承关联
             group.MapPost("/merchantbearings/batch", async (
                 BatchCreateMerchantBearingsCommand command,
-                [FromServices] IMediator mediator,
+                IMediator mediator,
                 HttpContext httpContext) =>
             {
                 var result = await mediator.Send(command);
-
-                return Results.Accepted(
-                    $"/api/sync/tasks/{Guid.NewGuid()}",
-                    ApiResponseHelper.Ok(result, "批量同步任务已接受", httpContext)
-                );
+                var taskId = Guid.NewGuid();
+                return ApiResponseHelper.Accepted($"/api/sync/tasks/{taskId}", new { taskId }, httpContext: httpContext);
             })
             .WithName("BatchCreateMerchantBearings")
-            .WithSummary("批量同步关联")
-            .WithDescription("批量创建/更新商家-轴承关联数据（需客户端认证）");
+            .WithSummary("批量同步关联");
 
-            // 批量同步替代品关系
             group.MapPost("/interchanges/batch", async (
                 BatchCreateInterchangesCommand command,
-                [FromServices] IMediator mediator,
+                IMediator mediator,
                 HttpContext httpContext) =>
             {
                 var result = await mediator.Send(command);
-
-                return Results.Accepted(
-                    $"/api/sync/tasks/{Guid.NewGuid()}",
-                    ApiResponseHelper.Ok(result, "批量同步任务已接受", httpContext)
-                );
+                var taskId = Guid.NewGuid();
+               return ApiResponseHelper.Accepted($"/api/sync/tasks/{taskId}", new { taskId }, httpContext: httpContext);
             })
             .WithName("BatchCreateInterchanges")
-            .WithSummary("批量同步替代品")
-            .WithDescription("批量创建/更新轴承替代品关系（需客户端认证）");
+            .WithSummary("批量同步替代品");
 
-            // 获取同步任务状态
+            // ============ 任务状态查询（使用 ApiResponseHelper） ============
+
             group.MapGet("/tasks/{taskId}", async (
                 string taskId,
-                [FromServices] IMediator mediator,
+                IMediator mediator,
                 HttpContext httpContext) =>
             {
                 if (!Guid.TryParse(taskId, out var taskGuid))
@@ -132,8 +119,7 @@ namespace OpenFindBearings.Api.Endpoints
                     : ApiResponseHelper.Ok(result, httpContext: httpContext);
             })
             .WithName("GetSyncTaskStatus")
-            .WithSummary("获取同步任务状态")
-            .WithDescription("获取批量任务的处理状态");
+            .WithSummary("获取同步任务状态");
         }
     }
 }

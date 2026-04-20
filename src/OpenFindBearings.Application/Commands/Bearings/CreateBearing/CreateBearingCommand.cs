@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using OpenFindBearings.Application.Behaviors;
 using OpenFindBearings.Domain.Enums;
 
@@ -163,5 +163,21 @@ namespace OpenFindBearings.Application.Commands.Bearings.CreateBearing
         /// 2D CAD尺寸图纸URL
         /// </summary>
         public string? Image2DCAD { get; init; }
+
+        /// <summary>
+        /// 录入人/系统（用于 DataSource.ImportedBy）
+        /// 爬虫时填站点名称，手动录入时填用户名称
+        /// </summary>
+        public string? ImportedBy { get; init; }
+
+        /// <summary>
+        /// 爬虫来源站点名称（用于批量同步时）
+        /// </summary>
+        public string? SourceSite { get; init; }
+
+        /// <summary>
+        /// 数据来源类型（crawler/manual/api/file，用于设置 DataSource）
+        /// </summary>
+        public string? DataSource { get; init; }
     }
 }

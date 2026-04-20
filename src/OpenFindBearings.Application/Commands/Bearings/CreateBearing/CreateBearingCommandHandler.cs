@@ -1,4 +1,4 @@
-﻿using FluentValidation;
+using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Domain.Aggregates;
@@ -41,6 +41,7 @@ namespace OpenFindBearings.Application.Commands.Bearings.CreateBearing
             SetIdentification(bearing, request);
             bearing.SetOrigin(request.OriginCountry, request.Category);
             bearing.SetImages(request.Image3D, request.Image2DCAD);
+            SetDataSource(bearing, request);
 
             await _bearingRepository.AddAsync(bearing, cancellationToken);
 
@@ -125,6 +126,29 @@ namespace OpenFindBearings.Application.Commands.Bearings.CreateBearing
         private void SetIdentification(Bearing bearing, CreateBearingCommand request)
         {
             bearing.UpdateIdentification(request.FormerCode, request.CodeSource, request.Trademark);
+        }
+
+        private void SetDataSource(Bearing bearing, CreateBearingCommand request)
+        {
+            var sourceType = request.DataSource ?? "manual";
+            var importedBy = request.SourceSite ?? request.ImportedBy;
+
+            if (sourceType.Equals("crawler", StringComparison.OrdinalIgnoreCase))
+            {
+                bearing.SetDataSource(DataSource.FromCrawler(importedBy ?? "unknown"));
+            }
+            else if (sourceType.Equals("api", StringComparison.OrdinalIgnoreCase))
+            {
+                bearing.SetDataSource(DataSource.FromApi(importedBy ?? "ApiSync"));
+            }
+            else if (sourceType.Equals("file", StringComparison.OrdinalIgnoreCase) || sourceType.Equals("fileimport", StringComparison.OrdinalIgnoreCase))
+            {
+                bearing.SetDataSource(DataSource.FromFileImport(importedBy));
+            }
+            else
+            {
+                bearing.SetDataSource(DataSource.FromManual(importedBy));
+            }
         }
     }
 }
