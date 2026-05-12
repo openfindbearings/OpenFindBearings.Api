@@ -74,7 +74,7 @@ namespace OpenFindBearings.Application.Queries.MerchantBearings.SearchMerchantBe
                 merchantBearings = merchantBearings.Where(mb =>
                     (mb.Merchant?.Name?.Contains(request.Keyword, StringComparison.OrdinalIgnoreCase) == true) ||
                     (mb.Bearing?.CurrentCode?.Contains(request.Keyword, StringComparison.OrdinalIgnoreCase) == true) ||
-                    (mb.Bearing?.Name?.Contains(request.Keyword, StringComparison.OrdinalIgnoreCase) == true));
+                    (mb.Bearing?.FormerCode?.Contains(request.Keyword, StringComparison.OrdinalIgnoreCase) == true));
             }
 
             // 排序

@@ -79,7 +79,6 @@ namespace OpenFindBearings.Application.Queries.Bearings.GetBearingQuery
             {
                 Id = bearing.Id,
                 CurrentCode = bearing.CurrentCode,
-                Name = bearing.Name,
                 Description = bearing.Description,
                 InnerDiameter = bearing.Dimensions.InnerDiameter,
                 OuterDiameter = bearing.Dimensions.OuterDiameter,

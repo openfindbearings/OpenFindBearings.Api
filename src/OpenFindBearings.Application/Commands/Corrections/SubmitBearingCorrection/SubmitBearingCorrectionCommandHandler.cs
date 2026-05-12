@@ -41,7 +41,7 @@ namespace OpenFindBearings.Application.Commands.Corrections.SubmitBearingCorrect
             string? originalValue = request.FieldName.ToLower() switch
             {
                 "partnumber" => bearing.CurrentCode,
-                "name" => bearing.Name,
+                "formercode" => bearing.FormerCode,
                 "description" => bearing.Description,
                 "innerdiameter" => bearing.Dimensions.InnerDiameter.ToString(),
                 "outerdiameter" => bearing.Dimensions.OuterDiameter.ToString(),

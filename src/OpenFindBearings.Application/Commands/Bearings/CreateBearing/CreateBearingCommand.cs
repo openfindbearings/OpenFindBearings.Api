@@ -25,11 +25,6 @@ namespace OpenFindBearings.Application.Commands.Bearings.CreateBearing
         public string? CodeSource { get; init; }
 
         /// <summary>
-        /// 产品名称
-        /// </summary>
-        public string Name { get; init; } = string.Empty;
-
-        /// <summary>
         /// 产品描述
         /// </summary>
         public string? Description { get; init; }

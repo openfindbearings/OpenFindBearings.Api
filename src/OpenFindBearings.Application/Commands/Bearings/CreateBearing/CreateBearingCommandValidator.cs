@@ -17,11 +17,6 @@ namespace OpenFindBearings.Application.Commands.Bearings.CreateBearing
                 .MaximumLength(100).WithMessage("曾用代号长度不能超过100个字符")
                 .When(x => !string.IsNullOrWhiteSpace(x.FormerCode));
 
-            // 名称验证
-            RuleFor(x => x.Name)
-                .NotEmpty().WithMessage("产品名称不能为空")
-                .MaximumLength(200).WithMessage("名称长度不能超过200个字符");
-
             // ✅ 新增：轴承类型名称验证
             RuleFor(x => x.BearingType)
                 .NotEmpty().WithMessage("轴承类型名称不能为空")

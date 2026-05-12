@@ -12,7 +12,7 @@ using OpenFindBearings.Infrastructure.Persistence.Data;
 namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260417072858_InitialCreate")]
+    [Migration("20260512054202_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -126,11 +126,6 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)")
                         .HasColumnName("Material");
-
-                    b.Property<string>("Name")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("Name");
 
                     b.Property<string>("OriginCountry")
                         .HasMaxLength(50)
@@ -1529,10 +1524,6 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                             b1.Property<Guid>("BearingId")
                                 .HasColumnType("uuid");
 
-                            b1.Property<int?>("CrawlerSite")
-                                .HasColumnType("integer")
-                                .HasColumnName("CrawlerSite");
-
                             b1.Property<DateTime>("ImportedAt")
                                 .HasColumnType("timestamp with time zone")
                                 .HasColumnName("ImportedAt");
@@ -1542,25 +1533,10 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                                 .HasColumnType("character varying(100)")
                                 .HasColumnName("ImportedBy");
 
-                            b1.Property<string>("SourceDetail")
-                                .HasMaxLength(500)
-                                .HasColumnType("character varying(500)")
-                                .HasColumnName("SourceDetail");
-
-                            b1.Property<string>("SourceId")
-                                .HasMaxLength(200)
-                                .HasColumnType("character varying(200)")
-                                .HasColumnName("SourceId");
-
                             b1.Property<string>("SourceType")
                                 .HasMaxLength(50)
                                 .HasColumnType("character varying(50)")
                                 .HasColumnName("DataSourceType");
-
-                            b1.Property<string>("SourceUrl")
-                                .HasMaxLength(1000)
-                                .HasColumnType("character varying(1000)")
-                                .HasColumnName("SourceUrl");
 
                             b1.HasKey("BearingId");
 
@@ -1670,10 +1646,6 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                             b1.Property<Guid>("MerchantId")
                                 .HasColumnType("uuid");
 
-                            b1.Property<int?>("CrawlerSite")
-                                .HasColumnType("integer")
-                                .HasColumnName("CrawlerSite");
-
                             b1.Property<DateTime>("ImportedAt")
                                 .HasColumnType("timestamp with time zone")
                                 .HasColumnName("ImportedAt");
@@ -1683,25 +1655,10 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                                 .HasColumnType("character varying(100)")
                                 .HasColumnName("ImportedBy");
 
-                            b1.Property<string>("SourceDetail")
-                                .HasMaxLength(500)
-                                .HasColumnType("character varying(500)")
-                                .HasColumnName("SourceDetail");
-
-                            b1.Property<string>("SourceId")
-                                .HasMaxLength(200)
-                                .HasColumnType("character varying(200)")
-                                .HasColumnName("SourceId");
-
                             b1.Property<string>("SourceType")
                                 .HasMaxLength(50)
                                 .HasColumnType("character varying(50)")
                                 .HasColumnName("DataSourceType");
-
-                            b1.Property<string>("SourceUrl")
-                                .HasMaxLength(1000)
-                                .HasColumnType("character varying(1000)")
-                                .HasColumnName("SourceUrl");
 
                             b1.HasKey("MerchantId");
 

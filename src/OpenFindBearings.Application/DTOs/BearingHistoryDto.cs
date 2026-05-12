@@ -21,11 +21,6 @@
         public string BearingCurrentCode { get; set; } = string.Empty;
 
         /// <summary>
-        /// 轴承名称
-        /// </summary>
-        public string BearingName { get; set; } = string.Empty;
-
-        /// <summary>
         /// 品牌名称
         /// </summary>
         public string? BrandName { get; set; }

@@ -29,11 +29,6 @@ namespace OpenFindBearings.Domain.Aggregates
         public string? CodeSource { get; private set; }
 
         /// <summary>
-        /// 产品名称
-        /// </summary>
-        public string? Name { get; private set; }
-
-        /// <summary>
         /// 产品描述
         /// </summary>
         public string? Description { get; private set; }
@@ -230,7 +225,6 @@ namespace OpenFindBearings.Domain.Aggregates
         /// </summary>
         public Bearing(
             string currentCode,
-            string? name,
             Guid bearingTypeId,
             string bearingType,
             Dimensions dimensions,
@@ -240,12 +234,10 @@ namespace OpenFindBearings.Domain.Aggregates
         {
             if (string.IsNullOrWhiteSpace(currentCode))
                 throw new ArgumentException("现行代号不能为空", nameof(currentCode));
-            // name 可以为空（爬虫数据可能没有名称）
             if (string.IsNullOrWhiteSpace(bearingType))
                 throw new ArgumentException("轴承类型不能为空", nameof(bearingType));
 
             CurrentCode = currentCode;
-            Name = name;
             BearingTypeId = bearingTypeId;
             BearingType = bearingType;
             Dimensions = dimensions ?? throw new ArgumentNullException(nameof(dimensions));
@@ -262,7 +254,6 @@ namespace OpenFindBearings.Domain.Aggregates
         /// </summary>
         public static Bearing CreateNonStandard(
             string currentCode,
-            string name,
             Guid bearingTypeId, 
             string bearingType,
             Dimensions dimensions,
@@ -272,7 +263,7 @@ namespace OpenFindBearings.Domain.Aggregates
             PerformanceParams? performance = null,
             decimal? weight = null)
         {
-            var bearing = new Bearing(currentCode, name, bearingTypeId, bearingType, dimensions, brandId, performance, weight)
+            var bearing = new Bearing(currentCode, bearingTypeId, bearingType, dimensions, brandId, performance, weight)
             {
                 IsStandard = false,
                 StructureType = structureType,
@@ -287,7 +278,6 @@ namespace OpenFindBearings.Domain.Aggregates
         /// </summary>
         public static Bearing CreateBearing(
             string currentCode,
-            string name,
             Guid bearingTypeId,
             string bearingType,
             decimal innerDiameter,
@@ -299,7 +289,6 @@ namespace OpenFindBearings.Domain.Aggregates
             var dimensions = new Dimensions(innerDiameter, outerDiameter, width);
             return new Bearing(
                 currentCode: currentCode,
-                name: name,
                 bearingTypeId: bearingTypeId,
                 bearingType: bearingType,
                 dimensions: dimensions,
@@ -454,7 +443,7 @@ namespace OpenFindBearings.Domain.Aggregates
         /// <summary>
         /// 获取完整的产品名称
         /// </summary>
-        public string GetFullName() => $"{Brand?.Name} {Name}";
+        public string GetFullName() => $"{Brand?.Name} {CurrentCode}";
 
         /// <summary>
         /// 获取尺寸字符串

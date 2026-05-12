@@ -63,7 +63,6 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                 query = query.Where(b =>
                     b.CurrentCode.Contains(searchParams.Keyword) ||
                     (b.FormerCode != null && b.FormerCode.Contains(searchParams.Keyword)) ||
-                    b.Name.Contains(searchParams.Keyword) ||
                     (b.Description != null && b.Description.Contains(searchParams.Keyword)));
             }
 
@@ -186,8 +185,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
             if (!string.IsNullOrWhiteSpace(searchParams.Keyword))
                 query = query.Where(b =>
                     b.CurrentCode.Contains(searchParams.Keyword) ||
-                    (b.FormerCode != null && b.FormerCode.Contains(searchParams.Keyword)) ||
-                    b.Name.Contains(searchParams.Keyword));
+                    (b.FormerCode != null && b.FormerCode.Contains(searchParams.Keyword)));
 
             if (!string.IsNullOrWhiteSpace(searchParams.OriginCountry))
                 query = query.Where(b => b.OriginCountry == searchParams.OriginCountry);

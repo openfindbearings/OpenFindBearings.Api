@@ -67,7 +67,6 @@ namespace OpenFindBearings.Application.Queries.Mobile.GetMobileHome
                     Id = b.Id,
                     CurrentCode = b.CurrentCode,
                     FormerCode = b.FormerCode,
-                    Name = b.Name,
                     BrandName = b.Brand?.Name ?? string.Empty,
                     BearingTypeName = b.BearingType,
                     InnerDiameter = b.Dimensions.InnerDiameter,

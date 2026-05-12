@@ -12,12 +12,6 @@ namespace OpenFindBearings.Application.Commands.Bearings.UpdateBearing
             RuleFor(x => x.Id)
                 .NotEmpty().WithMessage("轴承ID不能为空");
 
-            When(x => x.Name != null, () =>
-            {
-                RuleFor(x => x.Name)
-                    .MaximumLength(200).WithMessage("名称长度不能超过200个字符");
-            });
-
             // 添加产地验证
             When(x => !string.IsNullOrWhiteSpace(x.OriginCountry), () =>
             {

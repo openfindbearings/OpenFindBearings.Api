@@ -28,10 +28,6 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
                 .HasMaxLength(50)
                 .HasColumnName("CodeSource");
 
-            builder.Property(b => b.Name)
-                .HasMaxLength(200)
-                .HasColumnName("Name");
-
             builder.Property(b => b.Description)
                 .HasMaxLength(1000)
                 .HasColumnName("Description");

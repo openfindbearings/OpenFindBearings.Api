@@ -21,11 +21,6 @@
         public string? FormerCode { get; set; }
 
         /// <summary>
-        /// 轴承名称
-        /// </summary>
-        public string Name { get; set; } = string.Empty;
-
-        /// <summary>
         /// 品牌名称
         /// </summary>
         public string BrandName { get; set; } = string.Empty;

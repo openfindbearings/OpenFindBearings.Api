@@ -64,7 +64,7 @@ namespace OpenFindBearings.Application.Queries.Corrections.GetMyCorrectionDetail
                 var bearing = await _bearingRepository.GetByIdAsync(targetId, cancellationToken);
                 if (bearing != null)
                 {
-                    return $"{bearing.CurrentCode} - {bearing.Name}";
+                    return bearing.CurrentCode;
                 }
             }
             else if (targetType == "Merchant")

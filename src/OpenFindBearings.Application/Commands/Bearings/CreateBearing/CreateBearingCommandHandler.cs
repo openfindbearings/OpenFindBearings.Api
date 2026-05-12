@@ -87,7 +87,6 @@ namespace OpenFindBearings.Application.Commands.Bearings.CreateBearing
             {
                 return new Bearing(
                     currentCode: request.CurrentCode,
-                    name: request.Name,
                     bearingTypeId: request.BearingTypeId,
                     bearingType: request.BearingType,
                     dimensions: dimensions,
@@ -99,7 +98,6 @@ namespace OpenFindBearings.Application.Commands.Bearings.CreateBearing
             {
                 return Bearing.CreateNonStandard(
                     currentCode: request.CurrentCode,
-                    name: request.Name,
                     bearingTypeId: request.BearingTypeId,
                     bearingType: request.BearingType,
                     dimensions: dimensions,

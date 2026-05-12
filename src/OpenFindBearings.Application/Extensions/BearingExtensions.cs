@@ -12,7 +12,6 @@ namespace OpenFindBearings.Application.Extensions
                 Id = bearing.Id,
                 CurrentCode = bearing.CurrentCode,
                 FormerCode = bearing.FormerCode,
-                Name = bearing.Name,
                 Description = bearing.Description,
                 BearingType = bearing.BearingType,
                 InnerDiameter = bearing.Dimensions.InnerDiameter,

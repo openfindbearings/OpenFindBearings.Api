@@ -18,11 +18,6 @@
         public string? FormerCode { get; set; }
 
         /// <summary>
-        /// 产品名称
-        /// </summary>
-        public string Name { get; set; } = string.Empty;
-
-        /// <summary>
         /// 产品描述
         /// </summary>
         public string? Description { get; set; }

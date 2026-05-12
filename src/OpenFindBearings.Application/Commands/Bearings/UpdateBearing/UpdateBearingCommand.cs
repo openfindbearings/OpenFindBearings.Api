@@ -12,9 +12,14 @@ namespace OpenFindBearings.Application.Commands.Bearings.UpdateBearing
         public Guid Id { get; init; }
 
         /// <summary>
-        /// 产品名称
+        /// 曾用代号
         /// </summary>
-        public string? Name { get; init; }
+        public string? FormerCode { get; init; }
+
+        /// <summary>
+        /// 代号来源
+        /// </summary>
+        public string? CodeSource { get; init; }
 
         /// <summary>
         /// 产品描述

@@ -100,7 +100,6 @@ namespace OpenFindBearings.Application.Commands.Sync.BatchCreateBearings
                             CurrentCode = bearingDto.CurrentCode,
                             FormerCode = bearingDto.FormerCode,
                             CodeSource = bearingDto.CodeSource,
-                            Name = bearingDto.Name,
                             Description = bearingDto.Description,
                             BearingType = bearingType.Name,
                             StructureType = bearingDto.StructureType,
@@ -140,7 +139,8 @@ namespace OpenFindBearings.Application.Commands.Sync.BatchCreateBearings
                         var updateCommand = new UpdateBearingCommand
                         {
                             Id = existingBearing.Id,
-                            Name = bearingDto.Name,
+                            FormerCode = bearingDto.FormerCode,
+                            CodeSource = bearingDto.CodeSource,
                             Description = bearingDto.Description,
                             StructureType = bearingDto.StructureType,
                             SizeSeries = bearingDto.SizeSeries,

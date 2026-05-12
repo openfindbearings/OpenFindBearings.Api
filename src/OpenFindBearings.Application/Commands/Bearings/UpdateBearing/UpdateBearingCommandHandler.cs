@@ -31,11 +31,13 @@ namespace OpenFindBearings.Application.Commands.Bearings.UpdateBearing
 
             var changedFields = new List<string>();
 
-            // 更新基本信息
-            if (request.Name != null)
+            // 更新标识信息（曾用代号、代号来源、商标）
+            if (request.FormerCode != null || request.CodeSource != null || request.Trademark != null)
             {
-                // bearing.UpdateName(request.Name);
-                changedFields.Add("Name");
+                bearing.UpdateIdentification(request.FormerCode, request.CodeSource, request.Trademark);
+                changedFields.Add("FormerCode");
+                changedFields.Add("CodeSource");
+                changedFields.Add("Trademark");
             }
 
             // 更新描述和重量
@@ -91,13 +93,6 @@ namespace OpenFindBearings.Application.Commands.Bearings.UpdateBearing
                     request.LimitingSpeedOil);
                 bearing.UpdatePerformance(performance);
                 changedFields.Add("Performance");
-            }
-
-            // 更新商标
-            if (request.Trademark != null)
-            {
-                bearing.UpdateIdentification(null, null, request.Trademark);
-                changedFields.Add("Trademark");
             }
 
             // 更新产地和类别
