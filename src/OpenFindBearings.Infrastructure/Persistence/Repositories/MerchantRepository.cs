@@ -39,6 +39,10 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         /// </summary>
         public async Task<PagedResult<Merchant>> SearchAsync(MerchantSearchParams searchParams, CancellationToken cancellationToken = default)
         {
+            if (searchParams.Page < 1) searchParams.Page = 1;
+            if (searchParams.PageSize < 1) searchParams.PageSize = 20;
+            if (searchParams.PageSize > 100) searchParams.PageSize = 100;
+
             var query = _context.Merchants.AsNoTracking();
 
             if (!string.IsNullOrWhiteSpace(searchParams.Keyword))
@@ -78,6 +82,13 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         {
             return await _context.Merchants
                 .AnyAsync(m => m.Name == name, cancellationToken);
+        }
+
+        // 根据名称精确获取商家
+        public async Task<Merchant?> GetByNameAsync(string name, CancellationToken cancellationToken = default)
+        {
+            return await _context.Merchants
+                .FirstOrDefaultAsync(m => m.Name == name, cancellationToken);
         }
 
         // 获取总数

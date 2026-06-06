@@ -13,17 +13,12 @@
         /// <summary>
         /// 轴承现行代号
         /// </summary>
-        public string CurrentCode { get; set; } = string.Empty;
+        public string PartNumber { get; set; } = string.Empty;
 
         /// <summary>
         /// 轴承曾用代号
         /// </summary>
-        public string? FormerCode { get; set; }
-
-        /// <summary>
-        /// 轴承名称
-        /// </summary>
-        public string Name { get; set; } = string.Empty;
+        public string? OldNumber { get; set; }
 
         /// <summary>
         /// 品牌名称

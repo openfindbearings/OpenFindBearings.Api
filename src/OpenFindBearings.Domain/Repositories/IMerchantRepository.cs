@@ -40,6 +40,11 @@ namespace OpenFindBearings.Domain.Repositories
         Task<bool> ExistsByNameAsync(string name, CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// 根据名称精确获取商家
+        /// </summary>
+        Task<Merchant?> GetByNameAsync(string name, CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// 获取商家总数
         /// </summary>
         Task<int> GetTotalCountAsync(CancellationToken cancellationToken = default);

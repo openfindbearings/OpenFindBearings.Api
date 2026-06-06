@@ -12,9 +12,14 @@ namespace OpenFindBearings.Application.Commands.Bearings.UpdateBearing
         public Guid Id { get; init; }
 
         /// <summary>
-        /// 产品名称
+        /// 曾用代号
         /// </summary>
-        public string? Name { get; init; }
+        public string? OldNumber { get; init; }
+
+        /// <summary>
+        /// 代号来源
+        /// </summary>
+        public string? CodeSource { get; init; }
 
         /// <summary>
         /// 产品描述
@@ -69,17 +74,27 @@ namespace OpenFindBearings.Application.Commands.Bearings.UpdateBearing
         /// <summary>
         /// 动载荷 (kN)
         /// </summary>
-        public decimal? DynamicLoadRating { get; init; }
+        public decimal? DynamicLoad { get; init; }
 
         /// <summary>
         /// 静载荷 (kN)
         /// </summary>
-        public decimal? StaticLoadRating { get; init; }
+        public decimal? StaticLoad { get; init; }
 
         /// <summary>
         /// 极限转速 (rpm)
         /// </summary>
         public decimal? LimitingSpeed { get; init; }
+
+        /// <summary>
+        /// 脂极限转速 (rpm)
+        /// </summary>
+        public decimal? LimitingSpeedGrease { get; init; }
+
+        /// <summary>
+        /// 油极限转速 (rpm)
+        /// </summary>
+        public decimal? LimitingSpeedOil { get; init; }
 
         /// <summary>
         /// 商标
@@ -95,5 +110,15 @@ namespace OpenFindBearings.Application.Commands.Bearings.UpdateBearing
         /// 产品类别
         /// </summary>
         public BearingCategory? Category { get; init; }
+
+        /// <summary>
+        /// 3D渲染图URL
+        /// </summary>
+        public string? Image3DUrl { get; init; }
+
+        /// <summary>
+        /// 2D CAD尺寸图纸URL
+        /// </summary>
+        public string? Image2DUrl { get; init; }
     }
 }

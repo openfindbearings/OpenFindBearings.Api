@@ -22,44 +22,42 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                 .FirstOrDefaultAsync(b => b.Id == id, cancellationToken);
         }
 
-        public async Task<Bearing?> GetByCurrentCodeAsync(string currentCode, CancellationToken cancellationToken = default)
+        public async Task<Bearing?> GetByPartNumberAsync(string partNumber, CancellationToken cancellationToken = default)
         {
             return await _context.Bearings
                 .Include(b => b.Brand)
-                .FirstOrDefaultAsync(b => b.CurrentCode == currentCode, cancellationToken);
-        }
-
-        public async Task<Bearing?> GetByPartNumberAsync(string partNumber, CancellationToken cancellationToken = default)
-        {
-            return await GetByCurrentCodeAsync(partNumber, cancellationToken);
+                .FirstOrDefaultAsync(b => b.PartNumber == partNumber, cancellationToken);
         }
 
         public async Task<PagedResult<Bearing>> SearchAsync(BearingSearchParams searchParams, CancellationToken cancellationToken = default)
         {
+            if (searchParams.Page < 1) searchParams.Page = 1;
+            if (searchParams.PageSize < 1) searchParams.PageSize = 20;
+            if (searchParams.PageSize > 100) searchParams.PageSize = 100;
+
             var query = _context.Bearings
                 .Include(b => b.Brand)
                 .AsNoTracking()
                 .Where(b => b.IsActive);
 
             // 现行代号搜索
-            if (!string.IsNullOrWhiteSpace(searchParams.CurrentCode))
+            if (!string.IsNullOrWhiteSpace(searchParams.PartNumber))
             {
-                query = query.Where(b => b.CurrentCode.Contains(searchParams.CurrentCode));
+                query = query.Where(b => b.PartNumber.Contains(searchParams.PartNumber));
             }
 
             // 曾用代号搜索
-            if (!string.IsNullOrWhiteSpace(searchParams.FormerCode))
+            if (!string.IsNullOrWhiteSpace(searchParams.OldNumber))
             {
-                query = query.Where(b => b.FormerCode != null && b.FormerCode.Contains(searchParams.FormerCode));
+                query = query.Where(b => b.OldNumber != null && b.OldNumber.Contains(searchParams.OldNumber));
             }
 
             // 关键词搜索
             if (!string.IsNullOrWhiteSpace(searchParams.Keyword))
             {
                 query = query.Where(b =>
-                    b.CurrentCode.Contains(searchParams.Keyword) ||
-                    (b.FormerCode != null && b.FormerCode.Contains(searchParams.Keyword)) ||
-                    b.Name.Contains(searchParams.Keyword) ||
+                    b.PartNumber.Contains(searchParams.Keyword) ||
+                    (b.OldNumber != null && b.OldNumber.Contains(searchParams.Keyword)) ||
                     (b.Description != null && b.Description.Contains(searchParams.Keyword)));
             }
 
@@ -129,9 +127,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
             // 排序
             query = (searchParams.SortBy?.ToLower()) switch
             {
-                "currentcode" => searchParams.SortOrder?.ToLower() == "desc"
-                    ? query.OrderByDescending(b => b.CurrentCode)
-                    : query.OrderBy(b => b.CurrentCode),
+                "partnumber" => searchParams.SortOrder?.ToLower() == "desc"
+                    ? query.OrderByDescending(b => b.PartNumber)
+                    : query.OrderBy(b => b.PartNumber),
 
                 "innerdiameter" => searchParams.SortOrder?.ToLower() == "desc"
                     ? query.OrderByDescending(b => b.Dimensions.InnerDiameter)
@@ -150,8 +148,8 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                     : query.OrderBy(b => b.ViewCount),
 
                 _ => searchParams.SortOrder?.ToLower() == "desc"
-                    ? query.OrderByDescending(b => b.CurrentCode)
-                    : query.OrderBy(b => b.CurrentCode)
+                    ? query.OrderByDescending(b => b.PartNumber)
+                    : query.OrderBy(b => b.PartNumber)
             };
 
             // 分页
@@ -173,17 +171,16 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         {
             var query = _context.Bearings.Where(b => b.IsActive);
 
-            if (!string.IsNullOrWhiteSpace(searchParams.CurrentCode))
-                query = query.Where(b => b.CurrentCode.Contains(searchParams.CurrentCode));
+            if (!string.IsNullOrWhiteSpace(searchParams.PartNumber))
+                query = query.Where(b => b.PartNumber.Contains(searchParams.PartNumber));
 
-            if (!string.IsNullOrWhiteSpace(searchParams.FormerCode))
-                query = query.Where(b => b.FormerCode != null && b.FormerCode.Contains(searchParams.FormerCode));
+            if (!string.IsNullOrWhiteSpace(searchParams.OldNumber))
+                query = query.Where(b => b.OldNumber != null && b.OldNumber.Contains(searchParams.OldNumber));
 
             if (!string.IsNullOrWhiteSpace(searchParams.Keyword))
                 query = query.Where(b =>
-                    b.CurrentCode.Contains(searchParams.Keyword) ||
-                    (b.FormerCode != null && b.FormerCode.Contains(searchParams.Keyword)) ||
-                    b.Name.Contains(searchParams.Keyword));
+                    b.PartNumber.Contains(searchParams.Keyword) ||
+                    (b.OldNumber != null && b.OldNumber.Contains(searchParams.Keyword)));
 
             if (!string.IsNullOrWhiteSpace(searchParams.OriginCountry))
                 query = query.Where(b => b.OriginCountry == searchParams.OriginCountry);
@@ -237,7 +234,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         public async Task<bool> ExistsByPartNumberAsync(string partNumber, CancellationToken cancellationToken = default)
         {
             return await _context.Bearings
-                .AnyAsync(b => b.CurrentCode == partNumber, cancellationToken);
+                .AnyAsync(b => b.PartNumber == partNumber, cancellationToken);
         }
 
         public async Task<IEnumerable<Bearing>> GetHotBearingsAsync(int count, CancellationToken cancellationToken = default)

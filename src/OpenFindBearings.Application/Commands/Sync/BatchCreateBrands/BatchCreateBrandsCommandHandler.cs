@@ -29,6 +29,7 @@ namespace OpenFindBearings.Application.Commands.Sync.BatchCreateBrands
 
             foreach (var brandDto in request.Brands)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 try
                 {
                     var existingBrand = await _brandRepository.GetByCodeAsync(brandDto.Code, cancellationToken);

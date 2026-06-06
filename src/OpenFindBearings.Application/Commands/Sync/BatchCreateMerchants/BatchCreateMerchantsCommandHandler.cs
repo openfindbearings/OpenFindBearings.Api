@@ -32,18 +32,11 @@ namespace OpenFindBearings.Application.Commands.Sync.BatchCreateMerchants
 
             foreach (var merchantDto in request.Merchants)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 try
                 {
-                    // 检查商家是否已存在
-                    var existingMerchantsResult = await _merchantRepository.SearchAsync(
-                        new Domain.Specifications.MerchantSearchParams
-                        {
-                            Keyword = merchantDto.Name,
-                            PageSize = 10
-                        }, cancellationToken);
-
-                    // ✅ 修改：使用 existingMerchantsResult.Items
-                    var existing = existingMerchantsResult.Items.FirstOrDefault();
+                    // 检查商家是否已存在（精确名称匹配）
+                    var existing = await _merchantRepository.GetByNameAsync(merchantDto.Name, cancellationToken);
 
                     if (existing != null && request.Mode == SyncMode.Create)
                     {
@@ -76,7 +69,7 @@ namespace OpenFindBearings.Application.Commands.Sync.BatchCreateMerchants
 
                         // ✅ 修改：传递所有6个参数
                         merchant.UpdateBasicInfo(
-                            companyName: merchantDto.CompanyName,
+                            companyName: merchantDto.EnglishName,
                             unifiedSocialCreditCode: merchantDto.UnifiedSocialCreditCode,
                             description: merchantDto.Description,
                             businessScope: merchantDto.BusinessScope,
@@ -96,7 +89,7 @@ namespace OpenFindBearings.Application.Commands.Sync.BatchCreateMerchants
                     {
                         // ✅ 修改：传递所有6个参数
                         existing.UpdateBasicInfo(
-                            companyName: merchantDto.CompanyName ?? existing.CompanyName,
+                            companyName: merchantDto.EnglishName ?? existing.CompanyName,
                             unifiedSocialCreditCode: merchantDto.UnifiedSocialCreditCode ?? existing.UnifiedSocialCreditCode,
                             description: merchantDto.Description ?? existing.Description,
                             businessScope: merchantDto.BusinessScope ?? existing.BusinessScope,

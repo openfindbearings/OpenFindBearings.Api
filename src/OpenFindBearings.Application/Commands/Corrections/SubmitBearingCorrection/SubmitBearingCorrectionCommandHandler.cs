@@ -40,8 +40,8 @@ namespace OpenFindBearings.Application.Commands.Corrections.SubmitBearingCorrect
             // 获取原始值
             string? originalValue = request.FieldName.ToLower() switch
             {
-                "partnumber" => bearing.CurrentCode,
-                "name" => bearing.Name,
+                "partnumber" => bearing.PartNumber,
+                "oldnumber" => bearing.OldNumber,
                 "description" => bearing.Description,
                 "innerdiameter" => bearing.Dimensions.InnerDiameter.ToString(),
                 "outerdiameter" => bearing.Dimensions.OuterDiameter.ToString(),
@@ -51,9 +51,11 @@ namespace OpenFindBearings.Application.Commands.Corrections.SubmitBearingCorrect
                 "material" => bearing.Material,
                 "sealtype" => bearing.SealType,
                 "cagetype" => bearing.CageType,
-                "dynamicloadrating" => bearing.Performance?.DynamicLoadRating?.ToString(),
-                "staticloadrating" => bearing.Performance?.StaticLoadRating?.ToString(),
+                "dynamicload" => bearing.Performance?.DynamicLoad?.ToString(),
+                "staticload" => bearing.Performance?.StaticLoad?.ToString(),
                 "limitingspeed" => bearing.Performance?.LimitingSpeed?.ToString(),
+                "limitingspeedgrease" => bearing.Performance?.LimitingSpeedGrease?.ToString(),
+                "limitingspeedoil" => bearing.Performance?.LimitingSpeedOil?.ToString(),
                 _ => null
             };
 

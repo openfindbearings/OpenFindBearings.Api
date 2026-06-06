@@ -1,155 +1,179 @@
-﻿using MediatR;
+using MediatR;
 using Microsoft.Extensions.Logging;
-using OpenFindBearings.Application.Commands.Bearings.CreateBearing;
-using OpenFindBearings.Application.Commands.Bearings.UpdateBearing;
+using OpenFindBearings.Application.DTOs;
+using OpenFindBearings.Domain.Aggregates;
+using OpenFindBearings.Domain.Entities;
+using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
+using OpenFindBearings.Domain.ValueObjects;
 
 namespace OpenFindBearings.Application.Commands.Sync.BatchCreateBearings
 {
     /// <summary>
-    /// 批量创建轴承命令处理器
+    /// 批量同步轴承命令处理器（重构版）
+    /// 性能优化：消除逐条 MediatR.Send 导致的 50 次独立 SaveChanges，改为直接操作实体 + 外层 UnitOfWork 单次提交
     /// </summary>
     public class BatchCreateBearingsCommandHandler : IRequestHandler<BatchCreateBearingsCommand, BatchResult>
     {
-        private readonly IMediator _mediator;
         private readonly IBearingRepository _bearingRepository;
         private readonly IBrandRepository _brandRepository;
         private readonly IBearingTypeRepository _bearingTypeRepository;
         private readonly ILogger<BatchCreateBearingsCommandHandler> _logger;
 
         public BatchCreateBearingsCommandHandler(
-            IMediator mediator,
             IBearingRepository bearingRepository,
             IBrandRepository brandRepository,
             IBearingTypeRepository bearingTypeRepository,
             ILogger<BatchCreateBearingsCommandHandler> logger)
         {
-            _mediator = mediator;
             _bearingRepository = bearingRepository;
             _brandRepository = brandRepository;
             _bearingTypeRepository = bearingTypeRepository;
             _logger = logger;
         }
 
-        public async Task<BatchResult> Handle(BatchCreateBearingsCommand request, CancellationToken cancellationToken)
+        public async Task<BatchResult> Handle(BatchCreateBearingsCommand request, CancellationToken ct)
         {
-            _logger.LogInformation("开始批量创建轴承，数量: {Count}, 模式: {Mode}",
-                request.Bearings.Count, request.Mode);
-
+            _logger.LogInformation("批量同步轴承: {Count}, 模式: {Mode}", request.Bearings.Count, request.Mode);
             var result = new BatchResult();
 
-            foreach (var bearingDto in request.Bearings)
+            foreach (var dto in request.Bearings)
             {
+                ct.ThrowIfCancellationRequested();
+
                 try
                 {
-                    // 验证品牌是否存在
-                    var brand = await _brandRepository.GetByCodeAsync(bearingDto.BrandCode, cancellationToken);
+                    var brand = await _brandRepository.GetByCodeAsync(dto.BrandCode, ct);
                     if (brand == null)
                     {
-                        result.AddFailed(bearingDto.CurrentCode, $"品牌不存在: {bearingDto.BrandCode}");
+                        result.AddFailed(dto.PartNumber, $"品牌不存在: {dto.BrandCode}");
                         continue;
                     }
 
-                    // 验证轴承类型是否存在
-                    var bearingType = await _bearingTypeRepository.GetByCodeAsync(bearingDto.BearingTypeCode, cancellationToken);
-                    if (bearingType == null)
+                    var type = await _bearingTypeRepository.GetByCodeAsync(dto.TypeName, ct);
+                    if (type == null)
                     {
-                        result.AddFailed(bearingDto.CurrentCode, $"轴承类型不存在: {bearingDto.BearingTypeCode}");
+                        result.AddFailed(dto.PartNumber, $"轴承类型不存在: {dto.TypeName}");
                         continue;
                     }
 
-                    // 检查轴承是否已存在
-                    var existingBearing = await _bearingRepository.GetByPartNumberAsync(bearingDto.CurrentCode, cancellationToken);
+                    var existing = await _bearingRepository.GetByPartNumberAsync(dto.PartNumber, ct);
 
-                    if (existingBearing != null && request.Mode == SyncMode.Create)
+                    // DataSource 保护逻辑：非爬虫数据不可被覆盖
+                    if (existing != null && existing.DataSource?.SourceType != DataSourceType.Crawler)
                     {
-                        result.AddFailed(bearingDto.CurrentCode, "轴承型号已存在");
+                        result.AddSkipped(dto.PartNumber, "非爬虫数据，跳过覆盖保护");
+                        _logger.LogDebug("跳过覆盖: {PartNumber}, 来源: {Source}", dto.PartNumber, existing.DataSource?.SourceType);
                         continue;
                     }
 
-                    if (existingBearing == null && request.Mode == SyncMode.Update)
+                    if (request.Mode == SyncMode.Create && existing != null)
                     {
-                        result.AddFailed(bearingDto.CurrentCode, "轴承型号不存在");
+                        result.AddFailed(dto.PartNumber, "轴承型号已存在");
                         continue;
                     }
 
-                    // 执行创建或更新
-                    if (existingBearing == null)
+                    if (request.Mode == SyncMode.Update && existing == null)
                     {
-                        // 创建新轴承
-                        var createCommand = new CreateBearingCommand
-                        {
-                            CurrentCode = bearingDto.CurrentCode,
-                            FormerCode = bearingDto.FormerCode,
-                            CodeSource = bearingDto.CodeSource,
-                            Name = bearingDto.Name,
-                            Description = bearingDto.Description,
-                            BearingType = bearingType.Name,
-                            StructureType = bearingDto.StructureType,
-                            SizeSeries = bearingDto.SizeSeries,
-                            IsStandard = bearingDto.IsStandard,
-                            InnerDiameter = bearingDto.InnerDiameter,
-                            OuterDiameter = bearingDto.OuterDiameter,
-                            Width = bearingDto.Width,
-                            ChamferRmin = bearingDto.ChamferRmin,
-                            ChamferRmax = bearingDto.ChamferRmax,
-                            Weight = bearingDto.Weight,
-                            PrecisionGrade = bearingDto.PrecisionGrade,
-                            Material = bearingDto.Material,
-                            SealType = bearingDto.SealType,
-                            CageType = bearingDto.CageType,
-                            DynamicLoadRating = bearingDto.DynamicLoadRating,
-                            StaticLoadRating = bearingDto.StaticLoadRating,
-                            LimitingSpeed = bearingDto.LimitingSpeed,
-                            BearingTypeId = bearingType.Id,
-                            BrandId = brand.Id,
-                            Trademark = bearingDto.Trademark,
-                            OriginCountry = bearingDto.OriginCountry,
-                            Category = bearingDto.Category
-                        };
-
-                        var id = await _mediator.Send(createCommand, cancellationToken);
-                        result.AddSuccess(bearingDto.CurrentCode, "created", id);
+                        result.AddFailed(dto.PartNumber, "轴承型号不存在");
+                        continue;
                     }
-                    else if (request.Mode == SyncMode.Update || request.Mode == SyncMode.Upsert)
+
+                    if (existing == null)
                     {
-                        // 更新现有轴承
-                        var updateCommand = new UpdateBearingCommand
-                        {
-                            Id = existingBearing.Id,
-                            Name = bearingDto.Name,
-                            Description = bearingDto.Description,
-                            StructureType = bearingDto.StructureType,
-                            SizeSeries = bearingDto.SizeSeries,
-                            ChamferRmin = bearingDto.ChamferRmin,
-                            ChamferRmax = bearingDto.ChamferRmax,
-                            Weight = bearingDto.Weight,
-                            PrecisionGrade = bearingDto.PrecisionGrade,
-                            Material = bearingDto.Material,
-                            SealType = bearingDto.SealType,
-                            CageType = bearingDto.CageType,
-                            DynamicLoadRating = bearingDto.DynamicLoadRating,
-                            StaticLoadRating = bearingDto.StaticLoadRating,
-                            LimitingSpeed = bearingDto.LimitingSpeed,
-                            Trademark = bearingDto.Trademark,
-                            OriginCountry = bearingDto.OriginCountry,
-                            Category = bearingDto.Category
-                        };
-                        await _mediator.Send(updateCommand, cancellationToken);
-                        result.AddSuccess(bearingDto.CurrentCode, "updated", existingBearing.Id);
+                        var bearing = CreateBearing(dto, type, brand);
+                        await _bearingRepository.AddAsync(bearing, ct);
+                        result.AddSuccess(dto.PartNumber, "created", bearing.Id);
+                    }
+                    else
+                    {
+                        UpdateBearing(existing, dto);
+                        await _bearingRepository.UpdateAsync(existing, ct);
+                        result.AddSuccess(dto.PartNumber, "updated", existing.Id);
                     }
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "批量创建轴承失败: {CurrentCode}", bearingDto.CurrentCode);
-                    result.AddFailed(bearingDto.CurrentCode, ex.Message);
+                    _logger.LogError(ex, "轴承同步失败: {PartNumber}", dto.PartNumber);
+                    result.AddFailed(dto.PartNumber, ex.Message);
                 }
             }
 
-            _logger.LogInformation("批量创建轴承完成，成功: {SuccessCount}, 失败: {FailCount}",
+            _logger.LogInformation("批量同步轴承完成: 成功{Success}, 失败{Fail}",
                 result.SuccessCount, result.FailCount);
 
             return result;
+        }
+
+        private static Bearing CreateBearing(SyncBearingDto dto, BearingType type, Brand brand)
+        {
+            var dimensions = new Dimensions(dto.InnerDiameter, dto.OuterDiameter, dto.Width);
+
+            PerformanceParams? perf = null;
+            if (dto.DynamicLoad.HasValue || dto.StaticLoad.HasValue || dto.LimitingSpeed.HasValue || dto.LimitingSpeedGrease.HasValue || dto.LimitingSpeedOil.HasValue)
+                perf = new PerformanceParams(dto.DynamicLoad, dto.StaticLoad, dto.LimitingSpeed, dto.LimitingSpeedGrease, dto.LimitingSpeedOil);
+
+            Bearing bearing;
+            if (dto.IsStandard)
+                bearing = new Bearing(dto.PartNumber, type.Id, type.Name, dimensions, brand.Id, perf, dto.Weight);
+            else
+                bearing = Bearing.CreateNonStandard(dto.PartNumber, type.Id, type.Name, dimensions, brand.Id, dto.StructureType, dto.SizeSeries, perf, dto.Weight);
+
+            bearing.UpdateIdentification(dto.OldNumber, dto.CodeSource, dto.Trademark);
+            bearing.UpdateTechnicalSpecs(dto.PrecisionGrade, dto.Material, dto.SealType, dto.CageType);
+            bearing.UpdateDimensionDetails(dto.ChamferRmin, dto.ChamferRmax);
+            bearing.UpdateDetails(dto.Description, dto.Weight);
+            bearing.SetOrigin(dto.OriginCountry, dto.Category);
+            bearing.SetImages(dto.Image3DUrl, dto.Image2DUrl);
+            SetDataSource(bearing, dto);
+
+            return bearing;
+        }
+
+        private static void UpdateBearing(Bearing bearing, SyncBearingDto dto)
+        {
+            if (dto.OldNumber != null || dto.CodeSource != null || dto.Trademark != null)
+                bearing.UpdateIdentification(dto.OldNumber, dto.CodeSource, dto.Trademark);
+
+            if (dto.Description != null || dto.Weight.HasValue)
+                bearing.UpdateDetails(dto.Description, dto.Weight);
+
+            if (dto.ChamferRmin.HasValue || dto.ChamferRmax.HasValue)
+                bearing.UpdateDimensionDetails(dto.ChamferRmin, dto.ChamferRmax);
+
+            if (dto.PrecisionGrade != null || dto.Material != null || dto.SealType != null || dto.CageType != null)
+                bearing.UpdateTechnicalSpecs(dto.PrecisionGrade, dto.Material, dto.SealType, dto.CageType);
+
+            if (dto.DynamicLoad.HasValue || dto.StaticLoad.HasValue || dto.LimitingSpeed.HasValue || dto.LimitingSpeedGrease.HasValue || dto.LimitingSpeedOil.HasValue)
+            {
+                var perf = new PerformanceParams(dto.DynamicLoad, dto.StaticLoad, dto.LimitingSpeed, dto.LimitingSpeedGrease, dto.LimitingSpeedOil);
+                bearing.UpdatePerformance(perf);
+            }
+
+            if (dto.OriginCountry != null)
+                bearing.SetOrigin(dto.OriginCountry, dto.Category);
+            else if (dto.Category != default(BearingCategory))
+                bearing.SetOrigin(bearing.OriginCountry, dto.Category);
+
+            if (dto.Image3DUrl != null || dto.Image2DUrl != null)
+                bearing.SetImages(dto.Image3DUrl, dto.Image2DUrl);
+        }
+
+        private static void SetDataSource(Bearing bearing, SyncBearingDto dto)
+        {
+            var sourceType = dto.DataSource ?? "manual";
+            var importedBy = dto.SourceSite;
+
+            if (sourceType.Equals("crawler", StringComparison.OrdinalIgnoreCase))
+                bearing.SetDataSource(DataSource.FromCrawler(importedBy ?? "unknown"));
+            else if (sourceType.Equals("api", StringComparison.OrdinalIgnoreCase))
+                bearing.SetDataSource(DataSource.FromApi(importedBy ?? "ApiSync"));
+            else if (sourceType.Equals("file", StringComparison.OrdinalIgnoreCase) || sourceType.Equals("fileimport", StringComparison.OrdinalIgnoreCase))
+                bearing.SetDataSource(DataSource.FromFileImport(importedBy));
+            else if (sourceType.Equals("seeddata", StringComparison.OrdinalIgnoreCase) || sourceType.Equals("seed", StringComparison.OrdinalIgnoreCase))
+                bearing.SetDataSource(DataSource.FromSeedData());
+            else
+                bearing.SetDataSource(DataSource.FromManual(importedBy));
         }
     }
 }

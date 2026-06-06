@@ -6,7 +6,7 @@
     public class SyncMerchantDto
     {
         public string Name { get; set; } = string.Empty;
-        public string? CompanyName { get; set; }
+        public string? EnglishName { get; set; }
         public string? UnifiedSocialCreditCode { get; set; }
         public int Type { get; set; }
         public string? Description { get; set; }

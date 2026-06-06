@@ -15,7 +15,7 @@ namespace OpenFindBearings.Application.Extensions
                 // ========== 敏感信息控制(匿名用户看不到) ==========
                 //MerchantName = null,
                 //MerchantGrade = string.Empty,
-                //MerchantCity = mb.Merchant?.Contact?.GetCity(),
+                //MerchantCity = mb.Merchant?.Contact?.City,
                 //MerchantPhone = null,
                 //MerchantAddress = null,
                 //IsPriceVisible = mb.IsPriceVisible(false),
@@ -23,7 +23,7 @@ namespace OpenFindBearings.Application.Extensions
                 // 还是放开，全能查到，因为这些信息目前是来源于网络，准确性不保证
                 MerchantName = mb.Merchant?.Name,
                 MerchantGrade = mb.Merchant?.Grade.ToString(),
-                MerchantCity = mb.Merchant?.Contact?.GetCity(),
+                MerchantCity = mb.Merchant?.Contact?.City,
                 MerchantPhone = mb.Merchant?.Contact?.Phone,
                 MerchantAddress = mb.Merchant?.Contact?.Address,
                 IsPriceVisible = mb.IsPriceVisible(true),
@@ -31,9 +31,8 @@ namespace OpenFindBearings.Application.Extensions
                 // ========== 其他字段 ==========
                 MerchantIsVerified = mb.Merchant?.IsVerified ?? false,
                 BearingId = mb.BearingId,
-                BearingCurrentCode = mb.Bearing?.CurrentCode ?? string.Empty,
-                BearingFormerCode = mb.Bearing?.FormerCode,
-                BearingName = mb.Bearing?.Name ?? string.Empty,
+                BearingPartNumber = mb.Bearing?.PartNumber ?? string.Empty,
+                BearingOldNumber = mb.Bearing?.OldNumber,
                 BearingTypeName = mb.Bearing?.BearingType,
                 BrandName = mb.Bearing?.Brand?.Name,
                 BrandLevel = mb.Bearing?.Brand?.Level.ToString(),
@@ -65,7 +64,7 @@ namespace OpenFindBearings.Application.Extensions
                 ////////// ========== 敏感信息控制(匿名用户看不到) ==========  目前不处理，后期关联了注册了的员工
                 MerchantName = mb.Merchant?.Name,
                 MerchantGrade = mb.Merchant?.Grade.ToString(),
-                MerchantCity = mb.Merchant?.Contact?.GetCity(),
+                MerchantCity = mb.Merchant?.Contact?.City,
                 MerchantPhone = mb.Merchant?.Contact?.Phone,
                 MerchantAddress = mb.Merchant?.Contact?.Address,
                 IsPriceVisible = mb.IsPriceVisible(true),
@@ -73,9 +72,8 @@ namespace OpenFindBearings.Application.Extensions
                 // ========== 其他字段 ==========
                 MerchantIsVerified = mb.Merchant?.IsVerified ?? false,
                 BearingId = mb.BearingId,
-                BearingCurrentCode = mb.Bearing?.CurrentCode ?? string.Empty,
-                BearingFormerCode = mb.Bearing?.FormerCode,
-                BearingName = mb.Bearing?.Name ?? string.Empty,
+                BearingPartNumber = mb.Bearing?.PartNumber ?? string.Empty,
+                BearingOldNumber = mb.Bearing?.OldNumber,
                 BearingTypeName = mb.Bearing?.BearingType,
                 BrandName = mb.Bearing?.Brand?.Name,
                 BrandLevel = mb.Bearing?.Brand?.Level.ToString(),

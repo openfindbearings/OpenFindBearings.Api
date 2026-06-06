@@ -12,9 +12,11 @@
         public string? CageType { get; set; }
 
         // 性能参数
-        public decimal? DynamicLoadRating { get; set; }
-        public decimal? StaticLoadRating { get; set; }
+        public decimal? DynamicLoad { get; set; }
+        public decimal? StaticLoad { get; set; }
         public decimal? LimitingSpeed { get; set; }
+        public decimal? LimitingSpeedGrease { get; set; }
+        public decimal? LimitingSpeedOil { get; set; }
 
         // 结构信息
         public string? StructureType { get; set; }

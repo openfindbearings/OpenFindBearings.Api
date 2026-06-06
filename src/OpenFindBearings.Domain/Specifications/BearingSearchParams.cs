@@ -12,12 +12,12 @@ namespace OpenFindBearings.Domain.Specifications
         /// <summary>
         /// 现行代号（模糊匹配）
         /// </summary>
-        public string? CurrentCode { get; set; }
+        public string? PartNumber { get; set; }
 
         /// <summary>
         /// 曾用代号（模糊匹配）
         /// </summary>
-        public string? FormerCode { get; set; }
+        public string? OldNumber { get; set; }
 
         /// <summary>
         /// 关键词搜索（同时搜索现行代号、曾用代号、名称、描述）
@@ -90,9 +90,9 @@ namespace OpenFindBearings.Domain.Specifications
         // ============ 排序 ============
 
         /// <summary>
-        /// 排序字段（currentCode, innerDiameter, outerDiameter, width, viewCount）
+        /// 排序字段（partNumber, innerDiameter, outerDiameter, width, viewCount）
         /// </summary>
-        public string? SortBy { get; set; } = "currentCode";
+        public string? SortBy { get; set; } = "partNumber";
 
         /// <summary>
         /// 排序方向（asc, desc）
@@ -110,29 +110,5 @@ namespace OpenFindBearings.Domain.Specifications
         /// 每页条数，默认20，最大100
         /// </summary>
         public int PageSize { get; set; } = 20;
-
-        /// <summary>
-        /// 验证并修正参数
-        /// </summary>
-        public void Validate()
-        {
-            if (Page < 1) Page = 1;
-            if (PageSize < 1) PageSize = 20;
-            if (PageSize > 100) PageSize = 100;
-
-            if (!string.IsNullOrWhiteSpace(SortBy))
-            {
-                var allowedSortFields = new[] { "currentCode", "innerDiameter", "outerDiameter", "width", "viewCount" };
-                if (!allowedSortFields.Contains(SortBy.ToLower()))
-                {
-                    SortBy = "currentCode";
-                }
-            }
-
-            if (!string.IsNullOrWhiteSpace(SortOrder))
-            {
-                SortOrder = SortOrder.ToLower() == "desc" ? "desc" : "asc";
-            }
-        }
     }
 }

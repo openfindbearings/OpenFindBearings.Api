@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using OpenFindBearings.Domain.Aggregates;
 using OpenFindBearings.Domain.Enums;
@@ -44,24 +44,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
                 ds.Property(d => d.SourceType)
                     .HasColumnName("DataSourceType")
                     .HasConversion<string>()
-                    .HasMaxLength(50)
-                    .IsRequired(false);
-
-                ds.Property(d => d.CrawlerSite)
-                    .HasColumnName("CrawlerSite")
-                    .HasConversion<int?>();
-
-                ds.Property(d => d.SourceUrl)
-                    .HasColumnName("SourceUrl")
-                    .HasMaxLength(1000);
-
-                ds.Property(d => d.SourceDetail)
-                    .HasColumnName("SourceDetail")
-                    .HasMaxLength(500);
-
-                ds.Property(d => d.SourceId)
-                    .HasColumnName("SourceId")
-                    .HasMaxLength(200);
+                    .HasMaxLength(50);
 
                 ds.Property(d => d.ImportedBy)
                     .HasColumnName("ImportedBy")
@@ -69,9 +52,6 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
 
                 ds.Property(d => d.ImportedAt)
                     .HasColumnName("ImportedAt");
-
-                ds.Property(d => d.ReliabilityScore)
-                    .HasColumnName("ReliabilityScore");
             });
 
             // ============ 数据追溯字段 ============

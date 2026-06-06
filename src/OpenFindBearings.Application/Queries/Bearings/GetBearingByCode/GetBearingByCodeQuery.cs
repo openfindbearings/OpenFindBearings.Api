@@ -12,6 +12,6 @@ namespace OpenFindBearings.Application.Queries.Bearings.GetBearingByCode
         /// <summary>
         /// 轴承型号
         /// </summary>
-        public string CurrentCode { get; set; } = string.Empty;
+        public string PartNumber { get; set; } = string.Empty;
     }
 }

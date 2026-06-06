@@ -1,4 +1,4 @@
-﻿using OpenFindBearings.Application.Interfaces;
+﻿using OpenFindBearings.Application.Shared.Interfaces;
 using System.Threading.Channels;
 
 namespace OpenFindBearings.Infrastructure.Services

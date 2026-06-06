@@ -23,17 +23,17 @@
         /// <summary>
         /// 价格描述
         /// </summary>
-        public string? PriceDescription { get; set; }
+        public string? Price { get; set; }
 
         /// <summary>
         /// 库存描述
         /// </summary>
-        public string? StockDescription { get; set; }
+        public string? Stock { get; set; }
 
         /// <summary>
         /// 最小起订量描述
         /// </summary>
-        public string? MinOrderDescription { get; set; }
+        public string? MinOrder { get; set; }
 
         /// <summary>
         /// 备注

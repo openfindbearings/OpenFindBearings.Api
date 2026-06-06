@@ -1,8 +1,7 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
-using OpenFindBearings.Application.Common.Models;
 using OpenFindBearings.Application.DTOs;
-using OpenFindBearings.Application.Interfaces;
+using OpenFindBearings.Application.Services;
 using OpenFindBearings.Domain.Aggregates;
 using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;

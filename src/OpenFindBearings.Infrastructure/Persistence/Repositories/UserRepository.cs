@@ -85,6 +85,10 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
             SearchUserParams searchParams,
             CancellationToken cancellationToken = default)
         {
+            if (searchParams.Page < 1) searchParams.Page = 1;
+            if (searchParams.PageSize < 1) searchParams.PageSize = 20;
+            if (searchParams.PageSize > 100) searchParams.PageSize = 100;
+
             var query = _context.Users.AsQueryable();
 
             // 关键词搜索（昵称或AuthUserId）

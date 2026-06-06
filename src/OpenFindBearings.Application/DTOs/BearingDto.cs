@@ -10,17 +10,12 @@
         /// <summary>
         /// 现行代号
         /// </summary>
-        public string CurrentCode { get; set; } = string.Empty;
+        public string PartNumber { get; set; } = string.Empty;
 
         /// <summary>
         /// 曾用代号
         /// </summary>
-        public string? FormerCode { get; set; }
-
-        /// <summary>
-        /// 产品名称
-        /// </summary>
-        public string Name { get; set; } = string.Empty;
+        public string? OldNumber { get; set; }
 
         /// <summary>
         /// 产品描述
@@ -57,5 +52,9 @@
         // 统计
         public int ViewCount { get; set; }
         public int FavoriteCount { get; set; }
+
+        // 图片
+        public string? Image3DUrl { get; set; }
+        public string? Image2DUrl { get; set; }
     }
 }

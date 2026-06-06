@@ -1,5 +1,6 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using OpenFindBearings.Api.Extensions;
 using OpenFindBearings.Api.Helpers;
 using OpenFindBearings.Application.Queries.Bearings.GetBearingByCode;
 using OpenFindBearings.Application.Queries.Bearings.GetBearingInterchanges;
@@ -136,14 +137,14 @@ namespace OpenFindBearings.Api.Endpoints
             /// 通过型号查询轴承
             /// 通过轴承现行代号精确查询轴承信息
             /// </summary>
-            group.MapGet("/bearings/by-code/{currentCode}", async (
-                string currentCode,
+            group.MapGet("/bearings/by-code/{partNumber}", async (
+                string partNumber,
                 IMediator mediator,
                 HttpContext httpContext) =>
             {
                 var query = new GetBearingByCodeQuery 
                 { 
-                    CurrentCode = currentCode 
+                    PartNumber = partNumber 
                 };
                 var result = await mediator.Send(query);
 
@@ -151,7 +152,7 @@ namespace OpenFindBearings.Api.Endpoints
                     ? ApiResponseHelper.NotFound("轴承型号不存在", httpContext)
                     : ApiResponseHelper.Ok(result, httpContext: httpContext);
             })
-            .WithName("GetBearingByCurrentCode")
+            .WithName("GetBearingByPartNumber")
             .WithSummary("通过型号查询轴承")
             .WithDescription("通过轴承现行代号精确查询轴承信息");
 

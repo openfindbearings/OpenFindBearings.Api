@@ -34,6 +34,10 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 
         public async Task<PagedResult<AuditLog>> SearchAsync(AuditLogSearchParams searchParams, CancellationToken cancellationToken = default)
         {
+            if (searchParams.Page < 1) searchParams.Page = 1;
+            if (searchParams.PageSize < 1) searchParams.PageSize = 20;
+            if (searchParams.PageSize > 100) searchParams.PageSize = 100;
+
             var query = _context.AuditLogs
                 .Include(al => al.Operator)
                 .AsNoTracking();

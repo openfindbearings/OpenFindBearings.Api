@@ -45,5 +45,8 @@
 
         public static BatchItemResult Failed(string identifier, string error)
             => new(identifier, "failed", null, error);
+
+        public static BatchItemResult Skipped(string identifier, string reason)
+            => new(identifier, "skipped", null, reason);
     }
 }

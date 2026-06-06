@@ -1,4 +1,4 @@
-﻿using OpenFindBearings.Api.Helpers;
+﻿using OpenFindBearings.Api.Extensions;
 
 namespace OpenFindBearings.Api.Services
 {

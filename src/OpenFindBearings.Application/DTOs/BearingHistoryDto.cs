@@ -18,12 +18,7 @@
         /// <summary>
         /// 轴承型号
         /// </summary>
-        public string BearingCurrentCode { get; set; } = string.Empty;
-
-        /// <summary>
-        /// 轴承名称
-        /// </summary>
-        public string BearingName { get; set; } = string.Empty;
+        public string BearingPartNumber { get; set; } = string.Empty;
 
         /// <summary>
         /// 品牌名称

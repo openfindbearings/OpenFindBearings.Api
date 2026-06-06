@@ -25,6 +25,11 @@ namespace OpenFindBearings.Application.Queries.Merchants.SearchMerchants
 
         public async Task<PagedResult<MerchantDto>> Handle(SearchMerchantsQuery request, CancellationToken cancellationToken)
         {
+            if (!HasAtLeastOneSearchCondition(request))
+            {
+                throw new InvalidOperationException("请至少提供一个搜索条件");
+            }
+
             var searchParams = new MerchantSearchParams
             {
                 Keyword = request.Keyword,
@@ -47,6 +52,14 @@ namespace OpenFindBearings.Application.Queries.Merchants.SearchMerchants
                 Page = result.Page,
                 PageSize = result.PageSize
             };
+        }
+
+        private static bool HasAtLeastOneSearchCondition(SearchMerchantsQuery request)
+        {
+            return !string.IsNullOrWhiteSpace(request.Keyword)
+                || !string.IsNullOrWhiteSpace(request.City)
+                || request.Type.HasValue
+                || request.VerifiedOnly.HasValue;
         }
     }
 }

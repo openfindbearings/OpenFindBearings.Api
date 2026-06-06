@@ -21,7 +21,7 @@ namespace OpenFindBearings.Application.Queries.Bearings.GetBearingByCode
 
         public async Task<BearingDetailDto?> Handle(GetBearingByCodeQuery request, CancellationToken cancellationToken)
         {
-            var bearing = await _bearingRepository.GetByPartNumberAsync(request.CurrentCode, cancellationToken);
+            var bearing = await _bearingRepository.GetByPartNumberAsync(request.PartNumber, cancellationToken);
             if (bearing == null)
                 return null;
 
@@ -33,14 +33,18 @@ namespace OpenFindBearings.Application.Queries.Bearings.GetBearingByCode
                 dto.Material = bearing.Material;
                 dto.SealType = bearing.SealType;
                 dto.CageType = bearing.CageType;
-                dto.DynamicLoadRating = bearing.Performance?.DynamicLoadRating;
-                dto.StaticLoadRating = bearing.Performance?.StaticLoadRating;
+                dto.DynamicLoad = bearing.Performance?.DynamicLoad;
+                dto.StaticLoad = bearing.Performance?.StaticLoad;
                 dto.LimitingSpeed = bearing.Performance?.LimitingSpeed;
+                dto.LimitingSpeedGrease = bearing.Performance?.LimitingSpeedGrease;
+                dto.LimitingSpeedOil = bearing.Performance?.LimitingSpeedOil;
                 dto.StructureType = bearing.StructureType;
                 dto.SizeSeries = bearing.SizeSeries;
                 dto.ChamferRmin = bearing.ChamferRmin;
                 dto.ChamferRmax = bearing.ChamferRmax;
                 dto.Trademark = bearing.Trademark;
+                dto.Image3DUrl = bearing.Image3DUrl;
+                dto.Image2DUrl = bearing.Image2DUrl;
             }
             return dto;
         }

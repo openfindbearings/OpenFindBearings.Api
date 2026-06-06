@@ -16,22 +16,17 @@ namespace OpenFindBearings.Domain.Aggregates
         /// <summary>
         /// 现行代号
         /// </summary>
-        public string CurrentCode { get; private set; }
+        public string PartNumber { get; private set; }
 
         /// <summary>
         /// 曾用代号
         /// </summary>
-        public string? FormerCode { get; private set; }
+        public string? OldNumber { get; private set; }
 
         /// <summary>
         /// 代号来源
         /// </summary>
         public string? CodeSource { get; private set; }
-
-        /// <summary>
-        /// 产品名称
-        /// </summary>
-        public string Name { get; private set; }
 
         /// <summary>
         /// 产品描述
@@ -201,6 +196,18 @@ namespace OpenFindBearings.Domain.Aggregates
         /// </summary>
         public int FavoriteCount => FavoritedByUsers.Count;
 
+        // ============ 图片字段 ============
+
+        /// <summary>
+        /// 3D渲染图URL
+        /// </summary>
+        public string? Image3DUrl { get; private set; }
+
+        /// <summary>
+        /// 2D CAD尺寸图纸URL
+        /// </summary>
+        public string? Image2DUrl { get; private set; }
+
         // ============ 构造函数 ============
 
         /// <summary>
@@ -208,18 +215,16 @@ namespace OpenFindBearings.Domain.Aggregates
         /// </summary>
         private Bearing() 
         {
-            Name = string.Empty;
-            CurrentCode = string.Empty;
+            PartNumber = string.Empty;
             BearingType = string.Empty;
-            Dimensions = null!;
+            Dimensions = new Dimensions(0, 0, 0); 
         }
 
         /// <summary>
         /// 创建标准轴承产品
         /// </summary>
         public Bearing(
-            string currentCode,
-            string name,
+            string partNumber,
             Guid bearingTypeId,
             string bearingType,
             Dimensions dimensions,
@@ -227,15 +232,12 @@ namespace OpenFindBearings.Domain.Aggregates
             PerformanceParams? performance = null,
             decimal? weight = null)
         {
-            if (string.IsNullOrWhiteSpace(currentCode))
-                throw new ArgumentException("现行代号不能为空", nameof(currentCode));
-            if (string.IsNullOrWhiteSpace(name))
-                throw new ArgumentException("产品名称不能为空", nameof(name));
+            if (string.IsNullOrWhiteSpace(partNumber))
+                throw new ArgumentException("现行代号不能为空", nameof(partNumber));
             if (string.IsNullOrWhiteSpace(bearingType))
                 throw new ArgumentException("轴承类型不能为空", nameof(bearingType));
 
-            CurrentCode = currentCode;
-            Name = name;
+            PartNumber = partNumber;
             BearingTypeId = bearingTypeId;
             BearingType = bearingType;
             Dimensions = dimensions ?? throw new ArgumentNullException(nameof(dimensions));
@@ -244,15 +246,14 @@ namespace OpenFindBearings.Domain.Aggregates
             Weight = weight;
             IsStandard = true;
 
-            AddDomainEvent(new BearingCreatedEvent(Id, CurrentCode, BrandId));
+            AddDomainEvent(new BearingCreatedEvent(Id, PartNumber, BrandId));
         }
 
         /// <summary>
         /// 创建非标轴承
         /// </summary>
         public static Bearing CreateNonStandard(
-            string currentCode,
-            string name,
+            string partNumber,
             Guid bearingTypeId, 
             string bearingType,
             Dimensions dimensions,
@@ -262,7 +263,7 @@ namespace OpenFindBearings.Domain.Aggregates
             PerformanceParams? performance = null,
             decimal? weight = null)
         {
-            var bearing = new Bearing(currentCode, name, bearingTypeId, bearingType, dimensions, brandId, performance, weight)
+            var bearing = new Bearing(partNumber, bearingTypeId, bearingType, dimensions, brandId, performance, weight)
             {
                 IsStandard = false,
                 StructureType = structureType,
@@ -276,8 +277,7 @@ namespace OpenFindBearings.Domain.Aggregates
         /// 创建轴承
         /// </summary>
         public static Bearing CreateBearing(
-            string currentCode,
-            string name,
+            string partNumber,
             Guid bearingTypeId,
             string bearingType,
             decimal innerDiameter,
@@ -288,8 +288,7 @@ namespace OpenFindBearings.Domain.Aggregates
         {
             var dimensions = new Dimensions(innerDiameter, outerDiameter, width);
             return new Bearing(
-                currentCode: currentCode,
-                name: name,
+                partNumber: partNumber,
                 bearingTypeId: bearingTypeId,
                 bearingType: bearingType,
                 dimensions: dimensions,
@@ -307,7 +306,7 @@ namespace OpenFindBearings.Domain.Aggregates
         {
             Description = description;
             Weight = weight;
-            AddDomainEvent(new BearingUpdatedEvent(Id, CurrentCode, ["Description", "Weight"]));
+            AddDomainEvent(new BearingUpdatedEvent(Id, PartNumber, ["Description", "Weight"]));
             UpdateTimestamp();
         }
 
@@ -315,11 +314,11 @@ namespace OpenFindBearings.Domain.Aggregates
         /// 更新标识信息
         /// </summary>
         public void UpdateIdentification(
-            string? formerCode,
+            string? oldNumber,
             string? codeSource,
             string? trademark)
         {
-            FormerCode = formerCode;
+            OldNumber = oldNumber;
             CodeSource = codeSource;
             Trademark = trademark;
             UpdateTimestamp();
@@ -416,11 +415,21 @@ namespace OpenFindBearings.Domain.Aggregates
 
             AddDomainEvent(new BearingViewedEvent(
                 Id,
-                CurrentCode,
+                PartNumber,
                 userId,
                 sessionId,
                 ViewCount));
 
+            UpdateTimestamp();
+        }
+
+        /// <summary>
+        /// 设置图片
+        /// </summary>
+        public void SetImages(string? image3DUrl, string? image2DUrl)
+        {
+            Image3DUrl = image3DUrl;
+            Image2DUrl = image2DUrl;
             UpdateTimestamp();
         }
 
@@ -434,7 +443,7 @@ namespace OpenFindBearings.Domain.Aggregates
         /// <summary>
         /// 获取完整的产品名称
         /// </summary>
-        public string GetFullName() => $"{Brand?.Name} {Name}";
+        public string GetFullName() => $"{Brand?.Name} {PartNumber}";
 
         /// <summary>
         /// 获取尺寸字符串
@@ -458,7 +467,7 @@ namespace OpenFindBearings.Domain.Aggregates
         /// </summary>
         public string GetSummary()
         {
-            var parts = new List<string> { CurrentCode, BearingType, Dimensions.ToString() };
+            var parts = new List<string> { PartNumber, BearingType, Dimensions.ToString() };
 
             if (!IsStandard)
                 parts.Insert(1, "[非标]");

@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using OpenFindBearings.Api.Extensions;
 using OpenFindBearings.Api.Middleware;
 using OpenFindBearings.Application;

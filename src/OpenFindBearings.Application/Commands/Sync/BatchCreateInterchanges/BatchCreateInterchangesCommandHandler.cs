@@ -33,6 +33,7 @@ namespace OpenFindBearings.Application.Commands.Sync.BatchCreateInterchanges
 
             foreach (var dto in request.Interchanges)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 var identifier = $"{dto.SourcePartNumber}({dto.SourceBrandCode}) -> {dto.TargetPartNumber}({dto.TargetBrandCode})";
 
                 try

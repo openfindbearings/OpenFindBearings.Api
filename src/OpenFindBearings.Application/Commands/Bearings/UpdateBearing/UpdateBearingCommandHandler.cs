@@ -31,11 +31,13 @@ namespace OpenFindBearings.Application.Commands.Bearings.UpdateBearing
 
             var changedFields = new List<string>();
 
-            // 更新基本信息
-            if (request.Name != null)
+            // 更新标识信息
+            if (request.OldNumber != null || request.CodeSource != null || request.Trademark != null)
             {
-                // bearing.UpdateName(request.Name);
-                changedFields.Add("Name");
+                bearing.UpdateIdentification(request.OldNumber, request.CodeSource, request.Trademark);
+                changedFields.Add("OldNumber");
+                changedFields.Add("CodeSource");
+                changedFields.Add("Trademark");
             }
 
             // 更新描述和重量
@@ -57,14 +59,12 @@ namespace OpenFindBearings.Application.Commands.Bearings.UpdateBearing
             // 更新结构类型
             if (request.StructureType != null)
             {
-                // bearing.UpdateStructureType(request.StructureType);
                 changedFields.Add("StructureType");
             }
 
             // 更新尺寸系列
             if (request.SizeSeries != null)
             {
-                // bearing.UpdateSizeSeries(request.SizeSeries);
                 changedFields.Add("SizeSeries");
             }
 
@@ -81,21 +81,16 @@ namespace OpenFindBearings.Application.Commands.Bearings.UpdateBearing
             }
 
             // 更新性能参数
-            if (request.DynamicLoadRating.HasValue || request.StaticLoadRating.HasValue || request.LimitingSpeed.HasValue)
+            if (request.DynamicLoad.HasValue || request.StaticLoad.HasValue || request.LimitingSpeed.HasValue || request.LimitingSpeedGrease.HasValue || request.LimitingSpeedOil.HasValue)
             {
                 var performance = new PerformanceParams(
-                    request.DynamicLoadRating,
-                    request.StaticLoadRating,
-                    request.LimitingSpeed);
+                    request.DynamicLoad,
+                    request.StaticLoad,
+                    request.LimitingSpeed,
+                    request.LimitingSpeedGrease,
+                    request.LimitingSpeedOil);
                 bearing.UpdatePerformance(performance);
                 changedFields.Add("Performance");
-            }
-
-            // 更新商标
-            if (request.Trademark != null)
-            {
-                bearing.UpdateIdentification(null, null, request.Trademark);
-                changedFields.Add("Trademark");
             }
 
             // 更新产地和类别
@@ -108,6 +103,13 @@ namespace OpenFindBearings.Application.Commands.Bearings.UpdateBearing
             {
                 bearing.SetOrigin(bearing.OriginCountry, request.Category.Value);
                 changedFields.Add("Category");
+            }
+
+            // 更新图片
+            if (request.Image3DUrl != null || request.Image2DUrl != null)
+            {
+                bearing.SetImages(request.Image3DUrl, request.Image2DUrl);
+                changedFields.Add("Images");
             }
 
             await _bearingRepository.UpdateAsync(bearing, cancellationToken);

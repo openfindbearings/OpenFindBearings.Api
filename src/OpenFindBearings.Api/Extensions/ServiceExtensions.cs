@@ -4,7 +4,7 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using OpenFindBearings.Api.Services;
-using OpenFindBearings.Application.Interfaces;
+using OpenFindBearings.Application.Services;
 using OpenFindBearings.Domain.Repositories;
 using OpenFindBearings.Infrastructure.Persistence.Data;
 using OpenFindBearings.Infrastructure.Persistence.Repositories;

@@ -58,12 +58,12 @@ namespace OpenFindBearings.Application.DTOs
         /// <summary>
         /// 轴承现行代号
         /// </summary>
-        public string BearingCurrentCode { get; set; } = string.Empty;
+        public string BearingPartNumber { get; set; } = string.Empty;
 
         /// <summary>
         /// 轴承曾用代号
         /// </summary>
-        public string? BearingFormerCode { get; set; }
+        public string? BearingOldNumber { get; set; }
 
         /// <summary>
         /// 轴承名称

@@ -35,6 +35,7 @@ namespace OpenFindBearings.Application.Commands.Sync.BatchCreateMerchantBearings
 
             foreach (var dto in request.MerchantBearings)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 try
                 {
                     // 查找商家
@@ -81,9 +82,9 @@ namespace OpenFindBearings.Application.Commands.Sync.BatchCreateMerchantBearings
                         if (existing != null)
                         {
                             existing.UpdateMarketInfo(
-                                dto.PriceDescription,
-                                dto.StockDescription,
-                                dto.MinOrderDescription,
+                                dto.Price,
+                                dto.Stock,
+                                dto.MinOrder,
                                 dto.Remarks
                             );
 
@@ -106,16 +107,16 @@ namespace OpenFindBearings.Application.Commands.Sync.BatchCreateMerchantBearings
                         var merchantBearing = new MerchantBearing(
                             merchant.Id,
                             bearing.Id,
-                            dto.PriceDescription,
-                            dto.StockDescription
+                            dto.Price,
+                            dto.Stock
                         );
 
-                        if (!string.IsNullOrEmpty(dto.MinOrderDescription))
+                        if (!string.IsNullOrEmpty(dto.MinOrder))
                         {
                             merchantBearing.UpdateMarketInfo(
-                                dto.PriceDescription,
-                                dto.StockDescription,
-                                dto.MinOrderDescription,
+                                dto.Price,
+                                dto.Stock,
+                                dto.MinOrder,
                                 dto.Remarks
                             );
                         }

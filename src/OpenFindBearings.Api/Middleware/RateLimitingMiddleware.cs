@@ -46,6 +46,13 @@ namespace OpenFindBearings.Api.Middleware
                 return;
             }
 
+            // 同步接口白名单（机器间通信，不受用户级限流影响）
+            if (path?.StartsWith("/api/sync/") == true)
+            {
+                await _next(context);
+                return;
+            }
+
             // 获取限流配置
             var limits = await GetLimitsAsync();
 

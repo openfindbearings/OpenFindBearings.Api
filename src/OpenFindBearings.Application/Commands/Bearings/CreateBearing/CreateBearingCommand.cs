@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using OpenFindBearings.Application.Behaviors;
 using OpenFindBearings.Domain.Enums;
 
@@ -12,22 +12,17 @@ namespace OpenFindBearings.Application.Commands.Bearings.CreateBearing
         /// <summary>
         /// 轴承型号（现行代号）
         /// </summary>
-        public string CurrentCode { get; init; } = string.Empty;
+        public string PartNumber { get; init; } = string.Empty;
 
         /// <summary>
         /// 曾用代号
         /// </summary>
-        public string? FormerCode { get; init; }
+        public string? OldNumber { get; init; }
 
         /// <summary>
         /// 代号来源
         /// </summary>
         public string? CodeSource { get; init; }
-
-        /// <summary>
-        /// 产品名称
-        /// </summary>
-        public string Name { get; init; } = string.Empty;
 
         /// <summary>
         /// 产品描述
@@ -107,17 +102,27 @@ namespace OpenFindBearings.Application.Commands.Bearings.CreateBearing
         /// <summary>
         /// 动载荷 (kN)
         /// </summary>
-        public decimal? DynamicLoadRating { get; init; }
+        public decimal? DynamicLoad { get; init; }
 
         /// <summary>
         /// 静载荷 (kN)
         /// </summary>
-        public decimal? StaticLoadRating { get; init; }
+        public decimal? StaticLoad { get; init; }
 
         /// <summary>
         /// 极限转速 (rpm)
         /// </summary>
         public decimal? LimitingSpeed { get; init; }
+
+        /// <summary>
+        /// 脂极限转速 (rpm)
+        /// </summary>
+        public decimal? LimitingSpeedGrease { get; init; }
+
+        /// <summary>
+        /// 油极限转速 (rpm)
+        /// </summary>
+        public decimal? LimitingSpeedOil { get; init; }
 
         /// <summary>
         /// 轴承类型ID
@@ -143,5 +148,31 @@ namespace OpenFindBearings.Application.Commands.Bearings.CreateBearing
         /// 产品类别
         /// </summary>
         public BearingCategory Category { get; init; } = BearingCategory.Domestic;
+
+        /// <summary>
+        /// 3D渲染图URL
+        /// </summary>
+        public string? Image3DUrl { get; init; }
+
+        /// <summary>
+        /// 2D CAD尺寸图纸URL
+        /// </summary>
+        public string? Image2DUrl { get; init; }
+
+        /// <summary>
+        /// 录入人/系统（用于 DataSource.ImportedBy）
+        /// 爬虫时填站点名称，手动录入时填用户名称
+        /// </summary>
+        public string? ImportedBy { get; init; }
+
+        /// <summary>
+        /// 爬虫来源站点名称（用于批量同步时）
+        /// </summary>
+        public string? SourceSite { get; init; }
+
+        /// <summary>
+        /// 数据来源类型（crawler/manual/api/file，用于设置 DataSource）
+        /// </summary>
+        public string? DataSource { get; init; }
     }
 }
