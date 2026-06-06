@@ -58,6 +58,15 @@ dotnet ef migrations add <MigrationName> -p src/OpenFindBearings.Infrastructure 
 dotnet ef database update -p src/OpenFindBearings.Infrastructure --startup-project src/OpenFindBearings.Api
 ```
 
+## 近期更新 (2026-06)
+
+- 同步接口全部改为同步 200 响应
+- `/api/sync/*` 路径加入限流白名单
+- 轴承批量 Handler 重构为单事务提交（50 次 SaveChanges → 1 次）
+- 新增 `DataSource.FromSeedData()` 种子数据源类型
+- 新增 `deploy.yml` — Docker 构建推送 + K3s 自动发布
+- Sync 侧 LoadService 响应处理重构为逐条判 `Items[].action`
+
 ## 近期更新 (2026-04)
 
 - 新增轴承图片字段 (Image3D, Image2DCAD)
