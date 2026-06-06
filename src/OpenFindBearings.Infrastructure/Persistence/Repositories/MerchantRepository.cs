@@ -84,6 +84,13 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                 .AnyAsync(m => m.Name == name, cancellationToken);
         }
 
+        // 根据名称精确获取商家
+        public async Task<Merchant?> GetByNameAsync(string name, CancellationToken cancellationToken = default)
+        {
+            return await _context.Merchants
+                .FirstOrDefaultAsync(m => m.Name == name, cancellationToken);
+        }
+
         // 获取总数
         public async Task<int> GetTotalCountAsync(CancellationToken cancellationToken = default)
         {

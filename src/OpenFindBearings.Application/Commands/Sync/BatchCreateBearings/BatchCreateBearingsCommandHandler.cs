@@ -127,7 +127,8 @@ namespace OpenFindBearings.Application.Commands.Sync.BatchCreateBearings
                             Trademark = bearingDto.Trademark,
                             OriginCountry = bearingDto.OriginCountry,
                             Category = bearingDto.Category,
-                            SourceSite = bearingDto.SourceSite
+                            SourceSite = bearingDto.SourceSite,
+                            DataSource = bearingDto.DataSource
                         };
 
                         var id = await _mediator.Send(createCommand, cancellationToken);

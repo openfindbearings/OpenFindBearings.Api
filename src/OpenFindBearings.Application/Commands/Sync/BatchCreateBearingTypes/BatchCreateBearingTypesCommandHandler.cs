@@ -61,8 +61,7 @@ namespace OpenFindBearings.Application.Commands.Sync.BatchCreateBearingTypes
                     else if (request.Mode == SyncMode.Update || request.Mode == SyncMode.Upsert)
                     {
                         // 更新现有类型
-                        existingType.GetType().GetProperty("Name")?.SetValue(existingType, typeDto.Name);
-                        existingType.GetType().GetProperty("Description")?.SetValue(existingType, typeDto.Description);
+                        existingType.Update(typeDto.Name, typeDto.Description);
 
                         await _bearingTypeRepository.UpdateAsync(existingType, cancellationToken);
                         result.AddSuccess(typeDto.Code, "updated", existingType.Id);

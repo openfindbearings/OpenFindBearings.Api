@@ -34,16 +34,8 @@ namespace OpenFindBearings.Application.Commands.Sync.BatchCreateMerchants
             {
                 try
                 {
-                    // 检查商家是否已存在
-                    var existingMerchantsResult = await _merchantRepository.SearchAsync(
-                        new Domain.Specifications.MerchantSearchParams
-                        {
-                            Keyword = merchantDto.Name,
-                            PageSize = 10
-                        }, cancellationToken);
-
-                    // ✅ 修改：使用 existingMerchantsResult.Items
-                    var existing = existingMerchantsResult.Items.FirstOrDefault();
+                    // 检查商家是否已存在（精确名称匹配）
+                    var existing = await _merchantRepository.GetByNameAsync(merchantDto.Name, cancellationToken);
 
                     if (existing != null && request.Mode == SyncMode.Create)
                     {
