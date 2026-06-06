@@ -16,12 +16,12 @@ namespace OpenFindBearings.Domain.ValueObjects
         /// <summary>
         /// 动载荷 (kN)
         /// </summary>
-        public decimal? DynamicLoadRating { get; private set; }
+        public decimal? DynamicLoad { get; private set; }
 
         /// <summary>
         /// 静载荷 (kN)
         /// </summary>
-        public decimal? StaticLoadRating { get; private set; }
+        public decimal? StaticLoad { get; private set; }
 
         /// <summary>
         /// 极限转速 (rpm)
@@ -54,8 +54,8 @@ namespace OpenFindBearings.Domain.ValueObjects
             if (dynamicLoad.HasValue && staticLoad.HasValue && dynamicLoad > staticLoad * 1.5m)
                 throw new ArgumentException("动载荷异常大于静载荷，请核对数据");
 
-            DynamicLoadRating = dynamicLoad;
-            StaticLoadRating = staticLoad;
+            DynamicLoad = dynamicLoad;
+            StaticLoad = staticLoad;
             LimitingSpeed = speed;
             LimitingSpeedGrease = greaseSpeed;
             LimitingSpeedOil = oilSpeed;
@@ -73,8 +73,8 @@ namespace OpenFindBearings.Domain.ValueObjects
         protected override IEnumerable<object> GetEqualityComponents()
         {
             yield return HasData;
-            yield return DynamicLoadRating ?? 0;
-            yield return StaticLoadRating ?? 0;
+            yield return DynamicLoad ?? 0;
+            yield return StaticLoad ?? 0;
             yield return LimitingSpeed ?? 0;
             yield return LimitingSpeedGrease ?? 0;
             yield return LimitingSpeedOil ?? 0;
@@ -86,8 +86,8 @@ namespace OpenFindBearings.Domain.ValueObjects
         public string GetSummary()
         {
             var parts = new List<string>();
-            if (DynamicLoadRating.HasValue) parts.Add($"C={DynamicLoadRating}kN");
-            if (StaticLoadRating.HasValue) parts.Add($"C0={StaticLoadRating}kN");
+            if (DynamicLoad.HasValue) parts.Add($"C={DynamicLoad}kN");
+            if (StaticLoad.HasValue) parts.Add($"C0={StaticLoad}kN");
             if (LimitingSpeed.HasValue) parts.Add($"n={LimitingSpeed}rpm");
             if (LimitingSpeedGrease.HasValue) parts.Add($"n(脂)={LimitingSpeedGrease}rpm");
             if (LimitingSpeedOil.HasValue) parts.Add($"n(油)={LimitingSpeedOil}rpm");

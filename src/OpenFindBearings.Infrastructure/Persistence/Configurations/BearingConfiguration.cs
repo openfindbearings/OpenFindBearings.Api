@@ -15,14 +15,12 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             builder.HasKey(b => b.Id);
 
             // ============ 基本属性 ============
-            builder.Property(b => b.CurrentCode)
+            builder.Property(b => b.PartNumber)
                 .IsRequired()
-                .HasMaxLength(100)
-                .HasColumnName("CurrentCode");
+                .HasMaxLength(100);
 
-            builder.Property(b => b.FormerCode)
-                .HasMaxLength(100)
-                .HasColumnName("FormerCode");
+            builder.Property(b => b.OldNumber)
+                .HasMaxLength(100);
 
             builder.Property(b => b.CodeSource)
                 .HasMaxLength(50)
@@ -119,12 +117,10 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
                     .HasDefaultValue(false)
                     .IsRequired();
 
-                perf.Property(p => p.DynamicLoadRating)
-                    .HasColumnName("DynamicLoadRating")
+                perf.Property(p => p.DynamicLoad)
                     .HasPrecision(12, 2);
 
-                perf.Property(p => p.StaticLoadRating)
-                    .HasColumnName("StaticLoadRating")
+                perf.Property(p => p.StaticLoad)
                     .HasPrecision(12, 2);
 
                 perf.Property(p => p.LimitingSpeed)
@@ -194,13 +190,11 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
                 .HasColumnName("ViewCount");
 
             // ============ 图片字段 ============
-            builder.Property(b => b.Image3D)
-                .HasMaxLength(500)
-                .HasColumnName("Image3D");
+            builder.Property(b => b.Image3DUrl)
+                .HasMaxLength(500);
 
-            builder.Property(b => b.Image2DCAD)
-                .HasMaxLength(500)
-                .HasColumnName("Image2DCAD");
+            builder.Property(b => b.Image2DUrl)
+                .HasMaxLength(500);
 
             // ============ 关联配置 ============
             // 关联轴承类型
@@ -242,7 +236,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
 
             // ============ 索引 ============
             // 组合索引：型号 + 品牌ID
-            builder.HasIndex(b => new { b.CurrentCode, b.BrandId })
+            builder.HasIndex(b => new { b.PartNumber, b.BrandId })
                 .IsUnique()
                 .HasDatabaseName("IX_Bearings_CurrentCode_BrandId");
 
@@ -275,7 +269,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             builder.HasIndex(b => new { b.BearingType, b.IsStandard })
                 .HasDatabaseName("IX_Bearings_Type_IsStandard");
 
-            builder.HasIndex(b => new { b.CurrentCode, b.BearingType })
+            builder.HasIndex(b => new { b.PartNumber, b.BearingType })
                 .HasDatabaseName("IX_Bearings_Code_Type");
 
             // ============ 全局查询过滤器 ============

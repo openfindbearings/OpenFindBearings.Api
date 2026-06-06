@@ -10,8 +10,8 @@ namespace OpenFindBearings.Application.Extensions
             return new BearingDto
             {
                 Id = bearing.Id,
-                CurrentCode = bearing.CurrentCode,
-                FormerCode = bearing.FormerCode,
+                PartNumber = bearing.PartNumber,
+                OldNumber = bearing.OldNumber,
                 Description = bearing.Description,
                 BearingType = bearing.BearingType,
                 InnerDiameter = bearing.Dimensions.InnerDiameter,
@@ -28,8 +28,8 @@ namespace OpenFindBearings.Application.Extensions
                 IsStandard = bearing.IsStandard,
                 ViewCount = bearing.ViewCount,
                 FavoriteCount = bearing.FavoriteCount,
-                Image3D = bearing.Image3D,
-                Image2DCAD = bearing.Image2DCAD
+                Image3DUrl = bearing.Image3DUrl,
+                Image2DUrl = bearing.Image2DUrl
             };
         }
     }

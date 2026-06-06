@@ -52,8 +52,8 @@ namespace OpenFindBearings.Application.Queries.Mobile.GetMobileBearingLightList
                 items.Add(new MobileBearingLightDto
                 {
                     Id = bearing.Id,
-                    CurrentCode = bearing.CurrentCode,           
-                    FormerCode = bearing.FormerCode,             
+                    PartNumber = bearing.PartNumber,           
+                    OldNumber = bearing.OldNumber,             
                     BrandName = bearing.Brand?.Name ?? string.Empty,
                     BearingTypeName = bearing.BearingType,       
                     InnerDiameter = bearing.Dimensions.InnerDiameter,

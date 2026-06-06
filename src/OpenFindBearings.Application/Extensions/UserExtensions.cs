@@ -56,7 +56,7 @@ namespace OpenFindBearings.Application.Extensions
             {
                 Id = history.Id,
                 BearingId = history.BearingId,
-                BearingCurrentCode = history.Bearing?.CurrentCode ?? string.Empty,
+                BearingPartNumber = history.Bearing?.PartNumber ?? string.Empty,
                 BrandName = history.Bearing?.Brand?.Name,
                 ViewedAt = history.ViewedAt,
                 ViewCount = history.User?.BearingHistory?.Count(h => h.BearingId == history.BearingId) ?? 1

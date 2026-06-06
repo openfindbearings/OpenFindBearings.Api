@@ -6,7 +6,6 @@ using OpenFindBearings.Application.Commands.Sync.BatchCreateInterchanges;
 using OpenFindBearings.Application.Commands.Sync.BatchCreateMerchantBearings;
 using OpenFindBearings.Application.Commands.Sync.BatchCreateMerchants;
 using OpenFindBearings.Application.Commands.Sync.Commands;
-using OpenFindBearings.Application.Queries.Sync.GetSyncTaskStatus;
 
 namespace OpenFindBearings.Api.Endpoints
 {
@@ -45,20 +44,13 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("SyncBearingTypes")
             .WithSummary("批量同步轴承类型");
 
-            // ============ 异步操作（不使用 ApiResponseHelper） ============
-
             group.MapPost("/bearings/batch", async (
                 BatchCreateBearingsCommand command,
                 IMediator mediator,
                 HttpContext httpContext) =>
             {
                 var result = await mediator.Send(command);
-
-                var clientId = httpContext.User.FindFirst("client_id")?.Value ?? "unknown";
-                httpContext.Items["ClientId"] = clientId;
-
-                var taskId = Guid.NewGuid();
-                return ApiResponseHelper.Accepted($"/api/sync/tasks/{taskId}", new { taskId }, httpContext: httpContext);
+                return ApiResponseHelper.Ok(result, "轴承批量同步完成", httpContext);
             })
             .WithName("BatchCreateBearings")
             .WithSummary("批量同步轴承");
@@ -69,8 +61,7 @@ namespace OpenFindBearings.Api.Endpoints
                 HttpContext httpContext) =>
             {
                 var result = await mediator.Send(command);
-                var taskId = Guid.NewGuid();
-                return ApiResponseHelper.Accepted($"/api/sync/tasks/{taskId}", new { taskId }, httpContext: httpContext);
+                return ApiResponseHelper.Ok(result, "商家批量同步完成", httpContext);
             })
             .WithName("BatchCreateMerchants")
             .WithSummary("批量同步商家");
@@ -81,8 +72,7 @@ namespace OpenFindBearings.Api.Endpoints
                 HttpContext httpContext) =>
             {
                 var result = await mediator.Send(command);
-                var taskId = Guid.NewGuid();
-                return ApiResponseHelper.Accepted($"/api/sync/tasks/{taskId}", new { taskId }, httpContext: httpContext);
+                return ApiResponseHelper.Ok(result, "关联批量同步完成", httpContext);
             })
             .WithName("BatchCreateMerchantBearings")
             .WithSummary("批量同步关联");
@@ -93,33 +83,10 @@ namespace OpenFindBearings.Api.Endpoints
                 HttpContext httpContext) =>
             {
                 var result = await mediator.Send(command);
-                var taskId = Guid.NewGuid();
-               return ApiResponseHelper.Accepted($"/api/sync/tasks/{taskId}", new { taskId }, httpContext: httpContext);
+                return ApiResponseHelper.Ok(result, "替代品批量同步完成", httpContext);
             })
             .WithName("BatchCreateInterchanges")
             .WithSummary("批量同步替代品");
-
-            // ============ 任务状态查询（使用 ApiResponseHelper） ============
-
-            group.MapGet("/tasks/{taskId}", async (
-                string taskId,
-                IMediator mediator,
-                HttpContext httpContext) =>
-            {
-                if (!Guid.TryParse(taskId, out var taskGuid))
-                {
-                    return ApiResponseHelper.BadRequest("无效的任务ID格式", httpContext: httpContext);
-                }
-
-                var query = new GetSyncTaskStatusQuery { TaskId = taskGuid };
-                var result = await mediator.Send(query);
-
-                return result == null
-                    ? ApiResponseHelper.NotFound($"任务不存在: {taskId}", httpContext)
-                    : ApiResponseHelper.Ok(result, httpContext: httpContext);
-            })
-            .WithName("GetSyncTaskStatus")
-            .WithSummary("获取同步任务状态");
         }
     }
 }

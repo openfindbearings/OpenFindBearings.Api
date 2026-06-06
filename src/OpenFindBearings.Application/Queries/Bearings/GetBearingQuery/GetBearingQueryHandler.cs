@@ -78,7 +78,7 @@ namespace OpenFindBearings.Application.Queries.Bearings.GetBearingQuery
             return new BearingDetailDto
             {
                 Id = bearing.Id,
-                CurrentCode = bearing.CurrentCode,
+                PartNumber = bearing.PartNumber,
                 Description = bearing.Description,
                 InnerDiameter = bearing.Dimensions.InnerDiameter,
                 OuterDiameter = bearing.Dimensions.OuterDiameter,
@@ -92,8 +92,8 @@ namespace OpenFindBearings.Application.Queries.Bearings.GetBearingQuery
                 Material = bearing.Material,
                 SealType = bearing.SealType,
                 CageType = bearing.CageType,
-                DynamicLoadRating = bearing.Performance?.DynamicLoadRating,
-                StaticLoadRating = bearing.Performance?.StaticLoadRating,
+                DynamicLoad = bearing.Performance?.DynamicLoad,
+                StaticLoad = bearing.Performance?.StaticLoad,
                 LimitingSpeed = bearing.Performance?.LimitingSpeed,
                 LimitingSpeedGrease = bearing.Performance?.LimitingSpeedGrease,
                 LimitingSpeedOil = bearing.Performance?.LimitingSpeedOil,
@@ -108,8 +108,8 @@ namespace OpenFindBearings.Application.Queries.Bearings.GetBearingQuery
                 ChamferRmin = bearing.ChamferRmin,
                 ChamferRmax = bearing.ChamferRmax,
                 Trademark = bearing.Trademark,
-                Image3D = bearing.Image3D,
-                Image2DCAD = bearing.Image2DCAD
+                Image3DUrl = bearing.Image3DUrl,
+                Image2DUrl = bearing.Image2DUrl
             };
         }
     }

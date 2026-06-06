@@ -65,8 +65,8 @@ namespace OpenFindBearings.Application.Queries.Mobile.GetMobileHome
                 HotBearings = hotBearingList.Select(b => new MobileBearingLightDto
                 {
                     Id = b.Id,
-                    CurrentCode = b.CurrentCode,
-                    FormerCode = b.FormerCode,
+                    PartNumber = b.PartNumber,
+                    OldNumber = b.OldNumber,
                     BrandName = b.Brand?.Name ?? string.Empty,
                     BearingTypeName = b.BearingType,
                     InnerDiameter = b.Dimensions.InnerDiameter,

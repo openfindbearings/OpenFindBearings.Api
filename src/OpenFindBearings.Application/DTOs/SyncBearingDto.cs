@@ -10,12 +10,12 @@ namespace OpenFindBearings.Application.DTOs
         /// <summary>
         /// 现行代号
         /// </summary>
-        public string CurrentCode { get; set; } = string.Empty;
+        public string PartNumber { get; set; } = string.Empty;
 
         /// <summary>
         /// 曾用代号
         /// </summary>
-        public string? FormerCode { get; set; }
+        public string? OldNumber { get; set; }
 
         /// <summary>
         /// 代号来源
@@ -100,12 +100,12 @@ namespace OpenFindBearings.Application.DTOs
         /// <summary>
         /// 动载荷 (kN)
         /// </summary>
-        public decimal? DynamicLoadRating { get; set; }
+        public decimal? DynamicLoad { get; set; }
 
         /// <summary>
         /// 静载荷 (kN)
         /// </summary>
-        public decimal? StaticLoadRating { get; set; }
+        public decimal? StaticLoad { get; set; }
 
         /// <summary>
         /// 极限转速 (rpm)
@@ -125,12 +125,12 @@ namespace OpenFindBearings.Application.DTOs
         /// <summary>
         /// 3D渲染图URL
         /// </summary>
-        public string? Image3D { get; set; }
+        public string? Image3DUrl { get; set; }
 
         /// <summary>
         /// 2D CAD尺寸图纸URL
         /// </summary>
-        public string? Image2DCAD { get; set; }
+        public string? Image2DUrl { get; set; }
 
         /// <summary>
         /// 品牌代码（如 SKF、FAG）
@@ -140,7 +140,7 @@ namespace OpenFindBearings.Application.DTOs
         /// <summary>
         /// 轴承类型代码（如 DGBB、ACBB）
         /// </summary>
-        public string BearingTypeCode { get; set; } = string.Empty;
+        public string TypeName { get; set; } = string.Empty;
 
         /// <summary>
         /// 数据来源类型（Crawler, Manual, FileImport, Api, UserSubmitted, SeedData）

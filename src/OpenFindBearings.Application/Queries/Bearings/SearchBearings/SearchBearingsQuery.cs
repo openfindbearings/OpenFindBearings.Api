@@ -14,12 +14,12 @@ namespace OpenFindBearings.Application.Queries.Bearings.SearchBearings
         /// <summary>
         /// 现行代号（模糊搜索）
         /// </summary>
-        public string? CurrentCode { get; set; }
+        public string? PartNumber { get; set; }
 
         /// <summary>
         /// 曾用代号（模糊搜索）
         /// </summary>
-        public string? FormerCode { get; set; }
+        public string? OldNumber { get; set; }
 
         /// <summary>
         /// 关键词

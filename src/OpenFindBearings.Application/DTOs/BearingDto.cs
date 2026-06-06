@@ -10,12 +10,12 @@
         /// <summary>
         /// 现行代号
         /// </summary>
-        public string CurrentCode { get; set; } = string.Empty;
+        public string PartNumber { get; set; } = string.Empty;
 
         /// <summary>
         /// 曾用代号
         /// </summary>
-        public string? FormerCode { get; set; }
+        public string? OldNumber { get; set; }
 
         /// <summary>
         /// 产品描述
@@ -54,7 +54,7 @@
         public int FavoriteCount { get; set; }
 
         // 图片
-        public string? Image3D { get; set; }
-        public string? Image2DCAD { get; set; }
+        public string? Image3DUrl { get; set; }
+        public string? Image2DUrl { get; set; }
     }
 }

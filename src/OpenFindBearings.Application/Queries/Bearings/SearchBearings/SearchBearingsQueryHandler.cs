@@ -29,8 +29,8 @@ namespace OpenFindBearings.Application.Queries.Bearings.SearchBearings
 
             var searchParams = new BearingSearchParams
             {
-                CurrentCode = request.CurrentCode,
-                FormerCode = request.FormerCode,
+                PartNumber = request.PartNumber,
+                OldNumber = request.OldNumber,
                 Keyword = request.Keyword,
                 MinInnerDiameter = request.MinInnerDiameter,
                 MaxInnerDiameter = request.MaxInnerDiameter,
@@ -64,8 +64,8 @@ namespace OpenFindBearings.Application.Queries.Bearings.SearchBearings
 
         private static bool HasAtLeastOneSearchCondition(SearchBearingsQuery request)
         {
-            return !string.IsNullOrWhiteSpace(request.CurrentCode)
-                || !string.IsNullOrWhiteSpace(request.FormerCode)
+            return !string.IsNullOrWhiteSpace(request.PartNumber)
+                || !string.IsNullOrWhiteSpace(request.OldNumber)
                 || !string.IsNullOrWhiteSpace(request.Keyword)
                 || request.MinInnerDiameter.HasValue
                 || request.MaxInnerDiameter.HasValue

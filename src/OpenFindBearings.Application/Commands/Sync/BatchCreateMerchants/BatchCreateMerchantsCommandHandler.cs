@@ -76,7 +76,7 @@ namespace OpenFindBearings.Application.Commands.Sync.BatchCreateMerchants
 
                         // ✅ 修改：传递所有6个参数
                         merchant.UpdateBasicInfo(
-                            companyName: merchantDto.CompanyName,
+                            companyName: merchantDto.EnglishName,
                             unifiedSocialCreditCode: merchantDto.UnifiedSocialCreditCode,
                             description: merchantDto.Description,
                             businessScope: merchantDto.BusinessScope,
@@ -96,7 +96,7 @@ namespace OpenFindBearings.Application.Commands.Sync.BatchCreateMerchants
                     {
                         // ✅ 修改：传递所有6个参数
                         existing.UpdateBasicInfo(
-                            companyName: merchantDto.CompanyName ?? existing.CompanyName,
+                            companyName: merchantDto.EnglishName ?? existing.CompanyName,
                             unifiedSocialCreditCode: merchantDto.UnifiedSocialCreditCode ?? existing.UnifiedSocialCreditCode,
                             description: merchantDto.Description ?? existing.Description,
                             businessScope: merchantDto.BusinessScope ?? existing.BusinessScope,

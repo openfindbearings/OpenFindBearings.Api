@@ -7,7 +7,7 @@ namespace OpenFindBearings.Application.Extensions
     {
         private static readonly Dictionary<string, string> FieldDisplayNames = new()
         {
-            { "CurrentCode", "型号" },
+            { "PartNumber", "型号" },
             { "Name", "名称" },
             { "Phone", "电话" },
             { "Address", "地址" },
@@ -23,7 +23,7 @@ namespace OpenFindBearings.Application.Extensions
         {
             var targetDisplay = correction.TargetType switch
             {
-                "Bearing" => correction.Bearing?.CurrentCode ?? correction.TargetId.ToString(),
+                "Bearing" => correction.Bearing?.PartNumber ?? correction.TargetId.ToString(),
                 "Merchant" => correction.Merchant?.Name ?? correction.TargetId.ToString(),
                 _ => correction.TargetId.ToString()
             };

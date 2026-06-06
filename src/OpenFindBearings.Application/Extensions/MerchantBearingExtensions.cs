@@ -31,8 +31,8 @@ namespace OpenFindBearings.Application.Extensions
                 // ========== 其他字段 ==========
                 MerchantIsVerified = mb.Merchant?.IsVerified ?? false,
                 BearingId = mb.BearingId,
-                BearingCurrentCode = mb.Bearing?.CurrentCode ?? string.Empty,
-                BearingFormerCode = mb.Bearing?.FormerCode,
+                BearingPartNumber = mb.Bearing?.PartNumber ?? string.Empty,
+                BearingOldNumber = mb.Bearing?.OldNumber,
                 BearingTypeName = mb.Bearing?.BearingType,
                 BrandName = mb.Bearing?.Brand?.Name,
                 BrandLevel = mb.Bearing?.Brand?.Level.ToString(),
@@ -72,8 +72,8 @@ namespace OpenFindBearings.Application.Extensions
                 // ========== 其他字段 ==========
                 MerchantIsVerified = mb.Merchant?.IsVerified ?? false,
                 BearingId = mb.BearingId,
-                BearingCurrentCode = mb.Bearing?.CurrentCode ?? string.Empty,
-                BearingFormerCode = mb.Bearing?.FormerCode,
+                BearingPartNumber = mb.Bearing?.PartNumber ?? string.Empty,
+                BearingOldNumber = mb.Bearing?.OldNumber,
                 BearingTypeName = mb.Bearing?.BearingType,
                 BrandName = mb.Bearing?.Brand?.Name,
                 BrandLevel = mb.Bearing?.Brand?.Level.ToString(),

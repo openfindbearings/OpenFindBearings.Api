@@ -207,7 +207,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
             {
                 // SKF 品牌的产品
                 bearings.Add(Bearing.CreateBearing(
-                    currentCode: "6205",
+                    partNumber: "6205",
                     bearingTypeId: bearingTypes[0].Id,
                     bearingType: bearingTypes[0].Name,
                     innerDiameter: 25, outerDiameter: 52, width: 15,

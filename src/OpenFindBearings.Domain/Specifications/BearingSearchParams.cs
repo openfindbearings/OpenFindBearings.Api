@@ -12,12 +12,12 @@ namespace OpenFindBearings.Domain.Specifications
         /// <summary>
         /// 现行代号（模糊匹配）
         /// </summary>
-        public string? CurrentCode { get; set; }
+        public string? PartNumber { get; set; }
 
         /// <summary>
         /// 曾用代号（模糊匹配）
         /// </summary>
-        public string? FormerCode { get; set; }
+        public string? OldNumber { get; set; }
 
         /// <summary>
         /// 关键词搜索（同时搜索现行代号、曾用代号、名称、描述）
@@ -90,9 +90,9 @@ namespace OpenFindBearings.Domain.Specifications
         // ============ 排序 ============
 
         /// <summary>
-        /// 排序字段（currentCode, innerDiameter, outerDiameter, width, viewCount）
+        /// 排序字段（partNumber, innerDiameter, outerDiameter, width, viewCount）
         /// </summary>
-        public string? SortBy { get; set; } = "currentCode";
+        public string? SortBy { get; set; } = "partNumber";
 
         /// <summary>
         /// 排序方向（asc, desc）

@@ -6,16 +6,14 @@ namespace OpenFindBearings.Application.Commands.Bearings.CreateBearing
     {
         public CreateBearingCommandValidator()
         {
-            // ✅ 修改：PartNumber → CurrentCode
-            RuleFor(x => x.CurrentCode)
+            RuleFor(x => x.PartNumber)
                 .NotEmpty().WithMessage("轴承型号不能为空")
                 .MaximumLength(100).WithMessage("型号长度不能超过100个字符")
                 .Matches(@"^[A-Z0-9\-]+$").WithMessage("型号只能包含大写字母、数字和连字符");
 
-            // ✅ 新增：曾用代号验证
-            RuleFor(x => x.FormerCode)
+            RuleFor(x => x.OldNumber)
                 .MaximumLength(100).WithMessage("曾用代号长度不能超过100个字符")
-                .When(x => !string.IsNullOrWhiteSpace(x.FormerCode));
+                .When(x => !string.IsNullOrWhiteSpace(x.OldNumber));
 
             // ✅ 新增：轴承类型名称验证
             RuleFor(x => x.BearingType)
@@ -68,10 +66,10 @@ namespace OpenFindBearings.Application.Commands.Bearings.CreateBearing
             });
 
             // 性能参数验证
-            When(x => x.DynamicLoadRating.HasValue && x.StaticLoadRating.HasValue, () =>
+            When(x => x.DynamicLoad.HasValue && x.StaticLoad.HasValue, () =>
             {
-                RuleFor(x => x.DynamicLoadRating!.Value)
-                    .LessThanOrEqualTo(x => x.StaticLoadRating!.Value * 1.5m)
+                RuleFor(x => x.DynamicLoad!.Value)
+                    .LessThanOrEqualTo(x => x.StaticLoad!.Value * 1.5m)
                     .WithMessage("动载荷异常大于静载荷，请核对数据");
             });
 

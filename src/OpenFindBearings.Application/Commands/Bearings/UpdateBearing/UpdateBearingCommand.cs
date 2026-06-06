@@ -14,7 +14,7 @@ namespace OpenFindBearings.Application.Commands.Bearings.UpdateBearing
         /// <summary>
         /// 曾用代号
         /// </summary>
-        public string? FormerCode { get; init; }
+        public string? OldNumber { get; init; }
 
         /// <summary>
         /// 代号来源
@@ -74,12 +74,12 @@ namespace OpenFindBearings.Application.Commands.Bearings.UpdateBearing
         /// <summary>
         /// 动载荷 (kN)
         /// </summary>
-        public decimal? DynamicLoadRating { get; init; }
+        public decimal? DynamicLoad { get; init; }
 
         /// <summary>
         /// 静载荷 (kN)
         /// </summary>
-        public decimal? StaticLoadRating { get; init; }
+        public decimal? StaticLoad { get; init; }
 
         /// <summary>
         /// 极限转速 (rpm)
@@ -114,11 +114,11 @@ namespace OpenFindBearings.Application.Commands.Bearings.UpdateBearing
         /// <summary>
         /// 3D渲染图URL
         /// </summary>
-        public string? Image3D { get; init; }
+        public string? Image3DUrl { get; init; }
 
         /// <summary>
         /// 2D CAD尺寸图纸URL
         /// </summary>
-        public string? Image2DCAD { get; init; }
+        public string? Image2DUrl { get; init; }
     }
 }

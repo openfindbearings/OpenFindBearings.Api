@@ -7,9 +7,6 @@ using OpenFindBearings.Domain.ValueObjects;
 
 namespace OpenFindBearings.Application.Commands.Bearings.CreateBearing
 {
-    /// <summary>
-    /// 创建轴承命令处理器
-    /// </summary>
     public class CreateBearingCommandHandler : IRequestHandler<CreateBearingCommand, Guid>
     {
         private readonly IBearingRepository _bearingRepository;
@@ -28,10 +25,10 @@ namespace OpenFindBearings.Application.Commands.Bearings.CreateBearing
 
         public async Task<Guid> Handle(CreateBearingCommand request, CancellationToken cancellationToken)
         {
-            _logger.LogInformation("开始处理创建轴承命令: {CurrentCode}", request.CurrentCode);
+            _logger.LogInformation("开始处理创建轴承命令: {PartNumber}", request.PartNumber);
 
             await ValidateCommandAsync(request, cancellationToken);
-            await CheckDuplicateCurrentCodeAsync(request.CurrentCode, cancellationToken);
+            await CheckDuplicatePartNumberAsync(request.PartNumber, cancellationToken);
 
             var dimensions = CreateDimensions(request);
             var performance = CreatePerformanceParams(request);
@@ -40,12 +37,12 @@ namespace OpenFindBearings.Application.Commands.Bearings.CreateBearing
             SetTechnicalParameters(bearing, request);
             SetIdentification(bearing, request);
             bearing.SetOrigin(request.OriginCountry, request.Category);
-            bearing.SetImages(request.Image3D, request.Image2DCAD);
+            bearing.SetImages(request.Image3DUrl, request.Image2DUrl);
             SetDataSource(bearing, request);
 
             await _bearingRepository.AddAsync(bearing, cancellationToken);
 
-            _logger.LogInformation("轴承创建成功: {BearingId}, 型号: {CurrentCode}", bearing.Id, bearing.CurrentCode);
+            _logger.LogInformation("轴承创建成功: {BearingId}, 型号: {PartNumber}", bearing.Id, bearing.PartNumber);
 
             return bearing.Id;
         }
@@ -59,12 +56,12 @@ namespace OpenFindBearings.Application.Commands.Bearings.CreateBearing
             }
         }
 
-        private async Task CheckDuplicateCurrentCodeAsync(string currentCode, CancellationToken cancellationToken)
+        private async Task CheckDuplicatePartNumberAsync(string partNumber, CancellationToken cancellationToken)
         {
-            var exists = await _bearingRepository.ExistsByPartNumberAsync(currentCode, cancellationToken);
+            var exists = await _bearingRepository.ExistsByPartNumberAsync(partNumber, cancellationToken);
             if (exists)
             {
-                throw new InvalidOperationException($"轴承型号 {currentCode} 已存在");
+                throw new InvalidOperationException($"轴承型号 {partNumber} 已存在");
             }
         }
 
@@ -75,10 +72,10 @@ namespace OpenFindBearings.Application.Commands.Bearings.CreateBearing
 
         private PerformanceParams? CreatePerformanceParams(CreateBearingCommand request)
         {
-            if (!request.DynamicLoadRating.HasValue && !request.StaticLoadRating.HasValue && !request.LimitingSpeed.HasValue && !request.LimitingSpeedGrease.HasValue && !request.LimitingSpeedOil.HasValue)
+            if (!request.DynamicLoad.HasValue && !request.StaticLoad.HasValue && !request.LimitingSpeed.HasValue && !request.LimitingSpeedGrease.HasValue && !request.LimitingSpeedOil.HasValue)
                 return null;
 
-            return new PerformanceParams(request.DynamicLoadRating, request.StaticLoadRating, request.LimitingSpeed, request.LimitingSpeedGrease, request.LimitingSpeedOil);
+            return new PerformanceParams(request.DynamicLoad, request.StaticLoad, request.LimitingSpeed, request.LimitingSpeedGrease, request.LimitingSpeedOil);
         }
 
         private Bearing CreateBearingEntity(CreateBearingCommand request, Dimensions dimensions, PerformanceParams? performance)
@@ -86,7 +83,7 @@ namespace OpenFindBearings.Application.Commands.Bearings.CreateBearing
             if (request.IsStandard)
             {
                 return new Bearing(
-                    currentCode: request.CurrentCode,
+                    partNumber: request.PartNumber,
                     bearingTypeId: request.BearingTypeId,
                     bearingType: request.BearingType,
                     dimensions: dimensions,
@@ -97,7 +94,7 @@ namespace OpenFindBearings.Application.Commands.Bearings.CreateBearing
             else
             {
                 return Bearing.CreateNonStandard(
-                    currentCode: request.CurrentCode,
+                    partNumber: request.PartNumber,
                     bearingTypeId: request.BearingTypeId,
                     bearingType: request.BearingType,
                     dimensions: dimensions,
@@ -123,7 +120,7 @@ namespace OpenFindBearings.Application.Commands.Bearings.CreateBearing
 
         private void SetIdentification(Bearing bearing, CreateBearingCommand request)
         {
-            bearing.UpdateIdentification(request.FormerCode, request.CodeSource, request.Trademark);
+            bearing.UpdateIdentification(request.OldNumber, request.CodeSource, request.Trademark);
         }
 
         private void SetDataSource(Bearing bearing, CreateBearingCommand request)
@@ -150,3 +147,4 @@ namespace OpenFindBearings.Application.Commands.Bearings.CreateBearing
         }
     }
 }
+
