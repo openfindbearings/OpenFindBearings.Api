@@ -83,6 +83,19 @@ namespace OpenFindBearings.Domain.ValueObjects
         }
 
         /// <summary>
+        /// 创建种子数据的数据源
+        /// </summary>
+        public static DataSource FromSeedData()
+        {
+            return new DataSource
+            {
+                SourceType = DataSourceType.SeedData,
+                ImportedBy = "SeedData",
+                ImportedAt = DateTime.UtcNow
+            };
+        }
+
+        /// <summary>
         /// 是否为爬虫数据（可以被覆盖）
         /// </summary>
         public bool IsCrawler => SourceType == DataSourceType.Crawler;

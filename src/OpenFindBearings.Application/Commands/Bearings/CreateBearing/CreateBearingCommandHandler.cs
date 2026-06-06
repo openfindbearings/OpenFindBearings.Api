@@ -140,6 +140,10 @@ namespace OpenFindBearings.Application.Commands.Bearings.CreateBearing
             {
                 bearing.SetDataSource(DataSource.FromFileImport(importedBy));
             }
+            else if (sourceType.Equals("seeddata", StringComparison.OrdinalIgnoreCase) || sourceType.Equals("seed", StringComparison.OrdinalIgnoreCase))
+            {
+                bearing.SetDataSource(DataSource.FromSeedData());
+            }
             else
             {
                 bearing.SetDataSource(DataSource.FromManual(importedBy));

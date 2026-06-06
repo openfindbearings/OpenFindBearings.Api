@@ -32,6 +32,7 @@ namespace OpenFindBearings.Application.Commands.Sync.BatchCreateMerchants
 
             foreach (var merchantDto in request.Merchants)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 try
                 {
                     // 检查商家是否已存在（精确名称匹配）

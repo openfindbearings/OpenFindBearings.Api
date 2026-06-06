@@ -35,6 +35,7 @@ namespace OpenFindBearings.Application.Commands.Sync.BatchCreateMerchantBearings
 
             foreach (var dto in request.MerchantBearings)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 try
                 {
                     // 查找商家

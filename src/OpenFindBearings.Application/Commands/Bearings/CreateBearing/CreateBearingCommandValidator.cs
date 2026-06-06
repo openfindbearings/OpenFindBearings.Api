@@ -9,7 +9,7 @@ namespace OpenFindBearings.Application.Commands.Bearings.CreateBearing
             RuleFor(x => x.PartNumber)
                 .NotEmpty().WithMessage("轴承型号不能为空")
                 .MaximumLength(100).WithMessage("型号长度不能超过100个字符")
-                .Matches(@"^[A-Z0-9\-]+$").WithMessage("型号只能包含大写字母、数字和连字符");
+                .Matches(@"^[A-Za-z0-9\-/\.\s\(\)\+]+$").WithMessage("型号包含非法字符");
 
             RuleFor(x => x.OldNumber)
                 .MaximumLength(100).WithMessage("曾用代号长度不能超过100个字符")

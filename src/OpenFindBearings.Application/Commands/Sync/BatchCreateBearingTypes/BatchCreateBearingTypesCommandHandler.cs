@@ -30,6 +30,7 @@ namespace OpenFindBearings.Application.Commands.Sync.BatchCreateBearingTypes
 
             foreach (var typeDto in request.BearingTypes)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 try
                 {
                     // 检查类型是否已存在
