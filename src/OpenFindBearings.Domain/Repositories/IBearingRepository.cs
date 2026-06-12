@@ -72,5 +72,15 @@ namespace OpenFindBearings.Domain.Repositories
         /// 获取各品牌的轴承数量统计
         /// </summary>
         Task<Dictionary<Guid, int>> GetBearingCountByBrandAsync(CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 根据ID获取轴承（包含已停用的，用于彻底删除前校验）
+        /// </summary>
+        Task<Bearing?> GetByIdIgnoringFilterAsync(Guid id, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 彻底删除轴承（物理删除）
+        /// </summary>
+        Task RemoveAsync(Bearing bearing, CancellationToken cancellationToken = default);
     }
 }

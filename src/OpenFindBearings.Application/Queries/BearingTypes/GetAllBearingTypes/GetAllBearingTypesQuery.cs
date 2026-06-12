@@ -9,6 +9,9 @@ namespace OpenFindBearings.Application.Queries.BearingTypes.GetAllBearingTypes
     /// </summary>
     public record GetAllBearingTypesQuery : IRequest<List<BearingTypeDto>>, IQuery
     {
-
+        /// <summary>
+        /// 是否包含已删除的类型（null=仅激活，true=全部）
+        /// </summary>
+        public bool? IncludeDeleted { get; set; }
     }
 }

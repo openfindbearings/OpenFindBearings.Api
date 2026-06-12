@@ -25,6 +25,8 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
 
             builder.HasIndex(bt => bt.Code)
                 .IsUnique();
+
+            builder.HasQueryFilter(bt => bt.IsActive);
         }
     }
 }

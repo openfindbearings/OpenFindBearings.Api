@@ -37,6 +37,14 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                 .ToListAsync(cancellationToken);
         }
 
+        public async Task<List<BearingType>> GetAllIncludingInactiveAsync(CancellationToken cancellationToken = default)
+        {
+            return await _context.BearingTypes
+                .IgnoreQueryFilters()
+                .OrderBy(bt => bt.Name)
+                .ToListAsync(cancellationToken);
+        }
+
         public async Task AddAsync(BearingType bearingType, CancellationToken cancellationToken = default)
         {
             await _context.BearingTypes.AddAsync(bearingType, cancellationToken);
@@ -45,6 +53,18 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         public async Task UpdateAsync(BearingType bearingType, CancellationToken cancellationToken = default)
         {
             _context.BearingTypes.Update(bearingType);
+        }
+
+        public async Task<BearingType?> GetByIdIgnoringFilterAsync(Guid id, CancellationToken cancellationToken = default)
+        {
+            return await _context.BearingTypes
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(bt => bt.Id == id, cancellationToken);
+        }
+
+        public async Task RemoveAsync(BearingType bearingType, CancellationToken cancellationToken = default)
+        {
+            _context.BearingTypes.Remove(bearingType);
         }
     }
 }

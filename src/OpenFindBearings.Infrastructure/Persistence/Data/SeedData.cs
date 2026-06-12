@@ -85,10 +85,10 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
             // 创建权限
             var permissions = new List<Permission>
             {
-                new("product.view", "查看产品"),
-                new("product.create", "创建产品"),
-                new("product.edit", "编辑产品"),
-                new("product.delete", "删除产品"),
+                new("bearing.view", "查看产品"),
+                new("bearing.create", "创建产品"),
+                new("bearing.edit", "编辑产品"),
+                new("bearing.delete", "删除产品"),
                 new("merchant.view", "查看商家"),
                 new("merchant.verify", "认证商家"),
                 new("merchant.manage", "管理商家"),
@@ -131,22 +131,22 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
 
             // MerchantAdmin 拥有商家管理权限
             rolePermissions.AddRange([
-                new(merchantAdminRole.Id, permissions.First(p => p.Name == "product.view").Id),
-                new(merchantAdminRole.Id, permissions.First(p => p.Name == "product.create").Id),
-                new(merchantAdminRole.Id, permissions.First(p => p.Name == "product.edit").Id),
+                new(merchantAdminRole.Id, permissions.First(p => p.Name == "bearing.view").Id),
+                new(merchantAdminRole.Id, permissions.First(p => p.Name == "bearing.create").Id),
+                new(merchantAdminRole.Id, permissions.First(p => p.Name == "bearing.edit").Id),
                 new(merchantAdminRole.Id, permissions.First(p => p.Name == "merchant.view").Id),
                 new(merchantAdminRole.Id, permissions.First(p => p.Name == "merchant.manage").Id),
             ]);
 
             // MerchantStaff 拥有查看权限
             rolePermissions.AddRange([
-                new(merchantStaffRole.Id, permissions.First(p => p.Name == "product.view").Id),
+                new(merchantStaffRole.Id, permissions.First(p => p.Name == "bearing.view").Id),
                 new(merchantStaffRole.Id, permissions.First(p => p.Name == "merchant.view").Id),
             ]);
 
             // Individual 拥有基本权限
             rolePermissions.AddRange([
-                new(individualRole.Id, permissions.First(p => p.Name == "product.view").Id),
+                new(individualRole.Id, permissions.First(p => p.Name == "bearing.view").Id),
                 new(individualRole.Id, permissions.First(p => p.Name == "correction.submit").Id),
                 new(individualRole.Id, permissions.First(p => p.Name == "favorite.bearing").Id),
                 new(individualRole.Id, permissions.First(p => p.Name == "favorite.merchant").Id),

@@ -27,9 +27,11 @@ namespace OpenFindBearings.Application.Queries.BearingTypes.GetAllBearingTypes
 
         public async Task<List<BearingTypeDto>> Handle(GetAllBearingTypesQuery request, CancellationToken cancellationToken)
         {
-            _logger.LogInformation("获取所有轴承类型列表");
+            _logger.LogInformation("获取所有轴承类型列表, IncludeDeleted={IncludeDeleted}", request.IncludeDeleted);
 
-            var bearingTypes = await _bearingTypeRepository.GetAllAsync(cancellationToken);
+            var bearingTypes = request.IncludeDeleted == true
+                ? await _bearingTypeRepository.GetAllIncludingInactiveAsync(cancellationToken)
+                : await _bearingTypeRepository.GetAllAsync(cancellationToken);
 
             var bearingCountByType = await _bearingRepository.GetBearingCountByTypeAsync(cancellationToken);
 

@@ -48,5 +48,15 @@ namespace OpenFindBearings.Domain.Repositories
         /// 获取商家总数
         /// </summary>
         Task<int> GetTotalCountAsync(CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 根据ID获取商家（包含已停用的，用于彻底删除前校验）
+        /// </summary>
+        Task<Merchant?> GetByIdIgnoringFilterAsync(Guid id, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 彻底删除商家（物理删除）
+        /// </summary>
+        Task RemoveAsync(Merchant merchant, CancellationToken cancellationToken = default);
     }
 }

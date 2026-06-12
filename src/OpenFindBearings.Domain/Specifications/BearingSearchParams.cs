@@ -87,6 +87,11 @@ namespace OpenFindBearings.Domain.Specifications
         /// </summary>
         public bool? IsStandard { get; set; }
 
+        /// <summary>
+        /// 是否激活（null=全部，true=仅激活，false=仅已删除）
+        /// </summary>
+        public bool? IsActive { get; set; }
+
         // ============ 排序 ============
 
         /// <summary>
