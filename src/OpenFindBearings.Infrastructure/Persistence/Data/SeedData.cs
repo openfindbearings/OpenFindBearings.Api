@@ -98,6 +98,12 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
                 new("favorite.merchant", "关注商家"),
                 new("user.manage", "管理用户"),
                 new("role.manage", "管理角色"),
+                new("dashboard.view", "查看仪表盘"),
+                new("audit.view", "查看审计日志"),
+                new("system.view", "查看系统配置"),
+                new("system.manage", "管理系统配置"),
+                new("data.restore", "恢复数据"),
+                new("data.harddelete", "彻底删除"),
             };
 
             await context.Permissions.AddRangeAsync(permissions);
@@ -162,17 +168,6 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
             var users = new List<User>();
             var userRoles = new List<UserRole>();
 
-            // 3.1 默认超级管理员（无论开发/生产都需要）
-            var adminUser = new User(
-                authUserId: "admin-default",
-                registrationSource: RegistrationSource.Admin,
-                registerIp: null,
-                nickname: "系统管理员"
-            );
-            users.Add(adminUser);
-            userRoles.Add(new UserRole(adminUser.Id, adminRole.Id));
-
-            // 3.2 开发环境额外测试用户
             if (isDevelopment)
             {
                 var merchant1 = new User("auth-merchant-001", RegistrationSource.Mobile, null, "张经理");
@@ -183,18 +178,20 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
                 users.AddRange([merchant1, merchant2, customer1, customer2]);
 
                 userRoles.AddRange([
-                    new UserRole(merchant1.Id, merchantStaffRole.Id),
-                    new UserRole(merchant2.Id, merchantStaffRole.Id),
+                    new UserRole(merchant1.Id, merchantAdminRole.Id),
+                    new UserRole(merchant2.Id, merchantAdminRole.Id),
                     new UserRole(customer1.Id, individualRole.Id),
                     new UserRole(customer2.Id, individualRole.Id),
                 ]);
             }
 
-            await context.Users.AddRangeAsync(users);
-            await context.SaveChangesAsync();
-
-            await context.UserRoles.AddRangeAsync(userRoles);
-            await context.SaveChangesAsync();
+            if (users.Count > 0)
+            {
+                await context.Users.AddRangeAsync(users);
+                await context.SaveChangesAsync();
+                await context.UserRoles.AddRangeAsync(userRoles);
+                await context.SaveChangesAsync();
+            }
             #endregion
 
             // ============ 4. 轴承产品数据（仅开发环境） ============

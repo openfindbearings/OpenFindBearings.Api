@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.DTOs;
 using OpenFindBearings.Domain.Repositories;
+using OpenFindBearings.Domain.Specifications;
 
 namespace OpenFindBearings.Application.Queries.Admin.GetDashboardStats
 {
@@ -37,51 +38,51 @@ namespace OpenFindBearings.Application.Queries.Admin.GetDashboardStats
             GetDashboardStatsQuery request,
             CancellationToken cancellationToken)
         {
-            // 这里需要根据实际仓储方法实现统计
-            // 以下为示例代码，需要根据实际仓储API调整
+            var bearingCount = await _bearingRepository.GetTotalCountAsync(new BearingSearchParams(), cancellationToken);
+            var merchantCount = await _merchantRepository.GetTotalCountAsync(cancellationToken);
 
             return new DashboardStatsDto
             {
                 StatsTime = DateTime.UtcNow,
                 Bearings = new BearingStatsDto
                 {
-                    TotalCount = 1000, // await _bearingRepository.CountAsync(cancellationToken),
-                    TodayAdded = 10,
-                    ThisWeekAdded = 50,
-                    ThisMonthAdded = 200,
+                    TotalCount = bearingCount,
+                    TodayAdded = 0,
+                    ThisWeekAdded = 0,
+                    ThisMonthAdded = 0,
                     TopBrands = new List<BrandDistributionDto>(),
                     TopTypes = new List<TypeDistributionDto>()
                 },
                 Merchants = new MerchantStatsDto
                 {
-                    TotalCount = 100,
-                    VerifiedCount = 80,
-                    PendingVerification = 10,
-                    TodayRegistered = 2,
+                    TotalCount = merchantCount,
+                    VerifiedCount = 0,
+                    PendingVerification = 0,
+                    TodayRegistered = 0,
                     TypeDistribution = new List<MerchantTypeDistributionDto>()
                 },
                 Users = new UserStatsDto
                 {
-                    TotalCount = 500,
-                    AdminCount = 5,
-                    MerchantStaffCount = 150,
-                    IndividualCount = 345,
-                    TodayRegistered = 8,
-                    ActiveToday = 45
+                    TotalCount = 0,
+                    AdminCount = 0,
+                    MerchantStaffCount = 0,
+                    IndividualCount = 0,
+                    TodayRegistered = 0,
+                    ActiveToday = 0
                 },
                 Corrections = new CorrectionStatsDto
                 {
-                    TotalCount = 50,
-                    PendingCount = 12,
-                    ApprovedCount = 30,
-                    RejectedCount = 8,
-                    TodaySubmitted = 3
+                    TotalCount = 0,
+                    PendingCount = 0,
+                    ApprovedCount = 0,
+                    RejectedCount = 0,
+                    TodaySubmitted = 0
                 },
                 Pending = new PendingStatsDto
                 {
-                    PendingMerchantBearings = 15,
-                    PendingCorrections = 12,
-                    PendingMerchantVerifications = 5
+                    PendingMerchantBearings = 0,
+                    PendingCorrections = 0,
+                    PendingMerchantVerifications = 0
                 }
             };
         }

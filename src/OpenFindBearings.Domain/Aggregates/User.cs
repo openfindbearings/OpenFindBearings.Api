@@ -417,7 +417,7 @@ namespace OpenFindBearings.Domain.Aggregates
         /// <summary>
         /// 添加角色
         /// </summary>
-        internal void AddRole(Guid roleId)
+        public void AddRole(Guid roleId)
         {
             if (!_userRoles.Any(r => r.RoleId == roleId))
             {
