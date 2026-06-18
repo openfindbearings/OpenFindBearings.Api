@@ -82,6 +82,11 @@ namespace OpenFindBearings.Application.Queries.Bearings.SearchBearings
         public bool? IsStandard { get; set; }
 
         /// <summary>
+        /// 是否包含已删除的轴承（null=仅激活，true=全部）
+        /// </summary>
+        public bool? IncludeDeleted { get; set; }
+
+        /// <summary>
         /// 排序字段
         /// </summary>
         public string? SortBy { get; set; }

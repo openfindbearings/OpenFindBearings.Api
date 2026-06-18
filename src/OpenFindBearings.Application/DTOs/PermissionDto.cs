@@ -11,7 +11,7 @@
         public Guid Id { get; set; }
 
         /// <summary>
-        /// 权限名称（如 "product.edit"）
+        /// 权限名称（如 "bearing.edit"）
         /// </summary>
         public string Name { get; set; } = string.Empty;
 

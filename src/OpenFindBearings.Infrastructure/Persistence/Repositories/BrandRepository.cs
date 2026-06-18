@@ -37,6 +37,14 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                 .ToListAsync(cancellationToken);
         }
 
+        public async Task<List<Brand>> GetAllIncludingInactiveAsync(CancellationToken cancellationToken = default)
+        {
+            return await _context.Brands
+                .IgnoreQueryFilters()
+                .OrderBy(b => b.Name)
+                .ToListAsync(cancellationToken);
+        }
+
         public async Task AddAsync(Brand brand, CancellationToken cancellationToken = default)
         {
             await _context.Brands.AddAsync(brand, cancellationToken);
@@ -45,6 +53,18 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         public async Task UpdateAsync(Brand brand, CancellationToken cancellationToken = default)
         {
             _context.Brands.Update(brand);
+        }
+
+        public async Task<Brand?> GetByIdIgnoringFilterAsync(Guid id, CancellationToken cancellationToken = default)
+        {
+            return await _context.Brands
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(b => b.Id == id, cancellationToken);
+        }
+
+        public async Task RemoveAsync(Brand brand, CancellationToken cancellationToken = default)
+        {
+            _context.Brands.Remove(brand);
         }
     }
 }

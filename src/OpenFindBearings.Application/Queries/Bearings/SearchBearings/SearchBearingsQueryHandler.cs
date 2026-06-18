@@ -43,6 +43,7 @@ namespace OpenFindBearings.Application.Queries.Bearings.SearchBearings
                 BrandId = request.BrandId,
                 BearingTypeId = request.BearingTypeId,
                 IsStandard = request.IsStandard,
+                IsActive = request.IncludeDeleted == true ? null : true,
                 SortBy = request.SortBy,
                 SortOrder = request.SortOrder,
                 Page = request.Page,
@@ -77,7 +78,8 @@ namespace OpenFindBearings.Application.Queries.Bearings.SearchBearings
                 || request.Category.HasValue
                 || request.BrandId.HasValue
                 || request.BearingTypeId.HasValue
-                || request.IsStandard.HasValue;
+                || request.IsStandard.HasValue
+                || request.IncludeDeleted.HasValue;
         }
     }
 }

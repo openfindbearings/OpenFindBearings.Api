@@ -59,13 +59,28 @@ namespace OpenFindBearings.Application.Commands.Corrections.ApproveCorrection
             var bearing = await _bearingRepository.GetByIdAsync(correction.TargetId, cancellationToken);
             if (bearing == null) return;
 
+            static decimal? ParseDec(string? s) => decimal.TryParse(s, out var v) ? v : null;
+
             switch (correction.FieldName.ToLower())
             {
-                case "name":
-                    // bearing.UpdateName(correction.SuggestedValue);
+                case "oldnumber":
+                    bearing.UpdateIdentification(correction.SuggestedValue, bearing.CodeSource, bearing.Trademark);
                     break;
                 case "description":
                     bearing.UpdateDetails(correction.SuggestedValue, bearing.Weight);
+                    break;
+                case "weight":
+                    bearing.UpdateDetails(bearing.Description, ParseDec(correction.SuggestedValue));
+                    break;
+                case "innerdiameter":
+                case "outerdiameter":
+                case "width":
+                    var d = bearing.Dimensions;
+                    bearing.UpdateDimensions(
+                        innerDiameter: correction.FieldName.ToLower() == "innerdiameter" ? ParseDec(correction.SuggestedValue) ?? d.InnerDiameter : d.InnerDiameter,
+                        outerDiameter: correction.FieldName.ToLower() == "outerdiameter" ? ParseDec(correction.SuggestedValue) ?? d.OuterDiameter : d.OuterDiameter,
+                        width: correction.FieldName.ToLower() == "width" ? ParseDec(correction.SuggestedValue) ?? d.Width : d.Width
+                    );
                     break;
                 case "precisiongrade":
                 case "material":
@@ -77,6 +92,21 @@ namespace OpenFindBearings.Application.Commands.Corrections.ApproveCorrection
                         correction.FieldName.ToLower() == "sealtype" ? correction.SuggestedValue : bearing.SealType,
                         correction.FieldName.ToLower() == "cagetype" ? correction.SuggestedValue : bearing.CageType
                     );
+                    break;
+                case "dynamicload":
+                case "staticload":
+                case "limitingspeed":
+                case "limitingspeedgrease":
+                case "limitingspeedoil":
+                    var p = bearing.Performance;
+                    var newPerf = new PerformanceParams(
+                        dynamicLoad: correction.FieldName.ToLower() == "dynamicload" ? ParseDec(correction.SuggestedValue) : p?.DynamicLoad,
+                        staticLoad: correction.FieldName.ToLower() == "staticload" ? ParseDec(correction.SuggestedValue) : p?.StaticLoad,
+                        speed: correction.FieldName.ToLower() == "limitingspeed" ? ParseDec(correction.SuggestedValue) : p?.LimitingSpeed,
+                        greaseSpeed: correction.FieldName.ToLower() == "limitingspeedgrease" ? ParseDec(correction.SuggestedValue) : p?.LimitingSpeedGrease,
+                        oilSpeed: correction.FieldName.ToLower() == "limitingspeedoil" ? ParseDec(correction.SuggestedValue) : p?.LimitingSpeedOil
+                    );
+                    bearing.UpdatePerformance(newPerf);
                     break;
             }
 

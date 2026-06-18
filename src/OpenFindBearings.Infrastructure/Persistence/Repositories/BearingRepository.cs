@@ -38,7 +38,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
             var query = _context.Bearings
                 .Include(b => b.Brand)
                 .AsNoTracking()
-                .Where(b => b.IsActive);
+                .Where(b => searchParams.IsActive == null || b.IsActive == searchParams.IsActive.Value);
 
             // 现行代号搜索
             if (!string.IsNullOrWhiteSpace(searchParams.PartNumber))
@@ -282,6 +282,18 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                 bearing.Deactivate();
                 await UpdateAsync(bearing, cancellationToken);
             }
+        }
+
+        public async Task<Bearing?> GetByIdIgnoringFilterAsync(Guid id, CancellationToken cancellationToken = default)
+        {
+            return await _context.Bearings
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(b => b.Id == id, cancellationToken);
+        }
+
+        public async Task RemoveAsync(Bearing bearing, CancellationToken cancellationToken = default)
+        {
+            _context.Bearings.Remove(bearing);
         }
     }
 }

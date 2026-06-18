@@ -32,6 +32,11 @@ namespace OpenFindBearings.Application.Queries.Merchants.SearchMerchants
         public bool? VerifiedOnly { get; set; }
 
         /// <summary>
+        /// 是否包含已删除商家
+        /// </summary>
+        public bool? IncludeDeleted { get; set; }
+
+        /// <summary>
         /// 页码
         /// </summary>
         public int Page { get; set; } = 1;

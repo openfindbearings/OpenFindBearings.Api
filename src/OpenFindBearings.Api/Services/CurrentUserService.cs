@@ -19,6 +19,11 @@ namespace OpenFindBearings.Api.Services
         string? AuthUserId { get; }
 
         /// <summary>
+        /// 租户ID（从 JWT token claims 中读取）
+        /// </summary>
+        Guid? TenantId { get; }
+
+        /// <summary>
         /// 会话ID（游客）
         /// </summary>
         string? SessionId { get; }
@@ -66,6 +71,9 @@ namespace OpenFindBearings.Api.Services
 
         /// <inheritdoc/>
         public string? AuthUserId => _httpContextAccessor.HttpContext?.GetAuthUserId();
+
+        /// <inheritdoc/>
+        public Guid? TenantId => _httpContextAccessor.HttpContext?.GetTenantId();
 
         /// <inheritdoc/>
         public string? SessionId => _httpContextAccessor.HttpContext?.GetSessionId();

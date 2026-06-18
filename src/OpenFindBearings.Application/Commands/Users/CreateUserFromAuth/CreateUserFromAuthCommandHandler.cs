@@ -1,5 +1,6 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
+using OpenFindBearings.Application.Shared.Constants;
 using OpenFindBearings.Domain.Aggregates;
 using OpenFindBearings.Domain.Repositories;
 
@@ -11,19 +12,22 @@ namespace OpenFindBearings.Application.Commands.Users.CreateUserFromAuth
     public class CreateUserFromAuthCommandHandler : IRequestHandler<CreateUserFromAuthCommand, Guid>
     {
         private readonly IUserRepository _userRepository;
+        private readonly IRoleRepository _roleRepository;
         private readonly ILogger<CreateUserFromAuthCommandHandler> _logger;
 
         public CreateUserFromAuthCommandHandler(
             IUserRepository userRepository,
+            IRoleRepository roleRepository,
             ILogger<CreateUserFromAuthCommandHandler> logger)
         {
             _userRepository = userRepository;
+            _roleRepository = roleRepository;
             _logger = logger;
         }
 
         public async Task<Guid> Handle(CreateUserFromAuthCommand request, CancellationToken cancellationToken)
         {
-            // ✅ 修改：移除 UserType
+            // 移除 UserType
             _logger.LogInformation("创建业务用户: AuthUserId={AuthUserId}, RegistrationSource={RegistrationSource}, Nickname={Nickname}",
                 request.AuthUserId, request.RegistrationSource, request.Nickname);
 
@@ -36,7 +40,7 @@ namespace OpenFindBearings.Application.Commands.Users.CreateUserFromAuth
                 return existingUser.Id;
             }
 
-            // ✅ 修改：移除 userType 参数
+            // 移除 userType 参数
             var user = new User(
                 authUserId: request.AuthUserId,
                 registrationSource: request.RegistrationSource,
@@ -45,6 +49,17 @@ namespace OpenFindBearings.Application.Commands.Users.CreateUserFromAuth
             );
 
             await _userRepository.AddAsync(user, cancellationToken);
+
+            // 确定角色：预置管理员直接分配 Admin 角色，其余用户分配 Individual
+            var roleName = user.AuthUserId == ServiceConstants.BusinessAdminAuthUserId
+                ? "Admin"
+                : "Individual";
+            var role = await _roleRepository.GetByNameAsync(roleName, cancellationToken);
+            if (role != null)
+            {
+                user.AddRole(role.Id);
+                _logger.LogInformation("已为用户 {UserId} 分配角色 {RoleName}", user.Id, role.Name);
+            }
 
             _logger.LogInformation("业务用户创建成功: UserId={UserId}, AuthUserId={AuthUserId}",
                 user.Id, user.AuthUserId);

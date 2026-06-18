@@ -22,6 +22,15 @@
         }
 
         /// <summary>
+        /// 获取当前用户租户ID（从 JWT token claims 中读取 tenant_id）
+        /// </summary>
+        public static Guid? GetTenantId(this HttpContext httpContext)
+        {
+            var claim = httpContext.User?.FindFirst("tenant_id")?.Value;
+            return Guid.TryParse(claim, out var tenantId) ? tenantId : null;
+        }
+
+        /// <summary>
         /// 获取会话ID（游客）
         /// </summary>
         public static string? GetSessionId(this HttpContext httpContext)

@@ -8,14 +8,24 @@ using OpenFindBearings.Application.Commands.Admin.ApproveLicense;
 using OpenFindBearings.Application.Commands.Admin.RejectLicense;
 using OpenFindBearings.Application.Commands.Bearings.CreateBearing;
 using OpenFindBearings.Application.Commands.Bearings.DeleteBearing;
+using OpenFindBearings.Application.Commands.Bearings.HardDeleteBearing;
+using OpenFindBearings.Application.Commands.Bearings.RestoreBearing;
 using OpenFindBearings.Application.Commands.Bearings.UpdateBearing;
 using OpenFindBearings.Application.Commands.BearingTypes.CreateBearingType;
+using OpenFindBearings.Application.Commands.BearingTypes.DeleteBearingType;
+using OpenFindBearings.Application.Commands.BearingTypes.HardDeleteBearingType;
+using OpenFindBearings.Application.Commands.BearingTypes.RestoreBearingType;
 using OpenFindBearings.Application.Commands.BearingTypes.UpdateBearingType;
 using OpenFindBearings.Application.Commands.Brands.CreateBrand;
+using OpenFindBearings.Application.Commands.Brands.DeleteBrand;
+using OpenFindBearings.Application.Commands.Brands.HardDeleteBrand;
+using OpenFindBearings.Application.Commands.Brands.RestoreBrand;
 using OpenFindBearings.Application.Commands.Brands.UpdateBrand;
 using OpenFindBearings.Application.Commands.Corrections.Commands;
 using OpenFindBearings.Application.Commands.Merchants.Commands;
 using OpenFindBearings.Application.Commands.Merchants.DeleteMerchant;
+using OpenFindBearings.Application.Commands.Merchants.HardDeleteMerchant;
+using OpenFindBearings.Application.Commands.Merchants.RestoreMerchant;
 using OpenFindBearings.Application.Commands.Merchants.VerifyMerchant;
 using OpenFindBearings.Application.Commands.Permissions.CreatePermission;
 using OpenFindBearings.Application.Commands.Permissions.DeletePermission;
@@ -30,6 +40,9 @@ using OpenFindBearings.Application.Commands.SystemConfig.UpdateSystemConfig;
 using OpenFindBearings.Application.Queries.Admin.GetAuditLogs;
 using OpenFindBearings.Application.Queries.Admin.GetDashboardStats;
 using OpenFindBearings.Application.Queries.Admin.GetPendingLicenses;
+using OpenFindBearings.Application.Queries.BearingTypes.GetAllBearingTypes;
+using OpenFindBearings.Application.Queries.Bearings.SearchBearings;
+using OpenFindBearings.Application.Queries.Brands.GetAllBrands;
 using OpenFindBearings.Application.Queries.Corrections.GetCorrectionDetail;
 using OpenFindBearings.Application.Queries.Corrections.GetCorrections;
 using OpenFindBearings.Application.Queries.Corrections.GetPendingCorrections;
@@ -59,6 +72,7 @@ namespace OpenFindBearings.Api.Endpoints
             var group = app.MapGroup("/api/admin")
                 .WithTags("管理员接口")
                 .RequireAuthorization("Admin");
+                // 双重防线：RequireAuthorization("Admin") 要求已认证 + RequirePermission 校验具体权限
 
             // ============ 4.1 仪表盘 ============
 
@@ -75,7 +89,8 @@ namespace OpenFindBearings.Api.Endpoints
             })
             .WithName("GetDashboardStats")
             .WithSummary("获取仪表盘统计")
-            .WithDescription("获取首页统计数据");
+            .WithDescription("获取首页统计数据")
+            .RequirePermission("dashboard.view");
 
             /// <summary>
             /// 审计日志
@@ -112,9 +127,42 @@ namespace OpenFindBearings.Api.Endpoints
             })
             .WithName("GetAuditLogs")
             .WithSummary("获取审计日志")
-            .WithDescription("查看操作日志");
+            .WithDescription("查看操作日志")
+            .RequirePermission("audit.view");
 
             // ============ 4.2 轴承管理 ============
+
+            /// <summary>
+            /// 轴承列表（管理端，支持 includeDeleted）
+            /// </summary>
+            group.MapGet("/bearings", async (
+                [FromServices] IMediator mediator,
+                HttpContext httpContext,
+                [FromQuery] string? keyword = null,
+                [FromQuery] bool? includeDeleted = null,
+                [FromQuery] int page = 1,
+                [FromQuery] int pageSize = 20) =>
+            {
+                var query = new SearchBearingsQuery
+                {
+                    Keyword = keyword,
+                    IncludeDeleted = includeDeleted,
+                    Page = page,
+                    PageSize = pageSize
+                };
+                var result = await mediator.Send(query);
+                return ApiResponseHelper.Paged(
+                    result.Items.ToList(),
+                    result.TotalCount,
+                    result.Page,
+                    result.PageSize,
+                    httpContext
+                );
+            })
+            .WithName("AdminGetBearings")
+            .WithSummary("获取轴承列表")
+            .WithDescription("管理端轴承列表，支持搜索和显示已删除")
+            .RequirePermission("bearing.view");
 
             /// <summary>
             /// 创建轴承
@@ -133,7 +181,7 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("AdminCreateBearing")
             .WithSummary("创建轴承")
             .WithDescription("创建新的轴承型号")
-            .RequirePermission("product.create");
+            .RequirePermission("bearing.create");
 
             /// <summary>
             /// 更新轴承
@@ -151,7 +199,7 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("AdminUpdateBearing")
             .WithSummary("更新轴承")
             .WithDescription("更新轴承信息")
-            .RequirePermission("product.edit");
+            .RequirePermission("bearing.edit");
 
             /// <summary>
             /// 删除轴承
@@ -168,7 +216,41 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("AdminDeleteBearing")
             .WithSummary("删除轴承")
             .WithDescription("删除轴承（软删除）")
-            .RequirePermission("product.delete");
+            .RequirePermission("bearing.delete");
+
+            /// <summary>
+            /// 恢复轴承
+            /// </summary>
+            group.MapPut("/bearings/{id:guid}/restore", async (
+                Guid id,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                var command = new RestoreBearingCommand(id);
+                await mediator.Send(command);
+                return ApiResponseHelper.Ok("轴承恢复成功", httpContext);
+            })
+            .WithName("AdminRestoreBearing")
+            .WithSummary("恢复轴承")
+            .WithDescription("恢复已删除的轴承")
+            .RequirePermission("data.restore");
+
+            /// <summary>
+            /// 彻底删除轴承
+            /// </summary>
+            group.MapDelete("/bearings/{id:guid}/hard", async (
+                Guid id,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                var command = new HardDeleteBearingCommand(id);
+                await mediator.Send(command);
+                return ApiResponseHelper.Ok("轴承已彻底删除", httpContext);
+            })
+            .WithName("AdminHardDeleteBearing")
+            .WithSummary("彻底删除轴承")
+            .WithDescription("物理删除轴承，不可恢复")
+            .RequirePermission("data.harddelete");
 
             // ============ 4.3 商家管理 ============
 
@@ -225,6 +307,40 @@ namespace OpenFindBearings.Api.Endpoints
             .WithSummary("删除商家")
             .WithDescription("删除商家")
             .RequirePermission("merchant.manage");
+
+            /// <summary>
+            /// 恢复商家
+            /// </summary>
+            group.MapPut("/merchants/{id:guid}/restore", async (
+                Guid id,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                var command = new RestoreMerchantCommand(id);
+                await mediator.Send(command);
+                return ApiResponseHelper.Ok("商家恢复成功", httpContext);
+            })
+            .WithName("AdminRestoreMerchant")
+            .WithSummary("恢复商家")
+            .WithDescription("恢复已删除的商家")
+            .RequirePermission("data.restore");
+
+            /// <summary>
+            /// 彻底删除商家
+            /// </summary>
+            group.MapDelete("/merchants/{id:guid}/hard", async (
+                Guid id,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                var command = new HardDeleteMerchantCommand(id);
+                await mediator.Send(command);
+                return ApiResponseHelper.Ok("商家已彻底删除", httpContext);
+            })
+            .WithName("AdminHardDeleteMerchant")
+            .WithSummary("彻底删除商家")
+            .WithDescription("物理删除商家，不可恢复")
+            .RequirePermission("data.harddelete");
 
             /// <summary>
             /// 认证商家
@@ -424,6 +540,23 @@ namespace OpenFindBearings.Api.Endpoints
             // ============ 4.5 品牌/类型管理 ============
 
             /// <summary>
+            /// 品牌列表（管理端，支持 includeDeleted）
+            /// </summary>
+            group.MapGet("/brands", async (
+                [FromServices] IMediator mediator,
+                HttpContext httpContext,
+                [FromQuery] bool? includeDeleted = null) =>
+            {
+                var query = new GetAllBrandsQuery { IncludeDeleted = includeDeleted };
+                var result = await mediator.Send(query);
+                return ApiResponseHelper.Ok(result, httpContext: httpContext);
+            })
+            .WithName("AdminGetBrands")
+            .WithSummary("获取品牌列表")
+            .WithDescription("管理端品牌列表，支持显示已删除")
+            .RequirePermission("bearing.view");
+
+            /// <summary>
             /// 创建品牌
             /// </summary>
             group.MapPost("/brands", async (
@@ -440,7 +573,7 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("AdminCreateBrand")
             .WithSummary("创建品牌")
             .WithDescription("添加新品牌")
-            .RequirePermission("product.create");
+            .RequirePermission("bearing.create");
 
             /// <summary>
             /// 更新品牌
@@ -458,7 +591,75 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("AdminUpdateBrand")
             .WithSummary("更新品牌")
             .WithDescription("更新品牌信息")
-            .RequirePermission("product.edit");
+            .RequirePermission("bearing.edit");
+
+            /// <summary>
+            /// 删除品牌（软删除）
+            /// </summary>
+            group.MapDelete("/brands/{id:guid}", async (
+                Guid id,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                var command = new DeleteBrandCommand(id);
+                await mediator.Send(command);
+                return ApiResponseHelper.Ok("品牌删除成功", httpContext);
+            })
+            .WithName("AdminDeleteBrand")
+            .WithSummary("删除品牌")
+            .WithDescription("删除品牌（软删除）")
+            .RequirePermission("bearing.delete");
+
+            /// <summary>
+            /// 恢复品牌
+            /// </summary>
+            group.MapPut("/brands/{id:guid}/restore", async (
+                Guid id,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                var command = new RestoreBrandCommand(id);
+                await mediator.Send(command);
+                return ApiResponseHelper.Ok("品牌恢复成功", httpContext);
+            })
+            .WithName("AdminRestoreBrand")
+            .WithSummary("恢复品牌")
+            .WithDescription("恢复已删除的品牌")
+            .RequirePermission("data.restore");
+
+            /// <summary>
+            /// 彻底删除品牌
+            /// </summary>
+            group.MapDelete("/brands/{id:guid}/hard", async (
+                Guid id,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                var command = new HardDeleteBrandCommand(id);
+                await mediator.Send(command);
+                return ApiResponseHelper.Ok("品牌已彻底删除", httpContext);
+            })
+            .WithName("AdminHardDeleteBrand")
+            .WithSummary("彻底删除品牌")
+            .WithDescription("物理删除品牌，不可恢复")
+            .RequirePermission("data.harddelete");
+
+            /// <summary>
+            /// 轴承类型列表（管理端，支持 includeDeleted）
+            /// </summary>
+            group.MapGet("/bearing-types", async (
+                [FromServices] IMediator mediator,
+                HttpContext httpContext,
+                [FromQuery] bool? includeDeleted = null) =>
+            {
+                var query = new GetAllBearingTypesQuery { IncludeDeleted = includeDeleted };
+                var result = await mediator.Send(query);
+                return ApiResponseHelper.Ok(result, httpContext: httpContext);
+            })
+            .WithName("AdminGetBearingTypes")
+            .WithSummary("获取轴承类型列表")
+            .WithDescription("管理端类型列表，支持显示已删除")
+            .RequirePermission("bearing.view");
 
             /// <summary>
             /// 创建轴承类型
@@ -477,7 +678,7 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("AdminCreateBearingType")
             .WithSummary("创建轴承类型")
             .WithDescription("添加新轴承类型")
-            .RequirePermission("product.create");
+            .RequirePermission("bearing.create");
 
             /// <summary>
             /// 更新轴承类型
@@ -495,7 +696,58 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("AdminUpdateBearingType")
             .WithSummary("更新轴承类型")
             .WithDescription("更新轴承类型")
-            .RequirePermission("product.edit");
+            .RequirePermission("bearing.edit");
+
+            /// <summary>
+            /// 删除轴承类型（软删除）
+            /// </summary>
+            group.MapDelete("/bearing-types/{id:guid}", async (
+                Guid id,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                var command = new DeleteBearingTypeCommand(id);
+                await mediator.Send(command);
+                return ApiResponseHelper.Ok("轴承类型删除成功", httpContext);
+            })
+            .WithName("AdminDeleteBearingType")
+            .WithSummary("删除轴承类型")
+            .WithDescription("删除轴承类型（软删除）")
+            .RequirePermission("bearing.delete");
+
+            /// <summary>
+            /// 恢复轴承类型
+            /// </summary>
+            group.MapPut("/bearing-types/{id:guid}/restore", async (
+                Guid id,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                var command = new RestoreBearingTypeCommand(id);
+                await mediator.Send(command);
+                return ApiResponseHelper.Ok("轴承类型恢复成功", httpContext);
+            })
+            .WithName("AdminRestoreBearingType")
+            .WithSummary("恢复轴承类型")
+            .WithDescription("恢复已删除的轴承类型")
+            .RequirePermission("data.restore");
+
+            /// <summary>
+            /// 彻底删除轴承类型
+            /// </summary>
+            group.MapDelete("/bearing-types/{id:guid}/hard", async (
+                Guid id,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                var command = new HardDeleteBearingTypeCommand(id);
+                await mediator.Send(command);
+                return ApiResponseHelper.Ok("轴承类型已彻底删除", httpContext);
+            })
+            .WithName("AdminHardDeleteBearingType")
+            .WithSummary("彻底删除轴承类型")
+            .WithDescription("物理删除轴承类型，不可恢复")
+            .RequirePermission("data.harddelete");
 
             // ============ 4.6 系统配置 ============
 
@@ -505,18 +757,19 @@ namespace OpenFindBearings.Api.Endpoints
             group.MapGet("/config", async (
                 [FromServices] IMediator mediator,
                 HttpContext httpContext,
-                [FromQuery] string? group = null) =>
+                [FromQuery] string? groupFilter = null) =>
             {
                 var query = new GetSystemConfigsQuery
                 {
-                    Group = group
+                    Group = groupFilter
                 };
                 var result = await mediator.Send(query);
                 return ApiResponseHelper.Ok(result, httpContext: httpContext);
             })
             .WithName("GetSystemConfigs")
             .WithSummary("获取系统配置")
-            .WithDescription("获取系统配置列表");
+            .WithDescription("获取系统配置列表")
+            .RequirePermission("system.view");
 
             /// <summary>
             /// 更新系统配置
@@ -547,7 +800,7 @@ namespace OpenFindBearings.Api.Endpoints
             /// <summary>
             /// 刷新限流配置缓存
             /// </summary>
-            group.MapPost("/admin/cache/refresh-rate-limit", async (
+            group.MapPost("/cache/refresh-rate-limit", async (
                 [FromServices] ISystemConfigRepository configRepo,
                 HttpContext httpContext) =>
             {
@@ -566,8 +819,7 @@ namespace OpenFindBearings.Api.Endpoints
             })
             .WithName("RefreshRateLimitCache")
             .WithSummary("刷新限流配置缓存")
-            .WithDescription("修改限流配置后调用此接口，使配置立即生效")
-            .RequireAuthorization("Admin");
+            .WithDescription("修改限流配置后调用此接口，使配置立即生效");
 
             /// <summary>
             /// 获取价格配置
@@ -582,7 +834,8 @@ namespace OpenFindBearings.Api.Endpoints
             })
             .WithName("GetPriceConfig")
             .WithSummary("获取价格配置")
-            .WithDescription("获取价格相关配置");
+            .WithDescription("获取价格相关配置")
+            .RequirePermission("system.view");
 
             /// <summary>
             /// 获取待审核的营业执照列表
@@ -610,7 +863,6 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("GetPendingLicenses")
             .WithSummary("获取待审核营业执照")
             .WithDescription("获取所有待审核的营业执照列表")
-            .RequireAuthorization("Admin")
             .RequirePermission("merchant.verify");
 
             /// <summary>
@@ -636,7 +888,6 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("ApproveLicense")
             .WithSummary("审核通过营业执照")
             .WithDescription("通过营业执照审核，商家获得认证")
-            .RequireAuthorization("Admin")
             .RequirePermission("merchant.verify");
 
             /// <summary>
@@ -663,7 +914,6 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("RejectLicense")
             .WithSummary("审核拒绝营业执照")
             .WithDescription("拒绝营业执照审核，填写拒绝理由")
-            .RequireAuthorization("Admin")
             .RequirePermission("merchant.verify");
 
             // ============ 角色管理 ============
@@ -690,7 +940,6 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("GetRoles")
             .WithSummary("获取角色列表")
             .WithDescription("分页获取所有角色列表")
-            .RequireAuthorization("Admin")
             .RequirePermission("role.manage");
 
             /// <summary>
@@ -710,7 +959,6 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("GetRoleDetail")
             .WithSummary("获取角色详情")
             .WithDescription("获取角色详细信息，包括拥有的权限")
-            .RequireAuthorization("Admin")
             .RequirePermission("role.manage");
 
             /// <summary>
@@ -727,7 +975,6 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("GetAllRoles")
             .WithSummary("获取所有角色")
             .WithDescription("获取所有角色列表，用于下拉框")
-            .RequireAuthorization("Admin")
             .RequirePermission("role.manage");
 
             /// <summary>
@@ -744,7 +991,6 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("CreateRole")
             .WithSummary("创建角色")
             .WithDescription("创建新角色")
-            .RequireAuthorization("Admin")
             .RequirePermission("role.manage");
 
             /// <summary>
@@ -763,7 +1009,6 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("UpdateRole")
             .WithSummary("更新角色")
             .WithDescription("更新角色信息")
-            .RequireAuthorization("Admin")
             .RequirePermission("role.manage");
 
             /// <summary>
@@ -781,7 +1026,6 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("DeleteRole")
             .WithSummary("删除角色")
             .WithDescription("删除角色（不能删除系统角色）")
-            .RequireAuthorization("Admin")
             .RequirePermission("role.manage");
 
             /// <summary>
@@ -800,7 +1044,6 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("AssignPermissionsToRole")
             .WithSummary("分配权限")
             .WithDescription("为角色分配权限")
-            .RequireAuthorization("Admin")
             .RequirePermission("role.manage");
 
             /// <summary>
@@ -818,7 +1061,6 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("GetRolePermissions")
             .WithSummary("获取角色权限")
             .WithDescription("获取角色拥有的权限名称列表")
-            .RequireAuthorization("Admin")
             .RequirePermission("role.manage");
 
             // ============ 权限管理 ============
@@ -831,13 +1073,13 @@ namespace OpenFindBearings.Api.Endpoints
                 HttpContext httpContext,
                 [FromQuery] int page = 1,
                 [FromQuery] int pageSize = 20,
-                [FromQuery] string? group = null) =>
+                [FromQuery] string? groupFilter = null) =>
             {
                 var query = new GetPermissionsQuery
                 {
                     Page = page,
                     PageSize = pageSize,
-                    Group = group
+                    Group = groupFilter
                 };
                 var result = await mediator.Send(query);
                 return ApiResponseHelper.Paged(result.Items.ToList(), result.TotalCount, result.Page, result.PageSize, httpContext);
@@ -845,7 +1087,6 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("GetPermissions")
             .WithSummary("获取权限列表")
             .WithDescription("分页获取所有权限列表")
-            .RequireAuthorization("Admin")
             .RequirePermission("role.manage");
 
             /// <summary>
@@ -865,7 +1106,6 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("GetPermissionDetail")
             .WithSummary("获取权限详情")
             .WithDescription("获取权限详细信息")
-            .RequireAuthorization("Admin")
             .RequirePermission("role.manage");
 
             /// <summary>
@@ -882,7 +1122,6 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("CreatePermission")
             .WithSummary("创建权限")
             .WithDescription("创建新权限")
-            .RequireAuthorization("Admin")
             .RequirePermission("role.manage");
 
             /// <summary>
@@ -901,7 +1140,6 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("UpdatePermission")
             .WithSummary("更新权限")
             .WithDescription("更新权限信息")
-            .RequireAuthorization("Admin")
             .RequirePermission("role.manage");
 
             /// <summary>
@@ -919,7 +1157,6 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("DeletePermission")
             .WithSummary("删除权限")
             .WithDescription("删除权限（不能删除已被使用的权限）")
-            .RequireAuthorization("Admin")
             .RequirePermission("role.manage");
 
             // ============ 用户角色管理 ============
@@ -930,16 +1167,19 @@ namespace OpenFindBearings.Api.Endpoints
             group.MapPost("/users/{userId:guid}/roles", async (
                 Guid userId,
                 AssignRoleToUserCommand command,
+                [FromServices] ICurrentUserService currentUser,
                 [FromServices] IMediator mediator,
                 HttpContext httpContext) =>
             {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
                 await mediator.Send(command);
                 return ApiResponseHelper.Ok("角色分配成功", httpContext);
             })
             .WithName("AdminAssignRoleToUser")
             .WithSummary("分配角色")
             .WithDescription("分配角色给用户")
-            .RequireAuthorization("Admin")
             .RequirePermission("user.manage");
 
             /// <summary>
@@ -948,9 +1188,13 @@ namespace OpenFindBearings.Api.Endpoints
             group.MapDelete("/users/{userId:guid}/roles/{roleName}", async (
                 Guid userId,
                 string roleName,
+                [FromServices] ICurrentUserService currentUser,
                 [FromServices] IMediator mediator,
                 HttpContext httpContext) =>
             {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
                 var command = new RemoveRoleFromUserCommand
                 {
                     UserId = userId,
@@ -962,7 +1206,6 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("AdminRemoveRoleFromUser")
             .WithSummary("移除角色")
             .WithDescription("从用户移除角色")
-            .RequireAuthorization("Admin")
             .RequirePermission("user.manage");
 
             /// <summary>
@@ -970,9 +1213,13 @@ namespace OpenFindBearings.Api.Endpoints
             /// </summary>
             group.MapGet("/users/{userId:guid}/roles", async (
                 Guid userId,
+                [FromServices] ICurrentUserService currentUser,
                 [FromServices] IMediator mediator,
                 HttpContext httpContext) =>
             {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
                 var query = new GetUserRolesQuery { UserId = userId };
                 var result = await mediator.Send(query);
                 return ApiResponseHelper.Ok(result, httpContext: httpContext);
@@ -980,7 +1227,6 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("AdminGetUserRoles")
             .WithSummary("获取用户角色")
             .WithDescription("获取用户的角色列表")
-            .RequireAuthorization("Admin")
             .RequirePermission("user.manage");
 
             /// <summary>
@@ -988,9 +1234,13 @@ namespace OpenFindBearings.Api.Endpoints
             /// </summary>
             group.MapGet("/users/{userId:guid}/permissions", async (
                 Guid userId,
+                [FromServices] ICurrentUserService currentUser,
                 [FromServices] IMediator mediator,
                 HttpContext httpContext) =>
             {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
                 var query = new GetUserPermissionsQuery { UserId = userId };
                 var result = await mediator.Send(query);
                 return ApiResponseHelper.Ok(result, httpContext: httpContext);
@@ -998,7 +1248,6 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("AdminGetUserPermissions")
             .WithSummary("获取用户权限")
             .WithDescription("获取用户的权限列表")
-            .RequireAuthorization("Admin")
             .RequirePermission("user.manage");
         }
     }

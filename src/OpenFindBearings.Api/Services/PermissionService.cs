@@ -139,7 +139,7 @@ namespace OpenFindBearings.Api.Services
                 return false;
 
             // 管理员可以管理所有轴承
-            if (await HasPermissionAsync("product.manage.all"))
+            if (await HasPermissionAsync("bearing.manage.all"))
                 return true;
 
             // 获取当前用户

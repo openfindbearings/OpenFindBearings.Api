@@ -85,10 +85,10 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
             // 创建权限
             var permissions = new List<Permission>
             {
-                new("product.view", "查看产品"),
-                new("product.create", "创建产品"),
-                new("product.edit", "编辑产品"),
-                new("product.delete", "删除产品"),
+                new("bearing.view", "查看产品"),
+                new("bearing.create", "创建产品"),
+                new("bearing.edit", "编辑产品"),
+                new("bearing.delete", "删除产品"),
                 new("merchant.view", "查看商家"),
                 new("merchant.verify", "认证商家"),
                 new("merchant.manage", "管理商家"),
@@ -98,6 +98,12 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
                 new("favorite.merchant", "关注商家"),
                 new("user.manage", "管理用户"),
                 new("role.manage", "管理角色"),
+                new("dashboard.view", "查看仪表盘"),
+                new("audit.view", "查看审计日志"),
+                new("system.view", "查看系统配置"),
+                new("system.manage", "管理系统配置"),
+                new("data.restore", "恢复数据"),
+                new("data.harddelete", "彻底删除"),
             };
 
             await context.Permissions.AddRangeAsync(permissions);
@@ -131,22 +137,22 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
 
             // MerchantAdmin 拥有商家管理权限
             rolePermissions.AddRange([
-                new(merchantAdminRole.Id, permissions.First(p => p.Name == "product.view").Id),
-                new(merchantAdminRole.Id, permissions.First(p => p.Name == "product.create").Id),
-                new(merchantAdminRole.Id, permissions.First(p => p.Name == "product.edit").Id),
+                new(merchantAdminRole.Id, permissions.First(p => p.Name == "bearing.view").Id),
+                new(merchantAdminRole.Id, permissions.First(p => p.Name == "bearing.create").Id),
+                new(merchantAdminRole.Id, permissions.First(p => p.Name == "bearing.edit").Id),
                 new(merchantAdminRole.Id, permissions.First(p => p.Name == "merchant.view").Id),
                 new(merchantAdminRole.Id, permissions.First(p => p.Name == "merchant.manage").Id),
             ]);
 
             // MerchantStaff 拥有查看权限
             rolePermissions.AddRange([
-                new(merchantStaffRole.Id, permissions.First(p => p.Name == "product.view").Id),
+                new(merchantStaffRole.Id, permissions.First(p => p.Name == "bearing.view").Id),
                 new(merchantStaffRole.Id, permissions.First(p => p.Name == "merchant.view").Id),
             ]);
 
             // Individual 拥有基本权限
             rolePermissions.AddRange([
-                new(individualRole.Id, permissions.First(p => p.Name == "product.view").Id),
+                new(individualRole.Id, permissions.First(p => p.Name == "bearing.view").Id),
                 new(individualRole.Id, permissions.First(p => p.Name == "correction.submit").Id),
                 new(individualRole.Id, permissions.First(p => p.Name == "favorite.bearing").Id),
                 new(individualRole.Id, permissions.First(p => p.Name == "favorite.merchant").Id),
@@ -162,17 +168,6 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
             var users = new List<User>();
             var userRoles = new List<UserRole>();
 
-            // 3.1 默认超级管理员（无论开发/生产都需要）
-            var adminUser = new User(
-                authUserId: "admin-default",
-                registrationSource: RegistrationSource.Admin,
-                registerIp: null,
-                nickname: "系统管理员"
-            );
-            users.Add(adminUser);
-            userRoles.Add(new UserRole(adminUser.Id, adminRole.Id));
-
-            // 3.2 开发环境额外测试用户
             if (isDevelopment)
             {
                 var merchant1 = new User("auth-merchant-001", RegistrationSource.Mobile, null, "张经理");
@@ -183,18 +178,20 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
                 users.AddRange([merchant1, merchant2, customer1, customer2]);
 
                 userRoles.AddRange([
-                    new UserRole(merchant1.Id, merchantStaffRole.Id),
-                    new UserRole(merchant2.Id, merchantStaffRole.Id),
+                    new UserRole(merchant1.Id, merchantAdminRole.Id),
+                    new UserRole(merchant2.Id, merchantAdminRole.Id),
                     new UserRole(customer1.Id, individualRole.Id),
                     new UserRole(customer2.Id, individualRole.Id),
                 ]);
             }
 
-            await context.Users.AddRangeAsync(users);
-            await context.SaveChangesAsync();
-
-            await context.UserRoles.AddRangeAsync(userRoles);
-            await context.SaveChangesAsync();
+            if (users.Count > 0)
+            {
+                await context.Users.AddRangeAsync(users);
+                await context.SaveChangesAsync();
+                await context.UserRoles.AddRangeAsync(userRoles);
+                await context.SaveChangesAsync();
+            }
             #endregion
 
             // ============ 4. 轴承产品数据（仅开发环境） ============

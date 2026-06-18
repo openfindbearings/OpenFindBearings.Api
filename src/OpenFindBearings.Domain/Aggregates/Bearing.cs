@@ -325,6 +325,15 @@ namespace OpenFindBearings.Domain.Aggregates
         }
 
         /// <summary>
+        /// 更新基本尺寸
+        /// </summary>
+        public void UpdateDimensions(decimal innerDiameter, decimal outerDiameter, decimal width)
+        {
+            Dimensions = new Dimensions(innerDiameter, outerDiameter, width);
+            UpdateTimestamp();
+        }
+
+        /// <summary>
         /// 更新尺寸相关参数
         /// </summary>
         public void UpdateDimensionDetails(decimal? chamferRmin, decimal? chamferRmax)

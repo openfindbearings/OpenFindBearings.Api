@@ -45,6 +45,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 
             var query = _context.Merchants.AsNoTracking();
 
+            if (searchParams.IsActive.HasValue)
+                query = query.Where(m => m.IsActive == searchParams.IsActive.Value);
+
             if (!string.IsNullOrWhiteSpace(searchParams.Keyword))
                 query = query.Where(m =>
                     m.Name.Contains(searchParams.Keyword) ||
@@ -106,7 +109,18 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         public async Task UpdateAsync(Merchant merchant, CancellationToken cancellationToken = default)
         {
             _context.Merchants.Update(merchant);
-            
+        }
+
+        public async Task<Merchant?> GetByIdIgnoringFilterAsync(Guid id, CancellationToken cancellationToken = default)
+        {
+            return await _context.Merchants
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(m => m.Id == id, cancellationToken);
+        }
+
+        public async Task RemoveAsync(Merchant merchant, CancellationToken cancellationToken = default)
+        {
+            _context.Merchants.Remove(merchant);
         }
     }
 }

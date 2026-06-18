@@ -36,6 +36,7 @@ namespace OpenFindBearings.Application.Queries.Merchants.SearchMerchants
                 City = request.City,
                 Type = request.Type,
                 VerifiedOnly = request.VerifiedOnly,
+                IsActive = request.IncludeDeleted == true ? null : true,
                 Page = request.Page,
                 PageSize = request.PageSize
             };
@@ -59,7 +60,8 @@ namespace OpenFindBearings.Application.Queries.Merchants.SearchMerchants
             return !string.IsNullOrWhiteSpace(request.Keyword)
                 || !string.IsNullOrWhiteSpace(request.City)
                 || request.Type.HasValue
-                || request.VerifiedOnly.HasValue;
+                || request.VerifiedOnly.HasValue
+                || request.IncludeDeleted.HasValue;
         }
     }
 }

@@ -4,12 +4,12 @@ namespace OpenFindBearings.Domain.Entities
 {
     /// <summary>
     /// 权限实体
-    /// 代表系统中的具体操作权限，如 "product.edit", "correction.review" 等
+    /// 代表系统中的具体操作权限，如 "bearing.edit", "correction.review" 等
     /// </summary>
     public class Permission : BaseEntity
     {
         /// <summary>
-        /// 权限名称（如 "product.edit", "correction.review"）
+        /// 权限名称（如 "bearing.edit", "correction.review"）
         /// </summary>
         public string Name { get; private set; }
 

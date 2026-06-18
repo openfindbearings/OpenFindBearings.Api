@@ -27,9 +27,11 @@ namespace OpenFindBearings.Application.Queries.Brands.GetAllBrands
 
         public async Task<List<BrandDto>> Handle(GetAllBrandsQuery request, CancellationToken cancellationToken)
         {
-            _logger.LogInformation("获取所有品牌列表");
+            _logger.LogInformation("获取所有品牌列表, IncludeDeleted={IncludeDeleted}", request.IncludeDeleted);
 
-            var brands = await _brandRepository.GetAllAsync(cancellationToken);
+            var brands = request.IncludeDeleted == true
+                ? await _brandRepository.GetAllIncludingInactiveAsync(cancellationToken)
+                : await _brandRepository.GetAllAsync(cancellationToken);
             var bearingCountByBrand = await _bearingRepository.GetBearingCountByBrandAsync(cancellationToken);
 
             return brands.Select(b => b.ToDto(bearingCountByBrand.GetValueOrDefault(b.Id, 0))).ToList();
