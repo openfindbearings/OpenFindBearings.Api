@@ -12,7 +12,7 @@ using OpenFindBearings.Infrastructure.Persistence.Data;
 namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260615141222_InitialCreate")]
+    [Migration("20260628140153_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -78,8 +78,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                         .HasColumnName("DataRemark");
 
                     b.Property<string>("Description")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)")
+                        .HasColumnType("text")
                         .HasColumnName("Description");
 
                     b.Property<string>("Image2DUrl")
@@ -234,8 +233,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                         .HasColumnName("DataRemark");
 
                     b.Property<string>("Description")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
+                        .HasColumnType("text");
 
                     b.Property<int>("FollowerCount")
                         .ValueGeneratedOnAdd()
@@ -1688,8 +1686,8 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                                 .HasColumnName("Mobile");
 
                             b1.Property<string>("Phone")
-                                .HasMaxLength(20)
-                                .HasColumnType("character varying(20)")
+                                .HasMaxLength(32)
+                                .HasColumnType("character varying(32)")
                                 .HasColumnName("Phone");
 
                             b1.Property<string>("QQ")

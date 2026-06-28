@@ -24,7 +24,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
                 .IsRequired();
 
             builder.Property(m => m.Description)
-                .HasMaxLength(1000);
+                .HasColumnType("text");
 
             builder.Property(m => m.BusinessScope)
                 .HasMaxLength(500);
@@ -112,7 +112,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             builder.OwnsOne(m => m.Contact, contact =>
             {
                 contact.Property(c => c.ContactPerson).HasColumnName("ContactPerson").HasMaxLength(100);
-                contact.Property(c => c.Phone).HasColumnName("Phone").HasMaxLength(20);
+                contact.Property(c => c.Phone).HasColumnName("Phone").HasMaxLength(32);
                 contact.Property(c => c.Mobile).HasColumnName("Mobile").HasMaxLength(20);
                 contact.Property(c => c.Email).HasColumnName("Email").HasMaxLength(100);
                 contact.Property(c => c.Address).HasColumnName("Address").HasMaxLength(500);

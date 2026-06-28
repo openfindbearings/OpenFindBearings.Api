@@ -19,5 +19,7 @@
         public string? Email { get; set; }
         public string? Address { get; set; }
         public bool IsVerified { get; set; }
+        public string? DataSource { get; set; }
+        public string? SourceSite { get; set; }
     }
 }

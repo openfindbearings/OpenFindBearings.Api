@@ -7,9 +7,6 @@ using OpenFindBearings.Domain.ValueObjects;
 
 namespace OpenFindBearings.Application.Commands.Sync.BatchCreateMerchants
 {
-    /// <summary>
-    /// 批量创建商家命令处理器
-    /// </summary>
     public class BatchCreateMerchantsCommandHandler : IRequestHandler<BatchCreateMerchantsCommand, BatchResult>
     {
         private readonly IMerchantRepository _merchantRepository;
@@ -35,7 +32,6 @@ namespace OpenFindBearings.Application.Commands.Sync.BatchCreateMerchants
                 cancellationToken.ThrowIfCancellationRequested();
                 try
                 {
-                    // 检查商家是否已存在（精确名称匹配）
                     var existing = await _merchantRepository.GetByNameAsync(merchantDto.Name, cancellationToken);
 
                     if (existing != null && request.Mode == SyncMode.Create)
@@ -50,15 +46,29 @@ namespace OpenFindBearings.Application.Commands.Sync.BatchCreateMerchants
                         continue;
                     }
 
+                    if (existing != null && request.Mode != SyncMode.Create)
+                    {
+                        if (existing.DataSource != null && existing.DataSource.SourceType != DataSourceType.Crawler)
+                        {
+                            result.AddSkipped(merchantDto.Name, "非爬虫数据，跳过覆盖保护");
+                            _logger.LogDebug("跳过覆盖商家: {Name}, 来源: {Source}", merchantDto.Name, existing.DataSource.SourceType);
+                            continue;
+                        }
+
+                        if (existing.DataSource == null && merchantDto.DataSource != null)
+                        {
+                            existing.SetDataSource(CreateDataSource(merchantDto.DataSource, merchantDto.SourceSite));
+                        }
+                    }
+
                     if (existing == null)
                     {
-                        // 创建新商家
                         var contact = new ContactInfo(
-                            merchantDto.ContactPerson,
-                            merchantDto.Phone,
-                            merchantDto.Mobile,
-                            merchantDto.Email,
-                            merchantDto.Address
+                            contactPerson: merchantDto.ContactPerson,
+                            phone: merchantDto.Phone,
+                            mobile: merchantDto.Mobile,
+                            email: merchantDto.Email,
+                            address: merchantDto.Address
                         );
 
                         var merchant = new Merchant(
@@ -67,7 +77,6 @@ namespace OpenFindBearings.Application.Commands.Sync.BatchCreateMerchants
                             contact
                         );
 
-                        // ✅ 修改：传递所有6个参数
                         merchant.UpdateBasicInfo(
                             companyName: merchantDto.EnglishName,
                             unifiedSocialCreditCode: merchantDto.UnifiedSocialCreditCode,
@@ -76,6 +85,11 @@ namespace OpenFindBearings.Application.Commands.Sync.BatchCreateMerchants
                             logoUrl: merchantDto.LogoUrl,
                             website: merchantDto.Website
                         );
+
+                        if (merchantDto.DataSource != null)
+                        {
+                            merchant.SetDataSource(CreateDataSource(merchantDto.DataSource, merchantDto.SourceSite));
+                        }
 
                         if (merchantDto.IsVerified)
                         {
@@ -87,7 +101,6 @@ namespace OpenFindBearings.Application.Commands.Sync.BatchCreateMerchants
                     }
                     else if (request.Mode == SyncMode.Update || request.Mode == SyncMode.Upsert)
                     {
-                        // ✅ 修改：传递所有6个参数
                         existing.UpdateBasicInfo(
                             companyName: merchantDto.EnglishName ?? existing.CompanyName,
                             unifiedSocialCreditCode: merchantDto.UnifiedSocialCreditCode ?? existing.UnifiedSocialCreditCode,
@@ -121,6 +134,20 @@ namespace OpenFindBearings.Application.Commands.Sync.BatchCreateMerchants
                 result.SuccessCount, result.FailCount);
 
             return result;
+        }
+
+        private static DataSource CreateDataSource(string? dataSource, string? sourceSite)
+        {
+            var sourceType = dataSource ?? "manual";
+            var importedBy = sourceSite;
+
+            if (sourceType.Equals("crawler", StringComparison.OrdinalIgnoreCase))
+                return DataSource.FromCrawler(importedBy ?? "unknown");
+            if (sourceType.Equals("api", StringComparison.OrdinalIgnoreCase))
+                return DataSource.FromApi(importedBy ?? "ApiSync");
+            if (sourceType.Equals("fileimport", StringComparison.OrdinalIgnoreCase))
+                return DataSource.FromFileImport(importedBy);
+            return DataSource.FromManual(importedBy);
         }
     }
 }
