@@ -27,7 +27,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
                 .HasColumnName("CodeSource");
 
             builder.Property(b => b.Description)
-                .HasMaxLength(1000)
+                .HasColumnType("text")
                 .HasColumnName("Description");
 
             // ============ 类型属性 ============
