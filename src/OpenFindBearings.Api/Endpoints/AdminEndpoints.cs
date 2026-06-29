@@ -373,6 +373,7 @@ namespace OpenFindBearings.Api.Endpoints
                 [FromQuery] string? city = null,
                 [FromQuery] int? type = null,
                 [FromQuery] bool? verifiedOnly = null,
+                [FromQuery] bool? includeDeleted = null,
                 [FromQuery] int page = 1,
                 [FromQuery] int pageSize = 20) =>
             {
@@ -382,6 +383,7 @@ namespace OpenFindBearings.Api.Endpoints
                     City = city,
                     Type = type.HasValue ? (MerchantType?)type : null,
                     VerifiedOnly = verifiedOnly,
+                    IncludeDeleted = includeDeleted,
                     Page = page,
                     PageSize = pageSize
                 };

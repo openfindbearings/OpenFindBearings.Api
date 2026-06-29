@@ -164,6 +164,24 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         }
 
         /// <inheritdoc/>
+        public async Task<int> GetCountSinceAsync(DateTime since, CancellationToken cancellationToken = default)
+        {
+            return await _context.Users
+                .Where(u => u.IsActive && u.CreatedAt >= since)
+                .CountAsync(cancellationToken);
+        }
+
+        /// <inheritdoc/>
+        public async Task<Dictionary<string, int>> GetRoleDistributionAsync(CancellationToken cancellationToken = default)
+        {
+            return await _context.UserRoles
+                .Where(ur => ur.User != null && ur.User.IsActive)
+                .GroupBy(ur => ur.Role.Name)
+                .Select(g => new { RoleName = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.RoleName, x => x.Count, cancellationToken);
+        }
+
+        /// <inheritdoc/>
         public async Task UpdateSearchStatsAsync(Guid userId, CancellationToken cancellationToken = default)
         {
             var user = await GetByIdAsync(userId, cancellationToken);

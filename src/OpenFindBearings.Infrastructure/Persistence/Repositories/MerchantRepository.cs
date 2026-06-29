@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using OpenFindBearings.Domain.Aggregates;
+using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
 using OpenFindBearings.Domain.Specifications;
 using OpenFindBearings.Infrastructure.Persistence.Data;
@@ -104,6 +105,29 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         {
             await _context.Merchants.AddAsync(merchant, cancellationToken);
             
+        }
+
+        public async Task<int> GetCountSinceAsync(DateTime since, CancellationToken cancellationToken = default)
+        {
+            return await _context.Merchants
+                .Where(m => m.IsActive && m.CreatedAt >= since)
+                .CountAsync(cancellationToken);
+        }
+
+        public async Task<int> GetVerifiedCountAsync(CancellationToken cancellationToken = default)
+        {
+            return await _context.Merchants
+                .Where(m => m.IsActive && m.IsVerified)
+                .CountAsync(cancellationToken);
+        }
+
+        public async Task<Dictionary<MerchantType, int>> GetTypeDistributionAsync(CancellationToken cancellationToken = default)
+        {
+            return await _context.Merchants
+                .Where(m => m.IsActive)
+                .GroupBy(m => m.Type)
+                .Select(g => new { Type = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.Type, x => x.Count, cancellationToken);
         }
 
         public async Task UpdateAsync(Merchant merchant, CancellationToken cancellationToken = default)

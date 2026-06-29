@@ -62,5 +62,10 @@ namespace OpenFindBearings.Domain.Repositories
         /// 删除关联
         /// </summary>
         Task DeleteAsync(Guid id, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 获取待审核关联数量
+        /// </summary>
+        Task<int> GetPendingApprovalCountAsync(CancellationToken cancellationToken = default);
     }
 }

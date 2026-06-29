@@ -1,4 +1,5 @@
 ﻿using OpenFindBearings.Domain.Entities;
+using OpenFindBearings.Domain.Enums;
 
 namespace OpenFindBearings.Domain.Repositories
 {
@@ -42,5 +43,15 @@ namespace OpenFindBearings.Domain.Repositories
         /// 获取所有纠错
         /// </summary>
         Task<List<CorrectionRequest>> GetAllAsync(CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 获取指定状态的纠错数量
+        /// </summary>
+        Task<int> GetCountByStatusAsync(CorrectionStatus status, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 获取指定时间后提交的纠错数量
+        /// </summary>
+        Task<int> GetCountSinceAsync(DateTime since, CancellationToken cancellationToken = default);
     }
 }

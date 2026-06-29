@@ -1,4 +1,5 @@
 ﻿using OpenFindBearings.Domain.Aggregates;
+using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Specifications;
 
 namespace OpenFindBearings.Domain.Repositories
@@ -53,6 +54,21 @@ namespace OpenFindBearings.Domain.Repositories
         /// 根据ID获取商家（包含已停用的，用于彻底删除前校验）
         /// </summary>
         Task<Merchant?> GetByIdIgnoringFilterAsync(Guid id, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 获取指定时间后创建的商家数量
+        /// </summary>
+        Task<int> GetCountSinceAsync(DateTime since, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 获取已验证商家数量
+        /// </summary>
+        Task<int> GetVerifiedCountAsync(CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 获取商家类型分布
+        /// </summary>
+        Task<Dictionary<MerchantType, int>> GetTypeDistributionAsync(CancellationToken cancellationToken = default);
 
         /// <summary>
         /// 彻底删除商家（物理删除）

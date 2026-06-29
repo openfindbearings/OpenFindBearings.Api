@@ -6,9 +6,6 @@ using OpenFindBearings.Domain.Specifications;
 
 namespace OpenFindBearings.Application.Queries.Admin.GetDashboardStats
 {
-    /// <summary>
-    /// 获取仪表盘统计数据查询处理器
-    /// </summary>
     public class GetDashboardStatsQueryHandler : IRequestHandler<GetDashboardStatsQuery, DashboardStatsDto>
     {
         private readonly IBearingRepository _bearingRepository;
@@ -16,6 +13,8 @@ namespace OpenFindBearings.Application.Queries.Admin.GetDashboardStats
         private readonly IUserRepository _userRepository;
         private readonly ICorrectionRequestRepository _correctionRepository;
         private readonly IMerchantBearingRepository _merchantBearingRepository;
+        private readonly IBrandRepository _brandRepository;
+        private readonly IBearingTypeRepository _bearingTypeRepository;
         private readonly ILogger<GetDashboardStatsQueryHandler> _logger;
 
         public GetDashboardStatsQueryHandler(
@@ -24,6 +23,8 @@ namespace OpenFindBearings.Application.Queries.Admin.GetDashboardStats
             IUserRepository userRepository,
             ICorrectionRequestRepository correctionRepository,
             IMerchantBearingRepository merchantBearingRepository,
+            IBrandRepository brandRepository,
+            IBearingTypeRepository bearingTypeRepository,
             ILogger<GetDashboardStatsQueryHandler> logger)
         {
             _bearingRepository = bearingRepository;
@@ -31,6 +32,8 @@ namespace OpenFindBearings.Application.Queries.Admin.GetDashboardStats
             _userRepository = userRepository;
             _correctionRepository = correctionRepository;
             _merchantBearingRepository = merchantBearingRepository;
+            _brandRepository = brandRepository;
+            _bearingTypeRepository = bearingTypeRepository;
             _logger = logger;
         }
 
@@ -38,50 +41,150 @@ namespace OpenFindBearings.Application.Queries.Admin.GetDashboardStats
             GetDashboardStatsQuery request,
             CancellationToken cancellationToken)
         {
-            var bearingCount = await _bearingRepository.GetTotalCountAsync(new BearingSearchParams(), cancellationToken);
-            var merchantCount = await _merchantRepository.GetTotalCountAsync(cancellationToken);
+            var now = DateTime.UtcNow;
+            var todayStart = now.Date;
+            var weekStart = now.Date.AddDays(-(int)now.DayOfWeek + (int)DayOfWeek.Monday);
+            var monthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+
+            var bearingTotalTask = _bearingRepository.GetTotalCountAsync(new BearingSearchParams(), cancellationToken);
+            var bearingTodayTask = _bearingRepository.GetCountSinceAsync(todayStart, cancellationToken);
+            var bearingWeekTask = _bearingRepository.GetCountSinceAsync(weekStart, cancellationToken);
+            var bearingMonthTask = _bearingRepository.GetCountSinceAsync(monthStart, cancellationToken);
+
+            var merchantTotalTask = _merchantRepository.GetTotalCountAsync(cancellationToken);
+            var merchantVerifiedTask = _merchantRepository.GetVerifiedCountAsync(cancellationToken);
+            var merchantTodayTask = _merchantRepository.GetCountSinceAsync(todayStart, cancellationToken);
+            var merchantTypeDistTask = _merchantRepository.GetTypeDistributionAsync(cancellationToken);
+
+            var userTotalTask = _userRepository.GetCountSinceAsync(DateTime.MinValue, cancellationToken);
+            var userTodayTask = _userRepository.GetCountSinceAsync(todayStart, cancellationToken);
+            var roleDistTask = _userRepository.GetRoleDistributionAsync(cancellationToken);
+
+            var correctionPendingTask = _correctionRepository.GetCountByStatusAsync(Domain.Enums.CorrectionStatus.Pending, cancellationToken);
+            var correctionApprovedTask = _correctionRepository.GetCountByStatusAsync(Domain.Enums.CorrectionStatus.Approved, cancellationToken);
+            var correctionRejectedTask = _correctionRepository.GetCountByStatusAsync(Domain.Enums.CorrectionStatus.Rejected, cancellationToken);
+            var correctionTodayTask = _correctionRepository.GetCountSinceAsync(todayStart, cancellationToken);
+
+            var bearingBrandDistTask = _bearingRepository.GetBearingCountByBrandAsync(cancellationToken);
+            var bearingTypeDistTask = _bearingRepository.GetBearingCountByTypeAsync(cancellationToken);
+            var pendingMerchantBearingsTask = _merchantBearingRepository.GetPendingApprovalCountAsync(cancellationToken);
+
+            await Task.WhenAll(
+                bearingTotalTask, bearingTodayTask, bearingWeekTask, bearingMonthTask,
+                merchantTotalTask, merchantVerifiedTask, merchantTodayTask, merchantTypeDistTask,
+                userTotalTask, userTodayTask, roleDistTask,
+                correctionPendingTask, correctionApprovedTask, correctionRejectedTask, correctionTodayTask,
+                bearingBrandDistTask, bearingTypeDistTask, pendingMerchantBearingsTask);
+
+            var bearingTotal = bearingTotalTask.Result;
+            var bearingToday = bearingTodayTask.Result;
+            var bearingWeek = bearingWeekTask.Result;
+            var bearingMonth = bearingMonthTask.Result;
+
+            var merchantTotal = merchantTotalTask.Result;
+            var merchantVerified = merchantVerifiedTask.Result;
+            var merchantToday = merchantTodayTask.Result;
+            var merchantTypeDist = merchantTypeDistTask.Result;
+
+            var userTotal = userTotalTask.Result;
+            var userToday = userTodayTask.Result;
+            var roleDist = roleDistTask.Result;
+
+            var correctionTotal = correctionPendingTask.Result + correctionApprovedTask.Result + correctionRejectedTask.Result;
+            var correctionPending = correctionPendingTask.Result;
+            var correctionApproved = correctionApprovedTask.Result;
+            var correctionRejected = correctionRejectedTask.Result;
+            var correctionToday = correctionTodayTask.Result;
+
+            var bearingBrandDist = bearingBrandDistTask.Result;
+            var bearingTypeDist = bearingTypeDistTask.Result;
+            var pendingMerchantBearings = pendingMerchantBearingsTask.Result;
+
+            var topBrands = new List<BrandDistributionDto>();
+            if (bearingBrandDist.Count > 0)
+            {
+                var allBrands = await _brandRepository.GetAllAsync(cancellationToken);
+                var brandMap = allBrands.ToDictionary(b => b.Id, b => b.Name);
+                topBrands = bearingBrandDist
+                    .OrderByDescending(x => x.Value)
+                    .Take(10)
+                    .Select(x => new BrandDistributionDto
+                    {
+                        BrandName = brandMap.GetValueOrDefault(x.Key, x.Key.ToString()),
+                        Count = x.Value
+                    })
+                    .ToList();
+            }
+
+            var topTypes = new List<TypeDistributionDto>();
+            if (bearingTypeDist.Count > 0)
+            {
+                var allTypes = await _bearingTypeRepository.GetAllAsync(cancellationToken);
+                var typeMap = allTypes.ToDictionary(t => t.Id, t => t.Name);
+                topTypes = bearingTypeDist
+                    .OrderByDescending(x => x.Value)
+                    .Take(10)
+                    .Select(x => new TypeDistributionDto
+                    {
+                        TypeName = typeMap.GetValueOrDefault(x.Key, x.Key.ToString()),
+                        Count = x.Value
+                    })
+                    .ToList();
+            }
+
+            var typeDistribution = merchantTypeDist
+                .Select(x => new MerchantTypeDistributionDto
+                {
+                    TypeName = x.Key.ToString(),
+                    Count = x.Value
+                })
+                .ToList();
+
+            var adminCount = roleDist.GetValueOrDefault("Admin", 0);
+            var staffCount = roleDist.GetValueOrDefault("MerchantStaff", 0);
+            var individualCount = roleDist.GetValueOrDefault("Individual", 0);
 
             return new DashboardStatsDto
             {
                 StatsTime = DateTime.UtcNow,
                 Bearings = new BearingStatsDto
                 {
-                    TotalCount = bearingCount,
-                    TodayAdded = 0,
-                    ThisWeekAdded = 0,
-                    ThisMonthAdded = 0,
-                    TopBrands = new List<BrandDistributionDto>(),
-                    TopTypes = new List<TypeDistributionDto>()
+                    TotalCount = bearingTotal,
+                    TodayAdded = bearingToday,
+                    ThisWeekAdded = bearingWeek,
+                    ThisMonthAdded = bearingMonth,
+                    TopBrands = topBrands,
+                    TopTypes = topTypes
                 },
                 Merchants = new MerchantStatsDto
                 {
-                    TotalCount = merchantCount,
-                    VerifiedCount = 0,
-                    PendingVerification = 0,
-                    TodayRegistered = 0,
-                    TypeDistribution = new List<MerchantTypeDistributionDto>()
+                    TotalCount = merchantTotal,
+                    VerifiedCount = merchantVerified,
+                    PendingVerification = merchantTotal - merchantVerified,
+                    TodayRegistered = merchantToday,
+                    TypeDistribution = typeDistribution
                 },
                 Users = new UserStatsDto
                 {
-                    TotalCount = 0,
-                    AdminCount = 0,
-                    MerchantStaffCount = 0,
-                    IndividualCount = 0,
-                    TodayRegistered = 0,
+                    TotalCount = userTotal,
+                    AdminCount = adminCount,
+                    MerchantStaffCount = staffCount,
+                    IndividualCount = individualCount,
+                    TodayRegistered = userToday,
                     ActiveToday = 0
                 },
                 Corrections = new CorrectionStatsDto
                 {
-                    TotalCount = 0,
-                    PendingCount = 0,
-                    ApprovedCount = 0,
-                    RejectedCount = 0,
-                    TodaySubmitted = 0
+                    TotalCount = correctionTotal + correctionApproved + correctionRejected,
+                    PendingCount = correctionPending,
+                    ApprovedCount = correctionApproved,
+                    RejectedCount = correctionRejected,
+                    TodaySubmitted = correctionToday
                 },
                 Pending = new PendingStatsDto
                 {
-                    PendingMerchantBearings = 0,
-                    PendingCorrections = 0,
+                    PendingMerchantBearings = pendingMerchantBearings,
+                    PendingCorrections = correctionPending,
                     PendingMerchantVerifications = 0
                 }
             };

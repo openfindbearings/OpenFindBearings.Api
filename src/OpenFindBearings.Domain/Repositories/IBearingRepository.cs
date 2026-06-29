@@ -79,6 +79,11 @@ namespace OpenFindBearings.Domain.Repositories
         Task<Bearing?> GetByIdIgnoringFilterAsync(Guid id, CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// 获取指定时间后创建的轴承数量
+        /// </summary>
+        Task<int> GetCountSinceAsync(DateTime since, CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// 彻底删除轴承（物理删除）
         /// </summary>
         Task RemoveAsync(Bearing bearing, CancellationToken cancellationToken = default);

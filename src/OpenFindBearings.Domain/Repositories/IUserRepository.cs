@@ -59,5 +59,15 @@ namespace OpenFindBearings.Domain.Repositories
         /// 检查用户是否存在
         /// </summary>
         Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 获取指定时间后创建的用户数量
+        /// </summary>
+        Task<int> GetCountSinceAsync(DateTime since, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 获取各角色的用户数量分布
+        /// </summary>
+        Task<Dictionary<string, int>> GetRoleDistributionAsync(CancellationToken cancellationToken = default);
     }
 }

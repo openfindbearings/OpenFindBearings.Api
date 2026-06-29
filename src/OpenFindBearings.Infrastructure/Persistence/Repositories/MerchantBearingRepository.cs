@@ -122,5 +122,11 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                 
             }
         }
+
+        public async Task<int> GetPendingApprovalCountAsync(CancellationToken cancellationToken = default)
+        {
+            return await _context.MerchantBearings
+                .CountAsync(mb => mb.IsPendingApproval, cancellationToken);
+        }
     }
 }
