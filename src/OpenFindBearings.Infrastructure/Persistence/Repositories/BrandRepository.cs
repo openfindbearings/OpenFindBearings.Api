@@ -66,5 +66,10 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         {
             _context.Brands.Remove(brand);
         }
+
+        public async Task<int> GetTotalCountAsync(CancellationToken cancellationToken = default)
+        {
+            return await _context.Brands.CountAsync(cancellationToken);
+        }
     }
 }

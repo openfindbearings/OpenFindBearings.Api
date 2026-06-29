@@ -15,6 +15,7 @@ namespace OpenFindBearings.Application.Queries.Admin.GetDashboardStats
         private readonly IMerchantBearingRepository _merchantBearingRepository;
         private readonly IBrandRepository _brandRepository;
         private readonly IBearingTypeRepository _bearingTypeRepository;
+        private readonly ILicenseVerificationRepository _licenseRepository;
         private readonly ILogger<GetDashboardStatsQueryHandler> _logger;
 
         public GetDashboardStatsQueryHandler(
@@ -25,6 +26,7 @@ namespace OpenFindBearings.Application.Queries.Admin.GetDashboardStats
             IMerchantBearingRepository merchantBearingRepository,
             IBrandRepository brandRepository,
             IBearingTypeRepository bearingTypeRepository,
+            ILicenseVerificationRepository licenseRepository,
             ILogger<GetDashboardStatsQueryHandler> logger)
         {
             _bearingRepository = bearingRepository;
@@ -34,6 +36,7 @@ namespace OpenFindBearings.Application.Queries.Admin.GetDashboardStats
             _merchantBearingRepository = merchantBearingRepository;
             _brandRepository = brandRepository;
             _bearingTypeRepository = bearingTypeRepository;
+            _licenseRepository = licenseRepository;
             _logger = logger;
         }
 
@@ -69,12 +72,18 @@ namespace OpenFindBearings.Application.Queries.Admin.GetDashboardStats
             var bearingTypeDistTask = _bearingRepository.GetBearingCountByTypeAsync(cancellationToken);
             var pendingMerchantBearingsTask = _merchantBearingRepository.GetPendingApprovalCountAsync(cancellationToken);
 
+            var brandTotalTask = _brandRepository.GetTotalCountAsync(cancellationToken);
+            var typeTotalTask = _bearingTypeRepository.GetTotalCountAsync(cancellationToken);
+            var pendingLicenseTask = _licenseRepository.GetPendingCountAsync(cancellationToken);
+            var pendingMerchantVerifyTask = _merchantRepository.GetVerifiedCountAsync(cancellationToken);
+
             await Task.WhenAll(
                 bearingTotalTask, bearingTodayTask, bearingWeekTask, bearingMonthTask,
                 merchantTotalTask, merchantVerifiedTask, merchantTodayTask, merchantTypeDistTask,
                 userTotalTask, userTodayTask, roleDistTask,
                 correctionPendingTask, correctionApprovedTask, correctionRejectedTask, correctionTodayTask,
-                bearingBrandDistTask, bearingTypeDistTask, pendingMerchantBearingsTask);
+                bearingBrandDistTask, bearingTypeDistTask, pendingMerchantBearingsTask,
+                brandTotalTask, typeTotalTask, pendingLicenseTask, pendingMerchantVerifyTask);
 
             var bearingTotal = bearingTotalTask.Result;
             var bearingToday = bearingTodayTask.Result;
@@ -99,6 +108,10 @@ namespace OpenFindBearings.Application.Queries.Admin.GetDashboardStats
             var bearingBrandDist = bearingBrandDistTask.Result;
             var bearingTypeDist = bearingTypeDistTask.Result;
             var pendingMerchantBearings = pendingMerchantBearingsTask.Result;
+            var brandTotal = brandTotalTask.Result;
+            var typeTotal = typeTotalTask.Result;
+            var pendingLicenses = pendingLicenseTask.Result;
+            var pendingMerchantVerifyTotal = pendingMerchantVerifyTask.Result;
 
             var topBrands = new List<BrandDistributionDto>();
             if (bearingBrandDist.Count > 0)
@@ -156,6 +169,14 @@ namespace OpenFindBearings.Application.Queries.Admin.GetDashboardStats
                     TopBrands = topBrands,
                     TopTypes = topTypes
                 },
+                Brands = new BrandStatsDto
+                {
+                    TotalCount = brandTotal
+                },
+                Types = new TypeStatsDto
+                {
+                    TotalCount = typeTotal
+                },
                 Merchants = new MerchantStatsDto
                 {
                     TotalCount = merchantTotal,
@@ -175,7 +196,7 @@ namespace OpenFindBearings.Application.Queries.Admin.GetDashboardStats
                 },
                 Corrections = new CorrectionStatsDto
                 {
-                    TotalCount = correctionTotal + correctionApproved + correctionRejected,
+                    TotalCount = correctionTotal,
                     PendingCount = correctionPending,
                     ApprovedCount = correctionApproved,
                     RejectedCount = correctionRejected,
@@ -185,7 +206,8 @@ namespace OpenFindBearings.Application.Queries.Admin.GetDashboardStats
                 {
                     PendingMerchantBearings = pendingMerchantBearings,
                     PendingCorrections = correctionPending,
-                    PendingMerchantVerifications = 0
+                    PendingLicenses = pendingLicenses,
+                    PendingMerchantVerifications = merchantTotal - pendingMerchantVerifyTotal
                 }
             };
         }
