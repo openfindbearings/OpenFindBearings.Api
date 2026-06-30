@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
+namespace OpenFindBearings.Infrastructure.Migrations
 {
     /// <inheritdoc />
     public partial class InitialCreate : Migration
@@ -412,7 +412,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     AfterData = table.Column<string>(type: "jsonb", nullable: true),
                     OperatorId = table.Column<Guid>(type: "uuid", nullable: false),
                     OperatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    Remarks = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    Remarks = table.Column<string>(type: "text", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     IsActive = table.Column<bool>(type: "boolean", nullable: false)

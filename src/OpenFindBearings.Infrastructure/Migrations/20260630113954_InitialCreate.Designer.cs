@@ -9,10 +9,10 @@ using OpenFindBearings.Infrastructure.Persistence.Data;
 
 #nullable disable
 
-namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
+namespace OpenFindBearings.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260628140153_InitialCreate")]
+    [Migration("20260630113954_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -557,8 +557,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("Remarks")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
+                        .HasColumnType("text");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");

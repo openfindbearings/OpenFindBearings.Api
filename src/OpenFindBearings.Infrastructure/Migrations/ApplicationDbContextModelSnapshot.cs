@@ -8,7 +8,7 @@ using OpenFindBearings.Infrastructure.Persistence.Data;
 
 #nullable disable
 
-namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
+namespace OpenFindBearings.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
     partial class ApplicationDbContextModelSnapshot : ModelSnapshot
@@ -554,8 +554,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("Remarks")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
+                        .HasColumnType("text");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
