@@ -1,9 +1,11 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.Commands.Sync.Commands;
+using OpenFindBearings.Application.DTOs;
 using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
+using OpenFindBearings.Domain.ValueObjects;
 
 namespace OpenFindBearings.Application.Commands.Sync.BatchCreateBrands
 {
@@ -34,6 +36,14 @@ namespace OpenFindBearings.Application.Commands.Sync.BatchCreateBrands
                 {
                     var existingBrand = await _brandRepository.GetByCodeAsync(brandDto.Code, cancellationToken);
 
+                    // DataSource 保护逻辑：非爬虫数据不可被覆盖
+                    if (existingBrand != null && existingBrand.DataSource?.SourceType != DataSourceType.Crawler)
+                    {
+                        result.AddSkipped(brandDto.Code, "非爬虫数据，跳过覆盖保护");
+                        _logger.LogDebug("跳过覆盖: {Code}, 来源: {Source}", brandDto.Code, existingBrand.DataSource?.SourceType);
+                        continue;
+                    }
+
                     if (existingBrand != null && request.Mode == SyncMode.Create)
                     {
                         result.AddFailed(brandDto.Code, $"品牌已存在: {brandDto.Code}");
@@ -56,6 +66,7 @@ namespace OpenFindBearings.Application.Commands.Sync.BatchCreateBrands
                         if (!string.IsNullOrEmpty(brandDto.Country) || !string.IsNullOrEmpty(brandDto.LogoUrl))
                             brand.UpdateDetails(brandDto.Country, brandDto.LogoUrl);
 
+                        SetDataSource(brand, brandDto);
                         await _brandRepository.AddAsync(brand, cancellationToken);
                         result.AddSuccess(brandDto.Code, "created", brand.Id);
                     }
@@ -90,6 +101,23 @@ namespace OpenFindBearings.Application.Commands.Sync.BatchCreateBrands
         /// <summary>
         /// 将字符串映射到 BrandLevel 枚举
         /// </summary>
+        private static void SetDataSource(Brand brand, SyncBrandDto dto)
+        {
+            var sourceType = dto.DataSource ?? "manual";
+            var importedBy = dto.SourceSite;
+
+            if (sourceType.Equals("crawler", StringComparison.OrdinalIgnoreCase))
+                brand.SetDataSource(DataSource.FromCrawler(importedBy ?? "unknown"));
+            else if (sourceType.Equals("api", StringComparison.OrdinalIgnoreCase))
+                brand.SetDataSource(DataSource.FromApi(importedBy ?? "ApiSync"));
+            else if (sourceType.Equals("file", StringComparison.OrdinalIgnoreCase) || sourceType.Equals("fileimport", StringComparison.OrdinalIgnoreCase))
+                brand.SetDataSource(DataSource.FromFileImport(importedBy));
+            else if (sourceType.Equals("seeddata", StringComparison.OrdinalIgnoreCase) || sourceType.Equals("seed", StringComparison.OrdinalIgnoreCase))
+                brand.SetDataSource(DataSource.FromSeedData());
+            else
+                brand.SetDataSource(DataSource.FromManual(importedBy));
+        }
+
         private BrandLevel MapToBrandLevel(string? level)
         {
             if (string.IsNullOrWhiteSpace(level))

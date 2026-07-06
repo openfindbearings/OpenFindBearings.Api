@@ -29,6 +29,21 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             builder.HasIndex(b => b.Code)
                 .IsUnique();
 
+            builder.OwnsOne(b => b.DataSource, ds =>
+            {
+                ds.Property(d => d.SourceType)
+                    .HasColumnName("DataSourceType")
+                    .HasConversion<string>()
+                    .HasMaxLength(50);
+
+                ds.Property(d => d.ImportedBy)
+                    .HasColumnName("ImportedBy")
+                    .HasMaxLength(100);
+
+                ds.Property(d => d.ImportedAt)
+                    .HasColumnName("ImportedAt");
+            });
+
             builder.HasQueryFilter(b => b.IsActive);
         }
     }

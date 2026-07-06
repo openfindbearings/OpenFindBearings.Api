@@ -1,4 +1,5 @@
 ﻿using OpenFindBearings.Domain.Abstractions;
+using OpenFindBearings.Domain.ValueObjects;
 
 namespace OpenFindBearings.Domain.Entities
 {
@@ -26,6 +27,11 @@ namespace OpenFindBearings.Domain.Entities
         /// 详细的类型说明，包括特点、用途等
         /// </summary>
         public string? Description { get; private set; }
+
+        /// <summary>
+        /// 数据来源
+        /// </summary>
+        public DataSource? DataSource { get; private set; }
 
         /// <summary>
         /// 无参构造函数，仅供EF Core使用
@@ -58,6 +64,15 @@ namespace OpenFindBearings.Domain.Entities
         {
             if (!string.IsNullOrWhiteSpace(name)) Name = name;
             if (description != null) Description = description;
+            UpdateTimestamp();
+        }
+
+        /// <summary>
+        /// 设置数据来源
+        /// </summary>
+        public void SetDataSource(DataSource dataSource)
+        {
+            DataSource = dataSource ?? throw new ArgumentNullException(nameof(dataSource));
             UpdateTimestamp();
         }
     }

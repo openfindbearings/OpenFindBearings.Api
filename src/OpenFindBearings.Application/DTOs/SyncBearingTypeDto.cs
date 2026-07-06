@@ -19,5 +19,15 @@
         /// 类型描述
         /// </summary>
         public string? Description { get; set; }
+
+        /// <summary>
+        /// 数据来源类型
+        /// </summary>
+        public string? DataSource { get; set; }
+
+        /// <summary>
+        /// 来源站点/系统
+        /// </summary>
+        public string? SourceSite { get; set; }
     }
 }
