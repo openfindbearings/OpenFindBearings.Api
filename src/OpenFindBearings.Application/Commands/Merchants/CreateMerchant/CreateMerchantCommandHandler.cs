@@ -51,6 +51,8 @@ namespace OpenFindBearings.Application.Commands.Merchants.CreateMerchant
                 website: request.Website
             );
 
+            merchant.SetEnglishName(request.EnglishName);
+
             await _merchantRepository.AddAsync(merchant, cancellationToken);
 
             _logger.LogInformation("商家创建成功: {MerchantId}, 名称: {MerchantName}",

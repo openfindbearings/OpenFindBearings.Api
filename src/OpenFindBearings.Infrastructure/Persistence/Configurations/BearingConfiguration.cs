@@ -17,10 +17,10 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             // ============ 基本属性 ============
             builder.Property(b => b.PartNumber)
                 .IsRequired()
-                .HasMaxLength(100);
+                .HasMaxLength(128);
 
             builder.Property(b => b.OldNumber)
-                .HasMaxLength(100);
+                .HasMaxLength(128);
 
             builder.Property(b => b.CodeSource)
                 .HasMaxLength(50)
@@ -124,16 +124,13 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
                     .HasPrecision(12, 2);
 
                 perf.Property(p => p.LimitingSpeed)
-                    .HasColumnName("LimitingSpeed")
-                    .HasPrecision(10, 0);
+                    .HasColumnName("LimitingSpeed");
 
                 perf.Property(p => p.LimitingSpeedGrease)
-                    .HasColumnName("LimitingSpeedGrease")
-                    .HasPrecision(10, 0);
+                    .HasColumnName("LimitingSpeedGrease");
 
                 perf.Property(p => p.LimitingSpeedOil)
-                    .HasColumnName("LimitingSpeedOil")
-                    .HasPrecision(10, 0);
+                    .HasColumnName("LimitingSpeedOil");
             });
 
             // ============ 产地和商标 ============
@@ -191,10 +188,10 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
 
             // ============ 图片字段 ============
             builder.Property(b => b.Image3DUrl)
-                .HasMaxLength(500);
+                .HasColumnType("text");
 
             builder.Property(b => b.Image2DUrl)
-                .HasMaxLength(500);
+                .HasColumnType("text");
 
             // ============ 关联配置 ============
             // 关联轴承类型

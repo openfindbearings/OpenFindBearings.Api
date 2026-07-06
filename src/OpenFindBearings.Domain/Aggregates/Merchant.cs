@@ -24,6 +24,11 @@ namespace OpenFindBearings.Domain.Aggregates
         public string? CompanyName { get; private set; }
 
         /// <summary>
+        /// 英文名称（用于国际化展示）
+        /// </summary>
+        public string? EnglishName { get; private set; }
+
+        /// <summary>
         /// 统一社会信用代码
         /// </summary>
         public string? UnifiedSocialCreditCode { get; private set; }
@@ -217,6 +222,15 @@ namespace OpenFindBearings.Domain.Aggregates
             BusinessScope = businessScope;
             LogoUrl = logoUrl;
             Website = website;
+            UpdateTimestamp();
+        }
+
+        /// <summary>
+        /// 设置英文名称
+        /// </summary>
+        public void SetEnglishName(string? englishName)
+        {
+            EnglishName = englishName;
             UpdateTimestamp();
         }
 

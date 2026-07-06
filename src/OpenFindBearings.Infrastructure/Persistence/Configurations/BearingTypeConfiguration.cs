@@ -14,14 +14,14 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
 
             builder.Property(bt => bt.Code)
                 .IsRequired()
-                .HasMaxLength(20);
+                .HasMaxLength(50);
 
             builder.Property(bt => bt.Name)
                 .IsRequired()
-                .HasMaxLength(100);
+                .HasMaxLength(200);
 
             builder.Property(bt => bt.Description)
-                .HasMaxLength(500);
+                .HasColumnType("text");
 
             builder.HasIndex(bt => bt.Code)
                 .IsUnique();

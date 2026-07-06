@@ -19,10 +19,5 @@
         /// 类型描述
         /// </summary>
         public string? Description { get; set; }
-
-        /// <summary>
-        /// 排序顺序
-        /// </summary>
-        public int SortOrder { get; set; } = 0;
     }
 }
