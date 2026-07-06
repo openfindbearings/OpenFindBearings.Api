@@ -51,9 +51,6 @@ namespace OpenFindBearings.Domain.ValueObjects
         /// </summary>
         public PerformanceParams(decimal? dynamicLoad, decimal? staticLoad, decimal? speed, decimal? greaseSpeed = null, decimal? oilSpeed = null)
         {
-            if (dynamicLoad.HasValue && staticLoad.HasValue && dynamicLoad > staticLoad * 1.5m)
-                throw new ArgumentException("动载荷异常大于静载荷，请核对数据");
-
             DynamicLoad = dynamicLoad;
             StaticLoad = staticLoad;
             LimitingSpeed = speed;
