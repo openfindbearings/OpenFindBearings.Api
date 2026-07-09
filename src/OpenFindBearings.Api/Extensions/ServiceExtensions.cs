@@ -26,7 +26,7 @@ namespace OpenFindBearings.Api.Extensions
             services.AddScoped<ICurrentUserService, CurrentUserService>();
             services.AddScoped<IPermissionService, PermissionService>();
             services.AddScoped<IApiCallLogRepository, ApiCallLogRepository>();
-            services.AddScoped<IStaffInvitationRepository, StaffInvitationRepository>();
+            // IStaffInvitationRepository 已在 Infrastructure.DependencyInjection 中注册
 
             // ============ IP 地区解析服务 ============
             services.AddHttpClient();                           // 用于 HTTP 请求
@@ -34,13 +34,8 @@ namespace OpenFindBearings.Api.Extensions
             services.AddScoped<IIpRegionService, IpRegionService>();
 
             // ============ 认证服务客户端 ============
-            // 注册认证服务 HTTP 客户端，用于与 OpenIddict 认证服务通信
-            services.AddHttpClient<IIdentityService, IdentityService>(client =>
-            {
-                client.BaseAddress = new Uri(configuration["Authentication:Authority"] ?? "https://localhost:7201");
-                client.DefaultRequestHeaders.Add("Accept", "application/json");
-                client.Timeout = TimeSpan.FromSeconds(30);
-            });
+            // PermissionService（IdentityService 在 Infrastructure 层注册）
+            services.AddScoped<IPermissionService, PermissionService>();
 
             // 添加响应压缩
             services.AddResponseCompression(options =>
@@ -156,11 +151,11 @@ namespace OpenFindBearings.Api.Extensions
                 options.AddPolicy("Merchant", policy =>
                     policy.RequireAuthenticatedUser());
 
-                // 同步客户端策略
+                // 同步客户端策略 — 验证 JWT scope 声明包含 api:sync
                 options.AddPolicy("SyncClient", policy =>
                     policy.RequireClaim("scope", "api:sync"));
 
-                // 登录用户策略
+                // 登录用户策略 — 仅验证认证状态，不检查 scope
                 options.AddPolicy("Authenticated", policy =>
                     policy.RequireAuthenticatedUser());
             });

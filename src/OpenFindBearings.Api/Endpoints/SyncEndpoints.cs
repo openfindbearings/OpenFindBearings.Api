@@ -6,6 +6,7 @@ using OpenFindBearings.Application.Commands.Sync.BatchCreateInterchanges;
 using OpenFindBearings.Application.Commands.Sync.BatchCreateMerchantBearings;
 using OpenFindBearings.Application.Commands.Sync.BatchCreateMerchants;
 using OpenFindBearings.Application.Commands.Sync.Commands;
+using OpenFindBearings.Application.Queries.Merchants.BatchCheckVerified;
 
 namespace OpenFindBearings.Api.Endpoints
 {
@@ -87,6 +88,18 @@ namespace OpenFindBearings.Api.Endpoints
             })
             .WithName("BatchCreateInterchanges")
             .WithSummary("批量同步替代品");
+
+            group.MapPost("/merchants/batch-check-verified", async (
+                BatchCheckVerifiedQuery query,
+                IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                var result = await mediator.Send(query);
+                return ApiResponseHelper.Ok(result, httpContext: httpContext);
+            })
+            .WithName("BatchCheckMerchantsVerified")
+            .WithSummary("批量查询商户是否已认证")
+            .WithDescription("接收商户名称列表，返回已认证的商户名称集合，用于 Sync L 阶段跳过已入驻商户数据");
         }
     }
 }

@@ -4,6 +4,7 @@ using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
 using OpenFindBearings.Domain.Specifications;
 using OpenFindBearings.Infrastructure.Persistence.Data;
+using MerchantStatus = OpenFindBearings.Domain.Enums.MerchantStatus;
 
 namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 {
@@ -65,6 +66,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
             if (searchParams.VerifiedOnly.HasValue && searchParams.VerifiedOnly.Value)
                 query = query.Where(m => m.IsVerified);
 
+            if (searchParams.Status.HasValue)
+                query = query.Where(m => m.Status == searchParams.Status.Value);
+
             var totalCount = await query.CountAsync(cancellationToken);
 
             var items = await query
@@ -119,6 +123,15 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
             return await _context.Merchants
                 .Where(m => m.IsActive && m.IsVerified)
                 .CountAsync(cancellationToken);
+        }
+
+        public async Task<List<string>> GetVerifiedNamesAsync(List<string> names, CancellationToken cancellationToken = default)
+        {
+            return await _context.Merchants
+                .Where(m => names.Contains(m.Name) && m.IsVerified)
+                .Select(m => m.Name)
+                .Distinct()
+                .ToListAsync(cancellationToken);
         }
 
         public async Task<Dictionary<MerchantType, int>> GetTypeDistributionAsync(CancellationToken cancellationToken = default)

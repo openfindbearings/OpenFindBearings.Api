@@ -1,7 +1,6 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Domain.Entities;
-using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Commands.Merchants.SubmitLicense
@@ -33,18 +32,13 @@ namespace OpenFindBearings.Application.Commands.Merchants.SubmitLicense
                 throw new InvalidOperationException($"商家不存在: {request.MerchantId}");
             }
 
-            // 创建营业执照审核记录
             var verification = new LicenseVerification(
                   request.MerchantId,
                   request.LicenseUrl,
                   request.SubmittedBy);
 
-            // 保存审核记录（需要在 DbContext 中添加 LicenseVerifications DbSet）
-            // await _context.LicenseVerifications.AddAsync(verification, cancellationToken);
-            // await _context.SaveChangesAsync(cancellationToken);
-
-            // 可选：发送通知给管理员
-            // await _notificationService.NotifyAdminsAsync($"商家 {merchant.Name} 提交了营业执照审核");
+            merchant.AddLicenseVerification(verification);
+            await _merchantRepository.UpdateAsync(merchant, cancellationToken);
 
             _logger.LogInformation("营业执照审核已提交: VerificationId={VerificationId}, MerchantId={MerchantId}",
                 verification.Id, request.MerchantId);

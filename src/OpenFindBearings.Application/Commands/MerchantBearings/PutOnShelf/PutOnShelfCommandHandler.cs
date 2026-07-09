@@ -10,13 +10,16 @@ namespace OpenFindBearings.Application.Commands.MerchantBearings.PutOnShelf
     public class PutOnShelfCommandHandler : IRequestHandler<PutOnShelfCommand>
     {
         private readonly IMerchantBearingRepository _merchantBearingRepository;
+        private readonly IUserRepository _userRepository;
         private readonly ILogger<PutOnShelfCommandHandler> _logger;
 
         public PutOnShelfCommandHandler(
             IMerchantBearingRepository merchantBearingRepository,
+            IUserRepository userRepository,
             ILogger<PutOnShelfCommandHandler> logger)
         {
             _merchantBearingRepository = merchantBearingRepository;
+            _userRepository = userRepository;
             _logger = logger;
         }
 
@@ -30,6 +33,13 @@ namespace OpenFindBearings.Application.Commands.MerchantBearings.PutOnShelf
             if (merchantBearing == null)
             {
                 throw new InvalidOperationException($"商家-轴承关联不存在: {request.MerchantBearingId}");
+            }
+
+            // 所有权验证：当前用户必须属于该商家
+            var currentUser = await _userRepository.GetByIdAsync(request.UserId, cancellationToken);
+            if (currentUser == null || currentUser.MerchantId != merchantBearing.MerchantId)
+            {
+                throw new UnauthorizedAccessException("无权修改其他商家的轴承信息");
             }
 
             merchantBearing.PutOnShelf();

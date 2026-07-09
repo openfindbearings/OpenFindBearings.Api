@@ -139,6 +139,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.AddStaff
                 email: request.Email,
                 phone: request.Phone,
                 role: request.Role,
+                invitationCode: invitationCode,
                 operatorId: request.OperatorId,
                 cancellationToken);
 

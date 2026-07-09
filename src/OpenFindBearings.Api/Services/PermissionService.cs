@@ -27,7 +27,7 @@ namespace OpenFindBearings.Api.Services
         /// <summary>
         /// 检查当前用户是否是商家管理员
         /// </summary>
-        bool IsMerchantAdminAsync();
+        bool IsMerchantAdmin();
 
         /// <summary>
         /// 检查当前用户是否有权限操作指定轴承
@@ -125,7 +125,7 @@ namespace OpenFindBearings.Api.Services
         /// <summary>
         /// 检查当前用户是否是商家管理员
         /// </summary>
-        public bool IsMerchantAdminAsync()
+        public bool IsMerchantAdmin()
         {
             return HasRole("MerchantAdmin");
         }

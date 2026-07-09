@@ -25,6 +25,7 @@ using OpenFindBearings.Application.Commands.Corrections.Commands;
 using OpenFindBearings.Application.Commands.Merchants.Commands;
 using OpenFindBearings.Application.Commands.Merchants.DeleteMerchant;
 using OpenFindBearings.Application.Commands.Merchants.HardDeleteMerchant;
+using OpenFindBearings.Application.Commands.Merchants.RejectMerchant;
 using OpenFindBearings.Application.Commands.Merchants.RestoreMerchant;
 using OpenFindBearings.Application.Commands.Merchants.VerifyMerchant;
 using OpenFindBearings.Application.Commands.Permissions.CreatePermission;
@@ -46,6 +47,7 @@ using OpenFindBearings.Application.Queries.Brands.GetAllBrands;
 using OpenFindBearings.Application.Queries.Corrections.GetCorrectionDetail;
 using OpenFindBearings.Application.Queries.Corrections.GetCorrections;
 using OpenFindBearings.Application.Queries.Corrections.GetPendingCorrections;
+using OpenFindBearings.Application.Queries.Merchants.GetMerchant;
 using OpenFindBearings.Application.Queries.Merchants.SearchMerchants;
 using OpenFindBearings.Application.Queries.Permissions.GetPermission;
 using OpenFindBearings.Application.Queries.Permissions.GetPermissions;
@@ -255,6 +257,25 @@ namespace OpenFindBearings.Api.Endpoints
             // ============ 4.3 商家管理 ============
 
             /// <summary>
+            /// 商家详情（按 ID 查询，用于 Sync 库存导入解析）
+            /// </summary>
+            group.MapGet("/merchants/{id:guid}", async (
+                Guid id,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                var query = new GetMerchantQuery { Id = id, IsAuthenticated = true };
+                var result = await mediator.Send(query);
+                return result == null
+                    ? ApiResponseHelper.NotFound("商家不存在", httpContext)
+                    : ApiResponseHelper.Ok(result, httpContext: httpContext);
+            })
+            .WithName("AdminGetMerchantById")
+            .WithSummary("获取商家详情")
+            .WithDescription("按 ID 获取商家详细信息")
+            .RequirePermission("merchant.manage");
+
+            /// <summary>
             /// 创建商家
             /// </summary>
             group.MapPost("/merchants", async (
@@ -354,13 +375,35 @@ namespace OpenFindBearings.Api.Endpoints
                 if (!currentUser.UserId.HasValue)
                     return ApiResponseHelper.Unauthorized(httpContext: httpContext);
 
-                var command = new VerifyMerchantCommand(id);
+                var command = new VerifyMerchantCommand(id, currentUser.UserId.Value.ToString());
                 await mediator.Send(command);
-                return ApiResponseHelper.Ok("商家认证成功", httpContext);
+                return ApiResponseHelper.Ok("商家认证成功，已清除爬虫数据", httpContext);
             })
             .WithName("VerifyMerchant")
             .WithSummary("认证商家")
-            .WithDescription("商家认证审核")
+            .WithDescription("商家认证审核，通过后将清除该商家的爬虫关联数据")
+            .RequirePermission("merchant.verify");
+
+            /// <summary>
+            /// 拒绝商家认证
+            /// </summary>
+            group.MapPost("/merchants/{id:guid}/reject", async (
+                Guid id,
+                RejectMerchantRequest request,
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                var command = new RejectMerchantCommand(id, request.Reason);
+                await mediator.Send(command);
+                return ApiResponseHelper.Ok("已拒绝商家认证", httpContext);
+            })
+            .WithName("RejectMerchant")
+            .WithSummary("拒绝商家认证")
+            .WithDescription("拒绝商家认证申请，需填写拒绝理由")
             .RequirePermission("merchant.verify");
 
             /// <summary>
@@ -374,6 +417,7 @@ namespace OpenFindBearings.Api.Endpoints
                 [FromQuery] int? type = null,
                 [FromQuery] bool? verifiedOnly = null,
                 [FromQuery] bool? includeDeleted = null,
+                [FromQuery] int? status = null,
                 [FromQuery] int page = 1,
                 [FromQuery] int pageSize = 20) =>
             {
@@ -382,6 +426,7 @@ namespace OpenFindBearings.Api.Endpoints
                     Keyword = keyword,
                     City = city,
                     Type = type.HasValue ? (MerchantType?)type : null,
+                    Status = status.HasValue ? (MerchantStatus?)status : null,
                     VerifiedOnly = verifiedOnly,
                     IncludeDeleted = includeDeleted,
                     Page = page,
@@ -821,7 +866,8 @@ namespace OpenFindBearings.Api.Endpoints
             })
             .WithName("RefreshRateLimitCache")
             .WithSummary("刷新限流配置缓存")
-            .WithDescription("修改限流配置后调用此接口，使配置立即生效");
+            .WithDescription("修改限流配置后调用此接口，使配置立即生效")
+            .RequirePermission("system.manage");
 
             /// <summary>
             /// 获取价格配置

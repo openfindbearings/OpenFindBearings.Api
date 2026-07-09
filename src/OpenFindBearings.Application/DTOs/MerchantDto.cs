@@ -57,6 +57,11 @@
         public bool IsVerified { get; set; }
 
         /// <summary>
+        /// 商家状态
+        /// </summary>
+        public string Status { get; set; } = string.Empty;
+
+        /// <summary>
         /// 商家等级
         /// </summary>
         public string Grade { get; set; } = string.Empty;

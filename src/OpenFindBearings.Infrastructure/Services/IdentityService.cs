@@ -108,12 +108,13 @@ namespace OpenFindBearings.Infrastructure.Services
             string? email,
             string? phone,
             string? role,
+            string invitationCode,
             Guid operatorId,
             CancellationToken cancellationToken = default)
         {
             var invitation = new StaffInvitation(
                 merchantId, email, phone, role,
-                Guid.NewGuid().ToString("N")[..12],
+                invitationCode,
                 operatorId);
 
             await _invitationRepository.AddAsync(invitation, cancellationToken);

@@ -44,5 +44,10 @@
         /// 是否在售
         /// </summary>
         public bool IsOnSale { get; set; } = true;
+
+        /// <summary>
+        /// 数据来源（Crawler/Manual/FileImport），为空时默认 Crawler
+        /// </summary>
+        public string? DataSource { get; set; }
     }
 }

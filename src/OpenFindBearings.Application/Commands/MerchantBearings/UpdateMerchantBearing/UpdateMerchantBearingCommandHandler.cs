@@ -3,19 +3,23 @@ using Microsoft.Extensions.Logging;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Commands.MerchantBearings.UpdateMerchantBearing
-{ /// <summary>
-  /// 更新商家-轴承关联命令处理器
-  /// </summary>
+{
+    /// <summary>
+    /// 更新商家-轴承关联命令处理器
+    /// </summary>
     public class UpdateMerchantBearingCommandHandler : IRequestHandler<UpdateMerchantBearingCommand>
     {
         private readonly IMerchantBearingRepository _merchantBearingRepository;
+        private readonly IUserRepository _userRepository;
         private readonly ILogger<UpdateMerchantBearingCommandHandler> _logger;
 
         public UpdateMerchantBearingCommandHandler(
             IMerchantBearingRepository merchantBearingRepository,
+            IUserRepository userRepository,
             ILogger<UpdateMerchantBearingCommandHandler> logger)
         {
             _merchantBearingRepository = merchantBearingRepository;
+            _userRepository = userRepository;
             _logger = logger;
         }
 
@@ -29,6 +33,13 @@ namespace OpenFindBearings.Application.Commands.MerchantBearings.UpdateMerchantB
             if (merchantBearing == null)
             {
                 throw new InvalidOperationException($"商家-轴承关联不存在: {request.Id}");
+            }
+
+            // 所有权验证：当前用户必须属于该商家
+            var currentUser = await _userRepository.GetByIdAsync(request.UserId, cancellationToken);
+            if (currentUser == null || currentUser.MerchantId != merchantBearing.MerchantId)
+            {
+                throw new UnauthorizedAccessException("无权修改其他商家的轴承信息");
             }
 
             // 检查是否有变化

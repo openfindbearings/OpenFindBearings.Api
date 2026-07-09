@@ -10,13 +10,16 @@ namespace OpenFindBearings.Application.Commands.MerchantBearings.SetPriceVisibil
     public class SetPriceVisibilityCommandHandler : IRequestHandler<SetPriceVisibilityCommand>
     {
         private readonly IMerchantBearingRepository _merchantBearingRepository;
+        private readonly IUserRepository _userRepository;
         private readonly ILogger<SetPriceVisibilityCommandHandler> _logger;
 
         public SetPriceVisibilityCommandHandler(
             IMerchantBearingRepository merchantBearingRepository,
+            IUserRepository userRepository,
             ILogger<SetPriceVisibilityCommandHandler> logger)
         {
             _merchantBearingRepository = merchantBearingRepository;
+            _userRepository = userRepository;
             _logger = logger;
         }
 
@@ -29,6 +32,13 @@ namespace OpenFindBearings.Application.Commands.MerchantBearings.SetPriceVisibil
             if (merchantBearing == null)
             {
                 throw new InvalidOperationException($"商家产品不存在: {request.MerchantBearingId}");
+            }
+
+            // 所有权验证：当前用户必须属于该商家
+            var currentUser = await _userRepository.GetByIdAsync(request.UserId, cancellationToken);
+            if (currentUser == null || currentUser.MerchantId != merchantBearing.MerchantId)
+            {
+                throw new UnauthorizedAccessException("无权修改其他商家的轴承信息");
             }
 
             merchantBearing.SetPriceVisibility(request.Visibility);

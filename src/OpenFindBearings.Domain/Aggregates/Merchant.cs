@@ -291,13 +291,14 @@ namespace OpenFindBearings.Domain.Aggregates
         /// <summary>
         /// 认证商家
         /// </summary>
-        public void Verify()
+        public void Verify(string? verifiedBy = null)
         {
             if (IsVerified)
                 throw new InvalidOperationException("商家已经认证");
 
             IsVerified = true;
             VerifiedAt = DateTime.UtcNow;
+            VerifiedBy = verifiedBy;
 
             // 认证后升级等级
             if (Grade < MerchantGrade.Verified)
@@ -525,7 +526,7 @@ namespace OpenFindBearings.Domain.Aggregates
         /// <summary>
         /// 添加营业执照审核记录
         /// </summary>
-        internal void AddLicenseVerification(LicenseVerification verification)
+        public void AddLicenseVerification(LicenseVerification verification)
         {
             _licenseVerifications.Add(verification);
             UpdateTimestamp();

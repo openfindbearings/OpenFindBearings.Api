@@ -39,6 +39,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             builder.Property(mp => mp.ApprovalComment)
                 .HasMaxLength(500);
 
+            builder.Property(mp => mp.DataSourceType)
+                .HasConversion<int>();
+
             // 关系配置
             builder.HasOne(mp => mp.Merchant)
                 .WithMany(m => m.MerchantBearings)

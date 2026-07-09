@@ -68,11 +68,11 @@ app.UseAuthentication();      // 必须在这
 app.UseMiddleware<UserContextMiddleware>(); // 在认证之后，授权之前
 app.UseAuthorization();       // 授权
 
-// 4. 审计日志记录（在授权之后，确保用户身份已解析）
-app.UseMiddleware<AuditLogMiddleware>();
-
 // 响应压缩
 app.UseResponseCompression();
+
+// 4. 审计日志记录（在授权之后，确保用户身份已解析）
+app.UseMiddleware<AuditLogMiddleware>();
 
 // 为了robots.txt，使用静态文件
 app.UseStaticFiles();

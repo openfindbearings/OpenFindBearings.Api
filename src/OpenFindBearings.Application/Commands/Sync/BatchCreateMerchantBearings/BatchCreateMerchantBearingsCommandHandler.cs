@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Domain.Entities;
+using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Commands.Sync.BatchCreateMerchantBearings
@@ -125,6 +126,13 @@ namespace OpenFindBearings.Application.Commands.Sync.BatchCreateMerchantBearings
                         {
                             merchantBearing.TakeOffShelf();
                         }
+
+                        merchantBearing.SetDataSourceType(dto.DataSource switch
+                        {
+                            "Manual" => DataSourceType.Manual,
+                            "FileImport" => DataSourceType.FileImport,
+                            _ => DataSourceType.Crawler
+                        });
 
                         await _merchantBearingRepository.AddAsync(merchantBearing, cancellationToken);
                         result.AddSuccess($"{dto.MerchantName}-{dto.BearingPartNumber}", "created", merchantBearing.Id);

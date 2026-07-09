@@ -30,6 +30,7 @@ namespace OpenFindBearings.Application.Queries.Merchants.SearchMerchants
                 Keyword = request.Keyword,
                 City = request.City,
                 Type = request.Type,
+                Status = request.Status,
                 VerifiedOnly = request.VerifiedOnly,
                 IsActive = request.IncludeDeleted == true ? null : true,
                 Page = request.Page,

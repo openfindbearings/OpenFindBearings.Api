@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.Commands.MerchantBearings.Commands;
 using OpenFindBearings.Domain.Entities;
+using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Commands.MerchantBearings.CreateMerchantBearing
@@ -72,6 +73,9 @@ namespace OpenFindBearings.Application.Commands.MerchantBearings.CreateMerchantB
                     request.MinOrderDescription,
                     request.Remarks);
             }
+
+            // 商户自管数据标记为 Manual
+            merchantBearing.SetDataSourceType(DataSourceType.Manual);
 
             // 新创建的关联需要提交审核
             merchantBearing.SubmitForApproval();

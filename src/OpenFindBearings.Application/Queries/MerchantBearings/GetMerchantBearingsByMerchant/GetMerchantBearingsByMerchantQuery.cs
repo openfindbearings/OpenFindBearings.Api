@@ -21,6 +21,11 @@ namespace OpenFindBearings.Application.Queries.MerchantBearings.GetMerchantBeari
         public bool? OnlyOnSale { get; init; }
 
         /// <summary>
+        /// 是否只显示待审核商品
+        /// </summary>
+        public bool? PendingOnly { get; init; }
+
+        /// <summary>
         /// 当前用户是否已登录（由API层传入）
         /// </summary>
         public bool IsAuthenticated { get; init; }

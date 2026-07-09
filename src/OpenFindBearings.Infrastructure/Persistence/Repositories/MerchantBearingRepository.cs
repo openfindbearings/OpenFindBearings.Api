@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using OpenFindBearings.Domain.Entities;
+using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
 using OpenFindBearings.Infrastructure.Persistence.Data;
 
@@ -123,10 +124,53 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
             }
         }
 
+        public async Task<PagedResult<MerchantBearing>> GetMerchantBearingsPagedAsync(
+            Guid merchantId, bool? onlyOnSale, bool? pendingOnly,
+            int page, int pageSize, CancellationToken cancellationToken = default)
+        {
+            var query = _context.MerchantBearings
+                .Include(mb => mb.Bearing)
+                    .ThenInclude(b => b.Brand)
+                .Include(mb => mb.Bearing)
+                    .ThenInclude(b => b.BearingTypeNavigation)
+                .Where(mb => mb.MerchantId == merchantId);
+
+            if (onlyOnSale == true)
+                query = query.Where(mb => mb.IsOnSale);
+
+            if (pendingOnly == true)
+                query = query.Where(mb => mb.IsPendingApproval);
+
+            var totalCount = await query.CountAsync(cancellationToken);
+
+            var items = await query
+                .OrderByDescending(mb => mb.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
+
+            return new PagedResult<MerchantBearing>
+            {
+                Items = items,
+                TotalCount = totalCount,
+                Page = page,
+                PageSize = pageSize
+            };
+        }
+
         public async Task<int> GetPendingApprovalCountAsync(CancellationToken cancellationToken = default)
         {
             return await _context.MerchantBearings
                 .CountAsync(mb => mb.IsPendingApproval, cancellationToken);
+        }
+
+        public async Task DeleteByMerchantAndSourceAsync(Guid merchantId, DataSourceType source, CancellationToken cancellationToken = default)
+        {
+            var records = await _context.MerchantBearings
+                .Where(mb => mb.MerchantId == merchantId && mb.DataSourceType == source)
+                .ToListAsync(cancellationToken);
+
+            _context.MerchantBearings.RemoveRange(records);
         }
     }
 }

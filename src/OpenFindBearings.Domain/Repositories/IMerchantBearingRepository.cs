@@ -1,4 +1,5 @@
 ﻿using OpenFindBearings.Domain.Entities;
+using OpenFindBearings.Domain.Enums;
 
 namespace OpenFindBearings.Domain.Repositories
 {
@@ -67,5 +68,15 @@ namespace OpenFindBearings.Domain.Repositories
         /// 获取待审核关联数量
         /// </summary>
         Task<int> GetPendingApprovalCountAsync(CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 分页查询商家的轴承关联（数据库级过滤与分页）
+        /// </summary>
+        Task<PagedResult<MerchantBearing>> GetMerchantBearingsPagedAsync(Guid merchantId, bool? onlyOnSale, bool? pendingOnly, int page, int pageSize, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 删除指定商家的指定来源关联数据
+        /// </summary>
+        Task DeleteByMerchantAndSourceAsync(Guid merchantId, DataSourceType source, CancellationToken cancellationToken = default);
     }
 }
