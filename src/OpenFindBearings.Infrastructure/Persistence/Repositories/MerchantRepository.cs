@@ -125,15 +125,6 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                 .CountAsync(cancellationToken);
         }
 
-        public async Task<List<string>> GetVerifiedNamesAsync(List<string> names, CancellationToken cancellationToken = default)
-        {
-            return await _context.Merchants
-                .Where(m => names.Contains(m.Name) && m.IsVerified)
-                .Select(m => m.Name)
-                .Distinct()
-                .ToListAsync(cancellationToken);
-        }
-
         public async Task<Dictionary<MerchantType, int>> GetTypeDistributionAsync(CancellationToken cancellationToken = default)
         {
             return await _context.Merchants

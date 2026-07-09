@@ -30,7 +30,7 @@ namespace OpenFindBearings.Application.Queries.MerchantBearings.GetMerchantBeari
                 request.MerchantId, request.IsAuthenticated);
 
             var result = await _merchantBearingRepository.GetMerchantBearingsPagedAsync(
-                request.MerchantId, request.OnlyOnSale, request.PendingOnly,
+                request.MerchantId, request.OnlyOnSale, request.PendingOnly, request.DataSource,
                 request.Page, request.PageSize, cancellationToken);
 
             return new PagedResult<MerchantBearingDto>

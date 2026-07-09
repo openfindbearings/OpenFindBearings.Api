@@ -125,7 +125,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         }
 
         public async Task<PagedResult<MerchantBearing>> GetMerchantBearingsPagedAsync(
-            Guid merchantId, bool? onlyOnSale, bool? pendingOnly,
+            Guid merchantId, bool? onlyOnSale, bool? pendingOnly, DataSourceType? dataSource,
             int page, int pageSize, CancellationToken cancellationToken = default)
         {
             var query = _context.MerchantBearings
@@ -140,6 +140,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 
             if (pendingOnly == true)
                 query = query.Where(mb => mb.IsPendingApproval);
+
+            if (dataSource.HasValue)
+                query = query.Where(mb => mb.DataSourceType == dataSource.Value);
 
             var totalCount = await query.CountAsync(cancellationToken);
 
@@ -162,15 +165,6 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         {
             return await _context.MerchantBearings
                 .CountAsync(mb => mb.IsPendingApproval, cancellationToken);
-        }
-
-        public async Task DeleteByMerchantAndSourceAsync(Guid merchantId, DataSourceType source, CancellationToken cancellationToken = default)
-        {
-            var records = await _context.MerchantBearings
-                .Where(mb => mb.MerchantId == merchantId && mb.DataSourceType == source)
-                .ToListAsync(cancellationToken);
-
-            _context.MerchantBearings.RemoveRange(records);
         }
     }
 }
