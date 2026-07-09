@@ -12,7 +12,7 @@ using OpenFindBearings.Infrastructure.Persistence.Data;
 namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260706020804_InitialCreate")]
+    [Migration("20260709061603_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -878,6 +878,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int?>("DataSourceType")
+                        .HasColumnType("integer");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
@@ -1738,6 +1741,70 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     b.Navigation("SourceBearing");
 
                     b.Navigation("TargetBearing");
+                });
+
+            modelBuilder.Entity("OpenFindBearings.Domain.Entities.BearingType", b =>
+                {
+                    b.OwnsOne("OpenFindBearings.Domain.ValueObjects.DataSource", "DataSource", b1 =>
+                        {
+                            b1.Property<Guid>("BearingTypeId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<DateTime>("ImportedAt")
+                                .HasColumnType("timestamp with time zone")
+                                .HasColumnName("ImportedAt");
+
+                            b1.Property<string>("ImportedBy")
+                                .HasMaxLength(100)
+                                .HasColumnType("character varying(100)")
+                                .HasColumnName("ImportedBy");
+
+                            b1.Property<string>("SourceType")
+                                .HasMaxLength(50)
+                                .HasColumnType("character varying(50)")
+                                .HasColumnName("DataSourceType");
+
+                            b1.HasKey("BearingTypeId");
+
+                            b1.ToTable("BearingTypes");
+
+                            b1.WithOwner()
+                                .HasForeignKey("BearingTypeId");
+                        });
+
+                    b.Navigation("DataSource");
+                });
+
+            modelBuilder.Entity("OpenFindBearings.Domain.Entities.Brand", b =>
+                {
+                    b.OwnsOne("OpenFindBearings.Domain.ValueObjects.DataSource", "DataSource", b1 =>
+                        {
+                            b1.Property<Guid>("BrandId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<DateTime>("ImportedAt")
+                                .HasColumnType("timestamp with time zone")
+                                .HasColumnName("ImportedAt");
+
+                            b1.Property<string>("ImportedBy")
+                                .HasMaxLength(100)
+                                .HasColumnType("character varying(100)")
+                                .HasColumnName("ImportedBy");
+
+                            b1.Property<string>("SourceType")
+                                .HasMaxLength(50)
+                                .HasColumnType("character varying(50)")
+                                .HasColumnName("DataSourceType");
+
+                            b1.HasKey("BrandId");
+
+                            b1.ToTable("Brands");
+
+                            b1.WithOwner()
+                                .HasForeignKey("BrandId");
+                        });
+
+                    b.Navigation("DataSource");
                 });
 
             modelBuilder.Entity("OpenFindBearings.Domain.Entities.CorrectionRequest", b =>

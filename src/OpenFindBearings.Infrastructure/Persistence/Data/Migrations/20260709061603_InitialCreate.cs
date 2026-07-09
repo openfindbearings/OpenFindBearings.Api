@@ -41,6 +41,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     Code = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     Name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
                     Description = table.Column<string>(type: "text", nullable: true),
+                    DataSourceType = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    ImportedBy = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    ImportedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     IsActive = table.Column<bool>(type: "boolean", nullable: false)
@@ -60,6 +63,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     Country = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
                     LogoUrl = table.Column<string>(type: "text", nullable: true),
                     Level = table.Column<int>(type: "integer", nullable: false),
+                    DataSourceType = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    ImportedBy = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    ImportedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     IsActive = table.Column<bool>(type: "boolean", nullable: false)
@@ -380,6 +386,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     IsOnSale = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
                     IsPendingApproval = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
                     ApprovalComment = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    DataSourceType = table.Column<int>(type: "integer", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     IsActive = table.Column<bool>(type: "boolean", nullable: false)
