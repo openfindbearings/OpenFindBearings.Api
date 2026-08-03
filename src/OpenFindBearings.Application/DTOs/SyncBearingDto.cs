@@ -110,17 +110,17 @@ namespace OpenFindBearings.Application.DTOs
         /// <summary>
         /// 极限转速 (rpm)
         /// </summary>
-        public decimal? LimitingSpeed { get; set; }
+        public int? LimitingSpeed { get; set; }
 
         /// <summary>
         /// 脂极限转速 (rpm)
         /// </summary>
-        public decimal? LimitingSpeedGrease { get; set; }
+        public int? LimitingSpeedGrease { get; set; }
 
         /// <summary>
         /// 油极限转速 (rpm)
         /// </summary>
-        public decimal? LimitingSpeedOil { get; set; }
+        public int? LimitingSpeedOil { get; set; }
 
         /// <summary>
         /// 3D渲染图URL

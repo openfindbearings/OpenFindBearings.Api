@@ -15,6 +15,11 @@ namespace OpenFindBearings.Application.Commands.MerchantBearings.SetPriceVisibil
         public Guid MerchantBearingId { get; init; }
 
         /// <summary>
+        /// 当前用户ID（API 端点注入，用于所有权验证）
+        /// </summary>
+        public Guid UserId { get; init; }
+
+        /// <summary>
         /// 价格可见性
         /// </summary>
         public PriceVisibility Visibility { get; init; }

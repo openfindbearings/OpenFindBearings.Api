@@ -34,6 +34,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.UpdateMerchant
 
             // ✅ 修改：更新基本信息 - 传递所有6个参数
             if (request.Name != null || request.CompanyName != null ||
+                request.EnglishName != null ||
                 request.UnifiedSocialCreditCode != null ||
                 request.Description != null || request.BusinessScope != null ||
                 request.LogoUrl != null || request.Website != null)
@@ -46,6 +47,9 @@ namespace OpenFindBearings.Application.Commands.Merchants.UpdateMerchant
                     logoUrl: request.LogoUrl ?? merchant.LogoUrl,
                     website: request.Website ?? merchant.Website
                 );
+
+                if (request.EnglishName != null)
+                    merchant.SetEnglishName(request.EnglishName);
             }
 
             // 更新名称（如果有单独更新名称的方法）

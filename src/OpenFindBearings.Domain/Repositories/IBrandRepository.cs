@@ -47,5 +47,10 @@ namespace OpenFindBearings.Domain.Repositories
         /// 彻底删除品牌（物理删除）
         /// </summary>
         Task RemoveAsync(Brand brand, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 获取品牌总数
+        /// </summary>
+        Task<int> GetTotalCountAsync(CancellationToken cancellationToken = default);
     }
 }

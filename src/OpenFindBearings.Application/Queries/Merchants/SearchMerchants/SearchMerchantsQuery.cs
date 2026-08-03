@@ -37,6 +37,11 @@ namespace OpenFindBearings.Application.Queries.Merchants.SearchMerchants
         public bool? IncludeDeleted { get; set; }
 
         /// <summary>
+        /// 商家状态筛选
+        /// </summary>
+        public MerchantStatus? Status { get; set; }
+
+        /// <summary>
         /// 页码
         /// </summary>
         public int Page { get; set; } = 1;

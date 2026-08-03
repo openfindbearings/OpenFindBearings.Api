@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using OpenFindBearings.Application.Behaviors;
 using OpenFindBearings.Application.DTOs;
+using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Queries.MerchantBearings.GetMerchantBearingsByMerchant
@@ -19,6 +20,16 @@ namespace OpenFindBearings.Application.Queries.MerchantBearings.GetMerchantBeari
         /// 是否只显示在售商品
         /// </summary>
         public bool? OnlyOnSale { get; init; }
+
+        /// <summary>
+        /// 是否只显示待审核商品
+        /// </summary>
+        public bool? PendingOnly { get; init; }
+
+        /// <summary>
+        /// 来源类型过滤
+        /// </summary>
+        public DataSourceType? DataSource { get; init; }
 
         /// <summary>
         /// 当前用户是否已登录（由API层传入）

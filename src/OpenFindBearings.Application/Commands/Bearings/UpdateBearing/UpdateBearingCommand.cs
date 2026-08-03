@@ -84,17 +84,17 @@ namespace OpenFindBearings.Application.Commands.Bearings.UpdateBearing
         /// <summary>
         /// 极限转速 (rpm)
         /// </summary>
-        public decimal? LimitingSpeed { get; init; }
+        public int? LimitingSpeed { get; init; }
 
         /// <summary>
         /// 脂极限转速 (rpm)
         /// </summary>
-        public decimal? LimitingSpeedGrease { get; init; }
+        public int? LimitingSpeedGrease { get; init; }
 
         /// <summary>
         /// 油极限转速 (rpm)
         /// </summary>
-        public decimal? LimitingSpeedOil { get; init; }
+        public int? LimitingSpeedOil { get; init; }
 
         /// <summary>
         /// 商标

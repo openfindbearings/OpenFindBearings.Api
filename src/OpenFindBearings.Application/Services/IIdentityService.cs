@@ -35,6 +35,7 @@
             string? email,
             string? phone,
             string? role,
+            string invitationCode,
             Guid operatorId,
             CancellationToken cancellationToken = default);
 

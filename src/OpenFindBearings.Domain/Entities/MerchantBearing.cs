@@ -98,6 +98,11 @@ namespace OpenFindBearings.Domain.Entities
         public string? ApprovalComment { get; private set; }
 
         /// <summary>
+        /// 数据来源类型（爬虫/手动录入）
+        /// </summary>
+        public DataSourceType? DataSourceType { get; private set; }
+
+        /// <summary>
         /// 无参构造函数，仅供EF Core使用
         /// </summary>
         private MerchantBearing() { }
@@ -273,6 +278,15 @@ namespace OpenFindBearings.Domain.Entities
         public void SetFeatured(bool featured)
         {
             IsFeatured = featured;
+            UpdateTimestamp();
+        }
+
+        /// <summary>
+        /// 设置数据来源类型
+        /// </summary>
+        public void SetDataSourceType(DataSourceType type)
+        {
+            DataSourceType = type;
             UpdateTimestamp();
         }
 

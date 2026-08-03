@@ -47,5 +47,10 @@ namespace OpenFindBearings.Domain.Repositories
         /// 彻底删除轴承类型（物理删除）
         /// </summary>
         Task RemoveAsync(BearingType bearingType, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 获取轴承类型总数
+        /// </summary>
+        Task<int> GetTotalCountAsync(CancellationToken cancellationToken = default);
     }
 }

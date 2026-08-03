@@ -16,6 +16,16 @@
         public BearingStatsDto Bearings { get; set; } = new();
 
         /// <summary>
+        /// 品牌统计
+        /// </summary>
+        public BrandStatsDto Brands { get; set; } = new();
+
+        /// <summary>
+        /// 类型统计
+        /// </summary>
+        public TypeStatsDto Types { get; set; } = new();
+
+        /// <summary>
         /// 商家统计
         /// </summary>
         public MerchantStatsDto Merchants { get; set; } = new();
@@ -47,6 +57,22 @@
         public int ThisMonthAdded { get; set; }
         public List<BrandDistributionDto> TopBrands { get; set; } = new();
         public List<TypeDistributionDto> TopTypes { get; set; } = new();
+    }
+
+    /// <summary>
+    /// 品牌统计
+    /// </summary>
+    public class BrandStatsDto
+    {
+        public int TotalCount { get; set; }
+    }
+
+    /// <summary>
+    /// 类型统计
+    /// </summary>
+    public class TypeStatsDto
+    {
+        public int TotalCount { get; set; }
     }
 
     /// <summary>
@@ -93,6 +119,7 @@
     {
         public int PendingMerchantBearings { get; set; }
         public int PendingCorrections { get; set; }
+        public int PendingLicenses { get; set; }
         public int PendingMerchantVerifications { get; set; }
     }
 

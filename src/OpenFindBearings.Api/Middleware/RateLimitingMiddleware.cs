@@ -38,7 +38,7 @@ namespace OpenFindBearings.Api.Middleware
         {
             // 健康检查路径白名单（不限流）
             var path = context.Request.Path.Value?.ToLower();
-            var whitelistPaths = new[] { "/health", "/ready", "/live", "/healthz", "/readyz" };
+            var whitelistPaths = new[] { "/health", "/health/ready", "/health/live", "/healthz", "/readyz" };
 
             if (whitelistPaths.Contains(path))
             {

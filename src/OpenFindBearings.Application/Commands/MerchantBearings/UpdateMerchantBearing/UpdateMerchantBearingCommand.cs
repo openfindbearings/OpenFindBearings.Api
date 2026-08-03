@@ -14,6 +14,11 @@ namespace OpenFindBearings.Application.Commands.MerchantBearings.UpdateMerchantB
         public Guid Id { get; init; }
 
         /// <summary>
+        /// 当前用户ID（API 端点注入，用于所有权验证）
+        /// </summary>
+        public Guid UserId { get; init; }
+
+        /// <summary>
         /// 价格描述
         /// </summary>
         public string? PriceDescription { get; init; }

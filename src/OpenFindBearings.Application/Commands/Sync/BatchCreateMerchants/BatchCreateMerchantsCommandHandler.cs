@@ -78,13 +78,15 @@ namespace OpenFindBearings.Application.Commands.Sync.BatchCreateMerchants
                         );
 
                         merchant.UpdateBasicInfo(
-                            companyName: merchantDto.EnglishName,
+                            companyName: null,
                             unifiedSocialCreditCode: merchantDto.UnifiedSocialCreditCode,
                             description: merchantDto.Description,
                             businessScope: merchantDto.BusinessScope,
                             logoUrl: merchantDto.LogoUrl,
                             website: merchantDto.Website
                         );
+
+                        merchant.SetEnglishName(merchantDto.EnglishName);
 
                         if (merchantDto.DataSource != null)
                         {
@@ -102,13 +104,16 @@ namespace OpenFindBearings.Application.Commands.Sync.BatchCreateMerchants
                     else if (request.Mode == SyncMode.Update || request.Mode == SyncMode.Upsert)
                     {
                         existing.UpdateBasicInfo(
-                            companyName: merchantDto.EnglishName ?? existing.CompanyName,
+                            companyName: existing.CompanyName,
                             unifiedSocialCreditCode: merchantDto.UnifiedSocialCreditCode ?? existing.UnifiedSocialCreditCode,
                             description: merchantDto.Description ?? existing.Description,
                             businessScope: merchantDto.BusinessScope ?? existing.BusinessScope,
                             logoUrl: merchantDto.LogoUrl ?? existing.LogoUrl,
                             website: merchantDto.Website ?? existing.Website
                         );
+
+                        if (merchantDto.EnglishName != null)
+                            existing.SetEnglishName(merchantDto.EnglishName);
 
                         var newContact = new ContactInfo(
                             contactPerson: merchantDto.ContactPerson ?? existing.Contact?.ContactPerson,

@@ -28,5 +28,10 @@ namespace OpenFindBearings.Domain.Repositories
         /// 更新审核记录
         /// </summary>
         Task UpdateAsync(LicenseVerification verification, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 获取待审核记录数量
+        /// </summary>
+        Task<int> GetPendingCountAsync(CancellationToken cancellationToken = default);
     }
 }

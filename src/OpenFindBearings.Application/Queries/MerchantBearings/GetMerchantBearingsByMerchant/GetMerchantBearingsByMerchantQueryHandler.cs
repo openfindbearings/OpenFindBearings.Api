@@ -29,26 +29,16 @@ namespace OpenFindBearings.Application.Queries.MerchantBearings.GetMerchantBeari
             _logger.LogInformation("获取商家轴承列表: MerchantId={MerchantId}, IsAuthenticated={IsAuthenticated}",
                 request.MerchantId, request.IsAuthenticated);
 
-            var merchantBearings = await _merchantBearingRepository.GetByMerchantAsync(request.MerchantId, cancellationToken);
-
-            if (request.OnlyOnSale.HasValue)
-            {
-                merchantBearings = merchantBearings.Where(mb => mb.IsOnSale == request.OnlyOnSale.Value);
-            }
-
-            var totalCount = merchantBearings.Count();
-            var items = merchantBearings
-                .Skip((request.Page - 1) * request.PageSize)
-                .Take(request.PageSize)
-                .Select(mb => mb.ToDto(request.IsAuthenticated))
-                .ToList();
+            var result = await _merchantBearingRepository.GetMerchantBearingsPagedAsync(
+                request.MerchantId, request.OnlyOnSale, request.PendingOnly, request.DataSource,
+                request.Page, request.PageSize, cancellationToken);
 
             return new PagedResult<MerchantBearingDto>
             {
-                Items = items,
-                TotalCount = totalCount,
-                Page = request.Page,
-                PageSize = request.PageSize
+                Items = result.Items.Select(mb => mb.ToDto(request.IsAuthenticated)).ToList(),
+                TotalCount = result.TotalCount,
+                Page = result.Page,
+                PageSize = result.PageSize
             };
         }
     }

@@ -73,11 +73,14 @@ namespace OpenFindBearings.Api.Middleware
                 if (user == null)
                 {
                     // ✅ 修改：移除 UserType
+                    var inviteCode = context.User?.FindFirst("invite_code")?.Value;
+
                     var createCommand = new CreateUserFromAuthCommand
                     {
                         AuthUserId = authUserId,
                         RegistrationSource = Domain.Enums.RegistrationSource.Web,
-                        Nickname = context.User?.FindFirst(ClaimTypes.Name)?.Value
+                        Nickname = context.User?.FindFirst(ClaimTypes.Name)?.Value,
+                        InviteCode = inviteCode
                     };
                     var userId = await mediator.Send(createCommand);
                     context.Items["UserId"] = userId;

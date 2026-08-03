@@ -30,7 +30,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.VerifyMerchant
                 throw new InvalidOperationException($"商家不存在: {request.Id}");
             }
 
-            merchant.Verify();
+            merchant.Verify(request.VerifiedBy);
             await _merchantRepository.UpdateAsync(merchant, cancellationToken);
 
             _logger.LogInformation("商家认证成功: {MerchantId}", request.Id);

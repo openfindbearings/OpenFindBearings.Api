@@ -26,17 +26,17 @@ namespace OpenFindBearings.Domain.ValueObjects
         /// <summary>
         /// 极限转速 (rpm)
         /// </summary>
-        public decimal? LimitingSpeed { get; private set; }
+        public int? LimitingSpeed { get; private set; }
 
         /// <summary>
         /// 脂极限转速 (rpm)
         /// </summary>
-        public decimal? LimitingSpeedGrease { get; private set; }
+        public int? LimitingSpeedGrease { get; private set; }
 
         /// <summary>
         /// 油极限转速 (rpm)
         /// </summary>
-        public decimal? LimitingSpeedOil { get; private set; }
+        public int? LimitingSpeedOil { get; private set; }
 
         /// <summary>
         /// 私有构造函数，供EF Core使用
@@ -49,11 +49,8 @@ namespace OpenFindBearings.Domain.ValueObjects
         /// <summary>
         /// 创建性能参数值对象
         /// </summary>
-        public PerformanceParams(decimal? dynamicLoad, decimal? staticLoad, decimal? speed, decimal? greaseSpeed = null, decimal? oilSpeed = null)
+        public PerformanceParams(decimal? dynamicLoad, decimal? staticLoad, int? speed, int? greaseSpeed = null, int? oilSpeed = null)
         {
-            if (dynamicLoad.HasValue && staticLoad.HasValue && dynamicLoad > staticLoad * 1.5m)
-                throw new ArgumentException("动载荷异常大于静载荷，请核对数据");
-
             DynamicLoad = dynamicLoad;
             StaticLoad = staticLoad;
             LimitingSpeed = speed;

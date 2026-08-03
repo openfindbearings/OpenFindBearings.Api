@@ -1,7 +1,10 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
+using OpenFindBearings.Application.DTOs;
 using OpenFindBearings.Domain.Entities;
+using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
+using OpenFindBearings.Domain.ValueObjects;
 
 namespace OpenFindBearings.Application.Commands.Sync.BatchCreateBearingTypes
 {
@@ -36,6 +39,14 @@ namespace OpenFindBearings.Application.Commands.Sync.BatchCreateBearingTypes
                     // 检查类型是否已存在
                     var existingType = await _bearingTypeRepository.GetByCodeAsync(typeDto.Code, cancellationToken);
 
+                    // DataSource 保护逻辑：非爬虫数据不可被覆盖
+                    if (existingType != null && existingType.DataSource?.SourceType != DataSourceType.Crawler)
+                    {
+                        result.AddSkipped(typeDto.Code, "非爬虫数据，跳过覆盖保护");
+                        _logger.LogDebug("跳过覆盖: {Code}, 来源: {Source}", typeDto.Code, existingType.DataSource?.SourceType);
+                        continue;
+                    }
+
                     if (existingType != null && request.Mode == SyncMode.Create)
                     {
                         result.AddFailed(typeDto.Code, $"轴承类型已存在: {typeDto.Code}");
@@ -56,6 +67,7 @@ namespace OpenFindBearings.Application.Commands.Sync.BatchCreateBearingTypes
                             typeDto.Name,
                             typeDto.Description);
 
+                        SetDataSource(bearingType, typeDto);
                         await _bearingTypeRepository.AddAsync(bearingType, cancellationToken);
                         result.AddSuccess(typeDto.Code, "created", bearingType.Id);
                     }
@@ -79,6 +91,23 @@ namespace OpenFindBearings.Application.Commands.Sync.BatchCreateBearingTypes
                 result.SuccessCount, result.FailCount);
 
             return result;
+        }
+
+        private static void SetDataSource(BearingType bearingType, SyncBearingTypeDto dto)
+        {
+            var sourceType = dto.DataSource ?? "manual";
+            var importedBy = dto.SourceSite;
+
+            if (sourceType.Equals("crawler", StringComparison.OrdinalIgnoreCase))
+                bearingType.SetDataSource(DataSource.FromCrawler(importedBy ?? "unknown"));
+            else if (sourceType.Equals("api", StringComparison.OrdinalIgnoreCase))
+                bearingType.SetDataSource(DataSource.FromApi(importedBy ?? "ApiSync"));
+            else if (sourceType.Equals("file", StringComparison.OrdinalIgnoreCase) || sourceType.Equals("fileimport", StringComparison.OrdinalIgnoreCase))
+                bearingType.SetDataSource(DataSource.FromFileImport(importedBy));
+            else if (sourceType.Equals("seeddata", StringComparison.OrdinalIgnoreCase) || sourceType.Equals("seed", StringComparison.OrdinalIgnoreCase))
+                bearingType.SetDataSource(DataSource.FromSeedData());
+            else
+                bearingType.SetDataSource(DataSource.FromManual(importedBy));
         }
     }
 }

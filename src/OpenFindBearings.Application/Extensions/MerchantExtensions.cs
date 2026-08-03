@@ -33,6 +33,7 @@ namespace OpenFindBearings.Application.Extensions
                 Id = merchant.Id,
                 Name = merchant.Name,
                 CompanyName = merchant.CompanyName,
+                Status = merchant.Status.ToString(),
                 Type = merchant.Type.ToString(),
                 ContactPerson = merchant.Contact?.ContactPerson,
                 Phone = merchant.Contact?.Phone,

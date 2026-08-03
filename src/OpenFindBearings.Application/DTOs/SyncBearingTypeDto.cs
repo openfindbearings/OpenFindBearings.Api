@@ -21,8 +21,13 @@
         public string? Description { get; set; }
 
         /// <summary>
-        /// 排序顺序
+        /// 数据来源类型
         /// </summary>
-        public int SortOrder { get; set; } = 0;
+        public string? DataSource { get; set; }
+
+        /// <summary>
+        /// 来源站点/系统
+        /// </summary>
+        public string? SourceSite { get; set; }
     }
 }

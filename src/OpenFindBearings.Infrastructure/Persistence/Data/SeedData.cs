@@ -12,12 +12,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
     {
         public static async Task SeedAsync(IServiceProvider provider, ILogger logger, bool isDevelopment)
         {
-            isDevelopment = true; // TODO: 正式发布的时候取消，目前测试期间isDevelopment始终为true
-
             try
             {
                 await using var context = provider.GetRequiredService<ApplicationDbContext>();
-                await using var scope = provider.CreateAsyncScope();
 
                 if (isDevelopment)
                 {

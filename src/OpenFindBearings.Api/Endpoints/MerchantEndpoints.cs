@@ -226,7 +226,7 @@ namespace OpenFindBearings.Api.Endpoints
                 if (merchant == null)
                     return ApiResponseHelper.NotFound("未找到所属商家", httpContext);
 
-                var isAdmin = permissionService.IsMerchantAdminAsync();
+                var isAdmin = permissionService.IsMerchantAdmin();
                 if (!isAdmin)
                 {
                     return ApiResponseHelper.Forbidden("需要商家管理员权限", httpContext);
@@ -258,7 +258,7 @@ namespace OpenFindBearings.Api.Endpoints
                 if (!currentUser.UserId.HasValue)
                     return ApiResponseHelper.Unauthorized(httpContext: httpContext);
 
-                var isAdmin = permissionService.IsMerchantAdminAsync();
+                var isAdmin = permissionService.IsMerchantAdmin();
                 if (!isAdmin)
                 {
                     return ApiResponseHelper.Forbidden("需要商家管理员权限", httpContext);
@@ -307,18 +307,13 @@ namespace OpenFindBearings.Api.Endpoints
                 {
                     MerchantId = merchant.Id,
                     OnlyOnSale = onlyOnSale,
+                    PendingOnly = pendingOnly,
                     Page = page,
                     PageSize = pageSize,
                     IsAuthenticated = true
                 };
 
                 var result = await mediator.Send(query);
-
-                if (pendingOnly == true)
-                {
-                    result.Items = result.Items.Where(x => x.IsPendingApproval).ToList();
-                    result.TotalCount = result.Items.Count();
-                }
 
                 return ApiResponseHelper.Paged(
                     result.Items.ToList(),
@@ -378,7 +373,7 @@ namespace OpenFindBearings.Api.Endpoints
                 if (!currentUser.UserId.HasValue)
                     return ApiResponseHelper.Unauthorized(httpContext: httpContext);
 
-                var updateCommand = command with { Id = id };
+                var updateCommand = command with { Id = id, UserId = currentUser.UserId.Value };
                 await mediator.Send(updateCommand);
 
                 return ApiResponseHelper.Ok("更新成功，等待审核", httpContext);
@@ -400,7 +395,7 @@ namespace OpenFindBearings.Api.Endpoints
                 if (!currentUser.UserId.HasValue)
                     return ApiResponseHelper.Unauthorized(httpContext: httpContext);
 
-                var updateCommand = command with { MerchantBearingId = id };
+                var updateCommand = command with { MerchantBearingId = id, UserId = currentUser.UserId.Value };
                 await mediator.Send(updateCommand);
 
                 return ApiResponseHelper.Ok("价格可见性设置成功", httpContext);
@@ -423,7 +418,8 @@ namespace OpenFindBearings.Api.Endpoints
 
                 var command = new PutOnShelfCommand
                 {
-                    MerchantBearingId = id
+                    MerchantBearingId = id,
+                    UserId = currentUser.UserId.Value
                 };
                 await mediator.Send(command);
 
@@ -447,7 +443,8 @@ namespace OpenFindBearings.Api.Endpoints
 
                 var command = new TakeOffShelfCommand
                 {
-                    MerchantBearingId = id
+                    MerchantBearingId = id,
+                    UserId = currentUser.UserId.Value
                 };
                 await mediator.Send(command);
 

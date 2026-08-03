@@ -87,6 +87,7 @@ namespace OpenFindBearings.Api.Endpoints
             })
             .WithName("BatchCreateInterchanges")
             .WithSummary("批量同步替代品");
+
         }
     }
 }

@@ -14,6 +14,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.Commands
         // 基本信息
         public string? Name { get; set; }
         public string? CompanyName { get; set; }
+        public string? EnglishName { get; set; }
         public string? UnifiedSocialCreditCode { get; set; } 
         public MerchantType? Type { get; set; }
 

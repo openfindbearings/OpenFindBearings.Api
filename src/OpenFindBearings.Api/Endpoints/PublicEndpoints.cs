@@ -13,6 +13,7 @@ using OpenFindBearings.Application.Queries.Follows.CheckMerchantFollow;
 using OpenFindBearings.Application.Queries.MerchantBearings.GetMerchantBearingsByMerchant;
 using OpenFindBearings.Application.Queries.Merchants.GetMerchant;
 using OpenFindBearings.Application.Queries.Merchants.SearchMerchants;
+using OpenFindBearings.Domain.Enums;
 
 namespace OpenFindBearings.Api.Endpoints
 {
@@ -281,14 +282,20 @@ namespace OpenFindBearings.Api.Endpoints
                 HttpContext httpContext,
                 [FromQuery] int page = 1,
                 [FromQuery] int pageSize = 20,
-                [FromQuery] bool? onlyOnSale = true) =>
+                [FromQuery] bool? onlyOnSale = true,
+                [FromQuery] string? dataSource = null) =>
             {
                 var isAuthenticated = httpContext.GetUserId().HasValue;
+
+                DataSourceType? parsedDataSource = null;
+                if (!string.IsNullOrWhiteSpace(dataSource) && Enum.TryParse<DataSourceType>(dataSource, ignoreCase: true, out var ds))
+                    parsedDataSource = ds;
 
                 var query = new GetMerchantBearingsByMerchantQuery
                 {
                     MerchantId = id,
                     OnlyOnSale = onlyOnSale,
+                    DataSource = parsedDataSource,
                     Page = page,
                     PageSize = pageSize,
                     IsAuthenticated = isAuthenticated

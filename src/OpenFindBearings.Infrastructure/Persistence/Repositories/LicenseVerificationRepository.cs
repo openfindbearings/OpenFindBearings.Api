@@ -63,5 +63,11 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
             _context.LicenseVerifications.Update(verification);
             
         }
+
+        public async Task<int> GetPendingCountAsync(CancellationToken cancellationToken = default)
+        {
+            return await _context.LicenseVerifications
+                .CountAsync(l => l.Status == LicenseVerificationStatus.Pending, cancellationToken);
+        }
     }
 }

@@ -13,25 +13,26 @@ namespace OpenFindBearings.Application.Commands.Users.CreateUserFromAuth
     {
         private readonly IUserRepository _userRepository;
         private readonly IRoleRepository _roleRepository;
+        private readonly IStaffInvitationRepository _invitationRepository;
         private readonly ILogger<CreateUserFromAuthCommandHandler> _logger;
 
         public CreateUserFromAuthCommandHandler(
             IUserRepository userRepository,
             IRoleRepository roleRepository,
+            IStaffInvitationRepository invitationRepository,
             ILogger<CreateUserFromAuthCommandHandler> logger)
         {
             _userRepository = userRepository;
             _roleRepository = roleRepository;
+            _invitationRepository = invitationRepository;
             _logger = logger;
         }
 
         public async Task<Guid> Handle(CreateUserFromAuthCommand request, CancellationToken cancellationToken)
         {
-            // 移除 UserType
             _logger.LogInformation("创建业务用户: AuthUserId={AuthUserId}, RegistrationSource={RegistrationSource}, Nickname={Nickname}",
                 request.AuthUserId, request.RegistrationSource, request.Nickname);
 
-            // 检查是否已存在
             var existingUser = await _userRepository.GetByAuthUserIdAsync(request.AuthUserId, cancellationToken);
             if (existingUser != null)
             {
@@ -40,7 +41,6 @@ namespace OpenFindBearings.Application.Commands.Users.CreateUserFromAuth
                 return existingUser.Id;
             }
 
-            // 移除 userType 参数
             var user = new User(
                 authUserId: request.AuthUserId,
                 registrationSource: request.RegistrationSource,
@@ -49,6 +49,31 @@ namespace OpenFindBearings.Application.Commands.Users.CreateUserFromAuth
             );
 
             await _userRepository.AddAsync(user, cancellationToken);
+
+            // 处理员工邀请码
+            if (!string.IsNullOrEmpty(request.InviteCode))
+            {
+                try
+                {
+                    var invitation = await _invitationRepository.GetByCodeAsync(request.InviteCode, cancellationToken);
+                    if (invitation != null && !invitation.IsCompleted && !invitation.IsExpired())
+                    {
+                        user.AssignToMerchant(invitation.MerchantId);
+                        invitation.Complete(request.AuthUserId);
+                        await _invitationRepository.UpdateAsync(invitation, cancellationToken);
+                        _logger.LogInformation("员工邀请码已处理: UserId={UserId}, MerchantId={MerchantId}",
+                            user.Id, invitation.MerchantId);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("邀请码无效或已过期: InviteCode={InviteCode}", request.InviteCode);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "处理员工邀请码异常: InviteCode={InviteCode}", request.InviteCode);
+                }
+            }
 
             // 确定角色：预置管理员直接分配 Admin 角色，其余用户分配 Individual
             var roleName = user.AuthUserId == ServiceConstants.BusinessAdminAuthUserId
@@ -60,6 +85,8 @@ namespace OpenFindBearings.Application.Commands.Users.CreateUserFromAuth
                 user.AddRole(role.Id);
                 _logger.LogInformation("已为用户 {UserId} 分配角色 {RoleName}", user.Id, role.Name);
             }
+
+            await _userRepository.UpdateAsync(user, cancellationToken);
 
             _logger.LogInformation("业务用户创建成功: UserId={UserId}, AuthUserId={AuthUserId}",
                 user.Id, user.AuthUserId);

@@ -29,5 +29,10 @@ namespace OpenFindBearings.Application.Commands.Users.CreateUserFromAuth
         /// 用户昵称
         /// </summary>
         public string? Nickname { get; init; }
+
+        /// <summary>
+        /// 员工邀请码
+        /// </summary>
+        public string? InviteCode { get; init; }
     }
 }

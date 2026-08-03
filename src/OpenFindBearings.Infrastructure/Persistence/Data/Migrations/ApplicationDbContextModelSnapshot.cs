@@ -79,12 +79,10 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                         .HasColumnName("Description");
 
                     b.Property<string>("Image2DUrl")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
+                        .HasColumnType("text");
 
                     b.Property<string>("Image3DUrl")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
+                        .HasColumnType("text");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
@@ -111,8 +109,8 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                         .HasColumnName("Material");
 
                     b.Property<string>("OldNumber")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
 
                     b.Property<string>("OriginCountry")
                         .HasMaxLength(50)
@@ -121,8 +119,8 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
 
                     b.Property<string>("PartNumber")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
 
                     b.Property<string>("PrecisionGrade")
                         .HasMaxLength(10)
@@ -214,8 +212,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("BusinessScope")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
+                        .HasColumnType("text");
 
                     b.Property<string>("CompanyName")
                         .HasMaxLength(200)
@@ -231,6 +228,10 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
 
                     b.Property<string>("Description")
                         .HasColumnType("text");
+
+                    b.Property<string>("EnglishName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
 
                     b.Property<int>("FollowerCount")
                         .ValueGeneratedOnAdd()
@@ -263,14 +264,13 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                         .HasColumnName("LastVerifiedAt");
 
                     b.Property<string>("LogoUrl")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
+                        .HasColumnType("text")
                         .HasColumnName("LogoUrl");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
 
                     b.Property<int>("ProductCount")
                         .ValueGeneratedOnAdd()
@@ -554,8 +554,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("Remarks")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
+                        .HasColumnType("text");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -643,23 +642,22 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
 
                     b.Property<string>("Code")
                         .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Description")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
+                        .HasColumnType("text");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -680,12 +678,12 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
 
                     b.Property<string>("Code")
                         .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<string>("Country")
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Country")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -697,13 +695,12 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                         .HasColumnType("integer");
 
                     b.Property<string>("LogoUrl")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
+                        .HasColumnType("text");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -877,6 +874,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("DataSourceType")
+                        .HasColumnType("integer");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
@@ -1589,19 +1589,16 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                                 .HasDefaultValue(false)
                                 .HasColumnName("PerformanceHasData");
 
-                            b1.Property<decimal?>("LimitingSpeed")
-                                .HasPrecision(10)
-                                .HasColumnType("numeric(10,0)")
+                            b1.Property<int?>("LimitingSpeed")
+                                .HasColumnType("integer")
                                 .HasColumnName("LimitingSpeed");
 
-                            b1.Property<decimal?>("LimitingSpeedGrease")
-                                .HasPrecision(10)
-                                .HasColumnType("numeric(10,0)")
+                            b1.Property<int?>("LimitingSpeedGrease")
+                                .HasColumnType("integer")
                                 .HasColumnName("LimitingSpeedGrease");
 
-                            b1.Property<decimal?>("LimitingSpeedOil")
-                                .HasPrecision(10)
-                                .HasColumnType("numeric(10,0)")
+                            b1.Property<int?>("LimitingSpeedOil")
+                                .HasColumnType("integer")
                                 .HasColumnName("LimitingSpeedOil");
 
                             b1.Property<decimal?>("StaticLoad")
@@ -1663,23 +1660,22 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                                 .HasColumnType("uuid");
 
                             b1.Property<string>("Address")
-                                .HasMaxLength(500)
-                                .HasColumnType("character varying(500)")
+                                .HasColumnType("text")
                                 .HasColumnName("Address");
 
                             b1.Property<string>("ContactPerson")
-                                .HasMaxLength(100)
-                                .HasColumnType("character varying(100)")
+                                .HasMaxLength(128)
+                                .HasColumnType("character varying(128)")
                                 .HasColumnName("ContactPerson");
 
                             b1.Property<string>("Email")
-                                .HasMaxLength(100)
-                                .HasColumnType("character varying(100)")
+                                .HasMaxLength(256)
+                                .HasColumnType("character varying(256)")
                                 .HasColumnName("Email");
 
                             b1.Property<string>("Mobile")
-                                .HasMaxLength(20)
-                                .HasColumnType("character varying(20)")
+                                .HasMaxLength(32)
+                                .HasColumnType("character varying(32)")
                                 .HasColumnName("Mobile");
 
                             b1.Property<string>("Phone")
@@ -1742,6 +1738,70 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     b.Navigation("SourceBearing");
 
                     b.Navigation("TargetBearing");
+                });
+
+            modelBuilder.Entity("OpenFindBearings.Domain.Entities.BearingType", b =>
+                {
+                    b.OwnsOne("OpenFindBearings.Domain.ValueObjects.DataSource", "DataSource", b1 =>
+                        {
+                            b1.Property<Guid>("BearingTypeId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<DateTime>("ImportedAt")
+                                .HasColumnType("timestamp with time zone")
+                                .HasColumnName("ImportedAt");
+
+                            b1.Property<string>("ImportedBy")
+                                .HasMaxLength(100)
+                                .HasColumnType("character varying(100)")
+                                .HasColumnName("ImportedBy");
+
+                            b1.Property<string>("SourceType")
+                                .HasMaxLength(50)
+                                .HasColumnType("character varying(50)")
+                                .HasColumnName("DataSourceType");
+
+                            b1.HasKey("BearingTypeId");
+
+                            b1.ToTable("BearingTypes");
+
+                            b1.WithOwner()
+                                .HasForeignKey("BearingTypeId");
+                        });
+
+                    b.Navigation("DataSource");
+                });
+
+            modelBuilder.Entity("OpenFindBearings.Domain.Entities.Brand", b =>
+                {
+                    b.OwnsOne("OpenFindBearings.Domain.ValueObjects.DataSource", "DataSource", b1 =>
+                        {
+                            b1.Property<Guid>("BrandId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<DateTime>("ImportedAt")
+                                .HasColumnType("timestamp with time zone")
+                                .HasColumnName("ImportedAt");
+
+                            b1.Property<string>("ImportedBy")
+                                .HasMaxLength(100)
+                                .HasColumnType("character varying(100)")
+                                .HasColumnName("ImportedBy");
+
+                            b1.Property<string>("SourceType")
+                                .HasMaxLength(50)
+                                .HasColumnType("character varying(50)")
+                                .HasColumnName("DataSourceType");
+
+                            b1.HasKey("BrandId");
+
+                            b1.ToTable("Brands");
+
+                            b1.WithOwner()
+                                .HasForeignKey("BrandId");
+                        });
+
+                    b.Navigation("DataSource");
                 });
 
             modelBuilder.Entity("OpenFindBearings.Domain.Entities.CorrectionRequest", b =>

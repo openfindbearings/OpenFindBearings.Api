@@ -274,6 +274,13 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                 .ToDictionaryAsync(x => x.BrandId, x => x.Count, cancellationToken);
         }
 
+        public async Task<int> GetCountSinceAsync(DateTime since, CancellationToken cancellationToken = default)
+        {
+            return await _context.Bearings
+                .Where(b => b.IsActive && b.CreatedAt >= since)
+                .CountAsync(cancellationToken);
+        }
+
         public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
         {
             var bearing = await GetByIdAsync(id, cancellationToken);

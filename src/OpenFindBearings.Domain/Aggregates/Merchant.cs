@@ -24,6 +24,11 @@ namespace OpenFindBearings.Domain.Aggregates
         public string? CompanyName { get; private set; }
 
         /// <summary>
+        /// 英文名称（用于国际化展示）
+        /// </summary>
+        public string? EnglishName { get; private set; }
+
+        /// <summary>
         /// 统一社会信用代码
         /// </summary>
         public string? UnifiedSocialCreditCode { get; private set; }
@@ -221,6 +226,15 @@ namespace OpenFindBearings.Domain.Aggregates
         }
 
         /// <summary>
+        /// 设置英文名称
+        /// </summary>
+        public void SetEnglishName(string? englishName)
+        {
+            EnglishName = englishName;
+            UpdateTimestamp();
+        }
+
+        /// <summary>
         /// 更新商家名称
         /// </summary>
         public void UpdateName(string newName)
@@ -277,13 +291,14 @@ namespace OpenFindBearings.Domain.Aggregates
         /// <summary>
         /// 认证商家
         /// </summary>
-        public void Verify()
+        public void Verify(string? verifiedBy = null)
         {
             if (IsVerified)
                 throw new InvalidOperationException("商家已经认证");
 
             IsVerified = true;
             VerifiedAt = DateTime.UtcNow;
+            VerifiedBy = verifiedBy;
 
             // 认证后升级等级
             if (Grade < MerchantGrade.Verified)
@@ -511,7 +526,7 @@ namespace OpenFindBearings.Domain.Aggregates
         /// <summary>
         /// 添加营业执照审核记录
         /// </summary>
-        internal void AddLicenseVerification(LicenseVerification verification)
+        public void AddLicenseVerification(LicenseVerification verification)
         {
             _licenseVerifications.Add(verification);
             UpdateTimestamp();

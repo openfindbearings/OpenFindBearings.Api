@@ -15,10 +15,13 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
 
             builder.Property(m => m.Name)
                 .IsRequired()
-                .HasMaxLength(200);
+                .HasMaxLength(256);
 
             builder.Property(m => m.CompanyName)
                 .HasMaxLength(200);
+
+            builder.Property(m => m.EnglishName)
+                .HasMaxLength(256);
 
             builder.Property(m => m.Type)
                 .IsRequired();
@@ -27,7 +30,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
                 .HasColumnType("text");
 
             builder.Property(m => m.BusinessScope)
-                .HasMaxLength(500);
+                .HasColumnType("text");
 
             builder.Property(m => m.IsVerified)
                 .HasDefaultValue(false);
@@ -96,7 +99,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
 
             // ============ Logo和官网 ============
             builder.Property(m => m.LogoUrl)
-                .HasMaxLength(500)
+                .HasColumnType("text")
                 .HasColumnName("LogoUrl");
 
             builder.Property(m => m.Website)
@@ -111,11 +114,11 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             // 值对象配置 - ContactInfo
             builder.OwnsOne(m => m.Contact, contact =>
             {
-                contact.Property(c => c.ContactPerson).HasColumnName("ContactPerson").HasMaxLength(100);
+                contact.Property(c => c.ContactPerson).HasColumnName("ContactPerson").HasMaxLength(128);
                 contact.Property(c => c.Phone).HasColumnName("Phone").HasMaxLength(32);
-                contact.Property(c => c.Mobile).HasColumnName("Mobile").HasMaxLength(20);
-                contact.Property(c => c.Email).HasColumnName("Email").HasMaxLength(100);
-                contact.Property(c => c.Address).HasColumnName("Address").HasMaxLength(500);
+                contact.Property(c => c.Mobile).HasColumnName("Mobile").HasMaxLength(32);
+                contact.Property(c => c.Email).HasColumnName("Email").HasMaxLength(256);
+                contact.Property(c => c.Address).HasColumnName("Address").HasColumnType("text");
             });
 
             // 索引

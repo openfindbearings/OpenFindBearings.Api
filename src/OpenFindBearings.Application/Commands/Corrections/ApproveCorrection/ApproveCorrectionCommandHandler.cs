@@ -60,6 +60,7 @@ namespace OpenFindBearings.Application.Commands.Corrections.ApproveCorrection
             if (bearing == null) return;
 
             static decimal? ParseDec(string? s) => decimal.TryParse(s, out var v) ? v : null;
+            static int? ParseInt(string? s) => int.TryParse(s, out var v) ? v : null;
 
             switch (correction.FieldName.ToLower())
             {
@@ -102,9 +103,9 @@ namespace OpenFindBearings.Application.Commands.Corrections.ApproveCorrection
                     var newPerf = new PerformanceParams(
                         dynamicLoad: correction.FieldName.ToLower() == "dynamicload" ? ParseDec(correction.SuggestedValue) : p?.DynamicLoad,
                         staticLoad: correction.FieldName.ToLower() == "staticload" ? ParseDec(correction.SuggestedValue) : p?.StaticLoad,
-                        speed: correction.FieldName.ToLower() == "limitingspeed" ? ParseDec(correction.SuggestedValue) : p?.LimitingSpeed,
-                        greaseSpeed: correction.FieldName.ToLower() == "limitingspeedgrease" ? ParseDec(correction.SuggestedValue) : p?.LimitingSpeedGrease,
-                        oilSpeed: correction.FieldName.ToLower() == "limitingspeedoil" ? ParseDec(correction.SuggestedValue) : p?.LimitingSpeedOil
+                        speed: correction.FieldName.ToLower() == "limitingspeed" ? ParseInt(correction.SuggestedValue) : p?.LimitingSpeed,
+                        greaseSpeed: correction.FieldName.ToLower() == "limitingspeedgrease" ? ParseInt(correction.SuggestedValue) : p?.LimitingSpeedGrease,
+                        oilSpeed: correction.FieldName.ToLower() == "limitingspeedoil" ? ParseInt(correction.SuggestedValue) : p?.LimitingSpeedOil
                     );
                     bearing.UpdatePerformance(newPerf);
                     break;

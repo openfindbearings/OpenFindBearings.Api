@@ -33,7 +33,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
                 .HasColumnType("jsonb");
 
             builder.Property(al => al.Remarks)
-                .HasMaxLength(500);
+                .HasColumnType("text");
 
             builder.Property(al => al.OperatedAt)
                 .IsRequired();

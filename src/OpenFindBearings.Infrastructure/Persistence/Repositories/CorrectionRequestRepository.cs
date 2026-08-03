@@ -81,5 +81,17 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                 .OrderByDescending(c => c.SubmittedAt)
                 .ToListAsync(cancellationToken);
         }
+
+        public async Task<int> GetCountByStatusAsync(CorrectionStatus status, CancellationToken cancellationToken = default)
+        {
+            return await _context.CorrectionRequests
+                .CountAsync(c => c.Status == status, cancellationToken);
+        }
+
+        public async Task<int> GetCountSinceAsync(DateTime since, CancellationToken cancellationToken = default)
+        {
+            return await _context.CorrectionRequests
+                .CountAsync(c => c.CreatedAt >= since, cancellationToken);
+        }
     }
 }
