@@ -418,7 +418,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     EntityId = table.Column<Guid>(type: "uuid", nullable: false),
                     BeforeData = table.Column<string>(type: "jsonb", nullable: true),
                     AfterData = table.Column<string>(type: "jsonb", nullable: true),
-                    OperatorId = table.Column<Guid>(type: "uuid", nullable: false),
+                    OperatorId = table.Column<Guid>(type: "uuid", nullable: true),
                     OperatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     Remarks = table.Column<string>(type: "text", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),

@@ -33,7 +33,7 @@
         /// <summary>
         /// 操作人ID
         /// </summary>
-        public Guid OperatorId { get; set; }
+        public Guid? OperatorId { get; set; }
 
         /// <summary>
         /// 操作人姓名

@@ -68,7 +68,11 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         /// <inheritdoc/>
         public async Task UpdateAsync(User user, CancellationToken cancellationToken = default)
         {
-            _context.Users.Update(user);
+            var entry = _context.Entry(user);
+            if (entry.State != EntityState.Added)
+            {
+                entry.State = EntityState.Modified;
+            }
         }
 
         /// <inheritdoc/>
