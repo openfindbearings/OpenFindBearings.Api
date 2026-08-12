@@ -49,7 +49,7 @@ public class AuditLogMiddleware
             {
                 var subClaim = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
                                ?? context.User.FindFirst("sub")?.Value;
-                var operatorId = Guid.TryParse(subClaim, out var uid) ? uid : Guid.Empty;
+                Guid? operatorId = Guid.TryParse(subClaim, out var uid) ? uid : null;
                 var userName = context.User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value
                                ?? context.User.FindFirst("preferred_username")?.Value;
 

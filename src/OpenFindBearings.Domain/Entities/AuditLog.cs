@@ -37,7 +37,7 @@ namespace OpenFindBearings.Domain.Entities
         /// <summary>
         /// 操作人ID
         /// </summary>
-        public Guid OperatorId { get; private set; }
+        public Guid? OperatorId { get; private set; }
 
         /// <summary>
         /// 操作人导航属性
@@ -60,7 +60,7 @@ namespace OpenFindBearings.Domain.Entities
             string action,
             string entityType,
             Guid entityId,
-            Guid operatorId,
+            Guid? operatorId,
             string? beforeData = null,
             string? afterData = null,
             string? remarks = null)

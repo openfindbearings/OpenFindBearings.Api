@@ -117,12 +117,12 @@ namespace OpenFindBearings.Application.Queries.Admin.GetAuditLogs
             };
         }
 
-        private async Task<string> GetOperatorNameAsync(Guid operatorId, CancellationToken cancellationToken)
+        private async Task<string> GetOperatorNameAsync(Guid? operatorId, CancellationToken cancellationToken)
         {
-            if (operatorId == Guid.Empty)
+            if (operatorId == null || operatorId == Guid.Empty)
                 return "系统";
 
-            var operatorUser = await _userRepository.GetByIdAsync(operatorId, cancellationToken);
+            var operatorUser = await _userRepository.GetByIdAsync(operatorId.Value, cancellationToken);
             if (operatorUser == null)
                 return "未知用户";
 
