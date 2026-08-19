@@ -56,6 +56,7 @@ namespace OpenFindBearings.Application.Queries.Admin.GetDashboardStats
 
             var merchantTotal = await _merchantRepository.GetTotalCountAsync(cancellationToken);
             var merchantVerified = await _merchantRepository.GetVerifiedCountAsync(cancellationToken);
+            var merchantPendingApplications = await _merchantRepository.GetPendingApplicationCountAsync(cancellationToken);
             var merchantToday = await _merchantRepository.GetCountSinceAsync(todayStart, cancellationToken);
             var merchantTypeDist = await _merchantRepository.GetTypeDistributionAsync(cancellationToken);
 
@@ -75,7 +76,6 @@ namespace OpenFindBearings.Application.Queries.Admin.GetDashboardStats
             var brandTotal = await _brandRepository.GetTotalCountAsync(cancellationToken);
             var typeTotal = await _bearingTypeRepository.GetTotalCountAsync(cancellationToken);
             var pendingLicenses = await _licenseRepository.GetPendingCountAsync(cancellationToken);
-            var pendingMerchantVerifyTotal = await _merchantRepository.GetVerifiedCountAsync(cancellationToken);
 
             var correctionTotal = correctionPending + correctionApproved + correctionRejected;
 
@@ -148,6 +148,7 @@ namespace OpenFindBearings.Application.Queries.Admin.GetDashboardStats
                     TotalCount = merchantTotal,
                     VerifiedCount = merchantVerified,
                     PendingVerification = merchantTotal - merchantVerified,
+                    PendingApplicationCount = merchantPendingApplications,
                     TodayRegistered = merchantToday,
                     TypeDistribution = typeDistribution
                 },
@@ -172,8 +173,7 @@ namespace OpenFindBearings.Application.Queries.Admin.GetDashboardStats
                 {
                     PendingMerchantBearings = pendingMerchantBearings,
                     PendingCorrections = correctionPending,
-                    PendingLicenses = pendingLicenses,
-                    PendingMerchantVerifications = merchantTotal - pendingMerchantVerifyTotal
+                    PendingLicenses = pendingLicenses
                 }
             };
         }

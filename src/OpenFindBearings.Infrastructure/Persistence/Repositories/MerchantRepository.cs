@@ -125,6 +125,15 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                 .CountAsync(cancellationToken);
         }
 
+        public async Task<int> GetPendingApplicationCountAsync(CancellationToken cancellationToken = default)
+        {
+            return await _context.Merchants
+                .Where(m => m.IsActive &&
+                            m.Status == MerchantStatus.Pending &&
+                            (m.DataSource == null || m.DataSource.SourceType != Domain.Enums.DataSourceType.Crawler))
+                .CountAsync(cancellationToken);
+        }
+
         public async Task<Dictionary<MerchantType, int>> GetTypeDistributionAsync(CancellationToken cancellationToken = default)
         {
             return await _context.Merchants
