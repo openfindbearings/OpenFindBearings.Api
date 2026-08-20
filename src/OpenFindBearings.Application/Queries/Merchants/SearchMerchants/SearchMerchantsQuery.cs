@@ -42,6 +42,11 @@ namespace OpenFindBearings.Application.Queries.Merchants.SearchMerchants
         public MerchantStatus? Status { get; set; }
 
         /// <summary>
+        /// 是否排除爬虫来源商家（仅显示入驻申请商家）
+        /// </summary>
+        public bool? ExcludeCrawler { get; set; }
+
+        /// <summary>
         /// 页码
         /// </summary>
         public int Page { get; set; } = 1;

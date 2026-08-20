@@ -69,6 +69,11 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
             if (searchParams.Status.HasValue)
                 query = query.Where(m => m.Status == searchParams.Status.Value);
 
+            if (searchParams.ExcludeCrawler == true)
+                query = query.Where(m =>
+                    m.DataSource == null ||
+                    m.DataSource.SourceType != Domain.Enums.DataSourceType.Crawler);
+
             var totalCount = await query.CountAsync(cancellationToken);
 
             var items = await query
