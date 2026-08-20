@@ -147,7 +147,6 @@ namespace OpenFindBearings.Application.Queries.Admin.GetDashboardStats
                 {
                     TotalCount = merchantTotal,
                     VerifiedCount = merchantVerified,
-                    PendingVerification = merchantTotal - merchantVerified,
                     PendingApplicationCount = merchantPendingApplications,
                     TodayRegistered = merchantToday,
                     TypeDistribution = typeDistribution

@@ -82,7 +82,6 @@
     {
         public int TotalCount { get; set; }
         public int VerifiedCount { get; set; }
-        public int PendingVerification { get; set; }
         public int PendingApplicationCount { get; set; }
         public int TodayRegistered { get; set; }
         public List<MerchantTypeDistributionDto> TypeDistribution { get; set; } = new();
