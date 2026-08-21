@@ -77,6 +77,8 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
             var totalCount = await query.CountAsync(cancellationToken);
 
             var items = await query
+                .OrderByDescending(m => m.IsVerified)
+                .ThenBy(m => m.Name)
                 .Skip((searchParams.Page - 1) * searchParams.PageSize)
                 .Take(searchParams.PageSize)
                 .ToListAsync(cancellationToken);
