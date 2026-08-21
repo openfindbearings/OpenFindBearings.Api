@@ -54,5 +54,25 @@
         /// 备注
         /// </summary>
         public string? Remarks { get; set; }
+
+        /// <summary>
+        /// HTTP 请求方法
+        /// </summary>
+        public string? HttpMethod { get; set; }
+
+        /// <summary>
+        /// 请求路径
+        /// </summary>
+        public string? RequestPath { get; set; }
+
+        /// <summary>
+        /// HTTP 响应状态码
+        /// </summary>
+        public int? StatusCode { get; set; }
+
+        /// <summary>
+        /// 请求处理耗时（毫秒）
+        /// </summary>
+        public long? DurationMs { get; set; }
     }
 }

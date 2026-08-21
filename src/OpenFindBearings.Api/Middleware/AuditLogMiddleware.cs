@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text;
 using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Repositories;
@@ -39,12 +40,14 @@ public class AuditLogMiddleware
                 requestBody = requestBody[..2000] + "...(truncated)";
         }
 
+        var sw = Stopwatch.StartNew();
         try
         {
             await _next(context);
         }
         finally
         {
+            sw.Stop();
             try
             {
                 var subClaim = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
@@ -57,14 +60,18 @@ public class AuditLogMiddleware
 
                 var entityType = ExtractEntityType(path);
                 var entityId = ExtractEntityId(path);
+                var statusCode = context.Response.StatusCode;
 
                 var log = new AuditLog(
                     action,
                     entityType ?? "Unknown",
                     entityId ?? Guid.Empty,
                     operatorId,
-                    remarks: $"{method} {path} -> {context.Response.StatusCode}" +
-                             (requestBody != null ? $" Body: {requestBody}" : ""));
+                    remarks: requestBody,
+                    httpMethod: method,
+                    requestPath: path,
+                    statusCode: statusCode,
+                    durationMs: sw.ElapsedMilliseconds);
 
                 await repository.AddAsync(log, context.RequestAborted);
                 await dbContext.SaveChangesAsync(context.RequestAborted);
