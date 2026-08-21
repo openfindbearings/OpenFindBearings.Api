@@ -9,10 +9,10 @@ using OpenFindBearings.Infrastructure.Persistence.Data;
 
 #nullable disable
 
-namespace OpenFindBearings.Infrastructure.Migrations
+namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260821003518_InitialCreate")]
+    [Migration("20260821124741_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
