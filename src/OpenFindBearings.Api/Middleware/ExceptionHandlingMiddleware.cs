@@ -121,6 +121,13 @@ namespace OpenFindBearings.Api.Middleware
                     problemDetails.Extensions["sql_state"] = postgresException.SqlState;
                     break;
 
+                case NpgsqlException:
+                    response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+                    problemDetails.Title = "数据库服务不可用";
+                    problemDetails.Status = StatusCodes.Status503ServiceUnavailable;
+                    problemDetails.Detail = "数据库连接失败，请稍后重试";
+                    break;
+
                 default:
                     response.StatusCode = StatusCodes.Status500InternalServerError;
                     problemDetails.Title = "服务器内部错误";
