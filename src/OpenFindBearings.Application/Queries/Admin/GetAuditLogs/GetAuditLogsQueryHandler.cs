@@ -87,7 +87,11 @@ namespace OpenFindBearings.Application.Queries.Admin.GetAuditLogs
                         OperatorName = operatorName,
                         OperatedAt = log.OperatedAt,
                         Details = FormatAuditDetails(log),
-                        Remarks = log.Remarks
+                        Remarks = log.Remarks,
+                        HttpMethod = log.HttpMethod,
+                        RequestPath = log.RequestPath,
+                        StatusCode = log.StatusCode,
+                        DurationMs = log.DurationMs
                     });
                 }
                 catch (Exception ex)
@@ -103,7 +107,11 @@ namespace OpenFindBearings.Application.Queries.Admin.GetAuditLogs
                         OperatorId = log.OperatorId,
                         OperatorName = "未知",
                         OperatedAt = log.OperatedAt,
-                        Remarks = log.Remarks
+                        Remarks = log.Remarks,
+                        HttpMethod = log.HttpMethod,
+                        RequestPath = log.RequestPath,
+                        StatusCode = log.StatusCode,
+                        DurationMs = log.DurationMs
                     });
                 }
             }

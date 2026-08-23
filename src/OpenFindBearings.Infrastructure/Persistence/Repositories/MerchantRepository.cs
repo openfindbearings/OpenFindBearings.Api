@@ -69,9 +69,16 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
             if (searchParams.Status.HasValue)
                 query = query.Where(m => m.Status == searchParams.Status.Value);
 
+            if (searchParams.ExcludeCrawler == true)
+                query = query.Where(m =>
+                    m.DataSource == null ||
+                    m.DataSource.SourceType != Domain.Enums.DataSourceType.Crawler);
+
             var totalCount = await query.CountAsync(cancellationToken);
 
             var items = await query
+                .OrderByDescending(m => m.IsVerified)
+                .ThenBy(m => m.Name)
                 .Skip((searchParams.Page - 1) * searchParams.PageSize)
                 .Take(searchParams.PageSize)
                 .ToListAsync(cancellationToken);
@@ -122,6 +129,15 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         {
             return await _context.Merchants
                 .Where(m => m.IsActive && m.IsVerified)
+                .CountAsync(cancellationToken);
+        }
+
+        public async Task<int> GetPendingApplicationCountAsync(CancellationToken cancellationToken = default)
+        {
+            return await _context.Merchants
+                .Where(m => m.IsActive &&
+                            m.Status == MerchantStatus.Pending &&
+                            (m.DataSource == null || m.DataSource.SourceType != Domain.Enums.DataSourceType.Crawler))
                 .CountAsync(cancellationToken);
         }
 

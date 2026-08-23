@@ -66,6 +66,11 @@ namespace OpenFindBearings.Domain.Repositories
         Task<int> GetVerifiedCountAsync(CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// 获取入驻申请待审核商家数量（待审核且非爬虫来源）
+        /// </summary>
+        Task<int> GetPendingApplicationCountAsync(CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// 获取商家类型分布
         /// </summary>
         Task<Dictionary<MerchantType, int>> GetTypeDistributionAsync(CancellationToken cancellationToken = default);

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text;
 using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Repositories;
@@ -39,12 +40,14 @@ public class AuditLogMiddleware
                 requestBody = requestBody[..2000] + "...(truncated)";
         }
 
+        var sw = Stopwatch.StartNew();
         try
         {
             await _next(context);
         }
         finally
         {
+            sw.Stop();
             try
             {
                 var subClaim = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
@@ -53,25 +56,22 @@ public class AuditLogMiddleware
                 var userName = context.User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value
                                ?? context.User.FindFirst("preferred_username")?.Value;
 
-                var action = method switch
-                {
-                    "POST" => "Create",
-                    "PUT" => "Update",
-                    "PATCH" => "Update",
-                    "DELETE" => "Delete",
-                    _ => method
-                };
+                var action = MapAction(method, path);
 
                 var entityType = ExtractEntityType(path);
                 var entityId = ExtractEntityId(path);
+                var statusCode = context.Response.StatusCode;
 
                 var log = new AuditLog(
                     action,
                     entityType ?? "Unknown",
                     entityId ?? Guid.Empty,
                     operatorId,
-                    remarks: $"{method} {path} -> {context.Response.StatusCode}" +
-                             (requestBody != null ? $" Body: {requestBody}" : ""));
+                    remarks: requestBody,
+                    httpMethod: method,
+                    requestPath: path,
+                    statusCode: statusCode,
+                    durationMs: sw.ElapsedMilliseconds);
 
                 await repository.AddAsync(log, context.RequestAborted);
                 await dbContext.SaveChangesAsync(context.RequestAborted);
@@ -110,5 +110,22 @@ public class AuditLogMiddleware
             if (Guid.TryParse(s, out var id))
                 return id;
         return null;
+    }
+
+    private static string MapAction(string method, string path)
+    {
+        if (path.Contains("/merchants/", StringComparison.OrdinalIgnoreCase) && path.EndsWith("/verify", StringComparison.OrdinalIgnoreCase)) return "VerifyMerchant";
+        if (path.Contains("/merchants/", StringComparison.OrdinalIgnoreCase) && path.EndsWith("/reject", StringComparison.OrdinalIgnoreCase)) return "RejectMerchant";
+        if (path.Contains("/corrections/", StringComparison.OrdinalIgnoreCase) && path.EndsWith("/approve", StringComparison.OrdinalIgnoreCase)) return "ApproveCorrection";
+        if (path.Contains("/corrections/", StringComparison.OrdinalIgnoreCase) && path.EndsWith("/reject", StringComparison.OrdinalIgnoreCase)) return "RejectCorrection";
+        if (path.Contains("/licenses/", StringComparison.OrdinalIgnoreCase) && path.EndsWith("/approve", StringComparison.OrdinalIgnoreCase)) return "ApproveLicense";
+        if (path.Contains("/licenses/", StringComparison.OrdinalIgnoreCase) && path.EndsWith("/reject", StringComparison.OrdinalIgnoreCase)) return "RejectLicense";
+        return method switch
+        {
+            "POST" => "Create",
+            "PUT" or "PATCH" => "Update",
+            "DELETE" => "Delete",
+            _ => method
+        };
     }
 }

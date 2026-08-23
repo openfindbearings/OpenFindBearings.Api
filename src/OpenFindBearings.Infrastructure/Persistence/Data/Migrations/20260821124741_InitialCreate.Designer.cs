@@ -12,7 +12,7 @@ using OpenFindBearings.Infrastructure.Persistence.Data;
 namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260812025626_InitialCreate")]
+    [Migration("20260821124741_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -539,6 +539,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<long?>("DurationMs")
+                        .HasColumnType("bigint");
+
                     b.Property<Guid>("EntityId")
                         .HasColumnType("uuid");
 
@@ -546,6 +549,10 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
+
+                    b.Property<string>("HttpMethod")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
@@ -558,6 +565,13 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
 
                     b.Property<string>("Remarks")
                         .HasColumnType("text");
+
+                    b.Property<string>("RequestPath")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int?>("StatusCode")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");

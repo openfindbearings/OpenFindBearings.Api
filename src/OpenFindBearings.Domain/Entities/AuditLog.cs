@@ -54,6 +54,26 @@ namespace OpenFindBearings.Domain.Entities
         /// </summary>
         public string? Remarks { get; private set; }
 
+        /// <summary>
+        /// HTTP 请求方法
+        /// </summary>
+        public string? HttpMethod { get; private set; }
+
+        /// <summary>
+        /// 请求路径
+        /// </summary>
+        public string? RequestPath { get; private set; }
+
+        /// <summary>
+        /// HTTP 响应状态码
+        /// </summary>
+        public int? StatusCode { get; private set; }
+
+        /// <summary>
+        /// 请求处理耗时（毫秒）
+        /// </summary>
+        public long? DurationMs { get; private set; }
+
         private AuditLog() { }
 
         public AuditLog(
@@ -63,7 +83,11 @@ namespace OpenFindBearings.Domain.Entities
             Guid? operatorId,
             string? beforeData = null,
             string? afterData = null,
-            string? remarks = null)
+            string? remarks = null,
+            string? httpMethod = null,
+            string? requestPath = null,
+            int? statusCode = null,
+            long? durationMs = null)
         {
             Action = action;
             EntityType = entityType;
@@ -72,6 +96,10 @@ namespace OpenFindBearings.Domain.Entities
             BeforeData = beforeData;
             AfterData = afterData;
             Remarks = remarks;
+            HttpMethod = httpMethod;
+            RequestPath = requestPath;
+            StatusCode = statusCode;
+            DurationMs = durationMs;
             OperatedAt = DateTime.UtcNow;
         }
     }

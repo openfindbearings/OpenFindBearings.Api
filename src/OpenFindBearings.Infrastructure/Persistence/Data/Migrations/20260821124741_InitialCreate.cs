@@ -421,6 +421,10 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     OperatorId = table.Column<Guid>(type: "uuid", nullable: true),
                     OperatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     Remarks = table.Column<string>(type: "text", nullable: true),
+                    HttpMethod = table.Column<string>(type: "character varying(10)", maxLength: 10, nullable: true),
+                    RequestPath = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    StatusCode = table.Column<int>(type: "integer", nullable: true),
+                    DurationMs = table.Column<long>(type: "bigint", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     IsActive = table.Column<bool>(type: "boolean", nullable: false)

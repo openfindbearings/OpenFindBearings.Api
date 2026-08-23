@@ -49,69 +49,35 @@ namespace OpenFindBearings.Application.Queries.Admin.GetDashboardStats
             var weekStart = now.Date.AddDays(-(int)now.DayOfWeek + (int)DayOfWeek.Monday);
             var monthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
 
-            var bearingTotalTask = _bearingRepository.GetTotalCountAsync(new BearingSearchParams(), cancellationToken);
-            var bearingTodayTask = _bearingRepository.GetCountSinceAsync(todayStart, cancellationToken);
-            var bearingWeekTask = _bearingRepository.GetCountSinceAsync(weekStart, cancellationToken);
-            var bearingMonthTask = _bearingRepository.GetCountSinceAsync(monthStart, cancellationToken);
+            var bearingTotal = await _bearingRepository.GetTotalCountAsync(new BearingSearchParams(), cancellationToken);
+            var bearingToday = await _bearingRepository.GetCountSinceAsync(todayStart, cancellationToken);
+            var bearingWeek = await _bearingRepository.GetCountSinceAsync(weekStart, cancellationToken);
+            var bearingMonth = await _bearingRepository.GetCountSinceAsync(monthStart, cancellationToken);
 
-            var merchantTotalTask = _merchantRepository.GetTotalCountAsync(cancellationToken);
-            var merchantVerifiedTask = _merchantRepository.GetVerifiedCountAsync(cancellationToken);
-            var merchantTodayTask = _merchantRepository.GetCountSinceAsync(todayStart, cancellationToken);
-            var merchantTypeDistTask = _merchantRepository.GetTypeDistributionAsync(cancellationToken);
+            var merchantTotal = await _merchantRepository.GetTotalCountAsync(cancellationToken);
+            var merchantVerified = await _merchantRepository.GetVerifiedCountAsync(cancellationToken);
+            var merchantPendingApplications = await _merchantRepository.GetPendingApplicationCountAsync(cancellationToken);
+            var merchantToday = await _merchantRepository.GetCountSinceAsync(todayStart, cancellationToken);
+            var merchantTypeDist = await _merchantRepository.GetTypeDistributionAsync(cancellationToken);
 
-            var userTotalTask = _userRepository.GetCountSinceAsync(DateTime.MinValue, cancellationToken);
-            var userTodayTask = _userRepository.GetCountSinceAsync(todayStart, cancellationToken);
-            var roleDistTask = _userRepository.GetRoleDistributionAsync(cancellationToken);
+            var userTotal = await _userRepository.GetCountSinceAsync(DateTime.MinValue, cancellationToken);
+            var userToday = await _userRepository.GetCountSinceAsync(todayStart, cancellationToken);
+            var roleDist = await _userRepository.GetRoleDistributionAsync(cancellationToken);
 
-            var correctionPendingTask = _correctionRepository.GetCountByStatusAsync(Domain.Enums.CorrectionStatus.Pending, cancellationToken);
-            var correctionApprovedTask = _correctionRepository.GetCountByStatusAsync(Domain.Enums.CorrectionStatus.Approved, cancellationToken);
-            var correctionRejectedTask = _correctionRepository.GetCountByStatusAsync(Domain.Enums.CorrectionStatus.Rejected, cancellationToken);
-            var correctionTodayTask = _correctionRepository.GetCountSinceAsync(todayStart, cancellationToken);
+            var correctionPending = await _correctionRepository.GetCountByStatusAsync(Domain.Enums.CorrectionStatus.Pending, cancellationToken);
+            var correctionApproved = await _correctionRepository.GetCountByStatusAsync(Domain.Enums.CorrectionStatus.Approved, cancellationToken);
+            var correctionRejected = await _correctionRepository.GetCountByStatusAsync(Domain.Enums.CorrectionStatus.Rejected, cancellationToken);
+            var correctionToday = await _correctionRepository.GetCountSinceAsync(todayStart, cancellationToken);
 
-            var bearingBrandDistTask = _bearingRepository.GetBearingCountByBrandAsync(cancellationToken);
-            var bearingTypeDistTask = _bearingRepository.GetBearingCountByTypeAsync(cancellationToken);
-            var pendingMerchantBearingsTask = _merchantBearingRepository.GetPendingApprovalCountAsync(cancellationToken);
+            var bearingBrandDist = await _bearingRepository.GetBearingCountByBrandAsync(cancellationToken);
+            var bearingTypeDist = await _bearingRepository.GetBearingCountByTypeAsync(cancellationToken);
+            var pendingMerchantBearings = await _merchantBearingRepository.GetPendingApprovalCountAsync(cancellationToken);
 
-            var brandTotalTask = _brandRepository.GetTotalCountAsync(cancellationToken);
-            var typeTotalTask = _bearingTypeRepository.GetTotalCountAsync(cancellationToken);
-            var pendingLicenseTask = _licenseRepository.GetPendingCountAsync(cancellationToken);
-            var pendingMerchantVerifyTask = _merchantRepository.GetVerifiedCountAsync(cancellationToken);
+            var brandTotal = await _brandRepository.GetTotalCountAsync(cancellationToken);
+            var typeTotal = await _bearingTypeRepository.GetTotalCountAsync(cancellationToken);
+            var pendingLicenses = await _licenseRepository.GetPendingCountAsync(cancellationToken);
 
-            await Task.WhenAll(
-                bearingTotalTask, bearingTodayTask, bearingWeekTask, bearingMonthTask,
-                merchantTotalTask, merchantVerifiedTask, merchantTodayTask, merchantTypeDistTask,
-                userTotalTask, userTodayTask, roleDistTask,
-                correctionPendingTask, correctionApprovedTask, correctionRejectedTask, correctionTodayTask,
-                bearingBrandDistTask, bearingTypeDistTask, pendingMerchantBearingsTask,
-                brandTotalTask, typeTotalTask, pendingLicenseTask, pendingMerchantVerifyTask);
-
-            var bearingTotal = bearingTotalTask.Result;
-            var bearingToday = bearingTodayTask.Result;
-            var bearingWeek = bearingWeekTask.Result;
-            var bearingMonth = bearingMonthTask.Result;
-
-            var merchantTotal = merchantTotalTask.Result;
-            var merchantVerified = merchantVerifiedTask.Result;
-            var merchantToday = merchantTodayTask.Result;
-            var merchantTypeDist = merchantTypeDistTask.Result;
-
-            var userTotal = userTotalTask.Result;
-            var userToday = userTodayTask.Result;
-            var roleDist = roleDistTask.Result;
-
-            var correctionTotal = correctionPendingTask.Result + correctionApprovedTask.Result + correctionRejectedTask.Result;
-            var correctionPending = correctionPendingTask.Result;
-            var correctionApproved = correctionApprovedTask.Result;
-            var correctionRejected = correctionRejectedTask.Result;
-            var correctionToday = correctionTodayTask.Result;
-
-            var bearingBrandDist = bearingBrandDistTask.Result;
-            var bearingTypeDist = bearingTypeDistTask.Result;
-            var pendingMerchantBearings = pendingMerchantBearingsTask.Result;
-            var brandTotal = brandTotalTask.Result;
-            var typeTotal = typeTotalTask.Result;
-            var pendingLicenses = pendingLicenseTask.Result;
-            var pendingMerchantVerifyTotal = pendingMerchantVerifyTask.Result;
+            var correctionTotal = correctionPending + correctionApproved + correctionRejected;
 
             var topBrands = new List<BrandDistributionDto>();
             if (bearingBrandDist.Count > 0)
@@ -181,7 +147,7 @@ namespace OpenFindBearings.Application.Queries.Admin.GetDashboardStats
                 {
                     TotalCount = merchantTotal,
                     VerifiedCount = merchantVerified,
-                    PendingVerification = merchantTotal - merchantVerified,
+                    PendingApplicationCount = merchantPendingApplications,
                     TodayRegistered = merchantToday,
                     TypeDistribution = typeDistribution
                 },
@@ -206,8 +172,7 @@ namespace OpenFindBearings.Application.Queries.Admin.GetDashboardStats
                 {
                     PendingMerchantBearings = pendingMerchantBearings,
                     PendingCorrections = correctionPending,
-                    PendingLicenses = pendingLicenses,
-                    PendingMerchantVerifications = merchantTotal - pendingMerchantVerifyTotal
+                    PendingLicenses = pendingLicenses
                 }
             };
         }

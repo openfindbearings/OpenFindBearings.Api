@@ -418,6 +418,7 @@ namespace OpenFindBearings.Api.Endpoints
                 [FromQuery] bool? verifiedOnly = null,
                 [FromQuery] bool? includeDeleted = null,
                 [FromQuery] int? status = null,
+                [FromQuery] bool? excludeCrawler = null,
                 [FromQuery] int page = 1,
                 [FromQuery] int pageSize = 20) =>
             {
@@ -429,6 +430,7 @@ namespace OpenFindBearings.Api.Endpoints
                     Status = status.HasValue ? (MerchantStatus?)status : null,
                     VerifiedOnly = verifiedOnly,
                     IncludeDeleted = includeDeleted,
+                    ExcludeCrawler = excludeCrawler,
                     Page = page,
                     PageSize = pageSize
                 };

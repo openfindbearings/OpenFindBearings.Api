@@ -38,6 +38,16 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             builder.Property(al => al.OperatedAt)
                 .IsRequired();
 
+            builder.Property(al => al.HttpMethod)
+                .HasMaxLength(10);
+
+            builder.Property(al => al.RequestPath)
+                .HasMaxLength(500);
+
+            builder.Property(al => al.StatusCode);
+
+            builder.Property(al => al.DurationMs);
+
             builder.HasOne(al => al.Operator)
                 .WithMany()
                 .HasForeignKey(al => al.OperatorId)

@@ -82,7 +82,7 @@
     {
         public int TotalCount { get; set; }
         public int VerifiedCount { get; set; }
-        public int PendingVerification { get; set; }
+        public int PendingApplicationCount { get; set; }
         public int TodayRegistered { get; set; }
         public List<MerchantTypeDistributionDto> TypeDistribution { get; set; } = new();
     }
@@ -120,7 +120,6 @@
         public int PendingMerchantBearings { get; set; }
         public int PendingCorrections { get; set; }
         public int PendingLicenses { get; set; }
-        public int PendingMerchantVerifications { get; set; }
     }
 
     /// <summary>
