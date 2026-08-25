@@ -39,22 +39,22 @@ spec:
         
         livenessProbe:
           httpGet:
-            path: /health/live
+            path: /health
             port: 8080
-          initialDelaySeconds: 30  # 容器启动后延迟30秒开始探测
-          periodSeconds: 10        # 每10秒探测一次
-          timeoutSeconds: 5        # 探测超时时间
-          failureThreshold: 3      # 连续失败3次后重启容器
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
         
         readinessProbe:
           httpGet:
-            path: /health/ready
+            path: /health
             port: 8080
-          initialDelaySeconds: 5   # 启动后5秒开始探测
-          periodSeconds: 5         # 每5秒探测一次
+          initialDelaySeconds: 5
+          periodSeconds: 5
           timeoutSeconds: 3
-          successThreshold: 1      # 成功1次即认为就绪
-          failureThreshold: 3   
+          successThreshold: 1
+          failureThreshold: 3
 
 ---
 apiVersion: v1
