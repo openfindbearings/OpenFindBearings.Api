@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: openfindbearings-api-deployment
+  name: openfindbearings-api
   namespace: openfindbearings
   labels:
     app: openfindbearings-api
@@ -60,7 +60,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:  
-  name: openfindbearings-api-service
+  name: openfindbearings-api
   namespace: openfindbearings
 spec:
   selector:
@@ -97,6 +97,6 @@ spec:
           pathType: Prefix
           backend:
             service:
-              name: openfindbearings-api-service
-              port:
-                number: 80
+               name: openfindbearings-api
+               port:
+                 number: 80
