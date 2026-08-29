@@ -25,6 +25,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
 
                 await ExecuteAsync(context, logger, isDevelopment);
 
+                // 幂等补全：已有库在执行 ExecuteAsync 时因配置表非空会跳过种子，这里补全本次新增的配置键
+                await EnsureConfigKeysAsync(context);
+
                 logger.LogInformation("数据库初始化成功");
             }
             catch (Exception ex)
@@ -414,12 +417,47 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
                 new("RateLimit.Guest.RequestsPerMinute", "30", "RateLimit", "游客每分钟请求数", "int", true),
                 new("RateLimit.User.RequestsPerMinute", "60", "RateLimit", "用户每分钟请求数", "int", true),
                 new("RateLimit.Premium.RequestsPerMinute", "120", "RateLimit", "付费用户每分钟请求数", "int", true),
+
+                // 可信度阈值（由 Sync 运行时从 SystemConfigs 读取，覆盖 appsettings 默认值）
+                new("Reliability.AutoSyncThreshold", "85", "Reliability", "自动同步阈值（可信度≥此值直接入库）", "int", false),
+                new("Reliability.ReviewThreshold", "60", "Reliability", "人工审核阈值（可信度≥此值进入待审核）", "int", false),
+                new("Reliability.DefaultSourceScore", "80", "Reliability", "来源默认基础分", "int", false),
+
+                // 站点展示信息（前端/移动端读取）
+                new("Site.BeiAn", "", "General", "备案号", "string", true),
+                new("Site.CustomerService", "", "General", "客服联系方式", "string", true),
             };
 
             await context.SystemConfigs.AddRangeAsync(configs);
             await context.SaveChangesAsync();
 
             #endregion
+        }
+
+        /// <summary>
+        /// 幂等补全本次新增的系统配置键，避免已有库（SystemConfigs 非空、跳过主种子）缺少这些键导致不可编辑
+        /// </summary>
+        private static async Task EnsureConfigKeysAsync(ApplicationDbContext context)
+        {
+            // 改动说明：新增可信度三阈值与站点展示信息两类配置键，对缺失项执行 INSERT WHERE NOT EXISTS
+            var defaults = new (string Key, string Value, string Group, string Description, string Type, bool IsPublic)[]
+            {
+                ("Reliability.AutoSyncThreshold", "85", "Reliability", "自动同步阈值（可信度≥此值直接入库）", "int", false),
+                ("Reliability.ReviewThreshold", "60", "Reliability", "人工审核阈值（可信度≥此值进入待审核）", "int", false),
+                ("Reliability.DefaultSourceScore", "80", "Reliability", "来源默认基础分", "int", false),
+                ("Site.BeiAn", "", "General", "备案号", "string", true),
+                ("Site.CustomerService", "", "General", "客服联系方式", "string", true),
+            };
+
+            foreach (var d in defaults)
+            {
+                if (!await context.SystemConfigs.AnyAsync(c => c.Key == d.Key))
+                {
+                    context.SystemConfigs.Add(new SystemConfig(d.Key, d.Value, d.Group, d.Description, d.Type, d.IsPublic));
+                }
+            }
+
+            await context.SaveChangesAsync();
         }
     }
 }
