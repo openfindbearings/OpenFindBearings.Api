@@ -28,6 +28,9 @@ namespace OpenFindBearings.Api.Extensions
             // 管理员接口（需管理员角色）
             app.MapAdminEndpoints();
 
+            // 系统配置接口（内部服务拉取）
+            app.MapConfigEndpoints();
+
             // 同步接口（限 sync_client）
             app.MapSyncEndpoints();
         }

@@ -68,6 +68,16 @@ namespace OpenFindBearings.Application.Queries.Mobile.GetMobileConfig
                 ["maxUploadSize"] = 5242880 // 5MB
             };
 
+            // 改动说明：接入站点展示配置，移动端从 SystemConfigs 读取站点名称/备案号/客服联系方式
+            var siteName = configs.FirstOrDefault(c => c.Key == "SiteName");
+            if (siteName != null) result.SiteName = siteName.Value;
+
+            var beiAn = configs.FirstOrDefault(c => c.Key == "Site.BeiAn");
+            if (beiAn != null) result.SiteBeiAn = beiAn.Value;
+
+            var customerService = configs.FirstOrDefault(c => c.Key == "Site.CustomerService");
+            if (customerService != null) result.CustomerService = customerService.Value;
+
             return result;
         }
     }

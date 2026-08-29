@@ -11,5 +11,14 @@
         public string DownloadUrl { get; set; } = string.Empty;
         public Dictionary<string, string> Endpoints { get; set; } = new();
         public Dictionary<string, object> Settings { get; set; } = new();
+
+        /// <summary>站点名称</summary>
+        public string SiteName { get; set; } = string.Empty;
+
+        /// <summary>备案号</summary>
+        public string SiteBeiAn { get; set; } = string.Empty;
+
+        /// <summary>客服联系方式</summary>
+        public string CustomerService { get; set; } = string.Empty;
     }
 }

@@ -11,6 +11,7 @@ using OpenFindBearings.Application.Queries.BearingTypes.GetAllBearingTypes;
 using OpenFindBearings.Application.Queries.Brands.GetAllBrands;
 using OpenFindBearings.Application.Queries.Follows.CheckMerchantFollow;
 using OpenFindBearings.Application.Queries.MerchantBearings.GetMerchantBearingsByMerchant;
+using OpenFindBearings.Application.Queries.MerchantBearings.GetMerchantsByBearing;
 using OpenFindBearings.Application.Queries.Merchants.GetMerchant;
 using OpenFindBearings.Application.Queries.Merchants.SearchMerchants;
 using OpenFindBearings.Domain.Enums;
@@ -176,6 +177,38 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("GetBearingInterchanges")
             .WithSummary("获取轴承替代品")
             .WithDescription("获取当前轴承的可替代型号列表");
+
+            /// <summary>
+            /// 轴承在售商家（反向查询）
+            /// 获取销售当前轴承的商家列表，支持在售状态筛选
+            /// </summary>
+            group.MapGet("/bearings/{id:guid}/merchants", async (
+                Guid id,
+                IMediator mediator,
+                HttpContext httpContext,
+                [FromQuery] bool? onlyOnSale = true,
+                [FromQuery] int page = 1,
+                [FromQuery] int pageSize = 20) =>
+            {
+                var query = new GetMerchantsByBearingQuery
+                {
+                    BearingId = id,
+                    OnlyOnSale = onlyOnSale,
+                    Page = page,
+                    PageSize = pageSize
+                };
+                var result = await mediator.Send(query);
+                return ApiResponseHelper.Paged(
+                    result.Items.ToList(),
+                    result.TotalCount,
+                    result.Page,
+                    result.PageSize,
+                    httpContext
+                );
+            })
+            .WithName("GetMerchantsByBearing")
+            .WithSummary("获取轴承在售商家")
+            .WithDescription("获取销售指定轴承的所有商家，可按在售状态筛选");
 
             // ============ 品牌和类型接口 ============
 
