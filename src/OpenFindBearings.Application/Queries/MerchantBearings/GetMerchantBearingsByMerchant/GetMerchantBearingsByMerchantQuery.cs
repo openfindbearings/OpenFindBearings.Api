@@ -45,5 +45,15 @@ namespace OpenFindBearings.Application.Queries.MerchantBearings.GetMerchantBeari
         /// 每页条数
         /// </summary>
         public int PageSize { get; init; } = 20;
+
+        /// <summary>
+        /// 排序字段（created / price / viewcount）
+        /// </summary>
+        public string? SortBy { get; init; }
+
+        /// <summary>
+        /// 排序方向（asc / desc）
+        /// </summary>
+        public string? SortOrder { get; init; }
     }
 }

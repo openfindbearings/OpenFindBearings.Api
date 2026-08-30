@@ -316,7 +316,9 @@ namespace OpenFindBearings.Api.Endpoints
                 [FromQuery] int page = 1,
                 [FromQuery] int pageSize = 20,
                 [FromQuery] bool? onlyOnSale = true,
-                [FromQuery] string? dataSource = null) =>
+                [FromQuery] string? dataSource = null,
+                [FromQuery] string? sortBy = null,
+                [FromQuery] string? sortOrder = null) =>
             {
                 var isAuthenticated = httpContext.GetUserId().HasValue;
 
@@ -331,6 +333,8 @@ namespace OpenFindBearings.Api.Endpoints
                     DataSource = parsedDataSource,
                     Page = page,
                     PageSize = pageSize,
+                    SortBy = sortBy,
+                    SortOrder = sortOrder,
                     IsAuthenticated = isAuthenticated
                 };
 

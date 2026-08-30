@@ -133,6 +133,10 @@ namespace OpenFindBearings.Infrastructure
             // 轴承统计服务
             services.AddScoped<IBearingViewStatsService, BearingViewStatsService>();
 
+            // 改动说明：新增价格配置提供器，供商品创建与搜索排序处理器消费 Price.* 系统配置项
+            // 注册为 Singleton 以启用进程内 5 分钟缓存，内部通过 IServiceScopeFactory 解析 Scoped 仓储
+            services.AddSingleton<IPriceConfigProvider, PriceConfigProvider>();
+
             // 文件服务
             services.Configure<FileStorageSettings>(configuration.GetSection("FileStorage"));
             services.AddScoped<IFileService, LocalFileService>();

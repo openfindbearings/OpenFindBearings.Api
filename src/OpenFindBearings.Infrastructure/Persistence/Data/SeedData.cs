@@ -393,40 +393,11 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
             // ============ 9. 系统配置（必须） ============
 
             #region 系统配置
-            var configs = new List<SystemConfig>
-            {
-                // 基础配置
-                new("SiteName", "OpenFindBearings", "General", "网站名称", "string", true),
-                new("SiteDescription", "轴承信息平台", "General", "网站描述", "string", true),
-                new("ItemsPerPage", "20", "Pagination", "默认每页条数", "int", true),
-                new("EnableRegistration", "true", "User", "是否允许注册", "bool", true),
-                new("RequireEmailVerification", "false", "User", "是否需要邮箱验证", "bool", true),
-                // ✅ 修正：角色名改为 Individual
-                new("DefaultUserRole", "Individual", "User", "默认用户角色", "string", true),
-                    
-                // 价格配置
-                new("Price.DefaultVisibility", "LoginRequired", "Price", "价格默认可见性", "string", true),
-                new("Price.ShowNegotiableLabel", "true", "Price", "是否显示议价标签", "bool", true),
-                new("Price.NumericForSorting", "true", "Price", "是否启用数值化价格", "bool", true),
-                    
-                // 缓存配置
-                new("Cache.DefaultExpirationMinutes", "60", "Performance", "缓存默认过期时间", "int", true),
-                new("Cache.EnableRedis", "false", "Performance", "是否启用Redis缓存", "bool", true),
-                    
-                // 限流配置
-                new("RateLimit.Guest.RequestsPerMinute", "30", "RateLimit", "游客每分钟请求数", "int", true),
-                new("RateLimit.User.RequestsPerMinute", "60", "RateLimit", "用户每分钟请求数", "int", true),
-                new("RateLimit.Premium.RequestsPerMinute", "120", "RateLimit", "付费用户每分钟请求数", "int", true),
-
-                // 可信度阈值（由 Sync 运行时从 SystemConfigs 读取，覆盖 appsettings 默认值）
-                new("Reliability.AutoSyncThreshold", "85", "Reliability", "自动同步阈值（可信度≥此值直接入库）", "int", false),
-                new("Reliability.ReviewThreshold", "60", "Reliability", "人工审核阈值（可信度≥此值进入待审核）", "int", false),
-                new("Reliability.DefaultSourceScore", "80", "Reliability", "来源默认基础分", "int", false),
-
-                // 站点展示信息（前端/移动端读取）
-                new("Site.BeiAn", "", "General", "备案号", "string", true),
-                new("Site.CustomerService", "", "General", "客服联系方式", "string", true),
-            };
+            // 改动说明：配置默认值改为引用唯一的 ConfigDefaults 数组，与 EnsureConfigKeysAsync 共用，
+            //           避免两处重复维护导致新增配置时只改一处而漂移
+            var configs = ConfigDefaults
+                .Select(d => new SystemConfig(d.Key, d.Value, d.Group, d.Description, d.ValueType, d.IsSystem))
+                .ToList();
 
             await context.SystemConfigs.AddRangeAsync(configs);
             await context.SaveChangesAsync();
@@ -435,25 +406,44 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
         }
 
         /// <summary>
-        /// 幂等补全本次新增的系统配置键，避免已有库（SystemConfigs 非空、跳过主种子）缺少这些键导致不可编辑
+        /// 系统配置默认值定义
+        /// 职责：作为所有系统配置键的唯一权威来源，主种子与幂等补全共用同一份定义
+        /// 改动说明：此前同样 14 项在两处各维护一份，且补全处的元组字段名写作 IsPublic
+        ///           却传给 isSystem 参数，命名与语义错位，未来必然产生漂移
+        /// </summary>
+        private static readonly (string Key, string Value, string Group, string Description, string ValueType, bool IsSystem)[] ConfigDefaults =
+        [
+            // 站点设置（供移动端 /api/mobile/config 展示）
+            ("SiteName", "OpenFindBearings", "Site", "网站名称", "string", true),
+            ("SiteDescription", "轴承信息平台", "Site", "网站描述", "string", true),
+            ("Site.BeiAn", "", "Site", "备案号", "string", true),
+            ("Site.CustomerService", "", "Site", "客服联系方式", "string", true),
+
+            // 价格显示
+            ("Price.DefaultVisibility", "LoginRequired", "Price", "价格默认可见性", "string", true),
+            ("Price.ShowNegotiableLabel", "true", "Price", "是否显示议价标签", "bool", true),
+            ("Price.NumericForSorting", "true", "Price", "是否启用数值化价格", "bool", true),
+            ("Price.ExtractPattern", @"¥(\d+(?:\.\d+)?)", "Price", "价格提取正则（需含首个捕获组）", "string", false),
+
+            // 数据同步（限流 + 可信度阈值）
+            ("RateLimit.Guest.RequestsPerMinute", "30", "Sync", "游客每分钟请求数", "int", true),
+            ("RateLimit.User.RequestsPerMinute", "60", "Sync", "用户每分钟请求数", "int", true),
+            ("RateLimit.Premium.RequestsPerMinute", "120", "Sync", "付费用户每分钟请求数", "int", true),
+            ("Reliability.AutoSyncThreshold", "85", "Sync", "自动同步阈值（可信度≥此值直接入库）", "int", false),
+            ("Reliability.ReviewThreshold", "60", "Sync", "人工审核阈值（可信度≥此值进入待审核）", "int", false),
+            ("Reliability.DefaultSourceScore", "80", "Sync", "来源默认基础分", "int", false),
+        ];
+
+        /// <summary>
+        /// 幂等补全系统配置键，避免已有库（SystemConfigs 非空、跳过主种子）缺少配置键导致不可编辑
         /// </summary>
         private static async Task EnsureConfigKeysAsync(ApplicationDbContext context)
         {
-            // 改动说明：新增可信度三阈值与站点展示信息两类配置键，对缺失项执行 INSERT WHERE NOT EXISTS
-            var defaults = new (string Key, string Value, string Group, string Description, string Type, bool IsPublic)[]
-            {
-                ("Reliability.AutoSyncThreshold", "85", "Reliability", "自动同步阈值（可信度≥此值直接入库）", "int", false),
-                ("Reliability.ReviewThreshold", "60", "Reliability", "人工审核阈值（可信度≥此值进入待审核）", "int", false),
-                ("Reliability.DefaultSourceScore", "80", "Reliability", "来源默认基础分", "int", false),
-                ("Site.BeiAn", "", "General", "备案号", "string", true),
-                ("Site.CustomerService", "", "General", "客服联系方式", "string", true),
-            };
-
-            foreach (var d in defaults)
+            foreach (var d in ConfigDefaults)
             {
                 if (!await context.SystemConfigs.AnyAsync(c => c.Key == d.Key))
                 {
-                    context.SystemConfigs.Add(new SystemConfig(d.Key, d.Value, d.Group, d.Description, d.Type, d.IsPublic));
+                    context.SystemConfigs.Add(new SystemConfig(d.Key, d.Value, d.Group, d.Description, d.ValueType, d.IsSystem));
                 }
             }
 
