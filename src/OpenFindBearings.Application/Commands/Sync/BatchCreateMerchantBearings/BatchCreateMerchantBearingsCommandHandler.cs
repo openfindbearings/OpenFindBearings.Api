@@ -1,8 +1,10 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
+using OpenFindBearings.Application.Services;
 using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
+using OpenFindBearings.Domain.Services;
 
 namespace OpenFindBearings.Application.Commands.Sync.BatchCreateMerchantBearings
 {
@@ -14,17 +16,20 @@ namespace OpenFindBearings.Application.Commands.Sync.BatchCreateMerchantBearings
         private readonly IMerchantRepository _merchantRepository;
         private readonly IBearingRepository _bearingRepository;
         private readonly IMerchantBearingRepository _merchantBearingRepository;
+        private readonly IPriceConfigProvider _priceConfigProvider;
         private readonly ILogger<BatchCreateMerchantBearingsCommandHandler> _logger;
 
         public BatchCreateMerchantBearingsCommandHandler(
             IMerchantRepository merchantRepository,
             IBearingRepository bearingRepository,
             IMerchantBearingRepository merchantBearingRepository,
+            IPriceConfigProvider priceConfigProvider,
             ILogger<BatchCreateMerchantBearingsCommandHandler> logger)
         {
             _merchantRepository = merchantRepository;
             _bearingRepository = bearingRepository;
             _merchantBearingRepository = merchantBearingRepository;
+            _priceConfigProvider = priceConfigProvider;
             _logger = logger;
         }
 
@@ -33,6 +38,11 @@ namespace OpenFindBearings.Application.Commands.Sync.BatchCreateMerchantBearings
             _logger.LogInformation("开始批量创建商家-轴承关联，数量: {Count}", request.MerchantBearings.Count);
 
             var result = new BatchResult();
+
+            // 改动说明：接入价格系统配置——在循环外读取一次（提供器内部有 5 分钟缓存），
+            //           供批量记录提取数值价格并设置默认可见性，避免逐条查库
+            var priceConfig = await _priceConfigProvider.GetAsync(cancellationToken);
+            var defaultVisibility = PriceParser.ParseVisibility(priceConfig.DefaultVisibility);
 
             foreach (var dto in request.MerchantBearings)
             {
@@ -89,6 +99,10 @@ namespace OpenFindBearings.Application.Commands.Sync.BatchCreateMerchantBearings
                                 dto.Remarks
                             );
 
+                            // 改动说明：同步数值价格与可见性，使批量导入的数据同样可被排序与可见性控制覆盖
+                            existing.SetNumericPrice(PriceParser.ExtractNumericPrice(dto.Price, priceConfig.ExtractPattern));
+                            existing.SetPriceVisibility(defaultVisibility);
+
                             if (!dto.IsOnSale && existing.IsOnSale)
                             {
                                 existing.TakeOffShelf();
@@ -121,6 +135,11 @@ namespace OpenFindBearings.Application.Commands.Sync.BatchCreateMerchantBearings
                                 dto.Remarks
                             );
                         }
+
+                        // 改动说明：新建关联时按配置提取数值价格并设置默认可见性，
+                        //           此前仅经 UpdateMarketInfo 赋值 PriceDescription，NumericPrice 恒为 null
+                        merchantBearing.SetNumericPrice(PriceParser.ExtractNumericPrice(dto.Price, priceConfig.ExtractPattern));
+                        merchantBearing.SetPriceVisibility(defaultVisibility);
 
                         if (!dto.IsOnSale)
                         {

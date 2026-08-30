@@ -52,10 +52,6 @@ else
 
 // 1. 全局异常处理（必须最前面，捕获所有异常）
 app.UseMiddleware<ExceptionHandlingMiddleware>();
-// 2. 限流中间件（在请求进入业务逻辑前拦截）
-app.UseMiddleware<RateLimitingMiddleware>();
-// 3. 日志中间件（请求日志和用户行为收集）
-app.UseMiddleware<ApiLoggingMiddleware>();
 
 // HTTPS 重定向
 app.UseHttpsRedirection();
@@ -66,6 +62,21 @@ app.UseCors("AllowSpecificOrigins");
 // 认证和授权
 app.UseAuthentication();      // 必须在这
 app.UseMiddleware<UserContextMiddleware>(); // 在认证之后，授权之前
+
+// 2. 日志中间件（请求日志和用户行为）
+// 改动说明：原实现注册在认证与用户上下文之前，导致其读取的 Items["UserId"]/Items["SessionId"]
+//           恒为空——这两个值只能由 UserContextMiddleware 写入。结果是 ApiCallLog 全部
+//           丢失用户维度，基于用户ID的地区偏好统计也永不触发。
+//           移至用户上下文之后可获得真实用户身份；同时保持在限流之前，使被限流的
+//           请求（429）仍能被完整记录
+app.UseMiddleware<ApiLoggingMiddleware>();
+
+// 3. 限流中间件
+// 改动说明：原实现注册在认证之前，导致 HttpContext.User 尚未填充、Items["UserId"] 也未写入，
+//           限流判定恒为"未登录游客"并按出口 IP 限流，RateLimit.User / Premium 配置完全不可达。
+//           移至认证与用户上下文之后，才能按真实用户身份与角色分配配额（API 官方推荐位置）。
+app.UseMiddleware<RateLimitingMiddleware>();
+
 app.UseAuthorization();       // 授权
 
 // 响应压缩

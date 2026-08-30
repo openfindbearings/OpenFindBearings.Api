@@ -55,8 +55,8 @@ using OpenFindBearings.Application.Queries.Queries;
 using OpenFindBearings.Application.Queries.Roles.GetAllRoles;
 using OpenFindBearings.Application.Queries.Roles.GetRoleDetail;
 using OpenFindBearings.Application.Queries.Roles.GetRoles;
-using OpenFindBearings.Application.Queries.SystemConfig.GetPriceConfig;
 using OpenFindBearings.Application.Queries.SystemConfig.GetSystemConfigs;
+using OpenFindBearings.Application.Services;
 using OpenFindBearings.Application.Queries.Users.GetUserPermissions;
 using OpenFindBearings.Application.Queries.Users.GetUserRoles;
 using OpenFindBearings.Domain.Enums;
@@ -828,6 +828,7 @@ namespace OpenFindBearings.Api.Endpoints
                 UpdateSystemConfigCommand command,
                 [FromServices] ICurrentUserService currentUser,
                 [FromServices] IMediator mediator,
+                [FromServices] IPriceConfigProvider priceConfigProvider,
                 HttpContext httpContext) =>
             {
                 if (!currentUser.UserId.HasValue)
@@ -839,6 +840,15 @@ namespace OpenFindBearings.Api.Endpoints
                     UpdatedBy = currentUser.UserId.Value
                 };
                 await mediator.Send(updateCommand);
+
+                // 改动说明：价格类配置变更后失效进程内缓存。
+                //           失效动作必须放在 mediator.Send 返回之后——事务由 UnitOfWorkBehavior
+                //           在 Handler 执行完毕后才提交，若放在 Handler 内会早于提交，
+                //           并发请求在提交前重新加载到的仍是旧值并缓存 5 分钟，
+                //           恰好复现"页面已显示新值、API 仍按旧值写库"的不一致窗口
+                if (key.StartsWith("Price.", StringComparison.OrdinalIgnoreCase))
+                    priceConfigProvider.Invalidate();
+
                 return ApiResponseHelper.Ok("配置更新成功", httpContext);
             })
             .WithName("UpdateSystemConfig")
@@ -874,12 +884,14 @@ namespace OpenFindBearings.Api.Endpoints
             /// <summary>
             /// 获取价格配置
             /// </summary>
+            /// 改动说明：原实现走 GetPriceConfigQuery（MediatR 查询，每次拉全表且无缓存），
+            ///           与商品创建链路使用的 IPriceConfigProvider 构成两套读取路径，
+            ///           且二者对空值的兜底处理不一致。此处统一改用带缓存的提供器，消除行为分叉
             group.MapGet("/config/price", async (
-                [FromServices] IMediator mediator,
+                [FromServices] IPriceConfigProvider priceConfigProvider,
                 HttpContext httpContext) =>
             {
-                var query = new GetPriceConfigQuery();
-                var result = await mediator.Send(query);
+                var result = await priceConfigProvider.GetAsync(httpContext.RequestAborted);
                 return ApiResponseHelper.Ok(result, httpContext: httpContext);
             })
             .WithName("GetPriceConfig")

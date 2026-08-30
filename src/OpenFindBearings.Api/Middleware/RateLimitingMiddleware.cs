@@ -24,6 +24,33 @@ namespace OpenFindBearings.Api.Middleware
         // 存储限流记录：Key = 用户标识, Value = 请求记录列表
         private static readonly ConcurrentDictionary<string, Queue<DateTime>> _requestRecords = new();
 
+        /// <summary>
+        /// 配置读取失败时的短缓存时长
+        /// 改动说明：原实现仅在成功路径推进过期时间，数据库不可用期间每个请求都会进锁重试查库，
+        ///           形成故障期查库洪泛。此处失败后同样设一个短过期窗口，故障期最多每 30 秒重试一次
+        /// </summary>
+        private static readonly TimeSpan _failureCacheDuration = TimeSpan.FromSeconds(30);
+
+        /// <summary>
+        /// 单个用户标识最多保留的请求记录数，防止极端情况下内存无界增长
+        /// </summary>
+        private const int MaxRecordsPerKey = 1000;
+
+        /// <summary>
+        /// 用户记录队列空闲多少分钟后从字典中移除
+        /// </summary>
+        private const int IdleMinutesBeforeRemoval = 5;
+
+        /// <summary>
+        /// 空闲记录清扫间隔
+        /// </summary>
+        private static readonly TimeSpan _cleanupInterval = TimeSpan.FromMinutes(5);
+
+        /// <summary>
+        /// 上次执行空闲清扫的时刻
+        /// </summary>
+        private static DateTime _lastCleanupTime = DateTime.UtcNow;
+
         public RateLimitingMiddleware(
             RequestDelegate next,
             ILogger<RateLimitingMiddleware> logger,
@@ -65,8 +92,8 @@ namespace OpenFindBearings.Api.Middleware
             // 获取该用户类型的限流阈值
             var limit = limits.GetValueOrDefault(userType, 30);
 
-            // 检查是否超过限流
-            if (IsRateLimitExceeded(userKey, limit, out var retryAfter))
+            // 改动说明：合并为一次原子调用，超限时方法内部不会写入本次请求记录
+            if (TryRecordRequest(userKey, limit, out var retryAfter))
             {
                 _logger.LogWarning("请求被限流: UserKey={UserKey}, UserType={UserType}, Limit={Limit}/min",
                     userKey, userType, limit);
@@ -83,9 +110,6 @@ namespace OpenFindBearings.Api.Middleware
                 });
                 return;
             }
-
-            // 记录本次请求
-            AddRequestRecord(userKey);
 
             await _next(context);
         }
@@ -143,6 +167,10 @@ namespace OpenFindBearings.Api.Middleware
                     ["merchant"] = 200,
                     ["admin"] = 500
                 };
+
+                // 改动说明：失败路径同样推进过期时间（用较短窗口），避免数据库不可用期间
+                //           每个请求都进锁重试查库造成故障期查库洪泛
+                _cacheExpireTime = DateTime.UtcNow.Add(_failureCacheDuration);
             }
             finally
             {
@@ -157,7 +185,12 @@ namespace OpenFindBearings.Api.Middleware
         /// </summary>
         private string GetUserKey(HttpContext context, ICurrentUserService currentUser)
         {
-            // 优先级：UserId > SessionId > IP
+            // 优先级：ClientId > UserId > SessionId > IP
+            // 改动说明：同步客户端（sync-client）没有业务用户ID，若落到 IP 维度会与同 NAT 出口的
+            //           匿名流量共享配额。ClientId 由 UserContextMiddleware 写入，优先用它计数
+            if (context.Items.TryGetValue("ClientId", out var clientId) && clientId is string cid && !string.IsNullOrEmpty(cid))
+                return $"client_{cid}";
+
             if (currentUser.UserId.HasValue)
                 return $"user_{currentUser.UserId.Value}";
 
@@ -169,70 +202,96 @@ namespace OpenFindBearings.Api.Middleware
 
         /// <summary>
         /// 获取用户类型
+        /// 改动说明：原实现在此处把"角色名"映射为限流档位，但 UserType 枚举与 User 实体字段移除后
+        ///           上游不再写入该值，导致所有登录用户恒被判为 guest。
+        ///           现在角色到档位的映射已上移到 UserContextMiddleware（依据 RBAC 角色推导），
+        ///           此处只保留未登录判定与兜底，直接透传上游结果
         /// </summary>
+        /// <param name="currentUser">当前用户服务</param>
+        /// <returns>限流分档标识</returns>
         private string GetUserType(ICurrentUserService currentUser)
         {
-            if (currentUser.IsAuthenticated)
-            {
-                // 根据用户类型返回限流级别
-                var userType = currentUser.UserType?.ToLower();
+            if (!currentUser.IsAuthenticated)
+                return RateLimitUserType.Guest;
 
-                return userType switch
-                {
-                    "admin" => "admin",
-                    "merchantstaff" => "merchant",
-                    var x when x != null && x.Contains("vip") => "vip",
-                    _ => "user"
-                };
-            }
-
-            return "guest";
+            return currentUser.UserType ?? RateLimitUserType.User;
         }
 
         /// <summary>
-        /// 检查是否超过限流
+        /// 尝试记录一次请求，并判断是否已超出限流阈值
         /// </summary>
-        private bool IsRateLimitExceeded(string key, int limit, out int retryAfter)
+        /// <param name="key">用户唯一标识</param>
+        /// <param name="limit">该用户类型每分钟允许的请求数</param>
+        /// <param name="retryAfter">超出限制时需要等待的秒数</param>
+        /// <returns>true 表示已超出限制，请求应被拒绝；false 表示已记录本次请求，可继续处理</returns>
+        private bool TryRecordRequest(string key, int limit, out int retryAfter)
         {
             retryAfter = 0;
 
-            if (!_requestRecords.TryGetValue(key, out var records))
+            // 改动说明：空闲清扫先于 limit 判定执行。原实现在不限制的路径上提前返回，
+            //           使被豁免的用户标识永久占据字典条目，无法回收
+            CleanupIdleRecords();
+
+            // limit 小于等于 0 视为不限制
+            if (limit <= 0)
                 return false;
 
-            // 清理超过1分钟的旧记录
-            var oneMinuteAgo = DateTime.UtcNow.AddMinutes(-1);
-            while (records.Count > 0 && records.Peek() < oneMinuteAgo)
-            {
-                records.Dequeue();
-            }
-
-            // 检查是否超过限制
-            if (records.Count >= limit)
-            {
-                // 计算需要等待的秒数
-                var oldestRecord = records.Peek();
-                retryAfter = (int)Math.Ceiling((oldestRecord.AddMinutes(1) - DateTime.UtcNow).TotalSeconds);
-                if (retryAfter < 1) retryAfter = 1;
-                return true;
-            }
-
-            return false;
-        }
-
-        /// <summary>
-        /// 添加请求记录
-        /// </summary>
-        private void AddRequestRecord(string key)
-        {
+            // 改动说明：滑动窗口的"读取 + 清理 + 写入"必须在同一把锁内完成。
+            //           原实现拆成两个方法，读取侧无锁而写入侧加锁，Queue&lt;T&gt; 非线程安全，
+            //           并发请求同时 Dequeue 与 Enqueue 会破坏内部状态，可能抛异常导致 500
             var records = _requestRecords.GetOrAdd(key, _ => new Queue<DateTime>());
             lock (records)
             {
-                records.Enqueue(DateTime.UtcNow);
-
-                // 限制队列大小，防止内存无限增长
-                while (records.Count > 1000)
+                // 清理超过 1 分钟的旧记录
+                var oneMinuteAgo = DateTime.UtcNow.AddMinutes(-1);
+                while (records.Count > 0 && records.Peek() < oneMinuteAgo)
                 {
                     records.Dequeue();
+                }
+
+                if (records.Count >= limit)
+                {
+                    var oldestRecord = records.Peek();
+                    retryAfter = (int)Math.Ceiling((oldestRecord.AddMinutes(1) - DateTime.UtcNow).TotalSeconds);
+                    if (retryAfter < 1) retryAfter = 1;
+                    return true;
+                }
+
+                records.Enqueue(DateTime.UtcNow);
+
+                // 限制单个队列长度，防止极端情况下内存无界增长
+                while (records.Count > MaxRecordsPerKey)
+                {
+                    records.Dequeue();
+                }
+
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 清扫长时间无请求的用户记录队列
+        /// 改动说明：原实现的记录字典只增不减，每个出现过的 IP 或用户永久占用一个队列条目，
+        ///           长期运行内存单调增长。此处按固定间隔移除空闲超过阈值的条目
+        /// </summary>
+        private static void CleanupIdleRecords()
+        {
+            var now = DateTime.UtcNow;
+            if (now - _lastCleanupTime < _cleanupInterval)
+                return;
+
+            _lastCleanupTime = now;
+            var idleThreshold = now.AddMinutes(-IdleMinutesBeforeRemoval);
+
+            foreach (var entry in _requestRecords)
+            {
+                lock (entry.Value)
+                {
+                    // 队列为空，或最后一条记录已超过空闲阈值，则该条目可回收
+                    if (entry.Value.Count == 0 || entry.Value.LastOrDefault() < idleThreshold)
+                    {
+                        _requestRecords.TryRemove(entry.Key, out _);
+                    }
                 }
             }
         }

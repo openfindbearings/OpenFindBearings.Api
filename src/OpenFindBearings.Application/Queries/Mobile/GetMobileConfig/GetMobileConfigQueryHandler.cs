@@ -72,6 +72,10 @@ namespace OpenFindBearings.Application.Queries.Mobile.GetMobileConfig
             var siteName = configs.FirstOrDefault(c => c.Key == "SiteName");
             if (siteName != null) result.SiteName = siteName.Value;
 
+            // 改动说明：补充站点描述，使 SiteDescription 配置项具备真实消费方
+            var siteDescription = configs.FirstOrDefault(c => c.Key == "SiteDescription");
+            if (siteDescription != null) result.SiteDescription = siteDescription.Value;
+
             var beiAn = configs.FirstOrDefault(c => c.Key == "Site.BeiAn");
             if (beiAn != null) result.SiteBeiAn = beiAn.Value;
 

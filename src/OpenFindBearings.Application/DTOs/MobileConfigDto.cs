@@ -15,6 +15,13 @@
         /// <summary>站点名称</summary>
         public string SiteName { get; set; } = string.Empty;
 
+        /// <summary>
+        /// 站点描述
+        /// 改动说明：补充该字段以消费 SystemConfigs 中的 SiteDescription 配置项，
+        ///           此前该配置键已入库但无任何读取方，属死配置
+        /// </summary>
+        public string SiteDescription { get; set; } = string.Empty;
+
         /// <summary>备案号</summary>
         public string SiteBeiAn { get; set; } = string.Empty;
 

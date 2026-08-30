@@ -46,6 +46,10 @@ namespace OpenFindBearings.Api.Middleware
             {
                 context.Items["ClientId"] = clientId;
                 context.Items["IsClient"] = true;
+                // 改动说明：同步客户端（sync-client）没有 NameIdentifier 声明，限流中间件会把它
+                //           判为未登录游客并按出口 IP 限流，与同 NAT 下的匿名流量共享配额。
+                //           此处显式写入用户类型，使限流按客户端标识而非 IP 计数
+                context.Items["UserType"] = RateLimitUserType.Merchant;
                 _logger.LogDebug("客户端认证: ClientId={ClientId}", clientId);
             }
             // 情况3：游客（未登录）
@@ -84,8 +88,10 @@ namespace OpenFindBearings.Api.Middleware
                     };
                     var userId = await mediator.Send(createCommand);
                     context.Items["UserId"] = userId;
-                    // ✅ 删除 UserType 设置
-                    // context.Items["UserType"] = Domain.Enums.UserType.Individual.ToString();
+                    // 改动说明：此处原为写入 UserType 枚举值，但 UserType 枚举与 User 实体字段均已移除，
+                    //           项目已改走 RBAC 角色体系，恢复原代码会编译失败。
+                    //           新创建用户尚未分配角色，按普通登录用户处理
+                    context.Items["UserType"] = RateLimitUserType.User;
 
                     _logger.LogInformation("首次登录，创建业务用户: AuthUserId={AuthUserId}, UserId={UserId}", authUserId, userId);
 
@@ -98,8 +104,11 @@ namespace OpenFindBearings.Api.Middleware
                 else
                 {
                     context.Items["UserId"] = user.Id;
-                    // ✅ 删除 UserType 设置
-                    // context.Items["UserType"] = user.UserType;
+
+                    // 改动说明：原为 context.Items["UserType"] = user.UserType，因 UserType 枚举已移除而失效，
+                    //           导致限流中间件读到的用户类型恒为 null，所有登录用户都被当作游客按 IP 限流。
+                    //           改为依据 RBAC 角色推导限流用户类型，恢复 User / Premium 配额的可达性
+                    context.Items["UserType"] = DeriveRateLimitUserType(user.Roles, user.MerchantId);
 
                     // 如果还有未迁移的游客数据，自动迁移
                     if (!string.IsNullOrEmpty(sessionId))
@@ -113,6 +122,34 @@ namespace OpenFindBearings.Api.Middleware
             {
                 _logger.LogError(ex, "处理正式用户失败: AuthUserId={AuthUserId}", authUserId);
             }
+        }
+
+        /// <summary>
+        /// 依据 RBAC 角色推导限流用户类型
+        /// </summary>
+        /// <param name="roles">用户拥有的角色名称集合</param>
+        /// <param name="merchantId">用户关联的商户ID，为空表示非商户员工</param>
+        /// <returns>限流分档标识；无法匹配任何特殊角色时返回普通用户档位</returns>
+        private static string DeriveRateLimitUserType(IReadOnlyList<string>? roles, Guid? merchantId)
+        {
+            if (roles == null || roles.Count == 0)
+                return RateLimitUserType.User;
+
+            var hasRole = new Func<string, bool>(name =>
+                roles.Any(r => string.Equals(r, name, StringComparison.OrdinalIgnoreCase)));
+
+            // 管理员优先。改动说明：MerchantAdmin 是种子数据中商户的默认角色
+            //           （SeedData 里 merchant1/merchant2 均为 MerchantAdmin），
+            //           若只识别 Admin/SuperAdmin，商户管理员会被错误降档到普通用户档
+            if (hasRole("Admin") || hasRole("SuperAdmin") || hasRole("MerchantAdmin"))
+                return RateLimitUserType.Admin;
+
+            // 改动说明：MerchantAdmin 已在上面判为管理员，此处补充是为避免将来调整优先级后漏判
+            if (merchantId.HasValue && (hasRole("MerchantStaff") || hasRole("MerchantAdmin")))
+                return RateLimitUserType.Merchant;
+
+            // 付费档位预留：当前无对应角色，统一按普通用户处理
+            return RateLimitUserType.User;
         }
 
         /// <summary>

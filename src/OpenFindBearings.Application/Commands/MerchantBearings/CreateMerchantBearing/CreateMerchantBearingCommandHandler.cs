@@ -1,9 +1,11 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.Commands.MerchantBearings.Commands;
+using OpenFindBearings.Application.Services;
 using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
+using OpenFindBearings.Domain.Services;
 
 namespace OpenFindBearings.Application.Commands.MerchantBearings.CreateMerchantBearing
 {
@@ -15,17 +17,20 @@ namespace OpenFindBearings.Application.Commands.MerchantBearings.CreateMerchantB
         private readonly IMerchantBearingRepository _merchantBearingRepository;
         private readonly IMerchantRepository _merchantRepository;
         private readonly IBearingRepository _bearingRepository;
+        private readonly IPriceConfigProvider _priceConfigProvider;
         private readonly ILogger<CreateMerchantBearingCommandHandler> _logger;
 
         public CreateMerchantBearingCommandHandler(
             IMerchantBearingRepository merchantBearingRepository,
             IMerchantRepository merchantRepository,
             IBearingRepository bearingRepository,
+            IPriceConfigProvider priceConfigProvider,
             ILogger<CreateMerchantBearingCommandHandler> logger)
         {
             _merchantBearingRepository = merchantBearingRepository;
             _merchantRepository = merchantRepository;
             _bearingRepository = bearingRepository;
+            _priceConfigProvider = priceConfigProvider;
             _logger = logger;
         }
 
@@ -73,6 +78,16 @@ namespace OpenFindBearings.Application.Commands.MerchantBearings.CreateMerchantB
                     request.MinOrderDescription,
                     request.Remarks);
             }
+
+            // 改动说明：接入价格系统配置——此前 NumericPrice 与 PriceVisibility 始终为实体默认值，
+            //           导致价格排序与可见性控制形同虚设。此处按 Price.ExtractPattern 提取数值价格，
+            //           并按 Price.DefaultVisibility 设置默认可见性
+            var priceConfig = await _priceConfigProvider.GetAsync(cancellationToken);
+            var numericPrice = PriceParser.ExtractNumericPrice(request.PriceDescription, priceConfig.ExtractPattern);
+            merchantBearing.SetPrice(
+                request.PriceDescription,
+                numericPrice,
+                PriceParser.ParseVisibility(priceConfig.DefaultVisibility));
 
             // 商户自管数据标记为 Manual
             merchantBearing.SetDataSourceType(DataSourceType.Manual);

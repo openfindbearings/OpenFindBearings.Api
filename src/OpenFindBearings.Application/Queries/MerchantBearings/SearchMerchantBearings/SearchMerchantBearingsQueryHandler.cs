@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.DTOs;
 using OpenFindBearings.Application.Extensions;
+using OpenFindBearings.Application.Services;
 using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Repositories;
 
@@ -13,6 +14,7 @@ namespace OpenFindBearings.Application.Queries.MerchantBearings.SearchMerchantBe
     public class SearchMerchantBearingsQueryHandler : IRequestHandler<SearchMerchantBearingsQuery, PagedResult<MerchantBearingDto>>
     {
         private readonly IMerchantBearingRepository _merchantBearingRepository;
+        private readonly IPriceConfigProvider _priceConfigProvider;
         //private readonly IBearingRepository _bearingRepository;
         //private readonly IMerchantRepository _merchantRepository;
         private readonly ILogger<SearchMerchantBearingsQueryHandler> _logger;
@@ -21,11 +23,13 @@ namespace OpenFindBearings.Application.Queries.MerchantBearings.SearchMerchantBe
             IMerchantBearingRepository merchantBearingRepository,
             IBearingRepository bearingRepository,
             IMerchantRepository merchantRepository,
+            IPriceConfigProvider priceConfigProvider,
             ILogger<SearchMerchantBearingsQueryHandler> logger)
         {
             _merchantBearingRepository = merchantBearingRepository;
             //_bearingRepository = bearingRepository;
             //_merchantRepository = merchantRepository;
+            _priceConfigProvider = priceConfigProvider;
             _logger = logger;
         }
 
@@ -78,7 +82,20 @@ namespace OpenFindBearings.Application.Queries.MerchantBearings.SearchMerchantBe
             }
 
             // 排序
-            merchantBearings = request.SortBy?.ToLower() switch
+            // 改动说明：按价格排序前检查 Price.NumericForSorting 配置开关，关闭时忽略 sortBy=price
+            //           回退到默认的时间倒序，使该配置项在服务端真正生效（不再依赖调用方自觉）
+            var effectiveSortBy = request.SortBy;
+            if (string.Equals(effectiveSortBy, "price", StringComparison.OrdinalIgnoreCase))
+            {
+                var priceConfig = await _priceConfigProvider.GetAsync(cancellationToken);
+                if (!priceConfig.NumericForSorting)
+                {
+                    _logger.LogInformation("价格排序已关闭（Price.NumericForSorting=false），回退为时间倒序");
+                    effectiveSortBy = null;
+                }
+            }
+
+            merchantBearings = effectiveSortBy?.ToLower() switch
             {
                 "price" => request.SortOrder?.ToLower() == "desc"
                     ? merchantBearings.OrderByDescending(mb => mb.NumericPrice)

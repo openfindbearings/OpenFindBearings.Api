@@ -54,6 +54,9 @@ namespace OpenFindBearings.Application.Queries.SystemConfig.GetSystemConfigs
                     Value = config.Value,
                     Description = config.Description,
                     Group = config.Group,
+                    // 改动说明：补充下发值类型与是否内置，供管理端按类型渲染编辑控件
+                    ValueType = config.ValueType,
+                    IsSystem = config.IsSystem,
                     UpdatedAt = config.UpdatedAt ?? config.CreatedAt,
                     UpdatedBy = updatedByName
                 });
