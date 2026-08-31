@@ -69,34 +69,4 @@ spec:
     - protocol: TCP
       port: 80
       targetPort: 8080
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: openfindbearings-api-ingress
-  namespace: openfindbearings
-  labels:
-    name: openfindbearings-api-ingress
-  annotations:
-    cert-manager.io/cluster-issuer: letsencrypt-prod
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
-    acme.cert-manager.io/http01-edit-in-place: "true" 
-    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
-spec:
-  ingressClassName: nginx
-  tls:
-  - hosts:
-      - api.515813.xyz
-    secretName: api-515813-xyz-tls
 
-  rules:
-  - host: "api.515813.xyz"
-    http:
-      paths:
-        - path: /
-          pathType: Prefix
-          backend:
-            service:
-               name: openfindbearings-api
-               port:
-                 number: 80
