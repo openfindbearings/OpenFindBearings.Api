@@ -1,10 +1,12 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.Services;
 using OpenFindBearings.Application.Shared.Interfaces;
 using OpenFindBearings.Domain.Repositories;
+using OpenFindBearings.Infrastructure.Persistence;
 using OpenFindBearings.Infrastructure.Persistence.Data;
 using OpenFindBearings.Infrastructure.Persistence.Repositories;
 using OpenFindBearings.Infrastructure.Services;
@@ -20,9 +22,13 @@ namespace OpenFindBearings.Infrastructure
         public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
         {
             // ============ 1. 添加DbContext ============
+            // 改动说明：PostgreSQL 服务器时区为 Asia/Shanghai，Npgsql 读 timestamptz 时按服务器时区
+            // 转为 +08 偏移。通过拦截器在连接打开时 SET timezone='UTC'，确保存取均为 UTC。
             services.AddDbContext<ApplicationDbContext>(options =>
             {
-                options.UseNpgsql(configuration.GetConnectionString("DefaultConnection"), b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName));
+                options.UseNpgsql(configuration.GetConnectionString("DefaultConnection"),
+                    b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName));
+                options.AddInterceptors(new UtcTimeZoneInterceptor());
             });
 
             // 注册 UnitOfWork
