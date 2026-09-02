@@ -1,3 +1,4 @@
+using OpenFindBearings.Api;
 using OpenFindBearings.Api.Extensions;
 using OpenFindBearings.Api.Middleware;
 using OpenFindBearings.Application;
@@ -16,6 +17,13 @@ builder.Services.AddApiServices(builder.Configuration);    // API 层服务
 
 // 添加跨域
 builder.Services.AddCorsService(builder.Configuration);
+
+// 改动说明：DateTime 统一输出为 UTC ISO 8601 带 Z 后缀，确保前端时区转换正确
+builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options =>
+{
+    options.SerializerOptions.Converters.Add(new UtcDateTimeConverter());
+    options.SerializerOptions.Converters.Add(new NullableUtcDateTimeConverter());
+});
 
 // 添加认证和授权
 builder.Services.AddAuthenticationAndAuthorization(builder.Configuration);
