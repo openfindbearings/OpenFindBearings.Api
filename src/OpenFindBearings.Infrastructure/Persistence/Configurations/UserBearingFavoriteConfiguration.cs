@@ -15,11 +15,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
 
             builder.HasKey(uf => uf.Id);
 
-            // 改动说明：BaseEntity 构造函数预赋了 Guid.Id，而 Npgsql 对 Guid 主键默认不启用
-            // 值生成器——EF 经导航集合发现新实体时按"主键已设值=库中已存在"判定为 Modified，
-            // 收藏写入变成 UPDATE 不存在行 → 并发异常整批回滚（收藏永远写不进库）。
-            // 声明 OnAdd 生成后判定回归 Added→INSERT；连接表 Id 保存前无人引用，覆盖安全
-            builder.Property(uf => uf.Id).ValueGeneratedOnAdd();
+            // 改动说明：曾经在此声明 Id.ValueGeneratedOnAdd() 试图让导航新增实体回归 Added，
+            // 实测无效（EF 导航修复判定与它无关，且该列无数据库默认值，INSERT 会省略 Id 列）。
+            // 现回滚为 Npgsql 默认值生成配置，连接表实体一律改为显式仓储 Add/Delete 写入
 
             builder.HasIndex(uf => new { uf.UserId, uf.BearingId })
                 .IsUnique()

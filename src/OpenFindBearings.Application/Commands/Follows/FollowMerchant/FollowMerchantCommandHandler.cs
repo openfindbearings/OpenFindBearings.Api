@@ -54,8 +54,13 @@ namespace OpenFindBearings.Application.Commands.Follows.FollowMerchant
                 throw new InvalidOperationException($"用户不存在: {request.UserId}");
             }
 
+            // 执行关注。
+            // 改动说明：同收藏修复——原先依赖导航集合 Add + UpdateAsync(user) 令 EF 自动 INSERT
+            // 连接表实体，但 BaseEntity 预赋 Guid.Id + Npgsql 无值生成器导致 EF 导航修复判为 Modified，
+            // UPDATE 不存在行→整批回滚。现显式 Add 关注实体，关注不修改 Users 行故移除 UpdateAsync
             user.FollowMerchant(request.MerchantId);
-            await _userRepository.UpdateAsync(user, cancellationToken);
+            var follow = user.FollowedMerchants.Last(f => f.MerchantId == request.MerchantId);
+            await _followRepository.AddAsync(follow, cancellationToken);
 
             _logger.LogInformation("用户关注商家成功: UserId={UserId}, MerchantId={MerchantId}",
                 request.UserId, request.MerchantId);

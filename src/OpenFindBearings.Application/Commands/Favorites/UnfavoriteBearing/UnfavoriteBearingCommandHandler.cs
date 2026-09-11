@@ -10,16 +10,13 @@ namespace OpenFindBearings.Application.Commands.Favorites.UnfavoriteBearing
     public class UnfavoriteBearingCommandHandler : IRequestHandler<UnfavoriteBearingCommand>
     {
         private readonly IUserBearingFavoriteRepository _favoriteRepository;
-        private readonly IUserRepository _userRepository;
         private readonly ILogger<UnfavoriteBearingCommandHandler> _logger;
 
         public UnfavoriteBearingCommandHandler(
             IUserBearingFavoriteRepository favoriteRepository,
-            IUserRepository userRepository,
             ILogger<UnfavoriteBearingCommandHandler> logger)
         {
             _favoriteRepository = favoriteRepository;
-            _userRepository = userRepository;
             _logger = logger;
         }
 
@@ -37,15 +34,10 @@ namespace OpenFindBearings.Application.Commands.Favorites.UnfavoriteBearing
                 return;
             }
 
-            // 获取用户实体
-            var user = await _userRepository.GetByIdAsync(request.UserId, cancellationToken);
-            if (user == null)
-            {
-                throw new InvalidOperationException($"用户不存在: {request.UserId}");
-            }
-
-            user.UnfavoriteBearing(request.BearingId);
-            await _userRepository.UpdateAsync(user, cancellationToken);
+            // 直接删除收藏连接表行。
+            // 改动说明：原先 user.UnfavoriteBearing() + UpdateAsync(user) 只从内存集合移除，
+            // 但该集合从未加载，对库零效果、删不掉行。显式走仓储 DeleteAsync 按主键删除
+            await _favoriteRepository.DeleteAsync(request.UserId, request.BearingId, cancellationToken);
 
             _logger.LogInformation("用户取消收藏轴承成功: UserId={UserId}, BearingId={BearingId}",
                 request.UserId, request.BearingId);

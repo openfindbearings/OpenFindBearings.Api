@@ -54,9 +54,14 @@ namespace OpenFindBearings.Application.Commands.Favorites.FavoriteBearing
                 throw new InvalidOperationException($"用户不存在: {request.UserId}");
             }
 
-            // 执行收藏
+            // 执行收藏。
+            // 改动说明：原先依赖"导航集合 Add + UpdateAsync(user)"令 EF 自动 INSERT 子实体，
+            // 但 BaseEntity 构造预赋 Guid.Id，Npgsql 不启用值生成器，EF 导航修复把新实体判为
+            // Modified→UPDATE 不存在行→并发异常整批回滚。现显式 Add 连接表实体，
+            // 收藏不修改 Users 行故移除多余 UpdateAsync，由 UnitOfWork 统一提交
             user.FavoriteBearing(request.BearingId);
-            await _userRepository.UpdateAsync(user, cancellationToken);
+            var favorite = user.FavoriteBearings.Last(f => f.BearingId == request.BearingId);
+            await _favoriteRepository.AddAsync(favorite, cancellationToken);
 
             _logger.LogInformation("用户收藏轴承成功: UserId={UserId}, BearingId={BearingId}",
                 request.UserId, request.BearingId);
