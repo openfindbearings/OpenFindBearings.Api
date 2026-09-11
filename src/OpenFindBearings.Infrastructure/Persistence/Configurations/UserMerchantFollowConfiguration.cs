@@ -15,10 +15,8 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
 
             builder.HasKey(uf => uf.Id);
 
-            // 改动说明：同 UserBearingFavoriteConfiguration——Npgsql Guid 主键默认无值生成器，
-            // 导航发现的新关注实体被判 Modified → UPDATE 不存在行 → 整批回滚。
-            // 声明 OnAdd 生成使其回归 Added→INSERT
-            builder.Property(uf => uf.Id).ValueGeneratedOnAdd();
+            // 改动说明：同 UserBearingFavoriteConfiguration——曾声明 ValueGeneratedOnAdd() 无效且埋雷，
+            // 已回滚为 Npgsql 默认值生成配置，关注实体一律显式仓储 Add/Delete 写入
 
             builder.HasIndex(uf => new { uf.UserId, uf.MerchantId })
                 .IsUnique()

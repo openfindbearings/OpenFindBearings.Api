@@ -10,16 +10,13 @@ namespace OpenFindBearings.Application.Commands.Follows.UnfollowMerchant
     public class UnfollowMerchantCommandHandler : IRequestHandler<UnfollowMerchantCommand>
     {
         private readonly IUserMerchantFollowRepository _followRepository;
-        private readonly IUserRepository _userRepository;
         private readonly ILogger<UnfollowMerchantCommandHandler> _logger;
 
         public UnfollowMerchantCommandHandler(
             IUserMerchantFollowRepository followRepository,
-            IUserRepository userRepository,
             ILogger<UnfollowMerchantCommandHandler> logger)
         {
             _followRepository = followRepository;
-            _userRepository = userRepository;
             _logger = logger;
         }
 
@@ -37,15 +34,10 @@ namespace OpenFindBearings.Application.Commands.Follows.UnfollowMerchant
                 return;
             }
 
-            // 获取用户实体
-            var user = await _userRepository.GetByIdAsync(request.UserId, cancellationToken);
-            if (user == null)
-            {
-                throw new InvalidOperationException($"用户不存在: {request.UserId}");
-            }
-
-            user.UnfollowMerchant(request.MerchantId);
-            await _userRepository.UpdateAsync(user, cancellationToken);
+            // 直接删除关注连接表行。
+            // 改动说明：同取消收藏——原先 user.UnfollowMerchant() + UpdateAsync(user) 只从
+            // 未加载的内存集合移除，对库零效果。显式走仓储 DeleteAsync 按主键删除
+            await _followRepository.DeleteAsync(request.UserId, request.MerchantId, cancellationToken);
 
             _logger.LogInformation("用户取消关注商家成功: UserId={UserId}, MerchantId={MerchantId}",
                 request.UserId, request.MerchantId);
