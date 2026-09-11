@@ -9,6 +9,8 @@ using OpenFindBearings.Application.Commands.Favorites.UnfavoriteBearing;
 using OpenFindBearings.Application.Commands.Follows.FollowMerchant;
 using OpenFindBearings.Application.Commands.Follows.UnfollowMerchant;
 using OpenFindBearings.Application.Commands.History.ClearHistory;
+using OpenFindBearings.Application.Commands.History.DeleteBearingHistory;
+using OpenFindBearings.Application.Commands.History.DeleteMerchantHistory;
 using OpenFindBearings.Application.Commands.History.RecordBearingView;
 using OpenFindBearings.Application.Commands.History.RecordMerchantView;
 using OpenFindBearings.Application.Commands.Users.UpdateUserProfile;
@@ -470,6 +472,54 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("RecordMerchantView")
             .WithSummary("记录商家浏览")
             .WithDescription("记录用户查看商家的历史（前端自动调用）");
+
+            /// <summary>
+            /// 删除单条轴承浏览历史（新增路由：历史页逐条删除用，按 userId+bearingId 收敛归属）
+            /// </summary>
+            group.MapDelete("/history/bearings/{bearingId:guid}", async (
+                Guid bearingId,
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                var command = new DeleteBearingHistoryCommand
+                {
+                    UserId = currentUser.UserId.Value,
+                    BearingId = bearingId
+                };
+                await mediator.Send(command);
+
+                return ApiResponseHelper.Ok("删除成功", httpContext);
+            })
+            .WithName("DeleteBearingHistory")
+            .WithSummary("删除单条轴承浏览历史");
+
+            /// <summary>
+            /// 删除单条商家浏览历史（新增路由：历史页逐条删除用，按 userId+merchantId 收敛归属）
+            /// </summary>
+            group.MapDelete("/history/merchants/{merchantId:guid}", async (
+                Guid merchantId,
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                var command = new DeleteMerchantHistoryCommand
+                {
+                    UserId = currentUser.UserId.Value,
+                    MerchantId = merchantId
+                };
+                await mediator.Send(command);
+
+                return ApiResponseHelper.Ok("删除成功", httpContext);
+            })
+            .WithName("DeleteMerchantHistory")
+            .WithSummary("删除单条商家浏览历史");
 
             /// <summary>
             /// 清空浏览历史
