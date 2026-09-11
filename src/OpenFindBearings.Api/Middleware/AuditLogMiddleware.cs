@@ -50,9 +50,11 @@ public class AuditLogMiddleware
             sw.Stop();
             try
             {
-                var subClaim = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
-                               ?? context.User.FindFirst("sub")?.Value;
-                Guid? operatorId = Guid.TryParse(subClaim, out var uid) ? uid : null;
+                // 改动说明：OperatorId 原取 JWT sub（Identity AuthUserId），但 FK_AuditLogs_Users
+                // 指向业务库 Users.Id——两 ID 仅种子 admin 恰好一致，新注册用户必炸 23503
+                // （收藏等写操作被审计写入拖崩）。改取 UserContextMiddleware 已映射的业务 UserId；
+                // 无映射（客户端凭证/游客写操作）时置 null（列可空，审计不阻断）
+                Guid? operatorId = context.Items["UserId"] as Guid?;
                 var userName = context.User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value
                                ?? context.User.FindFirst("preferred_username")?.Value;
 
