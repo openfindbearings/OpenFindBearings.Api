@@ -16,6 +16,18 @@ spec:
       labels:
         app: openfindbearings-api
     spec:
+      # 改动说明：头像/执照上传写 wwwroot/uploads——容器内 /app 属 root 而进程 uid 1654
+      # 无写权限（同 Identity dpkeys 事故根因），挂 hostPath 卷并由 initContainer 纠权限；
+      # 顺带获得持久化（Pod 重启上传图不丢）。镜像复用 API 自身（docker.io 不可达教训）
+      initContainers:
+      - name: uploads-init
+        image: ghcr.io/openfindbearings/openfindbearings-api:v1.0.0
+        command: ["sh", "-c", "chown -R 1654:1654 /app/wwwroot/uploads && chmod 700 /app/wwwroot/uploads"]
+        securityContext:
+          runAsUser: 0
+        volumeMounts:
+        - name: uploads
+          mountPath: /app/wwwroot/uploads
       containers:
       - name: openfindbearings-api
         image: ghcr.io/openfindbearings/openfindbearings-api:v1.0.0
@@ -55,6 +67,11 @@ spec:
           timeoutSeconds: 3
           successThreshold: 1
           failureThreshold: 3
+      volumes:
+      - name: uploads
+        hostPath:
+          path: /opt/openfindbearings/api/uploads
+          type: DirectoryOrCreate
 
 ---
 apiVersion: v1
