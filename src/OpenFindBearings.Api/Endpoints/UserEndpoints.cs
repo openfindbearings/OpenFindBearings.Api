@@ -86,6 +86,49 @@ namespace OpenFindBearings.Api.Endpoints
             .WithDescription("更新当前登录用户的昵称、头像、地址、职业、公司、行业等信息");
 
             /// <summary>
+            /// 上传当前用户头像图片，返回可访问的相对 URL（由前端/BFF 拼接主机名成绝对地址）。
+            /// 改动说明：移动端个人信息页需要真实换头像能力，照商家执照上传范式实现；
+            /// 文件名用 UtcNow 时间戳（遵守全项目 UTC 规则，执照端点的 DateTime.Now 为存量不改动）。
+            /// 注意：uploads 目录在容器文件系统内，Pod 重启丢失，持久化（PVC/OSS）列入待办。
+            /// </summary>
+            group.MapPost("/avatar", async (
+                IFormFile file,
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IWebHostEnvironment environment,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                if (file == null || file.Length == 0)
+                    return ApiResponseHelper.BadRequest("请上传文件", httpContext: httpContext);
+
+                var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
+                var fileExtension = Path.GetExtension(file.FileName).ToLower();
+                if (!allowedExtensions.Contains(fileExtension))
+                    return ApiResponseHelper.BadRequest("只支持 JPG、PNG、WEBP 格式", httpContext: httpContext);
+
+                if (file.Length > 2 * 1024 * 1024)
+                    return ApiResponseHelper.BadRequest("头像文件不能超过2MB", httpContext: httpContext);
+
+                var uploadsFolder = Path.Combine(environment.WebRootPath, "uploads", "avatars");
+                Directory.CreateDirectory(uploadsFolder);
+
+                var fileName = $"{currentUser.UserId.Value:N}_{DateTime.UtcNow:yyyyMMddHHmmss}{fileExtension}";
+                var filePath = Path.Combine(uploadsFolder, fileName);
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await file.CopyToAsync(stream);
+                }
+
+                var fileUrl = $"/uploads/avatars/{fileName}";
+                return ApiResponseHelper.Ok(new { url = fileUrl }, httpContext: httpContext);
+            })
+            .WithName("UploadUserAvatar")
+            .WithSummary("上传用户头像")
+            .WithDescription("上传当前用户头像图片（jpg/png/webp，≤2MB），返回相对访问 URL");
+
+            /// <summary>
             /// 获取当前用户权限列表
             /// </summary>
             group.MapGet("/permissions", async (
