@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Domain.Repositories;
+using OpenFindBearings.Domain.ValueObjects;
 
 namespace OpenFindBearings.Application.Commands.BearingTypes.UpdateBearingType
 {
@@ -32,6 +33,10 @@ namespace OpenFindBearings.Application.Commands.BearingTypes.UpdateBearingType
 
             // 更新名称和描述
             bearingType.Update(request.Name, request.Description);
+
+            // 覆盖保护：人工维护（Admin 编辑）过的数据标记为非爬虫来源，
+            // 使后续爬虫批量同步跳过，避免人工修改被爬虫数据覆盖
+            bearingType.SetDataSource(DataSource.FromManual());
 
             await _bearingTypeRepository.UpdateAsync(bearingType, cancellationToken);
 

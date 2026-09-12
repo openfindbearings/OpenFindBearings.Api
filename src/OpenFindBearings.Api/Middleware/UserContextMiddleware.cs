@@ -4,6 +4,7 @@ using OpenFindBearings.Application.Commands.Users.CreateUserFromAuth;
 using OpenFindBearings.Application.Commands.Users.MigrateGuestData;
 using OpenFindBearings.Application.Queries.Users.GetUserByAuthId;
 using OpenFindBearings.Application.Queries.Users.GetUserBySessionId;
+using OpenFindBearings.Domain.Repositories;
 using System.Security.Claims;
 
 namespace OpenFindBearings.Api.Middleware
@@ -25,7 +26,7 @@ namespace OpenFindBearings.Api.Middleware
             _logger = logger;
         }
 
-        public async Task InvokeAsync(HttpContext context, IMediator mediator)
+        public async Task InvokeAsync(HttpContext context, IMediator mediator, IMerchantMemberRepository memberRepository)
         {
             // 从JWT中获取用户认证ID
             var authUserId = context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -39,7 +40,7 @@ namespace OpenFindBearings.Api.Middleware
             // 情况1：正式用户（已登录）
             if (!string.IsNullOrEmpty(authUserId))
             {
-                await HandleAuthenticatedUserAsync(context, mediator, authUserId, sessionId);
+                await HandleAuthenticatedUserAsync(context, mediator, memberRepository, authUserId, sessionId);
             }
             // 情况2：客户端认证（同步程序）
             else if (!string.IsNullOrEmpty(clientId))
@@ -67,6 +68,7 @@ namespace OpenFindBearings.Api.Middleware
         private async Task HandleAuthenticatedUserAsync(
             HttpContext context,
             IMediator mediator,
+            IMerchantMemberRepository memberRepository,
             string authUserId,
             string? sessionId)
         {
@@ -93,6 +95,9 @@ namespace OpenFindBearings.Api.Middleware
                     //           新创建用户尚未分配角色，按普通登录用户处理
                     context.Items["UserType"] = RateLimitUserType.User;
 
+                    // 解析当前商户上下文（新用户无成员关系，结果为空属正常）
+                    await ResolveCurrentMerchantAsync(context, userId, memberRepository);
+
                     _logger.LogInformation("首次登录，创建业务用户: AuthUserId={AuthUserId}, UserId={UserId}", authUserId, userId);
 
                     // 自动迁移游客数据
@@ -110,6 +115,9 @@ namespace OpenFindBearings.Api.Middleware
                     //           改为依据 RBAC 角色推导限流用户类型，恢复 User / Premium 配额的可达性
                     context.Items["UserType"] = DeriveRateLimitUserType(user.Roles, user.MerchantId);
 
+                    // 解析当前商户上下文（支持一人多商户：X-Merchant-Id 指定或缺省首个）
+                    await ResolveCurrentMerchantAsync(context, user.Id, memberRepository);
+
                     // 如果还有未迁移的游客数据，自动迁移
                     if (!string.IsNullOrEmpty(sessionId))
                     {
@@ -121,6 +129,41 @@ namespace OpenFindBearings.Api.Middleware
             catch (Exception ex)
             {
                 _logger.LogError(ex, "处理正式用户失败: AuthUserId={AuthUserId}", authUserId);
+            }
+        }
+
+        /// <summary>
+        /// 解析当前商户上下文（CurrentMerchantId）
+        /// 优先采用请求头 X-Merchant-Id（必须是该用户的在职成员商户，否则回退缺省）；
+        /// 缺省取用户首个在职成员商户；无成员关系时为空
+        /// </summary>
+        private async Task ResolveCurrentMerchantAsync(
+            HttpContext context,
+            Guid userId,
+            IMerchantMemberRepository memberRepository)
+        {
+            try
+            {
+                var header = context.Request.Headers["X-Merchant-Id"].FirstOrDefault();
+                if (!string.IsNullOrWhiteSpace(header) && Guid.TryParse(header, out var requestedMerchantId))
+                {
+                    var member = await memberRepository.GetActiveByUserAndMerchantAsync(userId, requestedMerchantId);
+                    if (member != null)
+                    {
+                        context.Items["CurrentMerchantId"] = requestedMerchantId;
+                        return;
+                    }
+                }
+
+                var members = await memberRepository.GetActiveByUserIdAsync(userId);
+                if (members.Count > 0)
+                {
+                    context.Items["CurrentMerchantId"] = members[0].MerchantId;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "解析当前商户上下文失败: UserId={UserId}", userId);
             }
         }
 

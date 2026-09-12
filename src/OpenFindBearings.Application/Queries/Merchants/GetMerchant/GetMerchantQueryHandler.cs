@@ -34,6 +34,10 @@ namespace OpenFindBearings.Application.Queries.Merchants.GetMerchant
             if (merchant == null)
                 return null;
 
+            // 修复 B6：提名草稿（Draft）商户对 C 端不可见（资料未补全、未提交审核）
+            if (merchant.Status == Domain.Enums.MerchantStatus.Draft)
+                return null;
+
             // 获取商家在售产品列表
             var merchantBearings = await _merchantBearingRepository.GetOnSaleByMerchantAsync(request.Id, cancellationToken);
 

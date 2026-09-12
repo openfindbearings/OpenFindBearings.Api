@@ -18,6 +18,11 @@
         /// <summary>
         /// 待审核
         /// </summary>
-        Pending = 2
+        Pending = 2,
+
+        /// <summary>
+        /// 草稿（提名他人为管理员时的未生效商户，不可被C端检索、不被Sync合并）
+        /// </summary>
+        Draft = 3
     }
 }

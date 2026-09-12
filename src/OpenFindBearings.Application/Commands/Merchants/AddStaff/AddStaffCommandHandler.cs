@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.DTOs;
 using OpenFindBearings.Application.Services;
 using OpenFindBearings.Domain.Aggregates;
+using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
 
@@ -15,8 +16,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.AddStaff
     {
         private readonly IUserRepository _userRepository;
         private readonly IMerchantRepository _merchantRepository;
-        private readonly IRoleRepository _roleRepository;
-        private readonly IUserRoleRepository _userRoleRepository;
+        private readonly IMerchantMemberRepository _merchantMemberRepository;
         private readonly IStaffInvitationRepository _invitationRepository;
         private readonly IIdentityService _identityService;
         private readonly ILogger<AddStaffCommandHandler> _logger;
@@ -24,16 +24,14 @@ namespace OpenFindBearings.Application.Commands.Merchants.AddStaff
         public AddStaffCommandHandler(
             IUserRepository userRepository,
             IMerchantRepository merchantRepository,
-            IRoleRepository roleRepository,
-            IUserRoleRepository userRoleRepository,
+            IMerchantMemberRepository merchantMemberRepository,
             IStaffInvitationRepository invitationRepository,
             IIdentityService identityService,
             ILogger<AddStaffCommandHandler> logger)
         {
             _userRepository = userRepository;
             _merchantRepository = merchantRepository;
-            _roleRepository = roleRepository;
-            _userRoleRepository = userRoleRepository;
+            _merchantMemberRepository = merchantMemberRepository;
             _invitationRepository = invitationRepository;
             _identityService = identityService;
             _logger = logger;
@@ -45,8 +43,10 @@ namespace OpenFindBearings.Application.Commands.Merchants.AddStaff
             _logger.LogInformation("添加员工: MerchantId={MerchantId}, Contact={Contact}, OperatorId={OperatorId}",
                 request.MerchantId, contactInfo, request.OperatorId);
 
-            var operatorUser = await _userRepository.GetByIdAsync(request.OperatorId, cancellationToken);
-            if (operatorUser == null || operatorUser.MerchantId != request.MerchantId)
+            // 改动说明：由 User.MerchantId 单值校验改为成员表校验操作人是该商户在职管理员
+            var operatorMember = await _merchantMemberRepository.GetActiveByUserAndMerchantAsync(
+                request.OperatorId, request.MerchantId, cancellationToken);
+            if (operatorMember == null || !operatorMember.IsAdmin)
             {
                 throw new UnauthorizedAccessException("您无权添加员工");
             }
@@ -97,32 +97,53 @@ namespace OpenFindBearings.Application.Commands.Merchants.AddStaff
             if (user == null)
             {
                 var nickname = oidcUser.GetDisplayName();
-                // ✅ 修改：移除 userType 参数
                 user = new User(
                     authUserId: oidcUser.Sub,
-                    registrationSource: RegistrationSource.Admin,  // 管理员添加的员工
+                    registrationSource: RegistrationSource.Admin,
                     registerIp: null,
                     nickname: nickname);
                 await _userRepository.AddAsync(user, cancellationToken);
             }
 
-            if (user.MerchantId.HasValue && user.MerchantId != request.MerchantId)
-            {
-                throw new InvalidOperationException("该用户已是其他商家的员工");
-            }
-
-            if (!user.MerchantId.HasValue)
-            {
-                user.AssignToMerchant(request.MerchantId);
-                await _userRepository.UpdateAsync(user, cancellationToken);
-            }
-
-            await AssignRoleAsync(user, request.Role, cancellationToken);
+            // 改动说明：一人多商户，同一用户可属于多个商户，取消"已是其他商家的员工"硬约束；
+            //           商户域角色写入成员表，取代全局角色分配
+            var targetRole = request.Role ?? MerchantMember.RoleMerchantStaff;
+            await EnsureMemberAsync(user, request.MerchantId, targetRole, request.OperatorId, cancellationToken);
 
             _logger.LogInformation("员工添加成功: UserId={UserId}, MerchantId={MerchantId}",
                 user.Id, request.MerchantId);
 
             return AddStaffResult.Linked(user.Id);
+        }
+
+        /// <summary>
+        /// 确保用户成为该商户在职成员（复用 Removed 行，不新增第二行）
+        /// </summary>
+        private async Task EnsureMemberAsync(
+            User user,
+            Guid merchantId,
+            string role,
+            Guid invitedBy,
+            CancellationToken cancellationToken)
+        {
+            var existingMember = await _merchantMemberRepository.GetByUserAndMerchantAsync(user.Id, merchantId, cancellationToken);
+            if (existingMember == null)
+            {
+                var member = new MerchantMember(user.Id, merchantId, role, invitedBy);
+                await _merchantMemberRepository.AddAsync(member, cancellationToken);
+            }
+            else
+            {
+                existingMember.Rejoin(role, invitedBy);
+                await _merchantMemberRepository.UpdateAsync(existingMember, cancellationToken);
+            }
+
+            // 兼容遗留读取：User.MerchantId 与首个成员保持一致（成员表才是事实源）
+            if (user.MerchantId != merchantId)
+            {
+                user.AssignToMerchant(merchantId);
+                await _userRepository.UpdateAsync(user, cancellationToken);
+            }
         }
 
         private async Task<AddStaffResult> SendInvitationAsync(AddStaffCommand request, CancellationToken cancellationToken)
@@ -169,24 +190,6 @@ namespace OpenFindBearings.Application.Commands.Merchants.AddStaff
             }
 
             return AddStaffResult.InvitationSent(invitationId, emailSent, smsSent);
-        }
-
-        private async Task AssignRoleAsync(User user, string? roleName, CancellationToken cancellationToken)
-        {
-            var targetRole = roleName ?? "MerchantStaff";
-            var role = await _roleRepository.GetByNameAsync(targetRole, cancellationToken);
-            if (role == null)
-            {
-                _logger.LogWarning("角色不存在: {RoleName}", targetRole);
-                return;
-            }
-
-            var hasRole = await _userRoleRepository.UserHasRoleAsync(user.Id, role.Name, cancellationToken);
-            if (!hasRole)
-            {
-                await _userRoleRepository.AddUserToRoleAsync(user.Id, role.Id, cancellationToken);
-                _logger.LogDebug("角色已分配: UserId={UserId}, Role={RoleName}", user.Id, targetRole);
-            }
         }
     }
 }

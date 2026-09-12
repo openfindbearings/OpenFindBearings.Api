@@ -26,6 +26,8 @@ namespace OpenFindBearings.Api.Extensions
             services.AddScoped<ICurrentUserService, CurrentUserService>();
             services.AddScoped<IPermissionService, PermissionService>();
             services.AddScoped<IApiCallLogRepository, ApiCallLogRepository>();
+            // Sync 库存导入（服务间调用，sync-client 凭据）
+            services.AddScoped<ISyncInventoryService, SyncInventoryService>();
             // IStaffInvitationRepository 已在 Infrastructure.DependencyInjection 中注册
 
             // ============ IP 地区解析服务 ============

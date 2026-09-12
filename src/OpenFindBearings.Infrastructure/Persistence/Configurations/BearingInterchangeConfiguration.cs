@@ -29,6 +29,22 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             builder.Property(bi => bi.IsBidirectional)
                 .HasDefaultValue(true);
 
+            // ============ 值对象 - DataSource（覆盖保护） ============
+            builder.OwnsOne(bi => bi.DataSource, ds =>
+            {
+                ds.Property(d => d.SourceType)
+                    .HasColumnName("DataSourceType")
+                    .HasConversion<string>()
+                    .HasMaxLength(50);
+
+                ds.Property(d => d.ImportedBy)
+                    .HasColumnName("ImportedBy")
+                    .HasMaxLength(100);
+
+                ds.Property(d => d.ImportedAt)
+                    .HasColumnName("ImportedAt");
+            });
+
             // 创建唯一索引：确保同一对轴承只有一个替代关系
             builder.HasIndex(bi => new { bi.SourceBearingId, bi.TargetBearingId })
                 .IsUnique()

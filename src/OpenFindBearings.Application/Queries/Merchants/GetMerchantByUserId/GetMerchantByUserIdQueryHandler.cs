@@ -11,16 +11,16 @@ namespace OpenFindBearings.Application.Queries.Merchants.GetMerchantByUserId
     /// </summary>
     public class GetMerchantByUserIdQueryHandler : IRequestHandler<GetMerchantByUserIdQuery, MerchantDetailDto?>
     {
-        private readonly IUserRepository _userRepository;
+        private readonly IMerchantMemberRepository _merchantMemberRepository;
         private readonly IMerchantRepository _merchantRepository;
         private readonly ILogger<GetMerchantByUserIdQueryHandler> _logger;
 
         public GetMerchantByUserIdQueryHandler(
-            IUserRepository userRepository,
+            IMerchantMemberRepository merchantMemberRepository,
             IMerchantRepository merchantRepository,
             ILogger<GetMerchantByUserIdQueryHandler> logger)
         {
-            _userRepository = userRepository;
+            _merchantMemberRepository = merchantMemberRepository;
             _merchantRepository = merchantRepository;
             _logger = logger;
         }
@@ -29,11 +29,12 @@ namespace OpenFindBearings.Application.Queries.Merchants.GetMerchantByUserId
         {
             _logger.LogInformation("根据用户ID获取商家: UserId={UserId}", request.UserId);
 
-            var user = await _userRepository.GetByIdAsync(request.UserId, cancellationToken);
-            if (user == null || !user.MerchantId.HasValue)
+            // 改动说明：由 User.MerchantId 单值列改为按成员表定位（用户首个在职成员商户），支持一人多商户
+            var members = await _merchantMemberRepository.GetActiveByUserIdAsync(request.UserId, cancellationToken);
+            if (members.Count == 0)
                 return null;
 
-            var merchant = await _merchantRepository.GetByIdAsync(user.MerchantId.Value, cancellationToken);
+            var merchant = await _merchantRepository.GetByIdAsync(members[0].MerchantId, cancellationToken);
             if (merchant == null)
                 return null;
 

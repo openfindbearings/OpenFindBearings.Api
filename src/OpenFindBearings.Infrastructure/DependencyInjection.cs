@@ -69,6 +69,9 @@ namespace OpenFindBearings.Infrastructure
             // 邀请仓储
             services.AddScoped<IStaffInvitationRepository, StaffInvitationRepository>();
 
+            // 商户成员仓储（一人多商户的唯一事实源）
+            services.AddScoped<IMerchantMemberRepository, MerchantMemberRepository>();
+
             // ============ 3. 注册缓存服务 ============
 
             // 读取缓存配置

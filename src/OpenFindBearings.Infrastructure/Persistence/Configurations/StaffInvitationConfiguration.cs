@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using OpenFindBearings.Domain.Entities;
+using OpenFindBearings.Domain.Enums;
 
 namespace OpenFindBearings.Infrastructure.Persistence.Configurations
 {
@@ -44,6 +45,22 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             builder.Property(i => i.IsCompleted)
                 .HasDefaultValue(false)
                 .HasColumnName("IsCompleted");
+
+            builder.Property(i => i.Type)
+                .HasConversion<string>()
+                .HasMaxLength(20)
+                .HasDefaultValue(InvitationType.Staff)
+                .HasColumnName("Type");
+
+            builder.Property(i => i.Status)
+                .HasConversion<string>()
+                .HasMaxLength(20)
+                .HasDefaultValue(InvitationStatus.Pending)
+                .HasColumnName("Status");
+
+            builder.Property(i => i.InitiatorJoins)
+                .HasDefaultValue(true)
+                .HasColumnName("InitiatorJoins");
 
             builder.Property(i => i.CompletedSub)
                 .HasMaxLength(100)

@@ -272,6 +272,42 @@ namespace OpenFindBearings.Domain.Aggregates
         }
 
         /// <summary>
+        /// 标记为提名草稿（提名他人为管理员时使用，Draft 状态不可被C端检索、不被Sync合并）
+        /// </summary>
+        public void MarkAsDraft()
+        {
+            Status = MerchantStatus.Draft;
+            UpdateTimestamp();
+        }
+
+        /// <summary>
+        /// 提交审核（Draft -> Pending，提名被接受后由被提名人补全资料并提交）
+        /// </summary>
+        public void SubmitForApproval()
+        {
+            if (Status != MerchantStatus.Draft)
+                throw new InvalidOperationException($"当前状态为 {Status}，无法提交审核");
+
+            Status = MerchantStatus.Pending;
+            UpdateTimestamp();
+        }
+
+        /// <summary>
+        /// 重新开放认领（修复 B7：曾被拒绝的爬虫商家再次被认领时，
+        /// 清除拒绝标记恢复为待审核，重新走审核流程）
+        /// </summary>
+        public void ReopenForClaim()
+        {
+            if (Status != MerchantStatus.Suspended)
+                return;
+
+            Status = MerchantStatus.Pending;
+            SuspensionReason = null;
+            Activate();  // 基类方法，恢复为有效（拒绝时曾被 Deactivate）
+            UpdateTimestamp();
+        }
+
+        /// <summary>
         /// 审核拒绝（管理员调用）
         /// </summary>
         public void Reject(string reason)

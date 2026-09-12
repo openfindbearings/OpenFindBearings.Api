@@ -1,5 +1,6 @@
 ﻿using OpenFindBearings.Domain.Abstractions;
 using OpenFindBearings.Domain.Aggregates;
+using OpenFindBearings.Domain.ValueObjects;
 
 namespace OpenFindBearings.Domain.Entities
 {
@@ -69,6 +70,12 @@ namespace OpenFindBearings.Domain.Entities
         public bool IsBidirectional { get; private set; }
 
         /// <summary>
+        /// 数据来源（覆盖保护用）
+        /// 人工维护/审核过的替代品来源标记为非爬虫，爬虫批量同步不再覆盖
+        /// </summary>
+        public DataSource? DataSource { get; private set; }
+
+        /// <summary>
         /// 无参构造函数，仅供EF Core使用
         /// </summary>
         private BearingInterchange() { }
@@ -135,6 +142,15 @@ namespace OpenFindBearings.Domain.Entities
         public void UpdateRemarks(string? remarks)
         {
             Remarks = remarks;
+            UpdateTimestamp();
+        }
+
+        /// <summary>
+        /// 设置数据来源
+        /// </summary>
+        public void SetDataSource(DataSource dataSource)
+        {
+            DataSource = dataSource ?? throw new ArgumentNullException(nameof(dataSource));
             UpdateTimestamp();
         }
 

@@ -10,16 +10,16 @@ namespace OpenFindBearings.Application.Commands.MerchantBearings.TakeOffShelf
     public class TakeOffShelfCommandHandler : IRequestHandler<TakeOffShelfCommand>
     {
         private readonly IMerchantBearingRepository _merchantBearingRepository;
-        private readonly IUserRepository _userRepository;
+        private readonly IMerchantMemberRepository _merchantMemberRepository;
         private readonly ILogger<TakeOffShelfCommandHandler> _logger;
 
         public TakeOffShelfCommandHandler(
             IMerchantBearingRepository merchantBearingRepository,
-            IUserRepository userRepository,
+            IMerchantMemberRepository merchantMemberRepository,
             ILogger<TakeOffShelfCommandHandler> logger)
         {
             _merchantBearingRepository = merchantBearingRepository;
-            _userRepository = userRepository;
+            _merchantMemberRepository = merchantMemberRepository;
             _logger = logger;
         }
 
@@ -35,9 +35,10 @@ namespace OpenFindBearings.Application.Commands.MerchantBearings.TakeOffShelf
                 throw new InvalidOperationException($"商家-轴承关联不存在: {request.MerchantBearingId}");
             }
 
-            // 所有权验证：当前用户必须属于该商家
-            var currentUser = await _userRepository.GetByIdAsync(request.UserId, cancellationToken);
-            if (currentUser == null || currentUser.MerchantId != merchantBearing.MerchantId)
+            // 所有权验证：当前用户必须是该商户的在职成员（成员表判定，支持一人多商户）
+            var member = await _merchantMemberRepository.GetActiveByUserAndMerchantAsync(
+                request.UserId, merchantBearing.MerchantId, cancellationToken);
+            if (member == null)
             {
                 throw new UnauthorizedAccessException("无权修改其他商家的轴承信息");
             }

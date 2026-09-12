@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Domain.Repositories;
+using OpenFindBearings.Domain.ValueObjects;
 
 namespace OpenFindBearings.Application.Commands.Brands.UpdateBrand
 {
@@ -43,6 +44,10 @@ namespace OpenFindBearings.Application.Commands.Brands.UpdateBrand
             {
                 brand.UpdateName(request.Name);
             }
+
+            // 覆盖保护：人工维护（Admin 编辑）过的数据标记为非爬虫来源，
+            // 使后续爬虫批量同步跳过，避免人工修改被爬虫数据覆盖
+            brand.SetDataSource(DataSource.FromManual());
 
             await _brandRepository.UpdateAsync(brand, cancellationToken);
 

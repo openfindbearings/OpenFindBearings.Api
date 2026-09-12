@@ -2,7 +2,9 @@
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Domain.Aggregates;
 using OpenFindBearings.Domain.Entities;
+using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
+using OpenFindBearings.Domain.ValueObjects;
 
 namespace OpenFindBearings.Application.Commands.Sync.BatchCreateInterchanges
 {
@@ -38,6 +40,14 @@ namespace OpenFindBearings.Application.Commands.Sync.BatchCreateInterchanges
 
                 try
                 {
+                    // 本次写入来源类型（Manual/FileImport 透传，其余视为爬虫）
+                    var incomingSourceType = dto.DataSource switch
+                    {
+                        "Manual" => DataSourceType.Manual,
+                        "FileImport" => DataSourceType.FileImport,
+                        _ => DataSourceType.Crawler
+                    };
+
                     // 查找源轴承
                     var sourceBearing = await FindBearing(dto.SourcePartNumber, dto.SourceBrandCode, cancellationToken);
                     if (sourceBearing == null)
@@ -65,8 +75,24 @@ namespace OpenFindBearings.Application.Commands.Sync.BatchCreateInterchanges
 
                         if (existing != null)
                         {
+                            // 覆盖保护：人工维护的替代品不被爬虫同步覆盖
+                            if (existing.DataSource != null
+                                && existing.DataSource.SourceType != DataSourceType.Crawler)
+                            {
+                                result.AddSkipped(identifier, "人工维护数据，跳过爬虫覆盖保护");
+                                continue;
+                            }
+
                             existing.UpdateConfidence(dto.Confidence);
                             existing.UpdateRemarks(dto.Remarks);
+                            // 修复 B4：本次为人工维护来源时同步标记 DataSource，
+                            // 否则存量爬虫行被人工审核后仍无 Manual 标记，下一轮爬虫会再次覆盖（保护形同虚设）
+                            if (incomingSourceType != DataSourceType.Crawler)
+                            {
+                                existing.SetDataSource(incomingSourceType == DataSourceType.FileImport
+                                    ? DataSource.FromFileImport()
+                                    : DataSource.FromManual());
+                            }
                             await _interchangeRepository.UpdateAsync(existing, cancellationToken);
                             result.AddSuccess(identifier, "updated", existing.Id);
                         }
@@ -83,6 +109,14 @@ namespace OpenFindBearings.Application.Commands.Sync.BatchCreateInterchanges
                             dto.Remarks,
                             dto.IsBidirectional
                         );
+
+                        // 覆盖保护：按本次来源类型标记数据来源，供后续爬虫同步判定是否可覆盖
+                        interchange.SetDataSource(incomingSourceType switch
+                        {
+                            DataSourceType.Manual => DataSource.FromManual(),
+                            DataSourceType.FileImport => DataSource.FromFileImport(),
+                            _ => DataSource.FromCrawler(dto.Source ?? "cbia")
+                        });
 
                         await _interchangeRepository.AddAsync(interchange, cancellationToken);
                         result.AddSuccess(identifier, "created", interchange.Id);
