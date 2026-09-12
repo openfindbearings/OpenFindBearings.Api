@@ -6,6 +6,9 @@ using OpenFindBearings.Api.Middleware;
 using OpenFindBearings.Api.Services;
 using OpenFindBearings.Application.Commands.Admin.ApproveLicense;
 using OpenFindBearings.Application.Commands.Admin.RejectLicense;
+// 改动说明 G4：平台兜底指定商户成员（命令与实体引用）
+using OpenFindBearings.Application.Commands.Merchants.AssignMerchantMember;
+using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Application.Commands.Bearings.CreateBearing;
 using OpenFindBearings.Application.Commands.Bearings.DeleteBearing;
 using OpenFindBearings.Application.Commands.Bearings.HardDeleteBearing;
@@ -23,6 +26,7 @@ using OpenFindBearings.Application.Commands.Brands.RestoreBrand;
 using OpenFindBearings.Application.Commands.Brands.UpdateBrand;
 using OpenFindBearings.Application.Commands.Corrections.Commands;
 using OpenFindBearings.Application.Commands.Merchants.Commands;
+using OpenFindBearings.Application.Commands.Merchants.ApproveMerchant;
 using OpenFindBearings.Application.Commands.Merchants.DeleteMerchant;
 using OpenFindBearings.Application.Commands.Merchants.HardDeleteMerchant;
 using OpenFindBearings.Application.Commands.Merchants.RejectMerchant;
@@ -362,6 +366,47 @@ namespace OpenFindBearings.Api.Endpoints
             .WithSummary("彻底删除商家")
             .WithDescription("物理删除商家，不可恢复")
             .RequirePermission("data.harddelete");
+
+            /// <summary>
+            /// 审核通过入驻申请（Pending -> Active，使商户生效）
+            /// 与认证（verify）分离：approve 决定商户是否生效，verify 决定认证等级
+            /// </summary>
+            group.MapPost("/merchants/{id:guid}/approve", async (
+                Guid id,
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                var command = new ApproveMerchantCommand(id, currentUser.UserId.Value.ToString());
+                await mediator.Send(command);
+                return ApiResponseHelper.Ok("入驻审核通过，商户已生效", httpContext);
+            })
+            .WithName("ApproveMerchant")
+            .WithSummary("审核通过入驻申请")
+            .WithDescription("审核通过入驻申请，商户由待审核转为生效状态")
+            .RequirePermission("merchant.verify");
+
+            /// <summary>
+            /// 平台指定商户成员（G4 兜底：商户无在职管理员等异常时平台救援）
+            /// 已存在成员行则恢复/改角色，否则新建；复用 merchant.verify 权限（平台审核组）
+            /// </summary>
+            group.MapPost("/merchants/{id:guid}/members", async (
+                Guid id,
+                AddPlatformMemberRequest request,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                var command = new AssignMerchantMemberCommand(id, request.UserId, request.Role ?? MerchantMember.RoleMerchantAdmin);
+                var memberId = await mediator.Send(command);
+                return ApiResponseHelper.Ok(new { memberId, message = "平台成员操作完成" }, httpContext: httpContext);
+            })
+            .WithName("AssignMerchantMemberByPlatform")
+            .WithSummary("平台指定商户成员")
+            .WithDescription("平台在商户无管理员等异常场景下直接指定/恢复成员（兜底通道）")
+            .RequirePermission("merchant.verify");
 
             /// <summary>
             /// 认证商家
@@ -1313,4 +1358,9 @@ namespace OpenFindBearings.Api.Endpoints
             .RequirePermission("user.manage");
         }
     }
+
+    /// <summary>
+    /// 平台指定商户成员请求体（G4 兜底通道）
+    /// </summary>
+    public record AddPlatformMemberRequest(Guid UserId, string? Role);
 }

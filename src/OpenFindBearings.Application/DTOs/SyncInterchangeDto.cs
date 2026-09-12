@@ -49,5 +49,11 @@
         /// 是否双向替代
         /// </summary>
         public bool IsBidirectional { get; set; } = true;
+
+        /// <summary>
+        /// 数据来源类型（Manual/FileImport/Crawler）
+        /// 用于替代品覆盖保护：人工审核过的数据标记 Manual，爬虫同步不再覆盖
+        /// </summary>
+        public string? DataSource { get; set; }
     }
 }

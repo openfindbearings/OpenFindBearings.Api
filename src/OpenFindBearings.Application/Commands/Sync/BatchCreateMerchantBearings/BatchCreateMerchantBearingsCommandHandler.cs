@@ -49,6 +49,14 @@ namespace OpenFindBearings.Application.Commands.Sync.BatchCreateMerchantBearings
                 cancellationToken.ThrowIfCancellationRequested();
                 try
                 {
+                    // 本次写入来源类型（与创建分支同一判定：Manual/FileImport 透传，其余视为爬虫）
+                    var incomingSourceType = dto.DataSource switch
+                    {
+                        "Manual" => DataSourceType.Manual,
+                        "FileImport" => DataSourceType.FileImport,
+                        _ => DataSourceType.Crawler
+                    };
+
                     // 查找商家
                     var merchantsResult = await _merchantRepository.SearchAsync(
                         new Domain.Specifications.MerchantSearchParams
@@ -92,6 +100,15 @@ namespace OpenFindBearings.Application.Commands.Sync.BatchCreateMerchantBearings
 
                         if (existing != null)
                         {
+                            // 覆盖保护：商户自管在售数据（Manual/FileImport）不被本次爬虫导入覆盖，
+                            // 避免商户辛苦维护的价格/库存/备注被爬虫更新替换
+                            if (existing.DataSourceType is DataSourceType.Manual or DataSourceType.FileImport
+                                && incomingSourceType == DataSourceType.Crawler)
+                            {
+                                result.AddSkipped($"{dto.MerchantName}-{dto.BearingPartNumber}", "商户自管数据，跳过爬虫覆盖保护");
+                                continue;
+                            }
+
                             existing.UpdateMarketInfo(
                                 dto.Price,
                                 dto.Stock,
@@ -146,12 +163,7 @@ namespace OpenFindBearings.Application.Commands.Sync.BatchCreateMerchantBearings
                             merchantBearing.TakeOffShelf();
                         }
 
-                        merchantBearing.SetDataSourceType(dto.DataSource switch
-                        {
-                            "Manual" => DataSourceType.Manual,
-                            "FileImport" => DataSourceType.FileImport,
-                            _ => DataSourceType.Crawler
-                        });
+                        merchantBearing.SetDataSourceType(incomingSourceType);
 
                         await _merchantBearingRepository.AddAsync(merchantBearing, cancellationToken);
                         result.AddSuccess($"{dto.MerchantName}-{dto.BearingPartNumber}", "created", merchantBearing.Id);

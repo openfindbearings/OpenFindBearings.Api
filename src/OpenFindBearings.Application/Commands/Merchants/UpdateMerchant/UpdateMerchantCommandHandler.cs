@@ -79,6 +79,10 @@ namespace OpenFindBearings.Application.Commands.Merchants.UpdateMerchant
                 // merchant.UpdateType(request.Type.Value);
             }
 
+            // 覆盖保护：人工维护（Admin 编辑/商户自改）过的数据标记为非爬虫来源，
+            // 使后续爬虫批量同步跳过，避免人工修改被爬虫数据覆盖
+            merchant.SetDataSource(DataSource.FromManual());
+
             await _merchantRepository.UpdateAsync(merchant, cancellationToken);
 
             _logger.LogInformation("商家更新成功: {MerchantId}", merchant.Id);

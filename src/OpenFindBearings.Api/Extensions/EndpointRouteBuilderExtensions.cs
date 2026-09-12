@@ -25,6 +25,9 @@ namespace OpenFindBearings.Api.Extensions
             // 商家管理接口（需商家角色）
             app.MapMerchantEndpoints();
 
+            // 商户入驻接口（需登录，自助申请/认领/状态查询）
+            app.MapMerchantApplicationEndpoints();
+
             // 管理员接口（需管理员角色）
             app.MapAdminEndpoints();
 

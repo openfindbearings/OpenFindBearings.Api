@@ -17,5 +17,10 @@ namespace OpenFindBearings.Application.Commands.Merchants.RemoveStaff
         /// 操作人ID
         /// </summary>
         public Guid OperatorId { get; init; }
+
+        /// <summary>
+        /// 商户ID（当前商户上下文）
+        /// </summary>
+        public Guid MerchantId { get; init; }
     }
 }

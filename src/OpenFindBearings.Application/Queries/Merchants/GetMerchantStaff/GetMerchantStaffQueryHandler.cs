@@ -1,7 +1,6 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.DTOs;
-using OpenFindBearings.Domain.Aggregates;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Queries.Merchants.GetMerchantStaff
@@ -11,14 +10,14 @@ namespace OpenFindBearings.Application.Queries.Merchants.GetMerchantStaff
     /// </summary>
     public class GetMerchantStaffQueryHandler : IRequestHandler<GetMerchantStaffQuery, List<MerchantStaffDto>>
     {
-        private readonly IUserRepository _userRepository;
+        private readonly IMerchantMemberRepository _merchantMemberRepository;
         private readonly ILogger<GetMerchantStaffQueryHandler> _logger;
 
         public GetMerchantStaffQueryHandler(
-            IUserRepository userRepository,
+            IMerchantMemberRepository merchantMemberRepository,
             ILogger<GetMerchantStaffQueryHandler> logger)
         {
-            _userRepository = userRepository;
+            _merchantMemberRepository = merchantMemberRepository;
             _logger = logger;
         }
 
@@ -26,33 +25,19 @@ namespace OpenFindBearings.Application.Queries.Merchants.GetMerchantStaff
             GetMerchantStaffQuery request,
             CancellationToken cancellationToken)
         {
-            _logger.LogInformation("获取商家员工列表: MerchantId={MerchantId}", request.MerchantId);
+            _logger.LogInformation("获取商家成员列表: MerchantId={MerchantId}", request.MerchantId);
 
-            var staff = await _userRepository.GetByMerchantIdAsync(request.MerchantId, cancellationToken);
+            // 改动说明：由 User.MerchantId + 全局角色改为按成员表查询，角色取自成员行，支持一人多商户
+            var members = await _merchantMemberRepository.GetActiveByMerchantAsync(request.MerchantId, cancellationToken);
 
-            return staff.Select(s => new MerchantStaffDto
+            return members.Select(m => new MerchantStaffDto
             {
-                Id = s.Id,
-                Nickname = s.Nickname ?? string.Empty,
-                Avatar = s.Avatar,
-                Role = GetUserRole(s)
+                Id = m.UserId,
+                Nickname = m.User?.Nickname ?? string.Empty,
+                Avatar = m.User?.Avatar,
+                Role = m.IsAdmin ? "管理员" : "员工",
+                Status = m.Status.ToString()
             }).ToList();
-        }
-
-        private string GetUserRole(User user)
-        {
-            var roles = user.UserRoles
-                .Select(ur => ur.Role?.Name)
-                .Where(r => !string.IsNullOrEmpty(r))
-                .ToList();
-
-            if (!roles.Any())
-                return "员工";
-
-            if (roles.Contains("MerchantAdmin"))
-                return "管理员";
-
-            return "员工";
         }
     }
 }

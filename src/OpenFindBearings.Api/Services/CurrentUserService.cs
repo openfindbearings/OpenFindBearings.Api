@@ -44,6 +44,11 @@ namespace OpenFindBearings.Api.Services
         string? UserType { get; }
 
         /// <summary>
+        /// 当前商户上下文（商户级操作定位用，X-Merchant-Id 或首个在职成员商户）
+        /// </summary>
+        Guid? CurrentMerchantId { get; }
+
+        /// <summary>
         /// 客户端IP
         /// </summary>
         string? ClientIp { get; }
@@ -86,6 +91,16 @@ namespace OpenFindBearings.Api.Services
 
         /// <inheritdoc/>
         public string? UserType => _httpContextAccessor.HttpContext?.Items["UserType"] as string;
+
+        /// <inheritdoc/>
+        public Guid? CurrentMerchantId
+        {
+            get
+            {
+                var items = _httpContextAccessor.HttpContext?.Items;
+                return items != null && items["CurrentMerchantId"] is Guid merchantId ? merchantId : null;
+            }
+        }
 
         /// <inheritdoc/>
         public string? ClientIp => _httpContextAccessor.HttpContext?.GetClientIp();

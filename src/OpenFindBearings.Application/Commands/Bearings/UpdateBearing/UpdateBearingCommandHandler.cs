@@ -112,6 +112,10 @@ namespace OpenFindBearings.Application.Commands.Bearings.UpdateBearing
                 changedFields.Add("Images");
             }
 
+            // 覆盖保护：人工维护（Admin 编辑）过的数据标记为非爬虫来源，
+            // 使后续爬虫批量同步跳过，避免人工修改被爬虫数据覆盖
+            bearing.SetDataSource(DataSource.FromManual());
+
             await _bearingRepository.UpdateAsync(bearing, cancellationToken);
 
             _logger.LogInformation("轴承更新成功: {BearingId}", bearing.Id);

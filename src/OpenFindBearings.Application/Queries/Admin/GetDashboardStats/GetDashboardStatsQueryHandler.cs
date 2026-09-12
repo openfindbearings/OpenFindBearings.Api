@@ -16,6 +16,7 @@ namespace OpenFindBearings.Application.Queries.Admin.GetDashboardStats
         private readonly IBrandRepository _brandRepository;
         private readonly IBearingTypeRepository _bearingTypeRepository;
         private readonly ILicenseVerificationRepository _licenseRepository;
+        private readonly IMerchantMemberRepository _merchantMemberRepository;
         private readonly ILogger<GetDashboardStatsQueryHandler> _logger;
 
         public GetDashboardStatsQueryHandler(
@@ -27,6 +28,7 @@ namespace OpenFindBearings.Application.Queries.Admin.GetDashboardStats
             IBrandRepository brandRepository,
             IBearingTypeRepository bearingTypeRepository,
             ILicenseVerificationRepository licenseRepository,
+            IMerchantMemberRepository merchantMemberRepository,
             ILogger<GetDashboardStatsQueryHandler> logger)
         {
             _bearingRepository = bearingRepository;
@@ -37,6 +39,7 @@ namespace OpenFindBearings.Application.Queries.Admin.GetDashboardStats
             _brandRepository = brandRepository;
             _bearingTypeRepository = bearingTypeRepository;
             _licenseRepository = licenseRepository;
+            _merchantMemberRepository = merchantMemberRepository;
             _logger = logger;
         }
 
@@ -120,8 +123,10 @@ namespace OpenFindBearings.Application.Queries.Admin.GetDashboardStats
                 .ToList();
 
             var adminCount = roleDist.GetValueOrDefault("Admin", 0);
-            var staffCount = roleDist.GetValueOrDefault("MerchantStaff", 0);
             var individualCount = roleDist.GetValueOrDefault("Individual", 0);
+
+            // 改动说明：商户员工/管理员数量改按成员表统计（商户域角色已从全局角色迁到成员行）
+            var merchantMemberCount = await _merchantMemberRepository.CountActiveAsync(cancellationToken);
 
             return new DashboardStatsDto
             {
@@ -155,7 +160,7 @@ namespace OpenFindBearings.Application.Queries.Admin.GetDashboardStats
                 {
                     TotalCount = userTotal,
                     AdminCount = adminCount,
-                    MerchantStaffCount = staffCount,
+                    MerchantStaffCount = merchantMemberCount,
                     IndividualCount = individualCount,
                     TodayRegistered = userToday,
                     ActiveToday = 0

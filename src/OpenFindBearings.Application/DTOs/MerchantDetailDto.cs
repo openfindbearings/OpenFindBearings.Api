@@ -61,5 +61,10 @@
         /// 在商家的角色
         /// </summary>
         public string? Role { get; set; }
+
+        /// <summary>
+        /// 成员状态（Active / Suspended，成员管理展示用）
+        /// </summary>
+        public string Status { get; set; } = string.Empty;
     }
 }

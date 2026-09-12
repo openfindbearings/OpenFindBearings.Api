@@ -13,6 +13,8 @@ namespace OpenFindBearings.Application.Queries.Queries
     public class GetUserProfileQueryHandler : IRequestHandler<GetUserProfileQuery, UserDto?>
     {
         private readonly IUserRepository _userRepository;
+        private readonly IMerchantMemberRepository _merchantMemberRepository;
+        private readonly IMerchantRepository _merchantRepository;
         private readonly IUserBearingFavoriteRepository _favoriteRepository;
         private readonly IUserMerchantFollowRepository _followRepository;
         private readonly ICorrectionRequestRepository _correctionRepository;
@@ -20,12 +22,16 @@ namespace OpenFindBearings.Application.Queries.Queries
 
         public GetUserProfileQueryHandler(
             IUserRepository userRepository,
+            IMerchantMemberRepository merchantMemberRepository,
+            IMerchantRepository merchantRepository,
             IUserBearingFavoriteRepository favoriteRepository,
             IUserMerchantFollowRepository followRepository,
             ICorrectionRequestRepository correctionRepository,
             ILogger<GetUserProfileQueryHandler> logger)
         {
             _userRepository = userRepository;
+            _merchantMemberRepository = merchantMemberRepository;
+            _merchantRepository = merchantRepository;
             _favoriteRepository = favoriteRepository;
             _followRepository = followRepository;
             _correctionRepository = correctionRepository;
@@ -47,6 +53,10 @@ namespace OpenFindBearings.Application.Queries.Queries
             var followCount = await _followRepository.CountByUserIdAsync(user.Id, cancellationToken);
             var corrections = await _correctionRepository.GetByUserAsync(user.Id, cancellationToken);
 
+            // 改动说明：由 User.MerchantId 单值列改为成员表判定，支持一人多商户；
+            //           MerchantId/MerchantName 取首个在职成员商户（兼容 BFF/Taro 现单值读取）
+            var members = await _merchantMemberRepository.GetActiveByUserIdAsync(user.Id, cancellationToken);
+
             var roles = user.UserRoles.Select(ur => ur.Role.Name).ToList();
             var permissions = user.UserRoles
                 .SelectMany(ur => ur.Role.RolePermissions)
@@ -58,7 +68,15 @@ namespace OpenFindBearings.Application.Queries.Queries
             dto.FavoriteCount = favoriteCount;
             dto.FollowCount = followCount;
             dto.CorrectionCount = corrections.Count;
-            dto.UserType = user.IsGuest ? "Guest" : (user.IsAdmin ? "Admin" : (user.MerchantId.HasValue ? "MerchantStaff" : "Individual"));
+            dto.UserType = user.IsGuest ? "Guest" : (user.IsAdmin ? "Admin" : (members.Count > 0 ? "MerchantStaff" : "Individual"));
+
+            if (members.Count > 0)
+            {
+                dto.MerchantId = members[0].MerchantId;
+                var firstMerchant = await _merchantRepository.GetByIdAsync(members[0].MerchantId, cancellationToken);
+                dto.MerchantName = firstMerchant?.Name;
+            }
+
             return dto;
         }
     }

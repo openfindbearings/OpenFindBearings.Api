@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using OpenFindBearings.Api.Helpers;
 using OpenFindBearings.Api.Services;
@@ -7,11 +8,15 @@ using OpenFindBearings.Application.Commands.MerchantBearings.PutOnShelf;
 using OpenFindBearings.Application.Commands.MerchantBearings.SetPriceVisibility;
 using OpenFindBearings.Application.Commands.MerchantBearings.TakeOffShelf;
 using OpenFindBearings.Application.Commands.MerchantBearings.UpdateMerchantBearing;
+using OpenFindBearings.Application.Commands.Merchants.ActivateMerchantMember;
 using OpenFindBearings.Application.Commands.Merchants.AddStaff;
+using OpenFindBearings.Application.Commands.Merchants.ChangeMerchantMemberRole;
 using OpenFindBearings.Application.Commands.Merchants.Commands;
 using OpenFindBearings.Application.Commands.Merchants.RemoveStaff;
 using OpenFindBearings.Application.Commands.Merchants.SubmitLicense;
+using OpenFindBearings.Application.Commands.Merchants.SuspendMerchantMember;
 using OpenFindBearings.Application.Queries.MerchantBearings.GetMerchantBearingsByMerchant;
+using OpenFindBearings.Application.Queries.Merchants.GetMerchant;
 using OpenFindBearings.Application.Queries.Merchants.GetMerchantByUserId;
 using OpenFindBearings.Application.Queries.Merchants.GetMerchantStaff;
 
@@ -67,11 +72,7 @@ namespace OpenFindBearings.Api.Endpoints
                 if (!currentUser.UserId.HasValue)
                     return ApiResponseHelper.Unauthorized(httpContext: httpContext);
 
-                var merchantQuery = new GetMerchantByUserIdQuery
-                {
-                    UserId = currentUser.UserId.Value
-                };
-                var merchant = await mediator.Send(merchantQuery);
+                var merchant = await GetCurrentMerchantAsync(currentUser, mediator);
 
                 if (merchant == null)
                     return ApiResponseHelper.NotFound("未找到所属商家", httpContext);
@@ -123,7 +124,8 @@ namespace OpenFindBearings.Api.Endpoints
                     var uploadsFolder = Path.Combine(environment.WebRootPath, "uploads", "licenses");
                     Directory.CreateDirectory(uploadsFolder);
 
-                    var fileName = $"{merchant.Id}_{DateTime.Now:yyyyMMddHHmmss}{fileExtension}";
+                    // 时区规范修复：文件名时间戳统一 UTC（原 DateTime.Now 依赖服务器时区）
+                    var fileName = $"{merchant.Id}_{DateTime.UtcNow:yyyyMMddHHmmss}{fileExtension}";
                     var filePath = Path.Combine(uploadsFolder, fileName);
 
                     using (var stream = new FileStream(filePath, FileMode.Create))
@@ -175,11 +177,7 @@ namespace OpenFindBearings.Api.Endpoints
                 if (!currentUser.UserId.HasValue)
                     return ApiResponseHelper.Unauthorized(httpContext: httpContext);
 
-                var merchantQuery = new GetMerchantByUserIdQuery
-                {
-                    UserId = currentUser.UserId.Value
-                };
-                var merchant = await mediator.Send(merchantQuery);
+                var merchant = await GetCurrentMerchantAsync(currentUser, mediator);
 
                 if (merchant == null)
                     return ApiResponseHelper.NotFound("未找到所属商家", httpContext);
@@ -217,16 +215,12 @@ namespace OpenFindBearings.Api.Endpoints
                 if (!currentUser.UserId.HasValue)
                     return ApiResponseHelper.Unauthorized(httpContext: httpContext);
 
-                var merchantQuery = new GetMerchantByUserIdQuery
-                {
-                    UserId = currentUser.UserId.Value
-                };
-                var merchant = await mediator.Send(merchantQuery);
+                var merchant = await GetCurrentMerchantAsync(currentUser, mediator);
 
                 if (merchant == null)
                     return ApiResponseHelper.NotFound("未找到所属商家", httpContext);
 
-                var isAdmin = permissionService.IsMerchantAdmin();
+                var isAdmin = await permissionService.IsMerchantAdmin();
                 if (!isAdmin)
                 {
                     return ApiResponseHelper.Forbidden("需要商家管理员权限", httpContext);
@@ -258,7 +252,7 @@ namespace OpenFindBearings.Api.Endpoints
                 if (!currentUser.UserId.HasValue)
                     return ApiResponseHelper.Unauthorized(httpContext: httpContext);
 
-                var isAdmin = permissionService.IsMerchantAdmin();
+                var isAdmin = await permissionService.IsMerchantAdmin();
                 if (!isAdmin)
                 {
                     return ApiResponseHelper.Forbidden("需要商家管理员权限", httpContext);
@@ -267,7 +261,8 @@ namespace OpenFindBearings.Api.Endpoints
                 var command = new RemoveStaffCommand
                 {
                     UserId = userId,
-                    OperatorId = currentUser.UserId.Value
+                    OperatorId = currentUser.UserId.Value,
+                    MerchantId = currentUser.CurrentMerchantId ?? Guid.Empty
                 };
                 await mediator.Send(command);
 
@@ -276,6 +271,116 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("RemoveStaff")
             .WithSummary("移除员工")
             .WithDescription("从当前商家移除员工（需商家管理员权限）");
+
+            /// <summary>
+            /// 停用成员（管理员离职/异常处置，可恢复）
+            /// </summary>
+            group.MapPost("/members/{userId:guid}/suspend", async (
+                Guid userId,
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMediator mediator,
+                [FromServices] IPermissionService permissionService,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                var isAdmin = await permissionService.IsMerchantAdmin();
+                if (!isAdmin)
+                {
+                    return ApiResponseHelper.Forbidden("需要商家管理员权限", httpContext);
+                }
+
+                if (!currentUser.CurrentMerchantId.HasValue)
+                    return ApiResponseHelper.NotFound("未找到所属商家", httpContext);
+
+                var command = new SuspendMerchantMemberCommand
+                {
+                    UserId = userId,
+                    MerchantId = currentUser.CurrentMerchantId.Value,
+                    OperatorId = currentUser.UserId.Value
+                };
+                await mediator.Send(command);
+
+                return ApiResponseHelper.Ok("成员已停用", httpContext);
+            })
+            .WithName("SuspendMerchantMember")
+            .WithSummary("停用成员")
+            .WithDescription("停用商户成员，立即失去操作权限，可恢复（需商家管理员权限）");
+
+            /// <summary>
+            /// 恢复被停用的成员
+            /// </summary>
+            group.MapPost("/members/{userId:guid}/activate", async (
+                Guid userId,
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMediator mediator,
+                [FromServices] IPermissionService permissionService,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                var isAdmin = await permissionService.IsMerchantAdmin();
+                if (!isAdmin)
+                {
+                    return ApiResponseHelper.Forbidden("需要商家管理员权限", httpContext);
+                }
+
+                if (!currentUser.CurrentMerchantId.HasValue)
+                    return ApiResponseHelper.NotFound("未找到所属商家", httpContext);
+
+                var command = new ActivateMerchantMemberCommand
+                {
+                    UserId = userId,
+                    MerchantId = currentUser.CurrentMerchantId.Value,
+                    OperatorId = currentUser.UserId.Value
+                };
+                await mediator.Send(command);
+
+                return ApiResponseHelper.Ok("成员已恢复", httpContext);
+            })
+            .WithName("ActivateMerchantMember")
+            .WithSummary("恢复成员")
+            .WithDescription("恢复被停用的商户成员（需商家管理员权限）");
+
+            /// <summary>
+            /// 变更成员角色（管理员/员工）
+            /// </summary>
+            group.MapPut("/members/{userId:guid}/role", async (
+                Guid userId,
+                ChangeMerchantMemberRoleRequest request,
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMediator mediator,
+                [FromServices] IPermissionService permissionService,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                var isAdmin = await permissionService.IsMerchantAdmin();
+                if (!isAdmin)
+                {
+                    return ApiResponseHelper.Forbidden("需要商家管理员权限", httpContext);
+                }
+
+                if (!currentUser.CurrentMerchantId.HasValue)
+                    return ApiResponseHelper.NotFound("未找到所属商家", httpContext);
+
+                var command = new ChangeMerchantMemberRoleCommand
+                {
+                    UserId = userId,
+                    MerchantId = currentUser.CurrentMerchantId.Value,
+                    Role = request.Role,
+                    OperatorId = currentUser.UserId.Value
+                };
+                await mediator.Send(command);
+
+                return ApiResponseHelper.Ok("成员角色已变更", httpContext);
+            })
+            .WithName("ChangeMerchantMemberRole")
+            .WithSummary("变更成员角色")
+            .WithDescription("变更商户成员角色（需商家管理员权限）");
 
             // ============ 3.2 产品管理 ============
 
@@ -294,11 +399,7 @@ namespace OpenFindBearings.Api.Endpoints
                 if (!currentUser.UserId.HasValue)
                     return ApiResponseHelper.Unauthorized(httpContext: httpContext);
 
-                var merchantQuery = new GetMerchantByUserIdQuery
-                {
-                    UserId = currentUser.UserId.Value
-                };
-                var merchant = await mediator.Send(merchantQuery);
+                var merchant = await GetCurrentMerchantAsync(currentUser, mediator);
 
                 if (merchant == null)
                     return ApiResponseHelper.NotFound("未找到所属商家", httpContext);
@@ -339,11 +440,7 @@ namespace OpenFindBearings.Api.Endpoints
                 if (!currentUser.UserId.HasValue)
                     return ApiResponseHelper.Unauthorized(httpContext: httpContext);
 
-                var merchantQuery = new GetMerchantByUserIdQuery
-                {
-                    UserId = currentUser.UserId.Value
-                };
-                var merchant = await mediator.Send(merchantQuery);
+                var merchant = await GetCurrentMerchantAsync(currentUser, mediator);
 
                 if (merchant == null)
                     return ApiResponseHelper.NotFound("未找到所属商家", httpContext);
@@ -453,6 +550,75 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("TakeOffShelf")
             .WithSummary("下架轴承")
             .WithDescription("下架自家轴承产品");
+
+            /// <summary>
+            /// Excel 批量导入在售商品（仅商户管理员）
+            /// 解析能力复用 Sync /api/inventory/import，写库 DataSourceType=Manual（不被爬虫覆盖）
+            /// </summary>
+            group.MapPost("/inventory/import", async (
+                IFormFile file,
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IPermissionService permissionService,
+                [FromServices] ISyncInventoryService syncInventoryService,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                // 仅商户管理员可批量导入（员工走单条 CRUD）
+                var isAdmin = await permissionService.IsMerchantAdmin();
+                if (!isAdmin)
+                {
+                    return ApiResponseHelper.Forbidden("仅商户管理员可批量导入在售商品", httpContext);
+                }
+
+                if (!currentUser.CurrentMerchantId.HasValue)
+                    return ApiResponseHelper.NotFound("未找到所属商家", httpContext);
+
+                if (file == null || file.Length == 0)
+                    return ApiResponseHelper.BadRequest("请选择要上传的 Excel 文件", httpContext: httpContext);
+
+                var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+                if (ext != ".xlsx" && ext != ".xls")
+                    return ApiResponseHelper.BadRequest("只支持 .xlsx 或 .xls 格式", httpContext: httpContext);
+
+                using var stream = file.OpenReadStream();
+                var result = await syncInventoryService.ImportInventoryAsync(
+                    currentUser.CurrentMerchantId.Value,
+                    stream,
+                    file.FileName,
+                    httpContext.RequestAborted);
+
+                if (!result.Success)
+                    return ApiResponseHelper.Problem("库存导入失败", result.Message, httpContext);
+
+                return Results.Content(result.Message, "application/json");
+            })
+            .WithName("ImportMerchantInventory")
+            .WithSummary("Excel 批量导入在售商品")
+            .WithDescription("上传 Excel 批量导入在售商品（需商户管理员权限），导入数据标记为商户自管不被爬虫覆盖")
+            .DisableAntiforgery();
+        }
+
+        /// <summary>
+        /// 按当前商户上下文定位商户（一人多商户：X-Merchant-Id 或缺省首个在职成员商户）
+        /// 取代原按 User.MerchantId 单值列的定位方式
+        /// </summary>
+        private static async Task<OpenFindBearings.Application.DTOs.MerchantDetailDto?> GetCurrentMerchantAsync(
+            ICurrentUserService currentUser,
+            IMediator mediator)
+        {
+            var merchantId = currentUser.CurrentMerchantId;
+            if (!merchantId.HasValue)
+                return null;
+
+            var merchant = await mediator.Send(new GetMerchantQuery { Id = merchantId.Value, IsAuthenticated = true });
+            return merchant;
         }
     }
+
+    /// <summary>
+    /// 变更成员角色请求体
+    /// </summary>
+    public record ChangeMerchantMemberRoleRequest(string Role);
 }
