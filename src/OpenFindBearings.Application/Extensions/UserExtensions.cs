@@ -18,8 +18,6 @@ namespace OpenFindBearings.Application.Extensions
                 Occupation = user.Occupation,
                 CompanyName = user.CompanyName,
                 Industry = user.Industry,
-                MerchantId = user.MerchantId,
-                MerchantName = user.Merchant?.Name,
                 Roles = roles ?? new List<string>(),
                 Permissions = permissions ?? new List<string>(),
                 FavoriteCount = user.FavoriteCount,

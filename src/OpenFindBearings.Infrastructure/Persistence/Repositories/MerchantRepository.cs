@@ -20,21 +20,12 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         public async Task<Merchant?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
         {
             return await _context.Merchants
-                .Include(m => m.Staff)
                 .Include(m => m.MerchantBearings)
                 .FirstOrDefaultAsync(m => m.Id == id, cancellationToken);
         }
 
-        /// <summary>
-        /// 根据用户ID获取商家（通过员工关联）
-        /// </summary>
-        public async Task<Merchant?> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
-        {
-            return await _context.Merchants
-                .Include(m => m.Staff)
-                .Where(m => m.Staff.Any(s => s.Id == userId))
-                .FirstOrDefaultAsync(cancellationToken);
-        }
+        // 改动说明：移除 GetByUserIdAsync（依赖已废弃的 Merchant.Staff / User.MerchantId 单值关系）；
+        //   按用户定位商户统一走成员表（GetMerchantByUserId 查询处理器），全项目此方法零调用者
 
         /// <summary>
         /// 商家搜索

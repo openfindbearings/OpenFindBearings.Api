@@ -23,7 +23,6 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         public async Task<User?> GetByAuthUserIdAsync(string authUserId, CancellationToken cancellationToken = default)
         {
             return await _context.Users
-                .Include(u => u.Merchant)
                 .Include(u => u.UserRoles)
                     .ThenInclude(ur => ur.Role)
                 .FirstOrDefaultAsync(u => u.AuthUserId == authUserId && u.IsActive, cancellationToken);
@@ -33,20 +32,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         public async Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
         {
             return await _context.Users
-                .Include(u => u.Merchant)
                 .Include(u => u.UserRoles)
                     .ThenInclude(ur => ur.Role)
                 .FirstOrDefaultAsync(u => u.Id == id && u.IsActive, cancellationToken);
-        }
-
-        /// <inheritdoc/>
-        public async Task<IEnumerable<User>> GetByMerchantIdAsync(Guid merchantId, CancellationToken cancellationToken = default)
-        {
-            return await _context.Users
-                .Include(u => u.UserRoles)
-                    .ThenInclude(ur => ur.Role)
-                .Where(u => u.MerchantId == merchantId && u.IsActive)
-                .ToListAsync(cancellationToken);
         }
 
         /// <inheritdoc/>
@@ -145,7 +133,6 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
             };
 
             var items = await query
-                .Include(u => u.Merchant)
                 .Include(u => u.UserRoles)
                     .ThenInclude(ur => ur.Role)
                 .Skip((searchParams.Page - 1) * searchParams.PageSize)

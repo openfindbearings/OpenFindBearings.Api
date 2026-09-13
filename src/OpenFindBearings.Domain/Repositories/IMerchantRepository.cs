@@ -16,11 +16,6 @@ namespace OpenFindBearings.Domain.Repositories
         Task<Merchant?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// 根据用户ID获取商家（通过员工关联）
-        /// </summary>
-        Task<Merchant?> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
-
-        /// <summary>
         /// 搜索商家
         /// </summary>
         Task<PagedResult<Merchant>> SearchAsync(MerchantSearchParams searchParams, CancellationToken cancellationToken = default);

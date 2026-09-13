@@ -90,10 +90,8 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             builder.Property(u => u.MergedToUserId);
 
             // ============ 关系配置 ============
-            builder.HasOne(u => u.Merchant)
-                .WithMany(m => m.Staff)
-                .HasForeignKey(u => u.MerchantId)
-                .OnDelete(DeleteBehavior.Restrict);
+            // 改动说明：移除 User.Merchant <-> Merchant.Staff 关系（基于已废弃的 User.MerchantId 单值列）；
+            //   商户与用户的归属改由 MerchantMember 独立实体表达
 
             // 导航属性 - 角色关联
             builder.HasMany(u => u.UserRoles)
@@ -133,7 +131,6 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
 
             // ============ 索引 ============
             builder.HasIndex(u => u.IsGuest);
-            builder.HasIndex(u => u.MerchantId);
             builder.HasIndex(u => u.GuestSessionId);
 
             builder.HasIndex(u => u.Level);

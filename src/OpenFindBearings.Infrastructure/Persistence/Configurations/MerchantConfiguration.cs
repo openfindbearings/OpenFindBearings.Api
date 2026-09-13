@@ -130,11 +130,8 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             builder.HasIndex(m => m.Status);
             builder.HasIndex(m => m.UnifiedSocialCreditCode);
 
-            // 导航属性 - 员工（一对多）
-            builder.HasMany(m => m.Staff)
-                .WithOne(u => u.Merchant)
-                .HasForeignKey(u => u.MerchantId)
-                .OnDelete(DeleteBehavior.Restrict);
+            // 改动说明：移除 Merchant.Staff 一对多配置（依赖已废弃的 User.MerchantId 单值列）；
+            //   商户成员改由 MerchantMember 独立实体表达
 
             // 导航属性 - 产品关联（一对多）
             builder.HasMany(m => m.MerchantBearings)

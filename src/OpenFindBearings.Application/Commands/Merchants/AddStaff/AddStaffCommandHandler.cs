@@ -138,12 +138,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.AddStaff
                 await _merchantMemberRepository.UpdateAsync(existingMember, cancellationToken);
             }
 
-            // 兼容遗留读取：User.MerchantId 与首个成员保持一致（成员表才是事实源）
-            if (user.MerchantId != merchantId)
-            {
-                user.AssignToMerchant(merchantId);
-                await _userRepository.UpdateAsync(user, cancellationToken);
-            }
+            // 改动说明：移除对已废弃 User.MerchantId 单值列的镜像写——成员表 MerchantMember 是唯一事实源
         }
 
         private async Task<AddStaffResult> SendInvitationAsync(AddStaffCommand request, CancellationToken cancellationToken)

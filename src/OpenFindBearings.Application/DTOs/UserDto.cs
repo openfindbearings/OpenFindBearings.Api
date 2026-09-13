@@ -49,16 +49,6 @@ namespace OpenFindBearings.Application.DTOs
         public string? Industry { get; init; }
 
         /// <summary>
-        /// 所属商家ID（如果是商家员工）
-        /// </summary>
-        public Guid? MerchantId { get; set; }
-
-        /// <summary>
-        /// 所属商家名称
-        /// </summary>
-        public string? MerchantName { get; set; }
-
-        /// <summary>
         /// 拥有的角色
         /// </summary>
         public List<string> Roles { get; set; } = new();
