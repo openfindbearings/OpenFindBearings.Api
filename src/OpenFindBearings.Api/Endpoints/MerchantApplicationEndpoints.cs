@@ -104,7 +104,8 @@ namespace OpenFindBearings.Api.Endpoints
                     Mobile = request.Mobile,
                     Email = request.Email,
                     Address = request.Address,
-                    InitiatorJoins = request.InitiatorJoins
+                    InitiatorJoins = request.InitiatorJoins,
+                    TargetMerchantId = request.TargetMerchantId
                 };
 
                 var code = await mediator.Send(command);
@@ -237,7 +238,8 @@ namespace OpenFindBearings.Api.Endpoints
         string? Mobile = null,
         string? Email = null,
         string? Address = null,
-        bool InitiatorJoins = true);
+        bool InitiatorJoins = true,
+        Guid? TargetMerchantId = null);
 
     /// <summary>
     /// 接受提名请求体（被提名人补全资料）

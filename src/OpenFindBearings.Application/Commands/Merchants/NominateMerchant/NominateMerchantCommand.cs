@@ -69,5 +69,11 @@ namespace OpenFindBearings.Application.Commands.Merchants.NominateMerchant
         /// 发起人是否默认入伙为员工（审核通过时生效）
         /// </summary>
         public bool InitiatorJoins { get; init; } = true;
+
+        /// <summary>
+        /// 提名到已有商家ID（可选）。为空=提名新建（建 Draft 商户）；
+        /// 非空=提名认领某个已存在的未认证无主商家（不新建、不改来源，成员在审核通过时建）
+        /// </summary>
+        public Guid? TargetMerchantId { get; init; }
     }
 }

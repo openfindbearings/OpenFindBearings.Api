@@ -86,6 +86,10 @@ namespace OpenFindBearings.Application.Commands.Merchants.ApplyMerchant
                 logoUrl: null,
                 website: null);
 
+            // 改动说明：真人新建的商户即"人工维护"，来源置 Manual，杜绝被后续爬虫同步覆盖或夺走；
+            //   此前 ApplySelf 未设来源(null)，会被 BatchCreateMerchants 视为可覆盖并回填 Crawler（漏洞修复）
+            merchant.SetDataSource(DataSource.FromManual("apply-self"));
+
             await _merchantRepository.AddAsync(merchant, cancellationToken);
 
             var member = new MerchantMember(
@@ -114,9 +118,11 @@ namespace OpenFindBearings.Application.Commands.Merchants.ApplyMerchant
                 throw new InvalidOperationException("要认领的商家不存在");
             }
 
-            if (merchant.DataSource == null || !merchant.DataSource.IsCrawler)
+            // 改动说明：认领门由"来源=Crawler"改为"未认证"——可认领只看 IsVerified（与"是否被爬虫覆盖"的
+            //   DataSource 轴解耦）。已认证商家不可认领；未认证的开放商家（含爬虫来源）均可被真人认领。
+            if (merchant.IsVerified)
             {
-                throw new InvalidOperationException("只能认领爬虫来源的商家");
+                throw new InvalidOperationException("该商家已认证，无法认领");
             }
 
             // 修复 B8：显式检查在职成员，防止并发窗口内重复认领产生双管理员
@@ -141,6 +147,35 @@ namespace OpenFindBearings.Application.Commands.Merchants.ApplyMerchant
                     throw new InvalidOperationException("该商家已被他人认领");
                 }
             }
+
+            // 改动说明：认领即真人接管该商户——应用向导第三步核对/补全的资料（字段级合并，未编辑项
+            //   回填原值，避免 UpdateBasicInfo/UpdateContact 全量覆盖清空 logo/website/businessScope），
+            //   并置来源为 Manual，使其不再被 Sync 爬虫覆盖（覆盖保护以 DataSource 为键，认领人已接管）。
+            merchant.UpdateBasicInfo(
+                companyName: request.CompanyName ?? merchant.CompanyName,
+                unifiedSocialCreditCode: request.UnifiedSocialCreditCode ?? merchant.UnifiedSocialCreditCode,
+                description: request.Description ?? merchant.Description,
+                businessScope: merchant.BusinessScope,
+                logoUrl: merchant.LogoUrl,
+                website: merchant.Website);
+
+            var hasContact = !string.IsNullOrWhiteSpace(request.ContactPerson) ||
+                !string.IsNullOrWhiteSpace(request.Phone) ||
+                !string.IsNullOrWhiteSpace(request.Mobile) ||
+                !string.IsNullOrWhiteSpace(request.Email) ||
+                !string.IsNullOrWhiteSpace(request.Address);
+            if (hasContact)
+            {
+                var c = merchant.Contact;
+                merchant.UpdateContact(new ContactInfo(
+                    request.ContactPerson ?? c?.ContactPerson,
+                    request.Phone ?? c?.Phone,
+                    request.Mobile ?? c?.Mobile,
+                    request.Email ?? c?.Email,
+                    request.Address ?? c?.Address));
+            }
+
+            merchant.SetDataSource(DataSource.FromManual(request.ApplicantUserId.ToString()));
 
             var member = new MerchantMember(
                 request.ApplicantUserId,
