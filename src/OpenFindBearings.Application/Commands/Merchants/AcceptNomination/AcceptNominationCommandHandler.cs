@@ -15,6 +15,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.AcceptNomination
         private readonly IMerchantRepository _merchantRepository;
         private readonly ILicenseVerificationRepository _licenseRepository;
         private readonly IUserRepository _userRepository;
+        private readonly IMerchantMemberRepository _merchantMemberRepository;
         private readonly ILogger<AcceptNominationCommandHandler> _logger;
 
         public AcceptNominationCommandHandler(
@@ -22,12 +23,14 @@ namespace OpenFindBearings.Application.Commands.Merchants.AcceptNomination
             IMerchantRepository merchantRepository,
             ILicenseVerificationRepository licenseRepository,
             IUserRepository userRepository,
+            IMerchantMemberRepository merchantMemberRepository,
             ILogger<AcceptNominationCommandHandler> logger)
         {
             _invitationRepository = invitationRepository;
             _merchantRepository = merchantRepository;
             _licenseRepository = licenseRepository;
             _userRepository = userRepository;
+            _merchantMemberRepository = merchantMemberRepository;
             _logger = logger;
         }
 
@@ -65,9 +68,32 @@ namespace OpenFindBearings.Application.Commands.Merchants.AcceptNomination
             }
 
             var merchant = await _merchantRepository.GetByIdAsync(invitation.MerchantId, cancellationToken);
-            if (merchant == null || merchant.Status != MerchantStatus.Draft)
+            if (merchant == null)
             {
-                throw new InvalidOperationException("提名商户状态异常，无法接受");
+                throw new InvalidOperationException("提名商户不存在");
+            }
+
+            // 改动说明：区分两种提名目标——
+            //   Draft（提名新建）：接受即补资料并 Draft→Pending；
+            //   已有未认证商家（提名认领已有）：接受=预认领，保持其原状态（不 Draft→Pending）。
+            //   两种情况的成员行都由审核通过时统一创建（ApproveMerchant.CreateNominationMembersAsync）。
+            var isDraftNomination = merchant.Status == MerchantStatus.Draft;
+            if (isDraftNomination)
+            {
+                // 新建提名走 Draft→Pending，无需额外校验归属
+            }
+            else
+            {
+                // 已有商家提名：接受时再校验其仍未被认领/未认证（提名发出后状态可能已变动）
+                if (merchant.IsVerified)
+                {
+                    throw new InvalidOperationException("该商家已认证，无法接受提名");
+                }
+                var activeMembers = await _merchantMemberRepository.GetActiveByMerchantAsync(merchant.Id, cancellationToken);
+                if (activeMembers.Count > 0)
+                {
+                    throw new InvalidOperationException("该商家已被他人认领");
+                }
             }
 
             // 修复 B3：补资料场景做字段级合并（?? 原值），
@@ -95,7 +121,14 @@ namespace OpenFindBearings.Application.Commands.Merchants.AcceptNomination
                     request.Address ?? c?.Address));
             }
 
-            merchant.SubmitForApproval();
+            // 改动说明：接受提名=进入真人维护链路，来源置 Manual 使其不再被 Sync 爬虫覆盖
+            merchant.SetDataSource(OpenFindBearings.Domain.ValueObjects.DataSource.FromManual(request.NomineeUserId.ToString()));
+
+            // 仅"提名新建"需 Draft→Pending；"提名认领已有商家"保持其原状态（本就非 Draft）
+            if (isDraftNomination)
+            {
+                merchant.SubmitForApproval();
+            }
             await _merchantRepository.UpdateAsync(merchant, cancellationToken);
 
             // 记录被提名人 sub（审核通过时据此建管理员成员行）

@@ -117,14 +117,25 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
             if (pageSize < 1) pageSize = 20;
             if (pageSize > 100) pageSize = 100;
 
+            // 改动说明：可认领判定改由两根独立轴决定——是否被认领看 IsVerified（未认证=开放认领），
+            //   不再看来源是否为 Crawler（那是"是否被爬虫覆盖"的另一根轴，见 BatchCreate）。
+            //   认领池 = 未认证 && 非草稿(Draft) && 无在职成员 && 无进行中提名。
             var query = _context.Merchants.AsNoTracking()
-                .Where(m => m.DataSource != null && m.DataSource.SourceType == Domain.Enums.DataSourceType.Crawler)
-                // 修复 B6：排除提名草稿状态（理论上爬虫商户不会为 Draft，防御性过滤）
+                .Where(m => !m.IsVerified)
                 .Where(m => m.Status != MerchantStatus.Draft)
-                // 排除已被认领（存在在职成员）的爬虫商家
+                // 排除已被认领（存在在职成员）的商家，防止二次抢领
                 .Where(m => !_context.Set<OpenFindBearings.Domain.Entities.MerchantMember>().Any(mem =>
                     mem.MerchantId == m.Id &&
-                    mem.Status == OpenFindBearings.Domain.Enums.MerchantMemberStatus.Active));
+                    mem.Status == OpenFindBearings.Domain.Enums.MerchantMemberStatus.Active))
+                // 排除进行中提名（Pending/Accepted 且未过期的 Nomination 邀请）锁定的商家：
+                //   提名发出到审核生效期间仍属他人申请流程，不对外开放抢领（成员在审核通过时才建，
+                //   故此窗口无在职成员，需靠该邀请状态排除，否则别人可趁隙认领同一商家）
+                .Where(m => !_context.Set<OpenFindBearings.Domain.Entities.StaffInvitation>().Any(si =>
+                    si.MerchantId == m.Id &&
+                    si.Type == OpenFindBearings.Domain.Enums.InvitationType.Nomination &&
+                    (si.Status == OpenFindBearings.Domain.Enums.InvitationStatus.Pending ||
+                     si.Status == OpenFindBearings.Domain.Enums.InvitationStatus.Accepted) &&
+                    si.CreatedAt.AddDays(7) >= DateTime.UtcNow));
 
             if (!string.IsNullOrWhiteSpace(keyword))
             {

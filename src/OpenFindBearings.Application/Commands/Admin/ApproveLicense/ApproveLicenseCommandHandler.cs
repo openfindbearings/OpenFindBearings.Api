@@ -41,6 +41,8 @@ namespace OpenFindBearings.Application.Commands.Admin.ApproveLicense
             if (merchant != null && !merchant.IsVerified)
             {
                 merchant.Verify(request.ReviewedBy.ToString());
+                // 改动说明：认证通过=平台人工核实，置 Manual 使该商户此后不被 Sync 爬虫覆盖（与认领轴解耦）
+                merchant.SetDataSource(OpenFindBearings.Domain.ValueObjects.DataSource.FromManual(request.ReviewedBy.ToString()));
                 await _merchantRepository.UpdateAsync(merchant, cancellationToken);
 
                 _logger.LogInformation("商家已认证: MerchantId={MerchantId}", merchant.Id);

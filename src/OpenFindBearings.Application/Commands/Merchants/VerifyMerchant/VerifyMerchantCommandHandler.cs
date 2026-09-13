@@ -31,6 +31,9 @@ namespace OpenFindBearings.Application.Commands.Merchants.VerifyMerchant
             }
 
             merchant.Verify(request.VerifiedBy);
+            // 改动说明：认证=平台人工核实确认，此后该商户资料属"人工维护"，来源置 Manual，
+            //   使其不再被 Sync 爬虫同步覆盖（覆盖保护以 DataSource 为键，与认领轴解耦）。
+            merchant.SetDataSource(OpenFindBearings.Domain.ValueObjects.DataSource.FromManual(request.VerifiedBy));
             await _merchantRepository.UpdateAsync(merchant, cancellationToken);
 
             _logger.LogInformation("商家认证成功: {MerchantId}", request.Id);
