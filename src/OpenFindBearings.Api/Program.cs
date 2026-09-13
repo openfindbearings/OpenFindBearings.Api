@@ -4,6 +4,7 @@ using OpenFindBearings.Api.Middleware;
 using OpenFindBearings.Application;
 using OpenFindBearings.Infrastructure;
 using OpenFindBearings.Infrastructure.Persistence.Data;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -40,6 +41,32 @@ builder.Services.AddHealthChecksService(builder.Configuration);
 // ============ 构建应用 ============
 var app = builder.Build();
 app.Logger.LogInformation("启动 OpenFindBearings API");
+
+// ============ 启动时自动迁移数据库 ============
+// 改动说明：此前 schema 靠手工/CI 应用，生产库曾停留在 InitialCreate，导致 MerchantMembers 等
+//   新表缺失、相关接口（认领搜索等）在运行时 500。改为启动即把库追平到代码内最新迁移，
+//   杜绝"库落后于代码"这类部署事故。当前为单副本部署，直接顺序执行 Migrate 即可；
+//   若将来扩到多副本，需在 Migrate 外加 Postgres advisory lock 或改为部署前一次性迁移 Job，
+//   以避免滚动更新时新旧 Pod 并发迁移。迁移异常直接抛出使启动失败，快速暴露而非带错误 schema 服务。
+using (var migrateScope = app.Services.CreateScope())
+{
+    var db = migrateScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    if (db.Database.IsRelational())
+    {
+        // 改动说明：GetPendingMigrationsAsync 返回 IAsyncEnumerable 不可 await，改用同步枚举以支持 Any/Count
+        var pendingMigrations = db.Database.GetPendingMigrations().ToList();
+        if (pendingMigrations.Count > 0)
+        {
+            app.Logger.LogInformation("检测到待应用迁移 {Count} 项，开始迁移数据库", pendingMigrations.Count);
+            await db.Database.MigrateAsync();
+            app.Logger.LogInformation("数据库迁移完成，已应用：{Migrations}", string.Join(", ", pendingMigrations));
+        }
+        else
+        {
+            app.Logger.LogDebug("数据库已是最新，无需迁移");
+        }
+    }
+}
 
 // 转发头
 app.UseForwardedHeaders();

@@ -21,7 +21,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
                     //await context.Database.EnsureDeletedAsync();
                 }
 
-                await context.Database.MigrateAsync();
+                // 改动说明：迁移已上移到 Program.cs 的启动块统一执行（失败即抛出、快速暴露），
+                //   此处不再重复 MigrateAsync——原先它被外层 try/catch 吞异常，正是生产库曾停在
+                //   InitialCreate、缺 MerchantMembers 表导致相关接口 500 的根因。SeedData 只负责种子。
 
                 await ExecuteAsync(context, logger, isDevelopment);
 
