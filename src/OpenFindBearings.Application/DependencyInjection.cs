@@ -37,8 +37,8 @@ namespace OpenFindBearings.Application
             //// 注册 UnitOfWorkBehavior（后提交）
             //services.AddScoped(typeof(IPipelineBehavior<,>), typeof(UnitOfWorkBehavior<,>));
 
-            // 业务自定义权限检查
-            services.AddScoped<PermissionChecker>();
+            // 改动说明：移除 PermissionChecker 注册——该类依赖已废弃的 User.MerchantId 且全项目无任何注入使用，
+            //   权限判定统一由 Api 层 PermissionService（查成员表）承担
 
             return services;
         }

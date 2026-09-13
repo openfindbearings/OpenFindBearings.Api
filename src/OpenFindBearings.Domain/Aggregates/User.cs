@@ -138,15 +138,8 @@ namespace OpenFindBearings.Domain.Aggregates
         /// </summary>
         public Guid? MergedToUserId { get; private set; }
 
-        /// <summary>
-        /// 所属商家ID（仅商家员工）
-        /// </summary>
-        public Guid? MerchantId { get; private set; }
-
-        /// <summary>
-        /// 所属商家导航属性
-        /// </summary>
-        public Merchant? Merchant { get; private set; }
+        // 改动说明：移除废弃的 MerchantId 单值列 + Merchant 导航属性（"一人一商户"旧模型）；
+        //   "谁属于哪个商户、什么角色"的唯一事实源已是 MerchantMember 成员表
 
         // ============ 导航属性（管理的子实体） ============
 
@@ -190,11 +183,6 @@ namespace OpenFindBearings.Domain.Aggregates
 
         public int FavoriteCount => _favoriteBearings.Count;
         public int FollowCount => _followedMerchants.Count;
-
-        /// <summary>
-        /// 是否为商家员工（通过角色和商家ID判断）
-        /// </summary>
-        public bool IsMerchantStaff => MerchantId.HasValue && _userRoles.Any(r => r.Role?.Name == "MerchantStaff");
 
         /// <summary>
         /// 是否为管理员（通过角色判断）
@@ -366,23 +354,8 @@ namespace OpenFindBearings.Domain.Aggregates
             UpdateTimestamp();
         }
 
-        /// <summary>
-        /// 关联到商家
-        /// </summary>
-        public void AssignToMerchant(Guid merchantId)
-        {
-            MerchantId = merchantId;
-            UpdateTimestamp();
-        }
-
-        /// <summary>
-        /// 从商家移除
-        /// </summary>
-        public void RemoveFromMerchant()
-        {
-            MerchantId = null;
-            UpdateTimestamp();
-        }
+        // 改动说明：移除 AssignToMerchant / RemoveFromMerchant——它们写的是已废弃的 User.MerchantId 单值列，
+        //   商户归属改由 MerchantMember 成员表表达
 
         /// <summary>
         /// 标记为已合并（游客数据已迁移到正式账户）

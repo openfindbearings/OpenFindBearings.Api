@@ -136,11 +136,8 @@ namespace OpenFindBearings.Domain.Aggregates
 
         // ============ 导航属性 ============
 
-        /// <summary>
-        /// 员工列表
-        /// </summary>
-        private readonly List<User> _staff = [];
-        public IReadOnlyCollection<User> Staff => _staff.AsReadOnly();
+        // 改动说明：移除 Staff 导航（原 List<User>，依赖已废弃的 User.MerchantId 单值反向关系）；
+        //   商户成员改由独立的 MerchantMember 表建模
 
         /// <summary>
         /// 产品目录
@@ -406,36 +403,8 @@ namespace OpenFindBearings.Domain.Aggregates
             UpdateTimestamp();
         }
 
-        // ============ 员工管理 ============
-
-        /// <summary>
-        /// 添加员工
-        /// </summary>
-        internal void AddStaff(User user)
-        {
-            if (user == null)
-                throw new ArgumentNullException(nameof(user));
-
-            if (!_staff.Contains(user))
-            {
-                _staff.Add(user);
-                user.AssignToMerchant(Id);
-                UpdateTimestamp();
-            }
-        }
-
-        /// <summary>
-        /// 移除员工
-        /// </summary>
-        internal void RemoveStaff(User user)
-        {
-            if (user != null && _staff.Contains(user))
-            {
-                _staff.Remove(user);
-                user.RemoveFromMerchant();
-                UpdateTimestamp();
-            }
-        }
+        // 改动说明：移除原"员工管理"节（AddStaff/RemoveStaff + _staff 集合）——
+        //   它们依赖已废弃的 User.MerchantId 单值关系；商户成员改由 MerchantMember 成员表承载（见成员仓储与端点）
 
         // ============ 产品管理 ============
 

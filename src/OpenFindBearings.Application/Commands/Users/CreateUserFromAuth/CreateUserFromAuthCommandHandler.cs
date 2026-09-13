@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.Shared.Constants;
 using OpenFindBearings.Domain.Aggregates;
+using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Commands.Users.CreateUserFromAuth
@@ -14,17 +15,20 @@ namespace OpenFindBearings.Application.Commands.Users.CreateUserFromAuth
         private readonly IUserRepository _userRepository;
         private readonly IRoleRepository _roleRepository;
         private readonly IStaffInvitationRepository _invitationRepository;
+        private readonly IMerchantMemberRepository _merchantMemberRepository;
         private readonly ILogger<CreateUserFromAuthCommandHandler> _logger;
 
         public CreateUserFromAuthCommandHandler(
             IUserRepository userRepository,
             IRoleRepository roleRepository,
             IStaffInvitationRepository invitationRepository,
+            IMerchantMemberRepository merchantMemberRepository,
             ILogger<CreateUserFromAuthCommandHandler> logger)
         {
             _userRepository = userRepository;
             _roleRepository = roleRepository;
             _invitationRepository = invitationRepository;
+            _merchantMemberRepository = merchantMemberRepository;
             _logger = logger;
         }
 
@@ -58,7 +62,17 @@ namespace OpenFindBearings.Application.Commands.Users.CreateUserFromAuth
                     var invitation = await _invitationRepository.GetByCodeAsync(request.InviteCode, cancellationToken);
                     if (invitation != null && !invitation.IsCompleted && !invitation.IsExpired())
                     {
-                        user.AssignToMerchant(invitation.MerchantId);
+                        // 改动说明：受邀员工注册时不再写已废弃的 User.MerchantId 单值列，改为建 MerchantMember 成员行
+                        //   （成员表才是归属与鉴权的事实源）；角色取邀请记录的 Role，缺省为商户员工
+                        var member = new MerchantMember(
+                            user.Id,
+                            invitation.MerchantId,
+                            string.IsNullOrWhiteSpace(invitation.Role)
+                                ? MerchantMember.RoleMerchantStaff
+                                : invitation.Role,
+                            invitation.OperatorId);
+                        await _merchantMemberRepository.AddAsync(member, cancellationToken);
+
                         invitation.Complete(request.AuthUserId);
                         await _invitationRepository.UpdateAsync(invitation, cancellationToken);
                         _logger.LogInformation("员工邀请码已处理: UserId={UserId}, MerchantId={MerchantId}",

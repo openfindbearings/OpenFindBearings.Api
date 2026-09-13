@@ -24,11 +24,6 @@ namespace OpenFindBearings.Domain.Repositories
         Task<User?> GetByGuestSessionIdAsync(string sessionId, CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// 获取商家的所有员工
-        /// </summary>
-        Task<IEnumerable<User>> GetByMerchantIdAsync(Guid merchantId, CancellationToken cancellationToken = default);
-
-        /// <summary>
         /// 获取所有管理员
         /// </summary>
         Task<IEnumerable<User>> GetAdminsAsync(CancellationToken cancellationToken = default);

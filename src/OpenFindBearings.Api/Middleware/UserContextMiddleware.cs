@@ -110,13 +110,14 @@ namespace OpenFindBearings.Api.Middleware
                 {
                     context.Items["UserId"] = user.Id;
 
-                    // 改动说明：原为 context.Items["UserType"] = user.UserType，因 UserType 枚举已移除而失效，
-                    //           导致限流中间件读到的用户类型恒为 null，所有登录用户都被当作游客按 IP 限流。
-                    //           改为依据 RBAC 角色推导限流用户类型，恢复 User / Premium 配额的可达性
-                    context.Items["UserType"] = DeriveRateLimitUserType(user.Roles, user.MerchantId);
+                    // 解析当前商户上下文（支持一人多商户：X-Merchant-Id 指定或缺省首个），
+                    //   返回该用户是否有在职商户成员关系（v2.1.0 起限流分档改用成员表，不再读已废弃的 User.MerchantId）
+                    var hasMerchantMembership = await ResolveCurrentMerchantAsync(context, user.Id, memberRepository);
 
-                    // 解析当前商户上下文（支持一人多商户：X-Merchant-Id 指定或缺省首个）
-                    await ResolveCurrentMerchantAsync(context, user.Id, memberRepository);
+                    // 改动说明：限流分档原依据 RBAC 角色 + User.MerchantId 推导；User.MerchantId 已废弃移除，
+                    //           改为"平台管理员角色→Admin 档 / 有在职商户成员→Merchant 档 / 其余→User 档"，
+                    //           商户身份一律以成员表为准（与"业务鉴权不信全局 role"的原则对齐）
+                    context.Items["UserType"] = DeriveRateLimitUserType(user.Roles, hasMerchantMembership);
 
                     // 如果还有未迁移的游客数据，自动迁移
                     if (!string.IsNullOrEmpty(sessionId))
@@ -136,8 +137,9 @@ namespace OpenFindBearings.Api.Middleware
         /// 解析当前商户上下文（CurrentMerchantId）
         /// 优先采用请求头 X-Merchant-Id（必须是该用户的在职成员商户，否则回退缺省）；
         /// 缺省取用户首个在职成员商户；无成员关系时为空
+        /// 返回值：该用户是否为任一商户的在职成员（供限流分档使用）
         /// </summary>
-        private async Task ResolveCurrentMerchantAsync(
+        private async Task<bool> ResolveCurrentMerchantAsync(
             HttpContext context,
             Guid userId,
             IMerchantMemberRepository memberRepository)
@@ -151,7 +153,7 @@ namespace OpenFindBearings.Api.Middleware
                     if (member != null)
                     {
                         context.Items["CurrentMerchantId"] = requestedMerchantId;
-                        return;
+                        return true;
                     }
                 }
 
@@ -159,36 +161,34 @@ namespace OpenFindBearings.Api.Middleware
                 if (members.Count > 0)
                 {
                     context.Items["CurrentMerchantId"] = members[0].MerchantId;
+                    return true;
                 }
+                return false;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "解析当前商户上下文失败: UserId={UserId}", userId);
+                return false;
             }
         }
 
         /// <summary>
-        /// 依据 RBAC 角色推导限流用户类型
+        /// 依据平台级 RBAC 角色 + 商户成员关系推导限流用户类型
         /// </summary>
-        /// <param name="roles">用户拥有的角色名称集合</param>
-        /// <param name="merchantId">用户关联的商户ID，为空表示非商户员工</param>
-        /// <returns>限流分档标识；无法匹配任何特殊角色时返回普通用户档位</returns>
-        private static string DeriveRateLimitUserType(IReadOnlyList<string>? roles, Guid? merchantId)
+        /// <param name="roles">用户拥有的平台级角色名称集合</param>
+        /// <param name="isMerchant">是否为任一商户的在职成员（成员表判定，非废弃的 User.MerchantId）</param>
+        /// <returns>限流分档标识；无法匹配任何特殊身份时返回普通用户档位</returns>
+        private static string DeriveRateLimitUserType(IReadOnlyList<string>? roles, bool isMerchant)
         {
-            if (roles == null || roles.Count == 0)
-                return RateLimitUserType.User;
-
             var hasRole = new Func<string, bool>(name =>
-                roles.Any(r => string.Equals(r, name, StringComparison.OrdinalIgnoreCase)));
+                roles != null && roles.Any(r => string.Equals(r, name, StringComparison.OrdinalIgnoreCase)));
 
-            // 管理员优先。改动说明：MerchantAdmin 是种子数据中商户的默认角色
-            //           （SeedData 里 merchant1/merchant2 均为 MerchantAdmin），
-            //           若只识别 Admin/SuperAdmin，商户管理员会被错误降档到普通用户档
-            if (hasRole("Admin") || hasRole("SuperAdmin") || hasRole("MerchantAdmin"))
+            // 平台管理员优先（仅识别全局 Admin/SuperAdmin；商户管理员不再是平台管理员档）
+            if (hasRole("Admin") || hasRole("SuperAdmin"))
                 return RateLimitUserType.Admin;
 
-            // 改动说明：MerchantAdmin 已在上面判为管理员，此处补充是为避免将来调整优先级后漏判
-            if (merchantId.HasValue && (hasRole("MerchantStaff") || hasRole("MerchantAdmin")))
+            // 商户成员（管理员/员工）走商户档，身份以成员表为准
+            if (isMerchant)
                 return RateLimitUserType.Merchant;
 
             // 付费档位预留：当前无对应角色，统一按普通用户处理

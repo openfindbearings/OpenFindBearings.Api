@@ -10,16 +10,13 @@ namespace OpenFindBearings.Application.Commands.Merchants.RemoveStaff
     public class RemoveStaffCommandHandler : IRequestHandler<RemoveStaffCommand>
     {
         private readonly IMerchantMemberRepository _merchantMemberRepository;
-        private readonly IUserRepository _userRepository;
         private readonly ILogger<RemoveStaffCommandHandler> _logger;
 
         public RemoveStaffCommandHandler(
             IMerchantMemberRepository merchantMemberRepository,
-            IUserRepository userRepository,
             ILogger<RemoveStaffCommandHandler> logger)
         {
             _merchantMemberRepository = merchantMemberRepository;
-            _userRepository = userRepository;
             _logger = logger;
         }
 
@@ -57,17 +54,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.RemoveStaff
             targetMember.Remove();
             await _merchantMemberRepository.UpdateAsync(targetMember, cancellationToken);
 
-            // 兼容遗留读取：若用户不再属于任何商户，清除 User.MerchantId 单值列
-            var user = await _userRepository.GetByIdAsync(request.UserId, cancellationToken);
-            if (user != null && user.MerchantId == request.MerchantId)
-            {
-                var remaining = await _merchantMemberRepository.GetActiveByUserIdAsync(request.UserId, cancellationToken);
-                if (remaining.Count == 0)
-                {
-                    user.RemoveFromMerchant();
-                    await _userRepository.UpdateAsync(user, cancellationToken);
-                }
-            }
+            // 改动说明：移除对已废弃 User.MerchantId 单值列的镜像清除——成员表 MerchantMember 是唯一事实源
         }
     }
 }

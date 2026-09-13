@@ -22,11 +22,6 @@
         public DateTime? VerifiedAt { get; set; }
 
         /// <summary>
-        /// 员工列表
-        /// </summary>
-        public List<MerchantStaffDto> Staff { get; set; } = new();
-
-        /// <summary>
         /// 在售产品列表
         /// </summary>
         public List<MerchantBearingDto> Products { get; set; } = new();

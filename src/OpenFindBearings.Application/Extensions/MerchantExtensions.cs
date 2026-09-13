@@ -71,13 +71,8 @@ namespace OpenFindBearings.Application.Extensions
                 Description = merchant.Description,
                 BusinessScope = merchant.BusinessScope,
                 VerifiedAt = merchant.VerifiedAt,
-                Staff = !isAuthenticated ? [] :merchant.Staff?.Select(s => new MerchantStaffDto
-                {
-                    Id = s.Id,
-                    Nickname = s.Nickname ?? string.Empty,
-                    Avatar = s.Avatar,
-                    Role = "员工"
-                }).ToList() ?? [],
+                // 改动说明：移除由 merchant.Staff（依赖已废弃的 User.MerchantId 关系）派生的员工列表；
+                //   商户成员统一由成员表接口 GET /api/merchant/staff 提供，商家详情不再内嵌员工
                 Products = products
             };
         }
