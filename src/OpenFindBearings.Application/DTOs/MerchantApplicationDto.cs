@@ -35,6 +35,11 @@ namespace OpenFindBearings.Application.DTOs
         /// 是否已认证（资质等级）
         /// </summary>
         public bool IsVerified { get; set; }
+
+        /// <summary>
+        /// 商户 Logo 相对/绝对 URL（供移动端商户切换器与 TabBar 展示当前商户头像）
+        /// </summary>
+        public string? LogoUrl { get; set; }
     }
 
     /// <summary>
