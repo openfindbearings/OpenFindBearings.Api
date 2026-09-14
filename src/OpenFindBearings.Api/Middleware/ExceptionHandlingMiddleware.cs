@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using OpenFindBearings.Api.Helpers;
+using OpenFindBearings.Application.Exceptions;
 using System.Text.Json;
 
 namespace OpenFindBearings.Api.Middleware
@@ -71,6 +72,18 @@ namespace OpenFindBearings.Api.Middleware
                     problemDetails.Title = "未授权";
                     problemDetails.Status = StatusCodes.Status401Unauthorized;
                     problemDetails.Detail = "请先登录";
+                    break;
+
+                // 真人自助新建撞名但对方商户仍可认领：返回 409 + 结构化 code/existingMerchantId/existingName，
+                //   供前端引导"改为认领"（复用 ProblemDetails.Extensions 通道，与 DbUpdateConcurrencyException 同模式）
+                case MerchantClaimableConflictException claimableConflict:
+                    response.StatusCode = StatusCodes.Status409Conflict;
+                    problemDetails.Title = "商户可认领冲突";
+                    problemDetails.Status = StatusCodes.Status409Conflict;
+                    problemDetails.Detail = claimableConflict.Message;
+                    problemDetails.Extensions["code"] = MerchantClaimableConflictException.ErrorCode;
+                    problemDetails.Extensions["existingMerchantId"] = claimableConflict.ExistingMerchantId;
+                    problemDetails.Extensions["existingName"] = claimableConflict.ExistingName;
                     break;
 
                 case KeyNotFoundException notFound:

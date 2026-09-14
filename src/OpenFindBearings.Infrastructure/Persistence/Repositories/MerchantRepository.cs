@@ -167,6 +167,15 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                 .FirstOrDefaultAsync(m => m.Name == name && m.Status != MerchantStatus.Draft, cancellationToken);
         }
 
+        // 根据统一社会信用代码精确获取非草稿商家（入驻查重用，代码优先于名称，草稿不计）
+        public async Task<Merchant?> GetByCreditCodeAsync(string creditCode, CancellationToken cancellationToken = default)
+        {
+            return await _context.Merchants
+                .FirstOrDefaultAsync(
+                    m => m.UnifiedSocialCreditCode == creditCode && m.Status != MerchantStatus.Draft,
+                    cancellationToken);
+        }
+
         // 获取总数
         // 修复 B6：统计口径排除提名草稿（Draft），Admin 仪表盘商户总数只含已提交/生效商户
         public async Task<int> GetTotalCountAsync(CancellationToken cancellationToken = default)
