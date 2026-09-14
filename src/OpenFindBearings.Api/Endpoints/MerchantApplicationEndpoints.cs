@@ -5,6 +5,7 @@ using OpenFindBearings.Api.Services;
 using OpenFindBearings.Application.Commands.Merchants.AcceptNomination;
 using OpenFindBearings.Application.Commands.Merchants.ApplyMerchant;
 using OpenFindBearings.Application.Commands.Merchants.NominateMerchant;
+using OpenFindBearings.Application.Commands.Merchants.WithdrawApplication;
 using OpenFindBearings.Application.Queries.Merchants.ClaimableMerchants;
 using OpenFindBearings.Application.Queries.Merchants.GetMerchantApplication;
 using OpenFindBearings.Application.Queries.Merchants.PendingNominations;
@@ -78,6 +79,31 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("GetMerchantApplication")
             .WithSummary("查询入驻状态")
             .WithDescription("查询当前用户在各商户的入驻进度（待审核/已生效/已拒绝）");
+
+            /// <summary>
+            /// 申请人自助撤回待审核的入驻申请（self 新建硬删 / claim 认领退回爬虫）
+            /// </summary>
+            group.MapPost("/{merchantId:guid}/withdraw", async (
+                Guid merchantId,
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                await mediator.Send(new WithdrawApplicationCommand
+                {
+                    MerchantId = merchantId,
+                    ApplicantUserId = currentUser.UserId.Value
+                });
+
+                return ApiResponseHelper.Ok("入驻申请已撤回", httpContext: httpContext);
+            })
+            .WithName("WithdrawMerchantApplication")
+            .WithSummary("撤回入驻申请")
+            .WithDescription("申请人撤回自己待审核的入驻申请：新建商户将被删除，认领的商家退回公共池可再被认领");
+
 
             /// <summary>
             /// 提名他人为管理员（入驻模式 B）

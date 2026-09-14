@@ -95,6 +95,8 @@ namespace OpenFindBearings.Application.Commands.Merchants.ApplyMerchant
             // 改动说明：真人新建的商户即"人工维护"，来源置 Manual，杜绝被后续爬虫同步覆盖或夺走；
             //   此前 ApplySelf 未设来源(null)，会被 BatchCreateMerchants 视为可覆盖并回填 Crawler（漏洞修复）
             merchant.SetDataSource(DataSource.FromManual("apply-self"));
+            // 改动说明：标记入驻渠道为 Self，申请人撤回时据此硬删除商户（见 WithdrawApplicationCommandHandler）
+            merchant.MarkApplicationMode(ApplicationMode.Self);
 
             await _merchantRepository.AddAsync(merchant, cancellationToken);
 
@@ -217,6 +219,8 @@ namespace OpenFindBearings.Application.Commands.Merchants.ApplyMerchant
             }
 
             merchant.SetDataSource(DataSource.FromManual(request.ApplicantUserId.ToString()));
+            // 改动说明：标记入驻渠道为 Claim，申请人撤回时据此仅解除成员+退回爬虫、不删商户本体
+            merchant.MarkApplicationMode(ApplicationMode.Claim);
 
             var member = new MerchantMember(
                 request.ApplicantUserId,
