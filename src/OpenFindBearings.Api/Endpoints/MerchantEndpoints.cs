@@ -36,7 +36,7 @@ namespace OpenFindBearings.Api.Endpoints
             // ============ 3.1 基础管理 ============
 
             /// <summary>
-            /// 获取店铺信息
+            /// 获取店铺信息（商户信息维护页读接口）
             /// </summary>
             group.MapGet("/profile", async (
                 [FromServices] ICurrentUserService currentUser,
@@ -46,11 +46,9 @@ namespace OpenFindBearings.Api.Endpoints
                 if (!currentUser.UserId.HasValue)
                     return ApiResponseHelper.Unauthorized(httpContext: httpContext);
 
-                var query = new GetMerchantByUserIdQuery
-                {
-                    UserId = currentUser.UserId.Value
-                };
-                var result = await mediator.Send(query);
+                // 改动说明：改用当前商户上下文(X-Merchant-Id)定位，与 PUT /profile 一致。
+                //   原用 GetMerchantByUserIdQuery 取"成员列表首个"，多商户下会 A 载入、B 保存，读写错位。
+                var result = await GetCurrentMerchantAsync(currentUser, mediator);
 
                 return result == null
                     ? ApiResponseHelper.NotFound("未找到所属商家", httpContext)
@@ -58,19 +56,25 @@ namespace OpenFindBearings.Api.Endpoints
             })
             .WithName("GetMerchantProfile")
             .WithSummary("获取店铺信息")
-            .WithDescription("获取当前登录商家用户的店铺详细信息");
+            .WithDescription("获取当前商户上下文的店铺详细信息（供商户信息维护页编辑回填）");
 
             /// <summary>
-            /// 更新店铺信息
+            /// 更新店铺信息（商户信息维护页写接口，需商户管理员）
             /// </summary>
             group.MapPut("/profile", async (
                 UpdateMerchantCommand command,
                 [FromServices] ICurrentUserService currentUser,
                 [FromServices] IMediator mediator,
+                [FromServices] IPermissionService permissionService,
                 HttpContext httpContext) =>
             {
                 if (!currentUser.UserId.HasValue)
                     return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                // 改动说明：资料维护锁定为商户管理员专属（对齐成员管理/批量导入端点的 admin 校验）
+                var isAdmin = await permissionService.IsMerchantAdmin();
+                if (!isAdmin)
+                    return ApiResponseHelper.Forbidden("需要商家管理员权限", httpContext);
 
                 var merchant = await GetCurrentMerchantAsync(currentUser, mediator);
 
@@ -84,7 +88,64 @@ namespace OpenFindBearings.Api.Endpoints
             })
             .WithName("UpdateMerchantProfile")
             .WithSummary("更新店铺信息")
-            .WithDescription("更新当前商家用户的店铺基本信息");
+            .WithDescription("更新当前商户的资料（需商家管理员权限）");
+
+            /// <summary>
+            /// 上传商户 Logo（图片文件，仅返回可访问 URL；由维护页保存时随 profile 落库）
+            /// </summary>
+            group.MapPost("/logo", async (
+                IFormFile file,
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IPermissionService permissionService,
+                [FromServices] IWebHostEnvironment environment,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                // 改动说明：Logo 属商户资料，上传同样限商户管理员
+                var isAdmin = await permissionService.IsMerchantAdmin();
+                if (!isAdmin)
+                    return ApiResponseHelper.Forbidden("需要商家管理员权限", httpContext);
+
+                if (file == null || file.Length == 0)
+                    return ApiResponseHelper.BadRequest("请上传文件", httpContext: httpContext);
+
+                var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
+                var fileExtension = Path.GetExtension(file.FileName).ToLowerInvariant();
+                if (!allowedExtensions.Contains(fileExtension))
+                    return ApiResponseHelper.BadRequest("只支持 JPG、PNG、WEBP 图片格式", httpContext: httpContext);
+
+                if (file.Length > 2 * 1024 * 1024)
+                    return ApiResponseHelper.BadRequest("图片大小不能超过 2MB", httpContext: httpContext);
+
+                try
+                {
+                    // 改动说明：与用户头像同规范落 API wwwroot/uploads，文件名 {userId:N}_{UTC}{ext}；
+                    //   仅回相对 URL，DB 写入由维护页保存 profile 时带 logoUrl 完成（null 保留、非空覆盖）
+                    var uploadsFolder = Path.Combine(environment.WebRootPath, "uploads", "merchants", "logo");
+                    Directory.CreateDirectory(uploadsFolder);
+
+                    var fileName = $"{currentUser.UserId.Value:N}_{DateTime.UtcNow:yyyyMMddHHmmss}{fileExtension}";
+                    var filePath = Path.Combine(uploadsFolder, fileName);
+
+                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await file.CopyToAsync(stream);
+                    }
+
+                    var fileUrl = $"/uploads/merchants/logo/{fileName}";
+                    return ApiResponseHelper.Ok(new { url = fileUrl, message = "Logo 上传成功" }, httpContext: httpContext);
+                }
+                catch (Exception ex)
+                {
+                    return ApiResponseHelper.Problem("Logo 上传失败", ex.Message, httpContext: httpContext);
+                }
+            })
+            .WithName("UploadMerchantLogo")
+            .WithSummary("上传商户Logo")
+            .WithDescription("上传商户 Logo 图片，返回可访问 URL（需商家管理员权限，保存资料时落库）")
+            .DisableAntiforgery();
 
             /// <summary>
             /// 上传营业执照

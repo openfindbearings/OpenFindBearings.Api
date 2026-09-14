@@ -22,6 +22,16 @@
         public DateTime? VerifiedAt { get; set; }
 
         /// <summary>
+        /// 官网（商户信息维护可编辑）
+        /// </summary>
+        public string? Website { get; set; }
+
+        /// <summary>
+        /// 统一社会信用代码（商户信息维护可编辑）
+        /// </summary>
+        public string? UnifiedSocialCreditCode { get; set; }
+
+        /// <summary>
         /// 在售产品列表
         /// </summary>
         public List<MerchantBearingDto> Products { get; set; } = new();

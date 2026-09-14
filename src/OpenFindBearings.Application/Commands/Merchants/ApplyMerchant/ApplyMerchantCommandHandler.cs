@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
+using OpenFindBearings.Application.Exceptions;
 using OpenFindBearings.Domain.Aggregates;
 using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Enums;
@@ -66,6 +67,11 @@ namespace OpenFindBearings.Application.Commands.Merchants.ApplyMerchant
                 throw new InvalidOperationException("商家名称不能为空");
             }
 
+            // 改动说明：真人新建前查重，避免与库中已有商户产生重名/同信用代码的重复记录。
+            //   命中可认领商户（未认证+无在职成员）→ 抛冲突异常引导前端改为认领；
+            //   命中已认证/已被认领商户 → 直接拒绝；无命中才新建。
+            await EnsureNoSelfDuplicateAsync(request, cancellationToken);
+
             var contact = new ContactInfo(
                 request.ContactPerson,
                 request.Phone,
@@ -100,6 +106,41 @@ namespace OpenFindBearings.Application.Commands.Merchants.ApplyMerchant
 
             _logger.LogInformation("新建商家入驻申请: MerchantId={MerchantId}", merchant.Id);
             return merchant;
+        }
+
+        /// <summary>
+        /// 自助新建查重：优先按统一社会信用代码精确匹配，其次按商户名精确匹配（均排除草稿）。
+        /// 命中"可认领"商户（未认证且无在职成员）抛 <see cref="MerchantClaimableConflictException"/> 引导改认领；
+        /// 命中已认证/已被他人认领商户抛 <see cref="InvalidOperationException"/> 直接拒绝。
+        /// </summary>
+        private async Task EnsureNoSelfDuplicateAsync(ApplyMerchantCommand request, CancellationToken cancellationToken)
+        {
+            var trimmedName = request.Name!.Trim();
+            var creditCode = string.IsNullOrWhiteSpace(request.UnifiedSocialCreditCode)
+                ? null
+                : request.UnifiedSocialCreditCode!.Trim();
+
+            var duplicate = creditCode != null
+                ? await _merchantRepository.GetByCreditCodeAsync(creditCode, cancellationToken)
+                : null;
+            duplicate ??= await _merchantRepository.GetByNameAsync(trimmedName, cancellationToken);
+            if (duplicate == null) return;
+
+            // 可认领判定与向导第一步/认领门一致：未认证 且 无在职成员
+            var claimable = !duplicate.IsVerified;
+            if (claimable)
+            {
+                var activeMembers = await _merchantMemberRepository.GetActiveByMerchantAsync(duplicate.Id, cancellationToken);
+                claimable = activeMembers.Count == 0;
+            }
+
+            if (claimable)
+            {
+                _logger.LogInformation("自助新建撞名命中可认领商户，引导改认领: ExistingMerchantId={Id}", duplicate.Id);
+                throw new MerchantClaimableConflictException(duplicate.Id, duplicate.Name);
+            }
+
+            throw new InvalidOperationException("该商户已存在（同名或同信用代码）且已认证或已被认领，无法重复新建");
         }
 
         /// <summary>

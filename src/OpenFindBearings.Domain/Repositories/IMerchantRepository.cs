@@ -41,6 +41,11 @@ namespace OpenFindBearings.Domain.Repositories
         Task<Merchant?> GetByNameAsync(string name, CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// 根据统一社会信用代码精确获取非草稿商家（用于入驻查重，代码优先于名称）
+        /// </summary>
+        Task<Merchant?> GetByCreditCodeAsync(string creditCode, CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// 获取商家总数
         /// </summary>
         Task<int> GetTotalCountAsync(CancellationToken cancellationToken = default);
