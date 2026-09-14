@@ -26,19 +26,20 @@
 | v1.13.0 | 2026-09-11 | 代码审查对齐：① 公共端点组补充 GET /api/login-methods（13→14）；② 用户端点组补充 POST /api/me/avatar、GET /api/me/corrections、GET /api/me/corrections/{id}（21→24）；③ 管理端点 6.2 轴承管理补充 DELETE /api/admin/bearings/{id:guid}/hard；④ 总端点数 114→118 |
 | v1.14.0 | 2026-09-12 | 商户入驻整体落地：① 新增"商户入驻"端点组（6 个）：POST /api/merchant/apply（预留转正式实现）、GET /api/merchant/application、POST /api/merchant/nominate、POST /api/merchant/nominate/{code}/accept、GET /api/merchant/claimable、GET /api/merchant/nominations/pending；② 商家端点组 12→16：新增 POST /api/merchant/members/{userId:guid}/suspend、POST /api/merchant/members/{userId:guid}/activate、PUT /api/merchant/members/{userId:guid}/role、POST /api/merchant/inventory/import（Excel 批量导入，仅商户管理员），并补成员管理小节；③ Admin 商家管理 58→60：新增 POST /api/admin/merchants/{id}/approve（审核通过入驻申请，Pending→Active，与 verify 认证分离）、POST /api/admin/merchants/{id}/members（平台指定成员兜底，复用 merchant.verify）；④ 总端点数 118→129，引导表格分组同步更新 |
 | v1.15.0 | 2026-09-14 | 商户信息维护与 Logo + 新建撞名引导认领：① 商家端点组 16→17，新增 POST /api/merchant/logo（上传商户 Logo，仅商户管理员，返回相对 URL，落 wwwroot/uploads/merchants/logo，.DisableAntiforgery）；② GET /api/merchant/profile 改按 X-Merchant-Id 当前商户上下文定位（原按"首个在职成员"，多商户读写错位），PUT /api/merchant/profile 补 IsMerchantAdmin 校验（原仅成员即可）；③ POST /api/merchant/apply（mode=self）新增撞名查重：命中可认领商户返回 HTTP 409 + ProblemDetails code=MERCHANT_CLAIMABLE_EXISTS/existingMerchantId/existingName（新增 MerchantClaimableConflictException + 中间件映射），命中已认证/已认领返回 400；④ MerchantApplicationDto 与 MerchantDetailDto 新增字段（LogoUrl；Detail 补 Website/UnifiedSocialCreditCode），MerchantExtensions.ToDetailDto 补齐 LogoUrl 等映射。总端点数 129→130 |
+| v1.16.0 | 2026-09-14 | 申请人自助撤回入驻申请：① 入驻端点组 6→7，新增 `POST /api/merchant/{merchantId:guid}/withdraw`（仅 Pending 且调用者是该商户在职 MerchantAdmin 即申请人本人可撤回；按 `Merchant.ApplicationMode` 分支清理——self 新建硬删商户及成员、claim 认领软移除认领人成员并把来源退回 Crawler 重新进入认领池、nomination/None 拒绝）。② Merchant 新增 `ApplicationMode` 列（None/Self/Claim/Nomination，默认 None 兼容存量），迁移 `AddMerchantApplicationMode`。总端点数 130→131 |
 
 ---
 
 ## 1. 概述
 
-OpenFindBearings.Api（以下简称 API）共注册 **130** 个端点，按职责划分为 7 组。另提供内部配置端点 `/api/config/reliability` 供 Sync 拉取可信度阈值（不计入 7 组统计）。
+OpenFindBearings.Api（以下简称 API）共注册 **131** 个端点，按职责划分为 7 组。另提供内部配置端点 `/api/config/reliability` 供 Sync 拉取可信度阈值（不计入 7 组统计）。
 
 | 组 | 路由前缀 | 端点数量 | 认证策略 |
 |---|---------|---------|---------|
 | 公共 | `/api` | 13 | 全部匿名 |
 | 移动端 | `/api/mobile` | 4 | 全部匿名 |
 | 用户 | `/api/me` | 24 | Bearer（Authenticated 策略） |
-| 入驻 | `/api/merchant` | 6 | Bearer（任意已登录用户） |
+| 入驻 | `/api/merchant` | 7 | Bearer（任意已登录用户） |
 | 商家 | `/api/merchant` | 17 | Bearer（Merchant 策略，分组限流） |
 | 后台管理 | `/api/admin` | 60 | Bearer（Admin 策略）+ RequirePermission |
 | 同步 | `/api/sync` | 6 | Bearer（SyncClient 策略） |
@@ -90,7 +91,7 @@ OpenFindBearings.Api（以下简称 API）共注册 **130** 个端点，按职�
 
 ---
 
-## 4. 入驻端点 `/api/merchant`（6 个）
+## 4. 入驻端点 `/api/merchant`（7 个）
 
 组授权：`RequireAuthorization()`（任意已登录用户即可，非 Merchant 策略）。
 
@@ -102,6 +103,7 @@ OpenFindBearings.Api（以下简称 API）共注册 **130** 个端点，按职�
 | POST | `/api/merchant/nominate/{code}/accept` | 被提名人接受提名并补全资料（Draft → Pending；手机号取自 JWT 防冒领） | `AcceptNomination` |
 | GET | `/api/merchant/claimable` | 认领搜索可认领的爬虫来源商家（未被认领），支持 keyword/page/pageSize | `GetClaimableMerchants` |
 | GET | `/api/merchant/nominations/pending` | 按当前登录用户手机号匹配待我接受的管理员提名邀请 | `GetPendingNominations` |
+| POST | `/api/merchant/{merchantId:guid}/withdraw` | **v1.16.0** 申请人自助撤回待审核的入驻申请：仅 `Status=Pending` 且调用者是该商户在职 MerchantAdmin（申请人本人）可执行；按 `ApplicationMode` 分支清理——self 硬删商户+全部成员行、claim 软移除认领人成员并 `RevertClaimedToCrawler`（来源退回 Crawler、渠道归 None，重新进入认领池）、nomination/None 抛"该申请暂不支持自助撤回"。业务校验失败均映射 400 | `WithdrawMerchantApplication` |
 
 ---
 
