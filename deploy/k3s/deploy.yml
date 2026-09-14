@@ -21,7 +21,7 @@ spec:
       # 顺带获得持久化（Pod 重启上传图不丢）。镜像复用 API 自身（docker.io 不可达教训）
       initContainers:
       - name: uploads-init
-        image: ghcr.io/openfindbearings/openfindbearings-api:v1.0.0
+        image: ghcr.io/openfindbearings/openfindbearings-api:latest
         command: ["sh", "-c", "chown -R 1654:1654 /app/wwwroot/uploads && chmod 700 /app/wwwroot/uploads"]
         securityContext:
           runAsUser: 0
@@ -30,7 +30,7 @@ spec:
           mountPath: /app/wwwroot/uploads
       containers:
       - name: openfindbearings-api
-        image: ghcr.io/openfindbearings/openfindbearings-api:v1.0.0
+        image: ghcr.io/openfindbearings/openfindbearings-api:latest
         ports:
         - containerPort: 8080
 
