@@ -35,6 +35,11 @@ namespace OpenFindBearings.Domain.Repositories
         Task<List<MerchantMember>> GetActiveByMerchantAsync(Guid merchantId, CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// 获取商户的全部成员（含 Removed/Suspended，用于彻底删除商户前清理成员外键）
+        /// </summary>
+        Task<List<MerchantMember>> GetAllByMerchantIdAsync(Guid merchantId, CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// 获取商户在职管理员数量
         /// </summary>
         Task<int> CountActiveAdminsAsync(Guid merchantId, CancellationToken cancellationToken = default);
@@ -53,5 +58,11 @@ namespace OpenFindBearings.Domain.Repositories
         /// 更新成员
         /// </summary>
         Task UpdateAsync(MerchantMember member, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 彻底删除成员（物理删除，用于 self 新建商户撤回时清理其成员行，
+        /// 因 MerchantMember→Merchant 外键为 Restrict，不先删成员会导致商户无法物理删除）
+        /// </summary>
+        Task RemoveAsync(MerchantMember member, CancellationToken cancellationToken = default);
     }
 }

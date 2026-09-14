@@ -60,6 +60,16 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                 .ToListAsync(cancellationToken);
         }
 
+        // 改动说明：self 撤回需彻底删除商户本体，而其成员行外键为 Restrict；
+        //   用 IgnoreQueryFilters 捞出全部（含软删/停用）成员再物理删除，避免残留行阻塞商户删除
+        public async Task<List<MerchantMember>> GetAllByMerchantIdAsync(Guid merchantId, CancellationToken cancellationToken = default)
+        {
+            return await _context.Set<MerchantMember>()
+                .IgnoreQueryFilters()
+                .Where(m => m.MerchantId == merchantId)
+                .ToListAsync(cancellationToken);
+        }
+
         public async Task<int> CountActiveAdminsAsync(Guid merchantId, CancellationToken cancellationToken = default)
         {
             return await _context.Set<MerchantMember>()
@@ -84,6 +94,11 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         public async Task UpdateAsync(MerchantMember member, CancellationToken cancellationToken = default)
         {
             _context.Set<MerchantMember>().Update(member);
+        }
+
+        public async Task RemoveAsync(MerchantMember member, CancellationToken cancellationToken = default)
+        {
+            _context.Set<MerchantMember>().Remove(member);
         }
     }
 }

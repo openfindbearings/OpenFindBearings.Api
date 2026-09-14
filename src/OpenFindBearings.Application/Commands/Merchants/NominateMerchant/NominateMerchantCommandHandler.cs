@@ -91,6 +91,9 @@ namespace OpenFindBearings.Application.Commands.Merchants.NominateMerchant
                     request.Type.HasValue ? (MerchantType)request.Type.Value : MerchantType.Trader,
                     contact);
                 merchant.MarkAsDraft();
+                // 改动说明：标记入驻渠道为 Nomination，提名新建的草稿商户属"未生效垃圾候选"，
+                //   未来撤回/清理时可据此判定硬删除（现有申请人自助撤回入口不含提名，此处仅打标）
+                merchant.MarkApplicationMode(ApplicationMode.Nomination);
                 merchant.UpdateBasicInfo(
                     companyName: request.CompanyName,
                     unifiedSocialCreditCode: null,

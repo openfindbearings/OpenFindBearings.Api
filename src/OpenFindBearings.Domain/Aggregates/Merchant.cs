@@ -90,6 +90,12 @@ namespace OpenFindBearings.Domain.Aggregates
         /// </summary>
         public string? SuspensionReason { get; private set; }
 
+        /// <summary>
+        /// 入驻渠道标记（Self/Claim/Nomination），用于申请人撤回时决定"删商户"还是"退回爬虫"。
+        /// 改动说明：新增，默认 None 兼容爬虫/种子/历史数据。
+        /// </summary>
+        public ApplicationMode ApplicationMode { get; private set; }
+
         // ============ 统计字段 ============
 
         /// <summary>
@@ -400,6 +406,27 @@ namespace OpenFindBearings.Domain.Aggregates
             Status = MerchantStatus.Active;
             SuspensionReason = null;
             Activate();  // 基类方法
+            UpdateTimestamp();
+        }
+
+        /// <summary>
+        /// 标记入驻渠道（Self/Claim/Nomination），供申请人撤回时判定清理策略
+        /// </summary>
+        public void MarkApplicationMode(ApplicationMode mode)
+        {
+            ApplicationMode = mode;
+            UpdateTimestamp();
+        }
+
+        /// <summary>
+        /// 认领撤回：把商户退回"爬虫自有"状态——来源退回 Crawler（重新可被 Sync 覆盖、重新进入认领池），
+        /// 渠道标记归 None。改动说明：认领时曾置 Manual 以护住认领人编辑，撤回后应还原为可被爬虫刷写。
+        /// </summary>
+        /// <param name="crawlerSiteName">回退后归属的爬虫站点名（占位标识即可）</param>
+        public void RevertClaimedToCrawler(string crawlerSiteName)
+        {
+            SetDataSource(DataSource.FromCrawler(crawlerSiteName));
+            ApplicationMode = ApplicationMode.None;
             UpdateTimestamp();
         }
 
