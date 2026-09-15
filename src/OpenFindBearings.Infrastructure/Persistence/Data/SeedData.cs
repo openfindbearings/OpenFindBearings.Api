@@ -435,7 +435,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
             ("Reliability.ReviewThreshold", "60", "Sync", "人工审核阈值（可信度≥此值进入待审核）", "int", false),
             ("Reliability.DefaultSourceScore", "80", "Sync", "来源默认基础分", "int", false),
 
-            // 移动端版本更新（供 /api/mobile/version/check 消费；规范 tag 发布时由 Taro CI 自动改写，Admin 页手动兜底）
+            // 移动端版本更新（供 /api/mobile/version/check 消费；由 Taro 集群侧 CronJob apk-sync 拉包齐备后自动改写，Admin 页手动兜底）
             ("Mobile.AppVersion", "v1.0.0-rc.1", "Mobile", "移动端最新版本号（SemVer 带点 prerelease，如 v1.0.0-rc.2）", "string", true),
             ("Mobile.MinVersion", "v1.0.0-rc.1", "Mobile", "最低支持版本（低于此值且开启强更时强制更新）", "string", true),
             ("Mobile.ForceUpdate", "false", "Mobile", "强制更新开关", "bool", true),
