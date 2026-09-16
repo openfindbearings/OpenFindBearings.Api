@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
+using OpenFindBearings.Application.Commands.Merchants.ApplicationCleanup;
 using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
 
@@ -51,10 +52,13 @@ namespace OpenFindBearings.Application.Commands.Merchants.WithdrawApplication
             switch (merchant.ApplicationMode)
             {
                 case ApplicationMode.Self:
-                    await WithdrawSelfAsync(merchant, cancellationToken);
+                    // v2.6.0 改动说明：分支清理逻辑提取至 ApplicantApplicationCleanup 与"删除被拒申请"共用，此处仅换调用
+                    await ApplicantApplicationCleanup.HardDeleteMerchantWithMembersAsync(
+                        merchant, _merchantRepository, _merchantMemberRepository, cancellationToken);
                     break;
                 case ApplicationMode.Claim:
-                    await WithdrawClaimAsync(merchant, member, cancellationToken);
+                    await ApplicantApplicationCleanup.RemoveClaimAndRevertToCrawlerAsync(
+                        merchant, member, _merchantRepository, _merchantMemberRepository, cancellationToken);
                     break;
                 default:
                     // Nomination / None 不走此自助撤回入口（提名发起方非成员、历史数据不该出现在申请列表）
@@ -63,37 +67,6 @@ namespace OpenFindBearings.Application.Commands.Merchants.WithdrawApplication
 
             _logger.LogInformation("入驻申请已撤回: MerchantId={MerchantId}, Mode={Mode}, Applicant={UserId}",
                 merchant.Id, merchant.ApplicationMode, request.ApplicantUserId);
-        }
-
-        /// <summary>
-        /// self 新建撤回：硬删除商户本体 + 其全部成员行（外键 Restrict 须先删成员）。
-        /// 改动说明：未公示的草稿式 Pending 商户撤回后彻底删除，避免残留同名/同代码记录干扰下次新建查重。
-        /// 营业执照/商品等子表由 MerchantId 外键级联在 DB 层随商户删除一并清理。
-        /// </summary>
-        private async Task WithdrawSelfAsync(Domain.Aggregates.Merchant merchant, CancellationToken cancellationToken)
-        {
-            var members = await _merchantMemberRepository.GetAllByMerchantIdAsync(merchant.Id, cancellationToken);
-            foreach (var m in members)
-            {
-                await _merchantMemberRepository.RemoveAsync(m, cancellationToken);
-            }
-            await _merchantRepository.RemoveAsync(merchant, cancellationToken);
-        }
-
-        /// <summary>
-        /// claim 认领撤回：不删商户（本就属于爬虫/平台），仅软移除认领人成员关系，
-        /// 并把商户来源退回 Crawler、渠道归 None，使其重新进入认领池且可被 Sync 覆盖。
-        /// </summary>
-        private async Task WithdrawClaimAsync(
-            Domain.Aggregates.Merchant merchant,
-            Domain.Entities.MerchantMember applicantMember,
-            CancellationToken cancellationToken)
-        {
-            applicantMember.Remove();
-            await _merchantMemberRepository.UpdateAsync(applicantMember, cancellationToken);
-
-            merchant.RevertClaimedToCrawler("apply-revert");
-            await _merchantRepository.UpdateAsync(merchant, cancellationToken);
         }
     }
 }

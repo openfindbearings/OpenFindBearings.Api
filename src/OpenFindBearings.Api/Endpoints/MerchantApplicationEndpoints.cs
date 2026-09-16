@@ -4,9 +4,12 @@ using OpenFindBearings.Api.Helpers;
 using OpenFindBearings.Api.Services;
 using OpenFindBearings.Application.Commands.Merchants.AcceptNomination;
 using OpenFindBearings.Application.Commands.Merchants.ApplyMerchant;
+using OpenFindBearings.Application.Commands.Merchants.DeleteRejectedApplication;
 using OpenFindBearings.Application.Commands.Merchants.NominateMerchant;
+using OpenFindBearings.Application.Commands.Merchants.ResubmitApplication;
 using OpenFindBearings.Application.Commands.Merchants.WithdrawApplication;
 using OpenFindBearings.Application.Queries.Merchants.ClaimableMerchants;
+using OpenFindBearings.Application.Queries.Merchants.GetApplicationDetail;
 using OpenFindBearings.Application.Queries.Merchants.GetMerchantApplication;
 using OpenFindBearings.Application.Queries.Merchants.PendingNominations;
 
@@ -103,6 +106,91 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("WithdrawMerchantApplication")
             .WithSummary("撤回入驻申请")
             .WithDescription("申请人撤回自己待审核的入驻申请：新建商户将被删除，认领的商家退回公共池可再被认领");
+
+            /// <summary>
+            /// 查询单个入驻申请详情（被拒重提表单预填，v2.6.0 新增）
+            /// </summary>
+            group.MapGet("/{merchantId:guid}/application", async (
+                Guid merchantId,
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                var detail = await mediator.Send(new GetApplicationDetailQuery(currentUser.UserId.Value, merchantId));
+                if (detail == null)
+                    return ApiResponseHelper.NotFound("申请不存在或你已不是该商户成员", httpContext: httpContext);
+
+                return ApiResponseHelper.Ok(detail, httpContext: httpContext);
+            })
+            .WithName("GetMerchantApplicationDetail")
+            .WithSummary("查询入驻申请详情")
+            .WithDescription("申请人查看自己某张入驻申请的全量资料（被拒后修改重提的预填数据源）");
+
+            /// <summary>
+            /// 被拒后修改资料重新提交（v2.6.0 新增，self/claim 通道）
+            /// </summary>
+            group.MapPost("/{merchantId:guid}/resubmit", async (
+                Guid merchantId,
+                ResubmitApplicationRequest request,
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                var command = new ResubmitApplicationCommand
+                {
+                    MerchantId = merchantId,
+                    ApplicantUserId = currentUser.UserId.Value,
+                    Name = request.Name,
+                    Type = request.Type,
+                    ContactPerson = request.ContactPerson,
+                    Phone = request.Phone,
+                    Mobile = request.Mobile,
+                    Email = request.Email,
+                    Address = request.Address,
+                    CompanyName = request.CompanyName,
+                    UnifiedSocialCreditCode = request.UnifiedSocialCreditCode,
+                    Description = request.Description,
+                    LicenseUrl = request.LicenseUrl
+                };
+
+                await mediator.Send(command);
+                return ApiResponseHelper.Ok(
+                    new { merchantId, message = "修改后的申请已重新提交，等待审核" },
+                    httpContext: httpContext);
+            })
+            .WithName("ResubmitMerchantApplication")
+            .WithSummary("重新提交被拒的入驻申请")
+            .WithDescription("申请人修改资料后重新提交被驳回的入驻申请（Suspended→Pending 重走审核），仅 self/claim 渠道开放");
+
+            /// <summary>
+            /// 删除被驳回的入驻申请（v2.6.0 新增，与撤回同构：Self 硬删 / Claim 退回认领池）
+            /// </summary>
+            group.MapPost("/{merchantId:guid}/delete-application", async (
+                Guid merchantId,
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                await mediator.Send(new DeleteRejectedApplicationCommand
+                {
+                    MerchantId = merchantId,
+                    ApplicantUserId = currentUser.UserId.Value
+                });
+
+                return ApiResponseHelper.Ok("被驳回的申请已删除", httpContext: httpContext);
+            })
+            .WithName("DeleteMerchantApplication")
+            .WithSummary("删除被驳回的入驻申请")
+            .WithDescription("申请人删除自己被驳回的入驻申请：新建商户将被彻底删除，认领的商家退回公共池可再被认领");
 
 
             /// <summary>
@@ -238,6 +326,22 @@ namespace OpenFindBearings.Api.Endpoints
     public record ApplyMerchantRequest(
         string Mode = "self",
         Guid? ClaimMerchantId = null,
+        string? Name = null,
+        int? Type = null,
+        string? ContactPerson = null,
+        string? Phone = null,
+        string? Mobile = null,
+        string? Email = null,
+        string? Address = null,
+        string? CompanyName = null,
+        string? UnifiedSocialCreditCode = null,
+        string? Description = null,
+        string? LicenseUrl = null);
+
+    /// <summary>
+    /// 被拒后修改重提请求体（字段与入驻申请一致，全量提交、服务端字段级合并）
+    /// </summary>
+    public record ResubmitApplicationRequest(
         string? Name = null,
         int? Type = null,
         string? ContactPerson = null,
