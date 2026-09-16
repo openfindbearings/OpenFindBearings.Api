@@ -80,5 +80,23 @@
         /// 商家Logo（如果有）
         /// </summary>
         public string? LogoUrl { get; set; }
+
+        /// <summary>
+        /// 入驻渠道（None/Self/Claim/Nomination）。
+        /// 改动说明：Admin 审批抽屉需区分自助/认领/提名路径展示
+        /// </summary>
+        public string ApplicationMode { get; set; } = string.Empty;
+
+        /// <summary>
+        /// 申请提交时间（UTC，取实体 CreatedAt）。
+        /// 改动说明：审批页按提交时间排序与 SLA 展示用
+        /// </summary>
+        public DateTime SubmittedAt { get; set; }
+
+        /// <summary>
+        /// 审核拒绝原因（Suspended 时有值）。
+        /// 改动说明：审批页"已拒绝"Tab 与抽屉展示驳回原因，此前只能从实体列间接推断
+        /// </summary>
+        public string? RejectReason { get; set; }
     }
 }

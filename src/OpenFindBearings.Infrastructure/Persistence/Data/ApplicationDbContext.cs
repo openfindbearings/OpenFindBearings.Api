@@ -48,6 +48,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
         // ============ 用户偏好 ============
         public DbSet<UserPreference> UserPreferences { get; set; }
 
+    // 改动说明：站内信通知表（审核结果/提名邀请等事件订阅落库）
+    public DbSet<Notification> Notifications { get; set; }
+
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

@@ -1,5 +1,7 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
+using OpenFindBearings.Application.Exceptions;
+using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Commands.Merchants.RejectMerchant
@@ -25,6 +27,12 @@ namespace OpenFindBearings.Application.Commands.Merchants.RejectMerchant
             if (merchant == null)
             {
                 throw new InvalidOperationException($"商家不存在: {request.Id}");
+            }
+
+            // 改动说明：并发守卫——另一管理员已先处理时返回 409（与 Approve 对称）
+            if (merchant.Status != MerchantStatus.Pending)
+            {
+                throw new MerchantAlreadyProcessedException(merchant.Status.ToString());
             }
 
             merchant.Reject(request.Reason);

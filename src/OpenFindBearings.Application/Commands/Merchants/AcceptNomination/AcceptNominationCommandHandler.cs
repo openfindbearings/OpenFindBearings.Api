@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Domain.Enums;
+using OpenFindBearings.Domain.Events;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Commands.Merchants.AcceptNomination
@@ -16,6 +17,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.AcceptNomination
         private readonly ILicenseVerificationRepository _licenseRepository;
         private readonly IUserRepository _userRepository;
         private readonly IMerchantMemberRepository _merchantMemberRepository;
+        private readonly IMediator _mediator;
         private readonly ILogger<AcceptNominationCommandHandler> _logger;
 
         public AcceptNominationCommandHandler(
@@ -24,6 +26,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.AcceptNomination
             ILicenseVerificationRepository licenseRepository,
             IUserRepository userRepository,
             IMerchantMemberRepository merchantMemberRepository,
+            IMediator mediator,
             ILogger<AcceptNominationCommandHandler> logger)
         {
             _invitationRepository = invitationRepository;
@@ -31,6 +34,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.AcceptNomination
             _licenseRepository = licenseRepository;
             _userRepository = userRepository;
             _merchantMemberRepository = merchantMemberRepository;
+            _mediator = mediator;
             _logger = logger;
         }
 
@@ -96,6 +100,13 @@ namespace OpenFindBearings.Application.Commands.Merchants.AcceptNomination
                 }
             }
 
+            // 改动说明：接受提名补资料时企业名称必填（与 ApplyMerchant 同口径）——
+            //   合并后仍为空才拒绝，提名新建时发起人已代填过企业名称的情况允许直接接受
+            if (string.IsNullOrWhiteSpace(request.CompanyName) && string.IsNullOrWhiteSpace(merchant.CompanyName))
+            {
+                throw new InvalidOperationException("企业名称（营业执照全称）不能为空");
+            }
+
             // 修复 B3：补资料场景做字段级合并（?? 原值），
             // 被提名人未填的字段不清空提名（Draft）阶段已填的值
             merchant.UpdateBasicInfo(
@@ -139,6 +150,14 @@ namespace OpenFindBearings.Application.Commands.Merchants.AcceptNomination
             }
             invitation.Complete(nomineeUser.AuthUserId);
             await _invitationRepository.UpdateAsync(invitation, cancellationToken);
+
+            // 改动说明：提名接受成功后即时发布事件，订阅者向发起人发站内信。
+            //   此处直接 Publish 而非走实体领域事件（StaffInvitation 无此语义方法，且命令层已知双方身份）；
+            //   订阅者内部独立 SaveChanges 落通知，失败只记日志不影响接受结果
+            if (invitation.OperatorId != Guid.Empty)
+            {
+                await _mediator.Publish(new NominationAcceptedEvent(invitation.OperatorId, merchant.Id, merchant.Name), cancellationToken);
+            }
 
             // 可选提交营业执照
             if (!string.IsNullOrWhiteSpace(request.LicenseUrl))

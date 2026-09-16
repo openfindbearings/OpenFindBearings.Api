@@ -31,6 +31,9 @@ namespace OpenFindBearings.Api.Extensions
             // 管理员接口（需管理员角色）
             app.MapAdminEndpoints();
 
+        // 改动说明：站内信端点（消息中心/未读角标）
+        app.MapNotificationEndpoints();
+
             // 系统配置接口（内部服务拉取）
             app.MapConfigEndpoints();
 

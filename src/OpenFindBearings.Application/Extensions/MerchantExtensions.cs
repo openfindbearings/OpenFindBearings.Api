@@ -22,7 +22,14 @@ namespace OpenFindBearings.Application.Extensions
                 Grade = merchant.Grade.ToString(),
                 FollowerCount = merchant.FollowerCount,
                 ProductCount = merchant.ProductCount,
-                LogoUrl = merchant.LogoUrl
+                LogoUrl = merchant.LogoUrl,
+                // 改动说明：ToPublicDto 此前漏映射 Status，Admin 入驻审批列表拿到的 Status 恒为空串，
+                //   徽标走兜底分支看似正常、"审核通过/拒绝"按钮条件永不成立（按钮不显示的根因）。
+                //   补齐 Status 并新增 ApplicationMode/SubmittedAt/RejectReason 三字段供审批页使用
+                Status = merchant.Status.ToString(),
+                ApplicationMode = merchant.ApplicationMode.ToString(),
+                SubmittedAt = merchant.CreatedAt,
+                RejectReason = merchant.SuspensionReason
             };
         }
 
@@ -51,6 +58,10 @@ namespace OpenFindBearings.Application.Extensions
                 //   导致商户详情页与"商户信息维护"页永远读不到 logo（恒空）与这两字段。补齐三字段映射。
                 LogoUrl = merchant.LogoUrl,
                 Website = merchant.Website,
+                // 改动说明：详情同样补审批三字段（与 ToPublicDto 对齐，抽屉直查详情时不依赖列表）
+                ApplicationMode = merchant.ApplicationMode.ToString(),
+                SubmittedAt = merchant.CreatedAt,
+                RejectReason = merchant.SuspensionReason,
                 UnifiedSocialCreditCode = merchant.UnifiedSocialCreditCode
             };
         }
@@ -79,6 +90,10 @@ namespace OpenFindBearings.Application.Extensions
                 // 改动说明：同 ToDetailDto 无参重载，补齐 LogoUrl/Website/UnifiedSocialCreditCode 映射
                 LogoUrl = merchant.LogoUrl,
                 Website = merchant.Website,
+                // 改动说明：同上一重载，补审批三字段
+                ApplicationMode = merchant.ApplicationMode.ToString(),
+                SubmittedAt = merchant.CreatedAt,
+                RejectReason = merchant.SuspensionReason,
                 UnifiedSocialCreditCode = merchant.UnifiedSocialCreditCode,
                 // 改动说明：移除由 merchant.Staff（依赖已废弃的 User.MerchantId 关系）派生的员工列表；
                 //   商户成员统一由成员表接口 GET /api/merchant/staff 提供，商家详情不再内嵌员工

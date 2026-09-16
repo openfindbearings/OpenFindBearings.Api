@@ -86,6 +86,16 @@ namespace OpenFindBearings.Api.Middleware
                     problemDetails.Extensions["existingName"] = claimableConflict.ExistingName;
                     break;
 
+                // 改动说明：并发审核冲突（另一管理员已先处理该申请）：409 + code，前端提示后自动刷新列表
+                case MerchantAlreadyProcessedException alreadyProcessed:
+                    response.StatusCode = StatusCodes.Status409Conflict;
+                    problemDetails.Title = "申请已被处理";
+                    problemDetails.Status = StatusCodes.Status409Conflict;
+                    problemDetails.Detail = alreadyProcessed.Message;
+                    problemDetails.Extensions["code"] = MerchantAlreadyProcessedException.ErrorCode;
+                    problemDetails.Extensions["currentStatus"] = alreadyProcessed.CurrentStatus;
+                    break;
+
                 case KeyNotFoundException notFound:
                     response.StatusCode = StatusCodes.Status404NotFound;
                     problemDetails.Title = "资源不存在";
