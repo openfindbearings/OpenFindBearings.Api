@@ -45,6 +45,10 @@ namespace OpenFindBearings.Application.Queries.Mobile.GetMobileConfig
             var downloadUrl = configs.FirstOrDefault(c => c.Key == "Mobile.DownloadUrl");
             if (downloadUrl != null) result.DownloadUrl = downloadUrl.Value;
 
+            // 媒体源 base（图片直出，前端拼相对键；下发以便换域名/切对象存储免发版）
+            var mediaBaseUrl = configs.FirstOrDefault(c => c.Key == "Mobile.MediaBaseUrl");
+            if (mediaBaseUrl != null) result.MediaBaseUrl = mediaBaseUrl.Value;
+
             // API 端点配置
             result.Endpoints = new Dictionary<string, string>
             {

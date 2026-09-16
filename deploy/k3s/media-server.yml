@@ -1,0 +1,152 @@
+# 媒体静态服务：图片/上传文件由 nginx 直出，应用不再逐字节代理（BFF->API Results.Stream 是反模式）。
+# 对外地址：https://bff.515813.xyz/media/{images,uploads}/**
+# 只读挂载两处既有落盘（写入端 Sync/API 完全不动，零文件迁移）：
+#   - Sync hostPath /opt/openfindbearings/sync/images  <- 爬虫轴承图 / 爬虫商户 logo（库内键 /images/...）
+#   - API  hostPath /opt/openfindbearings/api/uploads  <- 用户上传头像/执照/商户 logo（库内键 /uploads/...）
+# 预置头像已打包进 Taro 客户端，不经本服务。
+# 切换对象存储(MinIO/OSS/CDN)时：媒体键原样入对象桶 -> 站点配置 Mobile.MediaBaseUrl 改指新源 -> 退役本服务。
+# 注意：hostPath 依赖 Sync/API 与媒体 Pod 同节点（当前单节点集群成立）；多节点需改共享存储(RWX PVC)或对象存储。
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: openfindbearings-media-nginx
+  namespace: openfindbearings
+data:
+  default.conf: |
+    server {
+      listen 80;
+      server_name _;
+
+      # 探活端点，供 readiness/liveness 使用
+      location = /healthz {
+        default_type text/plain;
+        return 200 'ok';
+      }
+
+      # 跨端可加载（H5 dev/小程序/RN 直连）+ 内容嗅探防护；文件名带 sha256 或 userId+UTC，内容不可变 -> 长缓存
+      add_header Access-Control-Allow-Origin "*" always;
+      add_header X-Content-Type-Options "nosniff" always;
+      add_header Cache-Control "public, max-age=31536000, immutable" always;
+
+      # 爬虫图片：URL 含 /images/ 段，alias 去掉该段映射到 sync hostPath 根
+      #   /media/images/bearings/2d/<sha>.jpg -> /srv/sync/bearings/2d/<sha>.jpg
+      location /media/images/ {
+        alias /srv/sync/;
+        try_files $uri =404;
+      }
+
+      # 用户上传：URL 含 /uploads/ 段，alias 去掉该段映射到 api uploads hostPath 根
+      #   /media/uploads/avatars/<name> -> /srv/uploads/avatars/<name>
+      location /media/uploads/ {
+        alias /srv/uploads/;
+        try_files $uri =404;
+      }
+
+      # 拒绝点文件（.git/.env 等），其余一律 404，不开目录浏览
+      location ~ /\. { deny all; }
+      location / { return 404; }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openfindbearings-media
+  namespace: openfindbearings
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: openfindbearings-media
+  template:
+    metadata:
+      labels:
+        app: openfindbearings-media
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.27-alpine
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: sync-images
+          mountPath: /srv/sync
+          readOnly: true
+        - name: api-uploads
+          mountPath: /srv/uploads
+          readOnly: true
+        - name: nginx-conf
+          mountPath: /etc/nginx/conf.d/default.conf
+          subPath: default.conf
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 80
+          initialDelaySeconds: 3
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 20
+        resources:
+          limits:
+            memory: "64Mi"
+            cpu: "200m"
+          requests:
+            memory: "16Mi"
+            cpu: "10m"
+      volumes:
+      - name: sync-images
+        hostPath:
+          path: /opt/openfindbearings/sync/images
+          type: DirectoryOrCreate
+      - name: api-uploads
+        hostPath:
+          path: /opt/openfindbearings/api/uploads
+          type: DirectoryOrCreate
+      - name: nginx-conf
+        configMap:
+          name: openfindbearings-media-nginx
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: openfindbearings-media
+  namespace: openfindbearings
+spec:
+  selector:
+    app: openfindbearings-media
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  type: ClusterIP
+---
+# 与 BFF / APK 服务共用 bff.515813.xyz（ingress-nginx 合并同 host 多 Ingress 规则），仅新增 /media 路径；
+# TLS 引用 cert-manager 已签发的 secret，本资源不再带签发注解，避免对同一 host 重复签证书
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: openfindbearings-media-ingress
+  namespace: openfindbearings
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - bff.515813.xyz
+    secretName: bff-515813-xyz-tls
+  rules:
+  - host: bff.515813.xyz
+    http:
+      paths:
+      - path: /media
+        pathType: Prefix
+        backend:
+          service:
+            name: openfindbearings-media
+            port:
+              number: 80
