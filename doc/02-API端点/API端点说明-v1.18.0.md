@@ -94,7 +94,7 @@ OpenFindBearings.Api（以下简称 API）共注册 **131** 个端点，按职�
 > v1.17.0 说明：
 > - `GET /api/mobile/version/check` 支持 `currentVersion` / `platform` 查询参数。版本号按 **SemVer 2.0** 比较（NuGet.Versioning）：先比核心号（`1.0.1-rc.1 > 1.0.0-rc.12`），核心相同再比 prerelease（`rc.12 > rc.1`），`v` 前缀自动剥离；解析失败退化为"字符串不等即提示更新"兜底。
 > - 服务端版本配置读取 `Mobile.{platform}.Version`，回退 `Mobile.AppVersion`（同理 MinVersion / ForceUpdate / DownloadUrl / UpdateMessage 五键族）。`Mobile.DownloadUrl` 是 APK 下载**目录**（以 `/` 结尾，K3s 自建静态服务 `https://bff.515813.xyz/dl/`），客户端按 `app-v<版本>-<ABI>.apk` 拼文件名；GitHub Release 为拉取源（服务器 CronJob 同步），不直接面向用户分发。
-> - 五键由 SeedData 播种，存量库经 `EnsureConfigKeysAsync` 启动时幂等补全（无 EF 迁移）。发布新版流程（v1.18.0 起为集群拉取式）：Publish Release（规范 tag `vX.Y.Z[-rc.N]`）→ Taro CI 构建 APK 传 Release（跨境推包/写库步骤已删除）→ K3s CronJob `openfindbearings-apk-sync` 每晚 4 点（北京时间）拉最新规范版本分包（sha256 校验、断点续传），两包齐备才改写 `Mobile.AppVersion`、写固定模板 `Mobile.UpdateMessage`；拉不完不宣告、下轮续传。Admin 系统配置页仅作手动兜底。
+> - 五键由 SeedData 播种，存量库经 `EnsureConfigKeysAsync` 启动时幂等补全（无 EF 迁移）。发布新版流程（v1.18.0 起为集群拉取式）：Publish Release（规范 tag `vX.Y.Z[-rc.N]`）→ Taro CI 构建 APK 传 Release（跨境推包/写库步骤已删除）→ K3s CronJob `openfindbearings-apk-sync` 每晚 4 点（北京时间）拉最新规范版本分包（sha256 校验、`-c` 断点续传 + shell 重试循环抗链路抖动），两包齐备才改写 `Mobile.AppVersion`、写固定模板 `Mobile.UpdateMessage`，并清理历史版分包只留当前版；拉不完不宣告、下轮续传。Admin 系统配置页仅作手动兜底。
 
 ---
 
