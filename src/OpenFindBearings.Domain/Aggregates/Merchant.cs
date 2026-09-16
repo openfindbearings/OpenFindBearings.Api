@@ -271,6 +271,9 @@ namespace OpenFindBearings.Domain.Aggregates
             Status = MerchantStatus.Active;
             UpdateTimestamp();
 
+            // 改动说明：补发"入驻审核通过"事件（站内信订阅者据此通知管理员）；
+            //   原 MerchantVerifiedEvent 语义是资质认证，与入驻生效不同轴，保留以兼容既有订阅
+            AddDomainEvent(new MerchantApprovedEvent(Id, Name));
             AddDomainEvent(new MerchantVerifiedEvent(Id, Name));
         }
 
@@ -325,6 +328,9 @@ namespace OpenFindBearings.Domain.Aggregates
             SuspensionReason = reason;
             Deactivate();  // 基类方法
             UpdateTimestamp();
+
+            // 改动说明：补发"入驻审核拒绝"事件，携带原因供站内信正文展示
+            AddDomainEvent(new MerchantRejectedEvent(Id, Name, reason));
         }
 
         /// <summary>

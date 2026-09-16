@@ -42,6 +42,13 @@ namespace OpenFindBearings.Application.Commands.Merchants.ApplyMerchant
                 throw new InvalidOperationException("请先登录后再申请入驻");
             }
 
+            // 改动说明：企业名称（营业执照全称）升级为必填（self/claim 统一入口校验）——
+            //   审核依据需要主体公司名，此前选填导致审批列表大量空值盲审；前端表单已同步加校验
+            if (string.IsNullOrWhiteSpace(request.CompanyName))
+            {
+                throw new InvalidOperationException("企业名称（营业执照全称）不能为空");
+            }
+
             var merchant = request.Mode == "claim"
                 ? await ApplyClaimAsync(request, cancellationToken)
                 : await ApplySelfAsync(request, cancellationToken);

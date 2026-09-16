@@ -72,6 +72,9 @@ namespace OpenFindBearings.Infrastructure
             // 商户成员仓储（一人多商户的唯一事实源）
             services.AddScoped<IMerchantMemberRepository, MerchantMemberRepository>();
 
+        // 改动说明：站内信仓储（通知事件订阅者与消息中心端点共用）
+        services.AddScoped<INotificationRepository, NotificationRepository>();
+
             // ============ 3. 注册缓存服务 ============
 
             // 读取缓存配置

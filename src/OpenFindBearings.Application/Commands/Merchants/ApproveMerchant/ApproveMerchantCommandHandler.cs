@@ -44,6 +44,12 @@ namespace OpenFindBearings.Application.Commands.Merchants.ApproveMerchant
                 throw new InvalidOperationException($"商家不存在: {request.Id}");
             }
 
+            // 改动说明：并发守卫——另一管理员已先处理时返回 409（领域守卫抛 400 语义不准，此处先行拦截）
+            if (merchant.Status != MerchantStatus.Pending)
+            {
+                throw new OpenFindBearings.Application.Exceptions.MerchantAlreadyProcessedException(merchant.Status.ToString());
+            }
+
             merchant.Approve();
             await _merchantRepository.UpdateAsync(merchant, cancellationToken);
 
