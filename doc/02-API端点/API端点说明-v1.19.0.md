@@ -1,7 +1,7 @@
 # API 端点说明文档
 
-**版本：** v1.18.0
-**日期：** 2026-09-14
+**版本：** v1.19.0
+**日期：** 2026-09-16
 **状态：** 与代码同步
 
 ---
@@ -28,6 +28,7 @@
 | v1.15.0 | 2026-09-14 | 商户信息维护与 Logo + 新建撞名引导认领：① 商家端点组 16→17，新增 POST /api/merchant/logo（上传商户 Logo，仅商户管理员，返回相对 URL，落 wwwroot/uploads/merchants/logo，.DisableAntiforgery）；② GET /api/merchant/profile 改按 X-Merchant-Id 当前商户上下文定位（原按"首个在职成员"，多商户读写错位），PUT /api/merchant/profile 补 IsMerchantAdmin 校验（原仅成员即可）；③ POST /api/merchant/apply（mode=self）新增撞名查重：命中可认领商户返回 HTTP 409 + ProblemDetails code=MERCHANT_CLAIMABLE_EXISTS/existingMerchantId/existingName（新增 MerchantClaimableConflictException + 中间件映射），命中已认证/已认领返回 400；④ MerchantApplicationDto 与 MerchantDetailDto 新增字段（LogoUrl；Detail 补 Website/UnifiedSocialCreditCode），MerchantExtensions.ToDetailDto 补齐 LogoUrl 等映射。总端点数 129→130 |
 | v1.16.0 | 2026-09-14 | 申请人自助撤回入驻申请：① 入驻端点组 6→7，新增 `POST /api/merchant/{merchantId:guid}/withdraw`（仅 Pending 且调用者是该商户在职 MerchantAdmin 即申请人本人可撤回；按 `Merchant.ApplicationMode` 分支清理——self 新建硬删商户及成员、claim 认领软移除认领人成员并把来源退回 Crawler 重新进入认领池、nomination/None 拒绝）。② Merchant 新增 `ApplicationMode` 列（None/Self/Claim/Nomination，默认 None 兼容存量），迁移 `AddMerchantApplicationMode`。总端点数 130→131 |
 | v1.18.0 | 2026-09-15 | 版本分发机制改为集群拉取：Taro CI 删除跨境 `kubectl cp` 推包与 psql 写库步骤（上行 ~50KB/s 阻塞发布且需集群凭据），发布动作纯 GitHub 化；K3s 侧新增 CronJob `openfindbearings-apk-sync`（Taro 仓库 `deploy/apk-server/apk-server.yml`，每晚 4 点北京时间）从 GitHub Release 拉最新规范版本分包（资产 sha256 校验 + `wget -c` 断点续传），两包齐备才改写 `Mobile.AppVersion`/`Mobile.UpdateMessage`，拉不完不宣告；端点行为与 `Mobile.*` 键族语义不变 |
+| v1.19.0 | 2026-09-16 | 媒体服务改独立 nginx 直出（应用不再逐字节代理图片）：① 新增 `deploy/k3s/media-server.yml`（nginx 只读挂 sync hostPath `/opt/openfindbearings/sync/images` + api hostPath `/opt/openfindbearings/api/uploads`，对外 `bff.515813.xyz/media/{images,uploads}/**`）+ API `deploy.yml` uploads hostPath 权限从 700 改 755（媒体服务以不同 uid 只读挂载需 other 位读穿越）；② `Mobile.*` 新增第六键 `MediaBaseUrl`（`https://bff.515813.xyz/media`），`GET /api/mobile/config` 响应新增 `mediaBaseUrl` 字段，前端 `getMediaBase()` 拼接；③ URL 契约治本：库内只存相对媒体键，`UserEndpoints.UploadAvatar`/`MerchantEndpoints.UploadLogo` 保持返回相对 `/uploads/...`（前端与 BFF 都不再拼绝对），`Identity/UpdateProfileRequest.PictureUrl` `[Url]` 改相对/绝对双允许正则（此前 `[Url]` 强制绝对，是历史绝对地址入库根因）；④ 幂等一次性 SQL 归一历史绝对 URL：`deploy/k3s/media-url-migration.sql`；⑤ BFF `MediaEndpoints.cs` + `ApiClient.GetRawAsync` + `MeEndpoints.PublicUrl` 删除（BFF 端点 -1） |
 | v1.17.0 | 2026-09-14 | 移动端版本更新落地：① `GET /api/mobile/version/check` 版本比较升级为真 SemVer 2.0 语义（NuGet.Versioning，兼容 `v` 前缀与 `rc.N` prerelease；原 int.Parse 实现遇 prerelease 必抛恒判"无更新"，解析失败退化为字符串不等兜底）；② 系统配置新增 `Mobile.*` 五键（AppVersion/MinVersion/ForceUpdate/DownloadUrl/UpdateMessage，SeedData 播种 + EnsureConfigKeysAsync 幂等补全，无需迁移），发布新版时在 Admin 系统配置页更新 AppVersion/DownloadUrl 即对客户端生效；③ `Mobile.DownloadUrl` 语义为 APK 下载目录（以 `/` 结尾，K3s 自建静态服务），客户端按 `app-v<版本>-<ABI>.apk` 拼文件名；④ BFF（OpenFindBearings.Mobile）新增匿名代理 `GET /mobile/config`（修复原 404）与 `GET /mobile/version/check` |
 
 ---
@@ -88,13 +89,14 @@ OpenFindBearings.Api（以下简称 API）共注册 **131** 个端点，按职�
 |------|------|------|----------|
 | GET | `/api/mobile/home` | 移动端首页（推荐、分类、品牌） | `GetMobileHome` |
 | GET | `/api/mobile/bearings/light` | 轴承轻量列表（型号+品牌+类型） | `MobileBearingLightList` |
-| GET | `/api/mobile/config` | 移动端配置（含站点名称/备案号/客服联系方式） | `GetMobileConfig` |
+| GET | `/api/mobile/config` | 移动端配置（含站点名称/备案号/客服联系方式/媒体源 base） | `GetMobileConfig` |
 | GET | `/api/mobile/version/check` | 版本检查（SemVer 比较，见下方 v1.17.0 说明） | `CheckVersion` |
 
 > v1.17.0 说明：
 > - `GET /api/mobile/version/check` 支持 `currentVersion` / `platform` 查询参数。版本号按 **SemVer 2.0** 比较（NuGet.Versioning）：先比核心号（`1.0.1-rc.1 > 1.0.0-rc.12`），核心相同再比 prerelease（`rc.12 > rc.1`），`v` 前缀自动剥离；解析失败退化为"字符串不等即提示更新"兜底。
 > - 服务端版本配置读取 `Mobile.{platform}.Version`，回退 `Mobile.AppVersion`（同理 MinVersion / ForceUpdate / DownloadUrl / UpdateMessage 五键族）。`Mobile.DownloadUrl` 是 APK 下载**目录**（以 `/` 结尾，K3s 自建静态服务 `https://bff.515813.xyz/dl/`），客户端按 `app-v<版本>-<ABI>.apk` 拼文件名；GitHub Release 为拉取源（服务器 CronJob 同步），不直接面向用户分发。
 > - 五键由 SeedData 播种，存量库经 `EnsureConfigKeysAsync` 启动时幂等补全（无 EF 迁移）。发布新版流程（v1.18.0 起为集群拉取式）：Publish Release（规范 tag `vX.Y.Z[-rc.N]`）→ Taro CI 构建 APK 传 Release（跨境推包/写库步骤已删除）→ K3s CronJob `openfindbearings-apk-sync` 每晚 4 点（北京时间）拉最新规范版本分包（sha256 校验、`-c` 断点续传 + shell 重试循环抗链路抖动），两包齐备才改写 `Mobile.AppVersion`、写固定模板 `Mobile.UpdateMessage`，并清理历史版分包只留当前版；拉不完不宣告、下轮续传。Admin 系统配置页仅作手动兜底。
+> - v1.19.0 媒体：图片不再由 BFF 逐字节代理，改独立 nginx 媒体服务在 `bff.515813.xyz/media/**` 直出。`GET /api/mobile/config` 响应含 `mediaBaseUrl`（读 `Mobile.MediaBaseUrl`，如 `https://bff.515813.xyz/media`，末尾无斜杠）。**媒体 URL 契约：库内一律存相对键**（`/images/...` 爬虫、`/uploads/...` 用户上传、`/avatars/presets/...` 预置），host 由客户端 `getMediaBase()` 拼（可被 `mediaBaseUrl` 运行时覆盖）；上传端点（头像/商户 Logo/执照）返回相对键。换域名/切对象存储只需改 `Mobile.MediaBaseUrl`，库内键不变。预置头像打包进 Taro 客户端本地，不经服务器。
 
 ---
 

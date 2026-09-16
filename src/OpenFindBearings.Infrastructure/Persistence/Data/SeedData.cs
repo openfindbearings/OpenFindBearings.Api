@@ -441,6 +441,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
             ("Mobile.ForceUpdate", "false", "Mobile", "强制更新开关", "bool", true),
             ("Mobile.DownloadUrl", "https://bff.515813.xyz/dl/", "Mobile", "APK 下载目录（以/结尾，客户端按 app-v版本-ABI.apk 拼文件名；H5/小程序无需填写）", "string", true),
             ("Mobile.UpdateMessage", "发现新版本，建议更新", "Mobile", "更新弹窗说明文案", "string", true),
+            // 媒体资源公网 base：图片经独立 nginx 媒体服务在 /media 直出（应用不再逐字节代理）；
+            // 库内只存相对键（/images、/uploads、/avatars），客户端拼此 base。将来切对象存储只改此值
+            ("Mobile.MediaBaseUrl", "https://bff.515813.xyz/media", "Mobile", "媒体资源公网 base（末尾无斜杠）", "string", true),
         ];
 
         /// <summary>

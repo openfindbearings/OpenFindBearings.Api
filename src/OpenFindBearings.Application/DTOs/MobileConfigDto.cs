@@ -27,5 +27,11 @@
 
         /// <summary>客服联系方式</summary>
         public string CustomerService { get; set; } = string.Empty;
+
+        /// <summary>
+        /// 媒体资源公网 base（末尾无斜杠）。
+        /// 改动说明：图片改由独立媒体服务直出，前端据此拼相对键；下发以便换域名/切对象存储免发版
+        /// </summary>
+        public string MediaBaseUrl { get; set; } = string.Empty;
     }
 }
