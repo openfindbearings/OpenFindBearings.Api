@@ -14,13 +14,16 @@ namespace OpenFindBearings.Application.Queries.Merchants.GetApplicationDetail
     {
         private readonly IMerchantRepository _merchantRepository;
         private readonly IMerchantMemberRepository _merchantMemberRepository;
+        private readonly IMerchantDocumentRepository _documentRepository;
 
         public GetApplicationDetailQueryHandler(
             IMerchantRepository merchantRepository,
-            IMerchantMemberRepository merchantMemberRepository)
+            IMerchantMemberRepository merchantMemberRepository,
+            IMerchantDocumentRepository documentRepository)
         {
             _merchantRepository = merchantRepository;
             _merchantMemberRepository = merchantMemberRepository;
+            _documentRepository = documentRepository;
         }
 
         public async Task<MerchantApplicationDetailDto?> Handle(
@@ -35,6 +38,9 @@ namespace OpenFindBearings.Application.Queries.Merchants.GetApplicationDetail
             var merchant = await _merchantRepository.GetByIdAsync(request.MerchantId, cancellationToken);
             if (merchant == null)
                 return null;
+
+            // 改动说明（v2.7.0）：附带随单材料清单（含状态），供被拒重提页回显"缺什么补什么"
+            var documents = await _documentRepository.GetByMerchantIdAsync(merchant.Id, cancellationToken);
 
             return new MerchantApplicationDetailDto
             {
@@ -55,7 +61,18 @@ namespace OpenFindBearings.Application.Queries.Merchants.GetApplicationDetail
                 Email = merchant.Contact?.Email,
                 Address = merchant.Contact?.Address,
                 Description = merchant.Description,
-                LogoUrl = merchant.LogoUrl
+                LogoUrl = merchant.LogoUrl,
+                Documents = documents
+                    .OrderBy(d => d.SubmittedAt)
+                    .Select(d => new ApplicationDocumentDto
+                    {
+                        Type = (int)d.Type,
+                        TypeName = DocumentRequirements.DisplayName(d.Type),
+                        FileUrl = d.FileUrl,
+                        Status = d.Status.ToString(),
+                        ReviewComment = d.ReviewComment
+                    })
+                    .ToList()
             };
         }
     }

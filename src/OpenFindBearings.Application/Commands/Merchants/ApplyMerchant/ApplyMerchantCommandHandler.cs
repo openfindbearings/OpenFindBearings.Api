@@ -17,18 +17,18 @@ namespace OpenFindBearings.Application.Commands.Merchants.ApplyMerchant
     {
         private readonly IMerchantRepository _merchantRepository;
         private readonly IMerchantMemberRepository _merchantMemberRepository;
-        private readonly ILicenseVerificationRepository _licenseRepository;
+        private readonly IMerchantDocumentRepository _documentRepository;
         private readonly ILogger<ApplyMerchantCommandHandler> _logger;
 
         public ApplyMerchantCommandHandler(
             IMerchantRepository merchantRepository,
             IMerchantMemberRepository merchantMemberRepository,
-            ILicenseVerificationRepository licenseRepository,
+            IMerchantDocumentRepository documentRepository,
             ILogger<ApplyMerchantCommandHandler> logger)
         {
             _merchantRepository = merchantRepository;
             _merchantMemberRepository = merchantMemberRepository;
-            _licenseRepository = licenseRepository;
+            _documentRepository = documentRepository;
             _logger = logger;
         }
 
@@ -49,16 +49,33 @@ namespace OpenFindBearings.Application.Commands.Merchants.ApplyMerchant
                 throw new InvalidOperationException("企业名称（营业执照全称）不能为空");
             }
 
+            // 改动说明（v2.7.0）：商家类型升必填——材料必备性矩阵按类型判定（授权经销商要授权书），
+            //   此前 self 缺省 Trader 会让授权商钻"贸易商只需执照"的空子
+            if (!request.Type.HasValue || !Enum.IsDefined(typeof(MerchantType), request.Type.Value))
+            {
+                throw new InvalidOperationException("请选择商家类型");
+            }
+
+            // 改动说明（v2.7.0）：入驻材料分层——按矩阵校验随单材料（全类型必含营业执照、
+            //   授权经销商另需品牌授权书），不再允许"空单先入驻后补照"
+            var documentError = Application.DTOs.DocumentRequirements.Validate(
+                (MerchantType)request.Type.Value, request.Documents);
+            if (documentError != null)
+            {
+                throw new InvalidOperationException(documentError);
+            }
+
             var merchant = request.Mode == "claim"
                 ? await ApplyClaimAsync(request, cancellationToken)
                 : await ApplySelfAsync(request, cancellationToken);
 
-            // 可选提交营业执照（用于后续认证，不影响入驻生效）
-            if (!string.IsNullOrWhiteSpace(request.LicenseUrl))
+            // 改动说明（v2.7.0）：随单材料逐条落待审记录（原单一执照 FileUrl 泛化为多类型集合），
+            //   审核通过/拒绝时由 Approve/Reject 处理器级联置状态
+            foreach (var doc in request.Documents!)
             {
-                var verification = new LicenseVerification(merchant.Id, request.LicenseUrl, request.ApplicantUserId);
-                await _licenseRepository.AddAsync(verification, cancellationToken);
-                _logger.LogInformation("已随入驻提交营业执照: MerchantId={MerchantId}", merchant.Id);
+                await _documentRepository.AddAsync(
+                    new MerchantDocument(merchant.Id, doc.Type, doc.FileUrl.Trim(), request.ApplicantUserId),
+                    cancellationToken);
             }
 
             return merchant.Id;
@@ -88,7 +105,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.ApplyMerchant
 
             var merchant = new Merchant(
                 request.Name.Trim(),
-                request.Type.HasValue ? (MerchantType)request.Type.Value : MerchantType.Trader,
+                (MerchantType)request.Type!.Value,
                 contact);
 
             merchant.UpdateBasicInfo(
@@ -228,6 +245,12 @@ namespace OpenFindBearings.Application.Commands.Merchants.ApplyMerchant
             merchant.SetDataSource(DataSource.FromManual(request.ApplicantUserId.ToString()));
             // 改动说明：标记入驻渠道为 Claim，申请人撤回时据此仅解除成员+退回爬虫、不删商户本体
             merchant.MarkApplicationMode(ApplicationMode.Claim);
+            // 改动说明（v2.7.0）：认领向导核对/改选了商家类型则应用（爬虫默认类型不代表真人身份声明）
+            var claimedType = (MerchantType)request.Type!.Value;
+            if (merchant.Type != claimedType)
+            {
+                merchant.UpdateType(claimedType);
+            }
 
             var member = new MerchantMember(
                 request.ApplicantUserId,

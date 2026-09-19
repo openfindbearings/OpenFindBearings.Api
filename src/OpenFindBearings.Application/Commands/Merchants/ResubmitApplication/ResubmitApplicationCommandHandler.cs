@@ -17,18 +17,18 @@ namespace OpenFindBearings.Application.Commands.Merchants.ResubmitApplication
     {
         private readonly IMerchantRepository _merchantRepository;
         private readonly IMerchantMemberRepository _merchantMemberRepository;
-        private readonly ILicenseVerificationRepository _licenseRepository;
+        private readonly IMerchantDocumentRepository _documentRepository;
         private readonly ILogger<ResubmitApplicationCommandHandler> _logger;
 
         public ResubmitApplicationCommandHandler(
             IMerchantRepository merchantRepository,
             IMerchantMemberRepository merchantMemberRepository,
-            ILicenseVerificationRepository licenseRepository,
+            IMerchantDocumentRepository documentRepository,
             ILogger<ResubmitApplicationCommandHandler> logger)
         {
             _merchantRepository = merchantRepository;
             _merchantMemberRepository = merchantMemberRepository;
-            _licenseRepository = licenseRepository;
+            _documentRepository = documentRepository;
             _logger = logger;
         }
 
@@ -94,6 +94,20 @@ namespace OpenFindBearings.Application.Commands.Merchants.ResubmitApplication
                 merchant.UpdateType((MerchantType)request.Type.Value);
             }
 
+            // 改动说明（v2.7.0）：材料矩阵校验——已批准材料（前轮审核通过保留）+ 本次新提交合并判定；
+            //   上一轮 Pending 材料已随拒绝级联置 Rejected，故缺什么补什么，防止"空材料重提"绕过审核
+            var approvedSoFar = (await _documentRepository.GetByMerchantIdAsync(merchant.Id, cancellationToken))
+                .Where(d => d.Status == DocumentStatus.Approved)
+                .Select(d => new Application.DTOs.DocumentSubmission(d.Type, d.FileUrl))
+                .ToList();
+            var newDocs = request.Documents ?? [];
+            var documentError = Application.DTOs.DocumentRequirements.Validate(
+                merchant.Type, [.. approvedSoFar, .. newDocs]);
+            if (documentError != null)
+            {
+                throw new InvalidOperationException(documentError);
+            }
+
             // 名称允许修改（此前无更新路径，被"名称驳回"的申请无法纠错）
             var trimmedName = request.Name.Trim();
             if (trimmedName != merchant.Name)
@@ -104,11 +118,12 @@ namespace OpenFindBearings.Application.Commands.Merchants.ResubmitApplication
             merchant.Resubmit();
             await _merchantRepository.UpdateAsync(merchant, cancellationToken);
 
-            // 可选随附营业执照（与 apply 一致：追加一条记录供后续认证，不影响入驻状态）
-            if (!string.IsNullOrWhiteSpace(request.LicenseUrl))
+            // 改动说明（v2.7.0）：本次新提交的材料逐条建待审记录（原单一执照泛化为多类型集合）
+            foreach (var doc in newDocs)
             {
-                var verification = new LicenseVerification(merchant.Id, request.LicenseUrl, request.ApplicantUserId);
-                await _licenseRepository.AddAsync(verification, cancellationToken);
+                await _documentRepository.AddAsync(
+                    new MerchantDocument(merchant.Id, doc.Type, doc.FileUrl.Trim(), request.ApplicantUserId),
+                    cancellationToken);
             }
 
             _logger.LogInformation("被拒入驻申请已重新提交: MerchantId={MerchantId}, Mode={Mode}, Applicant={UserId}",

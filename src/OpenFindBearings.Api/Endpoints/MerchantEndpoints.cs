@@ -13,7 +13,8 @@ using OpenFindBearings.Application.Commands.Merchants.AddStaff;
 using OpenFindBearings.Application.Commands.Merchants.ChangeMerchantMemberRole;
 using OpenFindBearings.Application.Commands.Merchants.Commands;
 using OpenFindBearings.Application.Commands.Merchants.RemoveStaff;
-using OpenFindBearings.Application.Commands.Merchants.SubmitLicense;
+using OpenFindBearings.Application.Commands.Merchants.SubmitDocument;
+using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Application.Commands.Merchants.SuspendMerchantMember;
 using OpenFindBearings.Application.Queries.MerchantBearings.GetMerchantBearingsByMerchant;
 using OpenFindBearings.Application.Queries.Merchants.GetMerchant;
@@ -148,12 +149,119 @@ namespace OpenFindBearings.Api.Endpoints
             .DisableAntiforgery();
 
             /// <summary>
-            /// 上传营业执照
+            /// 上传证照材料（v2.7.0 由"上传营业执照"泛化：type 区分执照/授权书/厂房照，绑定当前商户上下文）
             /// </summary>
-            group.MapPost("/license", async (
+            group.MapPost("/documents", async (
             IFormFile file,
+            [FromForm] int type,
             [FromServices] ICurrentUserService currentUser,
             [FromServices] IMediator mediator,
+            [FromServices] IWebHostEnvironment environment,
+            HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                if (file == null || file.Length == 0)
+                    return ApiResponseHelper.BadRequest("请上传文件", httpContext: httpContext);
+
+                // 改动说明（v2.7.0）：材料类型服务端校验，非法值直接拒
+                if (!Enum.IsDefined(typeof(DocumentType), type))
+                    return ApiResponseHelper.BadRequest("材料类型无效", httpContext: httpContext);
+
+                var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".pdf" };
+                var fileExtension = Path.GetExtension(file.FileName).ToLowerInvariant();
+                if (!allowedExtensions.Contains(fileExtension))
+                    return ApiResponseHelper.BadRequest("只支持 JPG、PNG、PDF 格式", httpContext: httpContext);
+
+                if (file.Length > 5 * 1024 * 1024)
+                    return ApiResponseHelper.BadRequest("文件大小不能超过5MB", httpContext: httpContext);
+
+                try
+                {
+                    // 改动说明（v2.7.0）：商户定位由"首个成员商户"改为当前商户上下文头 X-Merchant-Id，
+                    //   多商户用户换材料不再错绑到第一个商户
+                    if (!currentUser.CurrentMerchantId.HasValue)
+                        return ApiResponseHelper.BadRequest("请先选择当前商户", httpContext: httpContext);
+                    var merchantId = currentUser.CurrentMerchantId.Value;
+
+                    var uploadsFolder = Path.Combine(environment.WebRootPath, "uploads", "documents");
+                    Directory.CreateDirectory(uploadsFolder);
+
+                    // 时区规范修复：文件名时间戳统一 UTC（原 DateTime.Now 依赖服务器时区）
+                    var fileName = $"{merchantId}_{DateTime.UtcNow:yyyyMMddHHmmss}{fileExtension}";
+                    var filePath = Path.Combine(uploadsFolder, fileName);
+
+                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await file.CopyToAsync(stream);
+                    }
+
+                    var fileUrl = $"/uploads/documents/{fileName}";
+
+                    var documentCommand = new SubmitDocumentCommand
+                    {
+                        MerchantId = merchantId,
+                        Type = (DocumentType)type,
+                        FileUrl = fileUrl,
+                        SubmittedBy = currentUser.UserId.Value
+                    };
+                    var documentId = await mediator.Send(documentCommand);
+
+                    return ApiResponseHelper.Ok(new
+                    {
+                        documentId,
+                        url = fileUrl,
+                        message = $"{Application.DTOs.DocumentRequirements.DisplayName((DocumentType)type)}已提交，等待审核"
+                    }, httpContext: httpContext);
+                }
+                catch (Exception ex)
+                {
+                    return ApiResponseHelper.Problem(
+                        title: "上传失败",
+                        detail: ex.Message,
+                        httpContext: httpContext
+                    );
+                }
+            })
+            .WithName("UploadDocument")
+            .WithSummary("上传证照材料")
+            .WithDescription("按类型上传商户证照材料（1 营业执照 / 2 品牌授权书 / 3 厂房照片）进入审核队列，绑定 X-Merchant-Id 当前商户")
+            .DisableAntiforgery();
+
+            /// <summary>
+            /// 当前商户证照材料列表（v2.7.0 新增，商户信息维护页"证照材料"区读自身材料状态）
+            /// </summary>
+            group.MapGet("/documents", async (
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                // CurrentMerchantId 属性本身已按成员表校验归属（非法/非成员商户为 null）
+                if (!currentUser.CurrentMerchantId.HasValue)
+                    return ApiResponseHelper.BadRequest("请先选择当前商户", httpContext: httpContext);
+
+                var result = await mediator.Send(new OpenFindBearings.Application.Queries.Admin.GetMerchantDocuments.GetMerchantDocumentsQuery
+                {
+                    MerchantId = currentUser.CurrentMerchantId.Value
+                });
+                return ApiResponseHelper.Ok(result, httpContext: httpContext);
+            })
+            .WithName("GetMyMerchantDocuments")
+            .WithSummary("获取当前商户证照材料")
+            .WithDescription("返回当前商户上下文（X-Merchant-Id）的全部证照材料与审核状态");
+
+            /// <summary>
+            /// 材料文件纯上传（v2.7.0 新增）：只落盘返回 URL、不建审核记录。
+            /// 入驻申请"随单材料"先经此换取 fileUrl，再放入 apply/resubmit/accept 的 documents 数组统一建单；
+            /// 入驻后的即时提交仍走 POST /documents（带 type 直接建待审记录）。
+            /// </summary>
+            group.MapPost("/documents/upload", async (
+            IFormFile file,
+            [FromServices] ICurrentUserService currentUser,
             [FromServices] IWebHostEnvironment environment,
             HttpContext httpContext) =>
             {
@@ -173,56 +281,28 @@ namespace OpenFindBearings.Api.Endpoints
 
                 try
                 {
-                    var merchantQuery = new GetMerchantByUserIdQuery
-                    {
-                        UserId = currentUser.UserId.Value
-                    };
-                    var merchant = await mediator.Send(merchantQuery);
-
-                    if (merchant == null)
-                        return ApiResponseHelper.NotFound("未找到所属商家", httpContext: httpContext);
-
-                    var uploadsFolder = Path.Combine(environment.WebRootPath, "uploads", "licenses");
+                    var uploadsFolder = Path.Combine(environment.WebRootPath, "uploads", "documents");
                     Directory.CreateDirectory(uploadsFolder);
 
-                    // 时区规范修复：文件名时间戳统一 UTC（原 DateTime.Now 依赖服务器时区）
-                    var fileName = $"{merchant.Id}_{DateTime.UtcNow:yyyyMMddHHmmss}{fileExtension}";
+                    // 时区规范：文件名时间戳统一 UTC
+                    var fileName = $"pre_{currentUser.UserId.Value:N}_{DateTime.UtcNow:yyyyMMddHHmmss}{fileExtension}";
                     var filePath = Path.Combine(uploadsFolder, fileName);
-
                     using (var stream = new FileStream(filePath, FileMode.Create))
                     {
                         await file.CopyToAsync(stream);
                     }
 
-                    var fileUrl = $"/uploads/licenses/{fileName}";
-
-                    var licenseCommand = new SubmitLicenseCommand
-                    {
-                        MerchantId = merchant.Id,
-                        LicenseUrl = fileUrl,
-                        SubmittedBy = currentUser.UserId.Value
-                    };
-                    var verificationId = await mediator.Send(licenseCommand);
-
-                    return ApiResponseHelper.Ok(new
-                    {
-                        verificationId,
-                        url = fileUrl,
-                        message = "营业执照已上传，等待审核"
-                    }, httpContext: httpContext);
+                    var fileUrl = $"/uploads/documents/{fileName}";
+                    return ApiResponseHelper.Ok(new { url = fileUrl }, httpContext: httpContext);
                 }
                 catch (Exception ex)
                 {
-                    return ApiResponseHelper.Problem(
-                        title: "上传失败",
-                        detail: ex.Message,
-                        httpContext: httpContext
-                    );
+                    return ApiResponseHelper.Problem(title: "上传失败", detail: ex.Message, httpContext: httpContext);
                 }
             })
-            .WithName("UploadLicense")
-            .WithSummary("上传营业执照")
-            .WithDescription("上传营业执照用于商家认证")
+            .WithName("UploadDocumentFile")
+            .WithSummary("材料文件预上传")
+            .WithDescription("上传材料图片/PDF 返回可访问 URL（不建审核记录，供入驻申请随单材料先传后提交）")
             .DisableAntiforgery();
 
             /// <summary>

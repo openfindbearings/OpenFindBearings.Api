@@ -158,10 +158,10 @@ namespace OpenFindBearings.Domain.Aggregates
         public IReadOnlyCollection<UserMerchantFollow> FollowedByUsers => _followedByUsers.AsReadOnly();
 
         /// <summary>
-        /// 营业执照审核记录
+        /// 证照材料审核记录（v2.7.0 由"营业执照审核记录"泛化：执照/授权书/厂房照多类型）
         /// </summary>
-        private readonly List<LicenseVerification> _licenseVerifications = [];
-        public IReadOnlyCollection<LicenseVerification> LicenseVerifications => _licenseVerifications.AsReadOnly();
+        private readonly List<MerchantDocument> _documents = [];
+        public IReadOnlyCollection<MerchantDocument> MerchantDocuments => _documents.AsReadOnly();
 
         // ============ 构造函数 ============
 
@@ -582,17 +582,6 @@ namespace OpenFindBearings.Domain.Aggregates
             DataRemark = string.IsNullOrEmpty(DataRemark)
                 ? remark
                 : $"{DataRemark}; {remark}";
-            UpdateTimestamp();
-        }
-
-        // ============ 营业执照审核 ============
-
-        /// <summary>
-        /// 添加营业执照审核记录
-        /// </summary>
-        public void AddLicenseVerification(LicenseVerification verification)
-        {
-            _licenseVerifications.Add(verification);
             UpdateTimestamp();
         }
 

@@ -40,7 +40,7 @@ namespace OpenFindBearings.Infrastructure
             services.AddScoped<IMerchantBearingRepository, MerchantBearingRepository>();
             services.AddScoped<IBearingInterchangeRepository, BearingInterchangeRepository>();
             services.AddScoped<ICorrectionRequestRepository, CorrectionRequestRepository>();
-            services.AddScoped<ILicenseVerificationRepository, LicenseVerificationRepository>();
+            services.AddScoped<IMerchantDocumentRepository, MerchantDocumentRepository>();
 
             // 品牌和类型字典仓储
             services.AddScoped<IBrandRepository, BrandRepository>();

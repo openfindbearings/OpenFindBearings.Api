@@ -1,5 +1,6 @@
 using MediatR;
 using OpenFindBearings.Application.Behaviors;
+using OpenFindBearings.Application.DTOs;
 
 namespace OpenFindBearings.Application.Commands.Merchants.ResubmitApplication
 {
@@ -51,7 +52,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.ResubmitApplication
         /// <summary>商户简介</summary>
         public string? Description { get; init; }
 
-        /// <summary>可选随附营业执照图片 URL（追加一条待审记录，不影响入驻状态）</summary>
-        public string? LicenseUrl { get; init; }
+        /// <summary>本次重提新补的证照材料（v2.7.0：与"此前已批准材料"合并后须满足类型矩阵；被拒时材料已级联置拒绝，通常需重新上传）</summary>
+        public IReadOnlyList<DocumentSubmission>? Documents { get; init; }
     }
 }

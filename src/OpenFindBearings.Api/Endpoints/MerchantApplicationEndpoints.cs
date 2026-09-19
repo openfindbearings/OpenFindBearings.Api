@@ -8,6 +8,7 @@ using OpenFindBearings.Application.Commands.Merchants.DeleteRejectedApplication;
 using OpenFindBearings.Application.Commands.Merchants.NominateMerchant;
 using OpenFindBearings.Application.Commands.Merchants.ResubmitApplication;
 using OpenFindBearings.Application.Commands.Merchants.WithdrawApplication;
+using OpenFindBearings.Application.DTOs;
 using OpenFindBearings.Application.Queries.Merchants.ClaimableMerchants;
 using OpenFindBearings.Application.Queries.Merchants.GetApplicationDetail;
 using OpenFindBearings.Application.Queries.Merchants.GetMerchantApplication;
@@ -52,7 +53,7 @@ namespace OpenFindBearings.Api.Endpoints
                     CompanyName = request.CompanyName,
                     UnifiedSocialCreditCode = request.UnifiedSocialCreditCode,
                     Description = request.Description,
-                    LicenseUrl = request.LicenseUrl,
+                    Documents = request.Documents,
                     ApplicantUserId = currentUser.UserId.Value
                 };
 
@@ -156,7 +157,7 @@ namespace OpenFindBearings.Api.Endpoints
                     CompanyName = request.CompanyName,
                     UnifiedSocialCreditCode = request.UnifiedSocialCreditCode,
                     Description = request.Description,
-                    LicenseUrl = request.LicenseUrl
+                    Documents = request.Documents
                 };
 
                 await mediator.Send(command);
@@ -259,7 +260,7 @@ namespace OpenFindBearings.Api.Endpoints
                     CompanyName = request.CompanyName,
                     UnifiedSocialCreditCode = request.UnifiedSocialCreditCode,
                     Description = request.Description,
-                    LicenseUrl = request.LicenseUrl
+                    Documents = request.Documents
                 };
 
                 var merchantId = await mediator.Send(command);
@@ -336,7 +337,7 @@ namespace OpenFindBearings.Api.Endpoints
         string? CompanyName = null,
         string? UnifiedSocialCreditCode = null,
         string? Description = null,
-        string? LicenseUrl = null);
+        IReadOnlyList<DocumentSubmission>? Documents = null);
 
     /// <summary>
     /// 被拒后修改重提请求体（字段与入驻申请一致，全量提交、服务端字段级合并）
@@ -352,7 +353,7 @@ namespace OpenFindBearings.Api.Endpoints
         string? CompanyName = null,
         string? UnifiedSocialCreditCode = null,
         string? Description = null,
-        string? LicenseUrl = null);
+        IReadOnlyList<DocumentSubmission>? Documents = null);
 
     /// <summary>
     /// 提名他人为管理员请求体
@@ -383,5 +384,5 @@ namespace OpenFindBearings.Api.Endpoints
         string? CompanyName = null,
         string? UnifiedSocialCreditCode = null,
         string? Description = null,
-        string? LicenseUrl = null);
+        IReadOnlyList<DocumentSubmission>? Documents = null);
 }

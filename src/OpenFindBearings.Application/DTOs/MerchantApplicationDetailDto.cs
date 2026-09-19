@@ -53,5 +53,31 @@ namespace OpenFindBearings.Application.DTOs
 
         /// <summary>Logo 相对媒体键</summary>
         public string? LogoUrl { get; set; }
+
+        /// <summary>
+        /// 随单证照材料列表（v2.7.0：重提页回显与补传指引用）
+        /// </summary>
+        public List<ApplicationDocumentDto> Documents { get; set; } = [];
+    }
+
+    /// <summary>
+    /// 入驻申请随单材料项（v2.7.0）
+    /// </summary>
+    public class ApplicationDocumentDto
+    {
+        /// <summary>材料类型枚举值（1 执照 / 2 授权书 / 3 厂房照）</summary>
+        public int Type { get; set; }
+
+        /// <summary>材料类型中文名</summary>
+        public string TypeName { get; set; } = string.Empty;
+
+        /// <summary>材料文件URL</summary>
+        public string FileUrl { get; set; } = string.Empty;
+
+        /// <summary>审核状态（Pending/Approved/Rejected）</summary>
+        public string Status { get; set; } = string.Empty;
+
+        /// <summary>审核意见（拒绝原因）</summary>
+        public string? ReviewComment { get; set; }
     }
 }

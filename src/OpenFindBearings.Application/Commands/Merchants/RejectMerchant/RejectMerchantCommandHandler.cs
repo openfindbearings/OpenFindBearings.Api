@@ -9,13 +9,16 @@ namespace OpenFindBearings.Application.Commands.Merchants.RejectMerchant
     public class RejectMerchantCommandHandler : IRequestHandler<RejectMerchantCommand>
     {
         private readonly IMerchantRepository _merchantRepository;
+        private readonly IMerchantDocumentRepository _documentRepository;
         private readonly ILogger<RejectMerchantCommandHandler> _logger;
 
         public RejectMerchantCommandHandler(
             IMerchantRepository merchantRepository,
+            IMerchantDocumentRepository documentRepository,
             ILogger<RejectMerchantCommandHandler> logger)
         {
             _merchantRepository = merchantRepository;
+            _documentRepository = documentRepository;
             _logger = logger;
         }
 
@@ -37,6 +40,14 @@ namespace OpenFindBearings.Application.Commands.Merchants.RejectMerchant
 
             merchant.Reject(request.Reason);
             await _merchantRepository.UpdateAsync(merchant, cancellationToken);
+
+            // 改动说明（v2.7.0）：随单待审材料级联拒绝，避免旧材料滞留待审队列、并支持重提时"缺什么补什么"判定
+            var documents = await _documentRepository.GetByMerchantIdAsync(merchant.Id, cancellationToken);
+            foreach (var doc in documents.Where(d => d.Status == DocumentStatus.Pending))
+            {
+                doc.Reject(request.ReviewedBy ?? Guid.Empty, request.Reason);
+                await _documentRepository.UpdateAsync(doc, cancellationToken);
+            }
 
             _logger.LogInformation("商家认证已拒绝: {MerchantId}", request.Id);
         }
