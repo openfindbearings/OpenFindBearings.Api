@@ -1,5 +1,6 @@
 using MediatR;
 using OpenFindBearings.Application.Behaviors;
+using OpenFindBearings.Application.DTOs;
 
 namespace OpenFindBearings.Application.Commands.Merchants.AcceptNomination
 {
@@ -65,8 +66,8 @@ namespace OpenFindBearings.Application.Commands.Merchants.AcceptNomination
         public string? Description { get; init; }
 
         /// <summary>
-        /// 营业执照图片 URL（可选，用于后续认证）
+        /// 随单提交的证照材料集合（v2.7.0：补资料即须满足类型材料矩阵，与 apply 同口径）
         /// </summary>
-        public string? LicenseUrl { get; init; }
+        public IReadOnlyList<DocumentSubmission>? Documents { get; init; }
     }
 }

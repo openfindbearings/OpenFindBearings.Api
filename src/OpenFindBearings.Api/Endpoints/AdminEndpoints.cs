@@ -4,8 +4,8 @@ using OpenFindBearings.Api.Extensions;
 using OpenFindBearings.Api.Helpers;
 using OpenFindBearings.Api.Middleware;
 using OpenFindBearings.Api.Services;
-using OpenFindBearings.Application.Commands.Admin.ApproveLicense;
-using OpenFindBearings.Application.Commands.Admin.RejectLicense;
+using OpenFindBearings.Application.Commands.Admin.ApproveDocument;
+using OpenFindBearings.Application.Commands.Admin.RejectDocument;
 // 改动说明 G4：平台兜底指定商户成员（命令与实体引用）
 using OpenFindBearings.Application.Commands.Merchants.AssignMerchantMember;
 using OpenFindBearings.Domain.Entities;
@@ -44,7 +44,8 @@ using OpenFindBearings.Application.Commands.Roles.UpdateRole;
 using OpenFindBearings.Application.Commands.SystemConfig.UpdateSystemConfig;
 using OpenFindBearings.Application.Queries.Admin.GetAuditLogs;
 using OpenFindBearings.Application.Queries.Admin.GetDashboardStats;
-using OpenFindBearings.Application.Queries.Admin.GetPendingLicenses;
+using OpenFindBearings.Application.Queries.Admin.GetPendingDocuments;
+using OpenFindBearings.Application.Queries.Admin.GetMerchantDocuments;
 using OpenFindBearings.Application.Queries.BearingTypes.GetAllBearingTypes;
 using OpenFindBearings.Application.Queries.Bearings.SearchBearings;
 using OpenFindBearings.Application.Queries.Brands.GetAllBrands;
@@ -280,6 +281,22 @@ namespace OpenFindBearings.Api.Endpoints
             .RequirePermission("merchant.manage");
 
             /// <summary>
+            /// 商户证照材料列表（v2.7.0 新增，审批抽屉"申请材料"区数据源）
+            /// </summary>
+            group.MapGet("/merchants/{id:guid}/documents", async (
+                Guid id,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                var result = await mediator.Send(new GetMerchantDocumentsQuery { MerchantId = id });
+                return ApiResponseHelper.Ok(result, httpContext: httpContext);
+            })
+            .WithName("GetMerchantDocuments")
+            .WithSummary("获取商户证照材料")
+            .WithDescription("按商户返回全部证照材料（含状态），供入驻审批抽屉与认证口径核对")
+            .RequirePermission("merchant.verify");
+
+            /// <summary>
             /// 创建商家
             /// </summary>
             group.MapPost("/merchants", async (
@@ -442,7 +459,7 @@ namespace OpenFindBearings.Api.Endpoints
                 if (!currentUser.UserId.HasValue)
                     return ApiResponseHelper.Unauthorized(httpContext: httpContext);
 
-                var command = new RejectMerchantCommand(id, request.Reason);
+                var command = new RejectMerchantCommand(id, request.Reason, currentUser.UserId.Value);
                 await mediator.Send(command);
                 return ApiResponseHelper.Ok("已拒绝商家认证", httpContext);
             })
@@ -945,15 +962,16 @@ namespace OpenFindBearings.Api.Endpoints
             .RequirePermission("system.view");
 
             /// <summary>
-            /// 获取待审核的营业执照列表
+            /// 获取待审核的证照材料队列（v2.7.0：入驻后换证/补授权书等变更材料；
+            ///   随入驻申请提交的材料在入驻审批抽屉内级联审，不入本队列）
             /// </summary>
-            group.MapGet("/licenses/pending", async (
+            group.MapGet("/documents/pending", async (
                 [FromServices] IMediator mediator,
                 HttpContext httpContext,
                 [FromQuery] int page = 1,
                 [FromQuery] int pageSize = 20) =>
             {
-                var query = new GetPendingLicensesQuery
+                var query = new GetPendingDocumentsQuery
                 {
                     Page = page,
                     PageSize = pageSize
@@ -967,15 +985,16 @@ namespace OpenFindBearings.Api.Endpoints
                     result.PageSize,
                     httpContext);
             })
-            .WithName("GetPendingLicenses")
-            .WithSummary("获取待审核营业执照")
-            .WithDescription("获取所有待审核的营业执照列表")
+            .WithName("GetPendingDocuments")
+            .WithSummary("获取待审核证照材料")
+            .WithDescription("获取所有待审核的商户证照材料（换证/补授权书等入驻后变更）")
             .RequirePermission("merchant.verify");
 
             /// <summary>
-            /// 审核通过营业执照
+            /// 审核通过证照材料（通过后不自动认证——认证改走 verify 端点按材料矩阵口径校验，
+            ///   v2.7.0 移除旧"执照通过即认证"耦合）
             /// </summary>
-            group.MapPost("/licenses/{id:guid}/approve", async (
+            group.MapPost("/documents/{id:guid}/approve", async (
                 Guid id,
                 [FromServices] ICurrentUserService currentUser,
                 [FromServices] IMediator mediator,
@@ -984,25 +1003,25 @@ namespace OpenFindBearings.Api.Endpoints
                 if (!currentUser.UserId.HasValue)
                     return ApiResponseHelper.Unauthorized(httpContext: httpContext);
 
-                var command = new ApproveLicenseCommand
+                var command = new ApproveDocumentCommand
                 {
                     VerificationId = id,
                     ReviewedBy = currentUser.UserId.Value
                 };
                 await mediator.Send(command);
-                return ApiResponseHelper.Ok("审核通过，商家已认证", httpContext);
+                return ApiResponseHelper.Ok("材料已审核通过", httpContext);
             })
-            .WithName("ApproveLicense")
-            .WithSummary("审核通过营业执照")
-            .WithDescription("通过营业执照审核，商家获得认证")
+            .WithName("ApproveDocument")
+            .WithSummary("审核通过证照材料")
+            .WithDescription("通过商户证照材料变更审核（认证标由 verify 端点按材料矩阵单独判定）")
             .RequirePermission("merchant.verify");
 
             /// <summary>
-            /// 审核拒绝营业执照
+            /// 审核拒绝证照材料
             /// </summary>
-            group.MapPost("/licenses/{id:guid}/reject", async (
+            group.MapPost("/documents/{id:guid}/reject", async (
                 Guid id,
-                RejectLicenseCommand command,
+                RejectDocumentCommand command,
                 [FromServices] ICurrentUserService currentUser,
                 [FromServices] IMediator mediator,
                 HttpContext httpContext) =>
@@ -1018,9 +1037,9 @@ namespace OpenFindBearings.Api.Endpoints
                 await mediator.Send(command);
                 return ApiResponseHelper.Ok("已拒绝", httpContext);
             })
-            .WithName("RejectLicense")
-            .WithSummary("审核拒绝营业执照")
-            .WithDescription("拒绝营业执照审核，填写拒绝理由")
+            .WithName("RejectDocument")
+            .WithSummary("审核拒绝证照材料")
+            .WithDescription("拒绝商户证照材料变更审核，填写拒绝理由")
             .RequirePermission("merchant.verify");
 
             // ============ 角色管理 ============

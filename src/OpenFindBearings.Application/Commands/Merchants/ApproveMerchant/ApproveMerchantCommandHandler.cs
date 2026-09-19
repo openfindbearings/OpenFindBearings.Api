@@ -10,12 +10,14 @@ namespace OpenFindBearings.Application.Commands.Merchants.ApproveMerchant
     /// 审核通过入驻申请命令处理器
     /// 将 Pending 状态的商户转为 Active，使其生效（补充原缺失的审核门：Approve 无调用方）
     /// 若该商户是提名模式（Nomination 邀请已接受），同时按 InitiatorJoins 建双方成员行
+    /// v2.7.0：入驻通过时把随单待审材料级联置 Approved（申请单一次审，材料不再单独排队）
     /// </summary>
     public class ApproveMerchantCommandHandler : IRequestHandler<ApproveMerchantCommand>
     {
         private readonly IMerchantRepository _merchantRepository;
         private readonly IMerchantMemberRepository _merchantMemberRepository;
         private readonly IStaffInvitationRepository _invitationRepository;
+        private readonly IMerchantDocumentRepository _documentRepository;
         private readonly IUserRepository _userRepository;
         private readonly ILogger<ApproveMerchantCommandHandler> _logger;
 
@@ -23,12 +25,14 @@ namespace OpenFindBearings.Application.Commands.Merchants.ApproveMerchant
             IMerchantRepository merchantRepository,
             IMerchantMemberRepository merchantMemberRepository,
             IStaffInvitationRepository invitationRepository,
+            IMerchantDocumentRepository documentRepository,
             IUserRepository userRepository,
             ILogger<ApproveMerchantCommandHandler> logger)
         {
             _merchantRepository = merchantRepository;
             _merchantMemberRepository = merchantMemberRepository;
             _invitationRepository = invitationRepository;
+            _documentRepository = documentRepository;
             _userRepository = userRepository;
             _logger = logger;
         }
@@ -52,6 +56,16 @@ namespace OpenFindBearings.Application.Commands.Merchants.ApproveMerchant
 
             merchant.Approve();
             await _merchantRepository.UpdateAsync(merchant, cancellationToken);
+
+            // 改动说明（v2.7.0）：申请单审核通过时随单待审材料级联批准（材料不独立排队，一次审结）；
+            //   ApprovedBy 为字符串 claim 值，解析失败以 Guid.Empty 记录（不阻断主流程）
+            var approverId = Guid.TryParse(request.ApprovedBy, out var parsedApprover) ? parsedApprover : Guid.Empty;
+            var documents = await _documentRepository.GetByMerchantIdAsync(merchant.Id, cancellationToken);
+            foreach (var doc in documents.Where(d => d.Status == DocumentStatus.Pending))
+            {
+                doc.Approve(approverId, "随入驻申请审核通过");
+                await _documentRepository.UpdateAsync(doc, cancellationToken);
+            }
 
             // 提名模式商户审核通过：建被提名人（管理员）与发起人（员工）成员行
             await CreateNominationMembersAsync(merchant.Id, cancellationToken);

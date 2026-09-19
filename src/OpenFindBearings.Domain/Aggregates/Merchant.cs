@@ -158,10 +158,10 @@ namespace OpenFindBearings.Domain.Aggregates
         public IReadOnlyCollection<UserMerchantFollow> FollowedByUsers => _followedByUsers.AsReadOnly();
 
         /// <summary>
-        /// 营业执照审核记录
+        /// 证照材料审核记录（v2.7.0 由"营业执照审核记录"泛化：执照/授权书/厂房照多类型）
         /// </summary>
-        private readonly List<LicenseVerification> _licenseVerifications = [];
-        public IReadOnlyCollection<LicenseVerification> LicenseVerifications => _licenseVerifications.AsReadOnly();
+        private readonly List<MerchantDocument> _documents = [];
+        public IReadOnlyCollection<MerchantDocument> MerchantDocuments => _documents.AsReadOnly();
 
         // ============ 构造函数 ============
 
@@ -310,6 +310,32 @@ namespace OpenFindBearings.Domain.Aggregates
             Status = MerchantStatus.Pending;
             SuspensionReason = null;
             Activate();  // 基类方法，恢复为有效（拒绝时曾被 Deactivate）
+            UpdateTimestamp();
+        }
+
+        /// <summary>
+        /// 被拒后修改资料重新提交（v2.6.0 新增，self/claim 申请人本人通道）：
+        /// 守卫 Suspended（仅被驳回的申请可重提），状态回 Pending、清驳回原因并恢复有效。
+        /// 与 ReopenForClaim 的区别：本方法是"原申请人自己改完再交"，成员关系保留不动；
+        /// ReopenForClaim 是"他人接盘重认领"，调用前需先解除旧成员。
+        /// </summary>
+        public void Resubmit()
+        {
+            if (Status != MerchantStatus.Suspended)
+                throw new InvalidOperationException($"当前状态为 {Status}，无法重新提交");
+
+            Status = MerchantStatus.Pending;
+            SuspensionReason = null;
+            Activate();  // 基类方法，恢复为有效（拒绝时曾被 Deactivate）
+            UpdateTimestamp();
+        }
+
+        /// <summary>
+        /// 更新商家类型（v2.6.0 新增：重提编辑表单允许改类型；建店时 UpdateBasicInfo 不含 Type）
+        /// </summary>
+        public void UpdateType(MerchantType newType)
+        {
+            Type = newType;
             UpdateTimestamp();
         }
 
@@ -556,17 +582,6 @@ namespace OpenFindBearings.Domain.Aggregates
             DataRemark = string.IsNullOrEmpty(DataRemark)
                 ? remark
                 : $"{DataRemark}; {remark}";
-            UpdateTimestamp();
-        }
-
-        // ============ 营业执照审核 ============
-
-        /// <summary>
-        /// 添加营业执照审核记录
-        /// </summary>
-        public void AddLicenseVerification(LicenseVerification verification)
-        {
-            _licenseVerifications.Add(verification);
             UpdateTimestamp();
         }
 

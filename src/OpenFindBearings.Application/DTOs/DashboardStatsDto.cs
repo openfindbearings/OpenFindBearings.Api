@@ -119,7 +119,7 @@
     {
         public int PendingMerchantBearings { get; set; }
         public int PendingCorrections { get; set; }
-        public int PendingLicenses { get; set; }
+        public int PendingDocuments { get; set; }
     }
 
     /// <summary>

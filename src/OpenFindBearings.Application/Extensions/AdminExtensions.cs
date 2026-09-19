@@ -22,18 +22,23 @@ namespace OpenFindBearings.Application.Extensions
             };
         }
 
-        public static PendingLicenseDto ToDto(this LicenseVerification license)
+        /// <summary>
+        /// 证照材料实体转队列 DTO（v2.7.0 泛化：带材料类型与中文名）
+        /// </summary>
+        public static PendingDocumentDto ToDto(this MerchantDocument document)
         {
-            return new PendingLicenseDto
+            return new PendingDocumentDto
             {
-                Id = license.Id,
-                MerchantId = license.MerchantId,
-                MerchantName = license.Merchant?.Name ?? string.Empty,
-                LicenseUrl = license.LicenseUrl ?? string.Empty,
-                Status = license.Status.ToString(),
-                SubmittedBy = license.SubmittedBy,
-                SubmitterName = license.Submitter?.Nickname ?? "未知",
-                SubmittedAt = license.SubmittedAt
+                Id = document.Id,
+                MerchantId = document.MerchantId,
+                MerchantName = document.Merchant?.Name ?? string.Empty,
+                Type = (int)document.Type,
+                TypeName = Application.DTOs.DocumentRequirements.DisplayName(document.Type),
+                FileUrl = document.FileUrl ?? string.Empty,
+                Status = document.Status.ToString(),
+                SubmittedBy = document.SubmittedBy,
+                SubmitterName = document.Submitter?.Nickname ?? "未知",
+                SubmittedAt = document.SubmittedAt
             };
         }
     }

@@ -120,8 +120,8 @@ public class AuditLogMiddleware
         if (path.Contains("/merchants/", StringComparison.OrdinalIgnoreCase) && path.EndsWith("/reject", StringComparison.OrdinalIgnoreCase)) return "RejectMerchant";
         if (path.Contains("/corrections/", StringComparison.OrdinalIgnoreCase) && path.EndsWith("/approve", StringComparison.OrdinalIgnoreCase)) return "ApproveCorrection";
         if (path.Contains("/corrections/", StringComparison.OrdinalIgnoreCase) && path.EndsWith("/reject", StringComparison.OrdinalIgnoreCase)) return "RejectCorrection";
-        if (path.Contains("/licenses/", StringComparison.OrdinalIgnoreCase) && path.EndsWith("/approve", StringComparison.OrdinalIgnoreCase)) return "ApproveLicense";
-        if (path.Contains("/licenses/", StringComparison.OrdinalIgnoreCase) && path.EndsWith("/reject", StringComparison.OrdinalIgnoreCase)) return "RejectLicense";
+        if (path.Contains("/documents/", StringComparison.OrdinalIgnoreCase) && path.EndsWith("/approve", StringComparison.OrdinalIgnoreCase)) return "ApproveDocument";
+        if (path.Contains("/documents/", StringComparison.OrdinalIgnoreCase) && path.EndsWith("/reject", StringComparison.OrdinalIgnoreCase)) return "RejectDocument";
         return method switch
         {
             "POST" => "Create",

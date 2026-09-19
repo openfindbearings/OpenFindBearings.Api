@@ -1,5 +1,6 @@
 using MediatR;
 using OpenFindBearings.Application.Behaviors;
+using OpenFindBearings.Application.DTOs;
 
 namespace OpenFindBearings.Application.Commands.Merchants.ApplyMerchant
 {
@@ -25,7 +26,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.ApplyMerchant
         public string? Name { get; init; }
 
         /// <summary>
-        /// 商家类型（MerchantType 枚举值，mode=self 时必填）
+        /// 商家类型（MerchantType 枚举值，v2.7.0 起 self/claim 均必填——材料必备性矩阵依赖类型判定）
         /// </summary>
         public int? Type { get; init; }
 
@@ -70,9 +71,10 @@ namespace OpenFindBearings.Application.Commands.Merchants.ApplyMerchant
         public string? Description { get; init; }
 
         /// <summary>
-        /// 营业执照图片 URL（可选，用于后续认证）
+        /// 随单提交的证照材料集合（v2.7.0：替代原单一 FileUrl 执照字段。全类型必含营业执照，
+        /// 授权经销商另需品牌授权书；材料状态随入驻审核级联批准/驳回）
         /// </summary>
-        public string? LicenseUrl { get; init; }
+        public IReadOnlyList<DocumentSubmission>? Documents { get; init; }
 
         /// <summary>
         /// 申请人业务用户ID

@@ -15,7 +15,7 @@ namespace OpenFindBearings.Application.Queries.Admin.GetDashboardStats
         private readonly IMerchantBearingRepository _merchantBearingRepository;
         private readonly IBrandRepository _brandRepository;
         private readonly IBearingTypeRepository _bearingTypeRepository;
-        private readonly ILicenseVerificationRepository _licenseRepository;
+        private readonly IMerchantDocumentRepository _documentRepository;
         private readonly IMerchantMemberRepository _merchantMemberRepository;
         private readonly ILogger<GetDashboardStatsQueryHandler> _logger;
 
@@ -27,7 +27,7 @@ namespace OpenFindBearings.Application.Queries.Admin.GetDashboardStats
             IMerchantBearingRepository merchantBearingRepository,
             IBrandRepository brandRepository,
             IBearingTypeRepository bearingTypeRepository,
-            ILicenseVerificationRepository licenseRepository,
+            IMerchantDocumentRepository documentRepository,
             IMerchantMemberRepository merchantMemberRepository,
             ILogger<GetDashboardStatsQueryHandler> logger)
         {
@@ -38,7 +38,7 @@ namespace OpenFindBearings.Application.Queries.Admin.GetDashboardStats
             _merchantBearingRepository = merchantBearingRepository;
             _brandRepository = brandRepository;
             _bearingTypeRepository = bearingTypeRepository;
-            _licenseRepository = licenseRepository;
+            _documentRepository = documentRepository;
             _merchantMemberRepository = merchantMemberRepository;
             _logger = logger;
         }
@@ -78,7 +78,7 @@ namespace OpenFindBearings.Application.Queries.Admin.GetDashboardStats
 
             var brandTotal = await _brandRepository.GetTotalCountAsync(cancellationToken);
             var typeTotal = await _bearingTypeRepository.GetTotalCountAsync(cancellationToken);
-            var pendingLicenses = await _licenseRepository.GetPendingCountAsync(cancellationToken);
+            var pendingDocuments = await _documentRepository.GetPendingCountAsync(cancellationToken);
 
             var correctionTotal = correctionPending + correctionApproved + correctionRejected;
 
@@ -177,7 +177,7 @@ namespace OpenFindBearings.Application.Queries.Admin.GetDashboardStats
                 {
                     PendingMerchantBearings = pendingMerchantBearings,
                     PendingCorrections = correctionPending,
-                    PendingLicenses = pendingLicenses
+                    PendingDocuments = pendingDocuments
                 }
             };
         }

@@ -14,7 +14,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.AcceptNomination
     {
         private readonly IStaffInvitationRepository _invitationRepository;
         private readonly IMerchantRepository _merchantRepository;
-        private readonly ILicenseVerificationRepository _licenseRepository;
+        private readonly IMerchantDocumentRepository _documentRepository;
         private readonly IUserRepository _userRepository;
         private readonly IMerchantMemberRepository _merchantMemberRepository;
         private readonly IMediator _mediator;
@@ -23,7 +23,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.AcceptNomination
         public AcceptNominationCommandHandler(
             IStaffInvitationRepository invitationRepository,
             IMerchantRepository merchantRepository,
-            ILicenseVerificationRepository licenseRepository,
+            IMerchantDocumentRepository documentRepository,
             IUserRepository userRepository,
             IMerchantMemberRepository merchantMemberRepository,
             IMediator mediator,
@@ -31,7 +31,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.AcceptNomination
         {
             _invitationRepository = invitationRepository;
             _merchantRepository = merchantRepository;
-            _licenseRepository = licenseRepository;
+            _documentRepository = documentRepository;
             _userRepository = userRepository;
             _merchantMemberRepository = merchantMemberRepository;
             _mediator = mediator;
@@ -159,12 +159,17 @@ namespace OpenFindBearings.Application.Commands.Merchants.AcceptNomination
                 await _mediator.Publish(new NominationAcceptedEvent(invitation.OperatorId, merchant.Id, merchant.Name), cancellationToken);
             }
 
-            // 可选提交营业执照
-            if (!string.IsNullOrWhiteSpace(request.LicenseUrl))
+            // 改动说明（v2.7.0）：补资料时按材料矩阵校验并落待审记录（与 apply 同口径，提名渠道不豁免）
+            var documentError = Application.DTOs.DocumentRequirements.Validate(merchant.Type, request.Documents);
+            if (documentError != null)
             {
-                await _licenseRepository.AddAsync(
-                    new OpenFindBearings.Domain.Entities.LicenseVerification(
-                        merchant.Id, request.LicenseUrl, request.NomineeUserId),
+                throw new InvalidOperationException(documentError);
+            }
+            foreach (var doc in request.Documents ?? [])
+            {
+                await _documentRepository.AddAsync(
+                    new OpenFindBearings.Domain.Entities.MerchantDocument(
+                        merchant.Id, doc.Type, doc.FileUrl.Trim(), request.NomineeUserId),
                     cancellationToken);
             }
 
