@@ -159,9 +159,13 @@ namespace OpenFindBearings.Domain.Aggregates
 
         /// <summary>
         /// 证照材料审核记录（v2.7.0 由"营业执照审核记录"泛化：执照/授权书/厂房照多类型）
+        /// 改动说明（v2.8.1）：字段名从 _documents 改为 _merchantDocuments——EF Core 按
+        ///   "<下划线+属性名camel>"约定发现 backing field，原名不匹配导致 EF 导航修复
+        ///   落到 getter 的 AsReadOnly() 包装上，随单材料 Add 时抛 Collection is read-only
+        ///   （_merchantBearings/_followedByUsers 因命名合规从未出问题，即此佐证）
         /// </summary>
-        private readonly List<MerchantDocument> _documents = [];
-        public IReadOnlyCollection<MerchantDocument> MerchantDocuments => _documents.AsReadOnly();
+        private readonly List<MerchantDocument> _merchantDocuments = [];
+        public IReadOnlyCollection<MerchantDocument> MerchantDocuments => _merchantDocuments.AsReadOnly();
 
         // ============ 构造函数 ============
 
