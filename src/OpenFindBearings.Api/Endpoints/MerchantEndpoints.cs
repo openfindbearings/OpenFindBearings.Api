@@ -313,7 +313,8 @@ namespace OpenFindBearings.Api.Endpoints
                 if (merchant == null)
                     return ApiResponseHelper.NotFound("未找到所属商家", httpContext);
 
-                var staffList = await mediator.Send(new GetMerchantStaffQuery(merchant.Id));
+                // 改动说明（v1.5.2）：传当前用户 id 供 DTO 标记 isSelf
+                var staffList = await mediator.Send(new GetMerchantStaffQuery(merchant.Id, currentUser.UserId));
 
                 var totalCount = staffList.Count();
                 var pagedItems = staffList

@@ -71,6 +71,12 @@ namespace OpenFindBearings.Domain.Aggregates
         public bool IsVerified { get; private set; }
 
         /// <summary>
+        /// 商户是否已主动申请认证（v2.9.0：申请-审核闭环信号，Admin 认证/驳回后清除；
+        /// 认证资格校验以材料矩阵为准，本标记仅作审核队列优先级提示）
+        /// </summary>
+        public bool VerifyRequested { get; private set; }
+
+        /// <summary>
         /// 认证通过时间
         /// </summary>
         public DateTime? VerifiedAt { get; private set; }
@@ -364,6 +370,17 @@ namespace OpenFindBearings.Domain.Aggregates
         }
 
         /// <summary>
+        /// 商户主动申请认证（v2.9.0）：仅置意向标记，资格由调用方按材料矩阵校验；幂等可重复申请
+        /// </summary>
+        public void RequestVerify()
+        {
+            if (IsVerified)
+                throw new InvalidOperationException("商家已经认证，无需申请");
+
+            VerifyRequested = true;
+        }
+
+        /// <summary>
         /// 认证商家
         /// </summary>
         public void Verify(string? verifiedBy = null)
@@ -374,6 +391,8 @@ namespace OpenFindBearings.Domain.Aggregates
             IsVerified = true;
             VerifiedAt = DateTime.UtcNow;
             VerifiedBy = verifiedBy;
+            // 改动说明（v2.9.0）：认证完成即清除商户的待处理申请标记
+            VerifyRequested = false;
 
             // 认证后升级等级
             if (Grade < MerchantGrade.Verified)

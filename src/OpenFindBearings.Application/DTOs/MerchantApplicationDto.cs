@@ -36,6 +36,11 @@ namespace OpenFindBearings.Application.DTOs
         /// </summary>
         public bool IsVerified { get; set; }
 
+    /// <summary>
+    /// 商户是否已主动申请认证（v2.9.0：Taro"申请认证"按钮态——已申请显示"已提交"禁用）
+    /// </summary>
+    public bool VerifyRequested { get; set; }
+
         /// <summary>
         /// 商户 Logo 相对/绝对 URL（供移动端商户切换器与 TabBar 展示当前商户头像）
         /// </summary>

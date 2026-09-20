@@ -7,6 +7,7 @@ using OpenFindBearings.Application.Commands.Merchants.ApplyMerchant;
 using OpenFindBearings.Application.Commands.Merchants.DeleteRejectedApplication;
 using OpenFindBearings.Application.Commands.Merchants.NominateMerchant;
 using OpenFindBearings.Application.Commands.Merchants.ResubmitApplication;
+using OpenFindBearings.Application.Commands.Merchants.RequestVerifyMerchant;
 using OpenFindBearings.Application.Commands.Merchants.WithdrawApplication;
 using OpenFindBearings.Application.DTOs;
 using OpenFindBearings.Application.Queries.Merchants.ClaimableMerchants;
@@ -107,6 +108,26 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("WithdrawMerchantApplication")
             .WithSummary("撤回入驻申请")
             .WithDescription("申请人撤回自己待审核的入驻申请：新建商户将被删除，认领的商家退回公共池可再被认领");
+
+            /// <summary>
+            /// 商户主动申请认证（v2.9.0 申请-审核闭环）：材料矩阵校验通过后置申请标记，Admin 认证队列优先处理
+            /// </summary>
+            group.MapPost("/{merchantId:guid}/verify-request", async (
+                Guid merchantId,
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                await mediator.Send(new RequestVerifyMerchantCommand(merchantId, currentUser.UserId.Value));
+
+                return ApiResponseHelper.Ok("认证申请已提交，平台将优先审核", httpContext: httpContext);
+            })
+            .WithName("RequestMerchantVerify")
+            .WithSummary("申请商家认证")
+            .WithDescription("商户管理员主动申请认证（需必备材料全部审核通过，与平台认证同口径）；重复提交幂等");
 
             /// <summary>
             /// 查询单个入驻申请详情（被拒重提表单预填，v2.6.0 新增）

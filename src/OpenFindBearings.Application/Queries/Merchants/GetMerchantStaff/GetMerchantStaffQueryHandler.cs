@@ -36,7 +36,9 @@ namespace OpenFindBearings.Application.Queries.Merchants.GetMerchantStaff
                 Nickname = m.User?.Nickname ?? string.Empty,
                 Avatar = m.User?.Avatar,
                 Role = m.IsAdmin ? "管理员" : "员工",
-                Status = m.Status.ToString()
+                Status = m.Status.ToString(),
+                // 改动说明（v1.5.2）：后端标记本人行（成员管理 UI 隐藏自操作，守卫在前端不可靠）
+                IsSelf = request.CurrentUserId.HasValue && m.UserId == request.CurrentUserId.Value
             }).ToList();
         }
     }

@@ -35,6 +35,10 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             builder.Property(m => m.IsVerified)
                 .HasDefaultValue(false);
 
+            // v2.9.0：商户主动申请认证标记（默认 false，存量无需回填）
+            builder.Property(m => m.VerifyRequested)
+                .HasDefaultValue(false);
+
             builder.Property(m => m.Grade)
                 .HasConversion<int>()
                 .HasDefaultValue(MerchantGrade.Standard)

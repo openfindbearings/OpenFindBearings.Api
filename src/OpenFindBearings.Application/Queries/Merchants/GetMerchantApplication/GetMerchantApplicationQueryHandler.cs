@@ -51,6 +51,8 @@ namespace OpenFindBearings.Application.Queries.Merchants.GetMerchantApplication
                         : null,
                     Role = member.Role,
                     IsVerified = merchant.IsVerified,
+                    // v2.9.0：申请认证标记透传给 Taro 按钮态
+                    VerifyRequested = merchant.VerifyRequested,
                     // 改动说明：带出 Logo，供移动端 TabBar/切换器显示当前商户头像
                     LogoUrl = merchant.LogoUrl
                 });

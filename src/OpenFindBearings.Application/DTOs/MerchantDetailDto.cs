@@ -71,5 +71,10 @@
         /// 成员状态（Active / Suspended，成员管理展示用）
         /// </summary>
         public string Status { get; set; } = string.Empty;
+
+        /// <summary>
+        /// 是否为当前登录用户本人（v1.5.2：成员管理页据此隐藏自操作按钮，前端 id 不同源无法自判）
+        /// </summary>
+        public bool IsSelf { get; set; }
     }
 }
