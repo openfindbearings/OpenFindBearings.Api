@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Amazon.S3;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,6 +11,7 @@ using OpenFindBearings.Infrastructure.Persistence;
 using OpenFindBearings.Infrastructure.Persistence.Data;
 using OpenFindBearings.Infrastructure.Persistence.Repositories;
 using OpenFindBearings.Infrastructure.Services;
+using OpenFindBearings.Infrastructure.Services.ObjectStorage;
 using StackExchange.Redis;
 
 namespace OpenFindBearings.Infrastructure
@@ -147,9 +149,31 @@ namespace OpenFindBearings.Infrastructure
             // 注册为 Singleton 以启用进程内 5 分钟缓存，内部通过 IServiceScopeFactory 解析 Scoped 仓储
             services.AddSingleton<IPriceConfigProvider, PriceConfigProvider>();
 
-            // 文件服务
-            services.Configure<FileStorageSettings>(configuration.GetSection("FileStorage"));
-            services.AddScoped<IFileService, LocalFileService>();
+            // ========== 对象存储 ==========
+            // 改动说明（v1.5.0）：用户上传（头像/Logo/证照材料）从端点直写本地盘改为走 IObjectStorageService
+            // 抽象；生产 Provider=Minio（S3 协议对接 MinIO，ForcePathStyle 为自建 MinIO 必需），
+            // 开发默认 LocalFile（写 wwwroot，media 同源直出）。原 IFileService/LocalFileService 死代码删除。
+            var storageProvider = configuration["FileStorage:Provider"] ?? "LocalFile";
+            switch (storageProvider)
+            {
+                case "Minio":
+                    services.AddSingleton<IAmazonS3>(_ => new AmazonS3Client(
+                        configuration["FileStorage:AccessKey"] ?? "minioadmin",
+                        configuration["FileStorage:SecretKey"] ?? "minioadmin",
+                        new Amazon.S3.AmazonS3Config
+                        {
+                            ServiceURL = configuration["FileStorage:Endpoint"] ?? "http://minio:9000",
+                            ForcePathStyle = true,
+                            AuthenticationRegion = "us-east-1"
+                        }));
+                    services.AddScoped<IObjectStorageService, MinioStorage>();
+                    break;
+                case "LocalFile":
+                    services.AddScoped<IObjectStorageService, LocalFileStorage>();
+                    break;
+                default:
+                    throw new NotSupportedException($"不支持的对象存储类型: {storageProvider}");
+            }
 
             // 添加后台任务队列服务
             services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();

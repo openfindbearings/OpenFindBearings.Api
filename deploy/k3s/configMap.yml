@@ -18,6 +18,11 @@ data:
   AllowedHosts: "*"
   AllowedOrigins__0: "https://www.simate.cn"
   AllowedOrigins__1: "https://simate.cn"
+  # 对象存储（v1.5.0）：用户上传统一落 MinIO bucket=media，key 前缀 uploads/**；
+  # 凭据在 openfindbearings-api-secrets（FileStorage__AccessKey/SecretKey）
+  FileStorage__Provider: "Minio"
+  FileStorage__Endpoint: "http://openfindbearings-minio:9000"
+  FileStorage__BucketName: "media"
   # 内部服务间调用令牌：BFF→API 带此头豁免按 IP 的用户级限流。须与 BFF 侧 Internal__ApiToken 完全一致。
   # 仅内网生效（API 无公网 ingress），如需轮换改此值并同步 BFF 后重启两服务。
   Internal__ApiToken: "ofb-internal-3f9a1c7e5b2d4a86"
