@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using OpenFindBearings.Api.Helpers;
 using OpenFindBearings.Api.Services;
+using OpenFindBearings.Application.Services;
 using OpenFindBearings.Application.Commands.Corrections.Commands;
 using OpenFindBearings.Application.Commands.Corrections.SubmitMerchantCorrection;
 using OpenFindBearings.Application.Commands.Favorites.FavoriteBearing;
@@ -94,7 +95,7 @@ namespace OpenFindBearings.Api.Endpoints
             group.MapPost("/avatar", async (
                 IFormFile file,
                 [FromServices] ICurrentUserService currentUser,
-                [FromServices] IWebHostEnvironment environment,
+                [FromServices] IObjectStorageService storage,
                 HttpContext httpContext) =>
             {
                 if (!currentUser.UserId.HasValue)
@@ -112,17 +113,13 @@ namespace OpenFindBearings.Api.Endpoints
                 if (file.Length > 2 * 1024 * 1024)
                     return ApiResponseHelper.BadRequest("头像文件不能超过2MB", httpContext: httpContext);
 
-                var uploadsFolder = Path.Combine(environment.WebRootPath, "uploads", "avatars");
-                Directory.CreateDirectory(uploadsFolder);
-
+                // 改动说明（v1.5.0）：落盘改走 IObjectStorageService（生产 MinIO / 开发本地盘），key/URL 形态不变
+                using var buffer = new MemoryStream();
+                await file.CopyToAsync(buffer);
                 var fileName = $"{currentUser.UserId.Value:N}_{DateTime.UtcNow:yyyyMMddHHmmss}{fileExtension}";
-                var filePath = Path.Combine(uploadsFolder, fileName);
-                using (var stream = new FileStream(filePath, FileMode.Create))
-                {
-                    await file.CopyToAsync(stream);
-                }
-
-                var fileUrl = $"/uploads/avatars/{fileName}";
+                var fileUrl = await storage.UploadAsync(
+                    $"uploads/avatars/{fileName}", buffer.ToArray(),
+                    FileUploadHelper.ContentTypeFromExtension(fileExtension));
                 return ApiResponseHelper.Ok(new { url = fileUrl }, httpContext: httpContext);
             })
             .WithName("UploadUserAvatar")

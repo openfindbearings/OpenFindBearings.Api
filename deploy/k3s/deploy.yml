@@ -16,20 +16,8 @@ spec:
       labels:
         app: openfindbearings-api
     spec:
-      # 改动说明：头像/执照上传写 wwwroot/uploads——容器内 /app 属 root 而进程 uid 1654
-      # 无写权限（同 Identity dpkeys 事故根因），挂 hostPath 卷并由 initContainer 纠权限；
-      # 顺带获得持久化（Pod 重启上传图不丢）。镜像复用 API 自身（docker.io 不可达教训）
-      # 权限 755 而非 700：媒体服务(media-server.yml)以不同 uid 只读挂载本 hostPath 直出图片，
-      # 需 other 位可读可穿越；写仍仅限属主 uid 1654（不放开写权限，安全等价）
-      initContainers:
-      - name: uploads-init
-        image: ghcr.io/openfindbearings/openfindbearings-api:latest
-        command: ["sh", "-c", "chown -R 1654:1654 /app/wwwroot/uploads && chmod 755 /app/wwwroot/uploads"]
-        securityContext:
-          runAsUser: 0
-        volumeMounts:
-        - name: uploads
-          mountPath: /app/wwwroot/uploads
+      # 改动说明（v1.5.0）：用户上传改走 MinIO 对象存储（minio.yml），原 wwwroot/uploads
+      # hostPath 卷 + uploads-init chown hack 一并废弃（权限问题根因消除）
       containers:
       - name: openfindbearings-api
         image: ghcr.io/openfindbearings/openfindbearings-api:latest
@@ -69,12 +57,6 @@ spec:
           timeoutSeconds: 3
           successThreshold: 1
           failureThreshold: 3
-      volumes:
-      - name: uploads
-        hostPath:
-          path: /opt/openfindbearings/api/uploads
-          type: DirectoryOrCreate
-
 ---
 apiVersion: v1
 kind: Service

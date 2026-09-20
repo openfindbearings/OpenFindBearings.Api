@@ -31,5 +31,20 @@ namespace OpenFindBearings.Api.Helpers
                 _ => string.Empty
             };
         }
+
+        /// <summary>
+        /// 扩展名映射 Content-Type（对象存储元数据用；客户端 MIME 不可信时以落定扩展名为准）。
+        /// </summary>
+        public static string ContentTypeFromExtension(string ext) => ext switch
+        {
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".png" => "image/png",
+            ".webp" => "image/webp",
+            ".gif" => "image/gif",
+            ".pdf" => "application/pdf",
+            ".xls" => "application/vnd.ms-excel",
+            ".xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            _ => "application/octet-stream"
+        };
     }
 }

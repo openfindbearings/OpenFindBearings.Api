@@ -14,6 +14,7 @@ using OpenFindBearings.Application.Commands.Merchants.ChangeMerchantMemberRole;
 using OpenFindBearings.Application.Commands.Merchants.Commands;
 using OpenFindBearings.Application.Commands.Merchants.RemoveStaff;
 using OpenFindBearings.Application.Commands.Merchants.SubmitDocument;
+using OpenFindBearings.Application.Services;
 using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Application.Commands.Merchants.SuspendMerchantMember;
 using OpenFindBearings.Application.Queries.MerchantBearings.GetMerchantBearingsByMerchant;
@@ -98,7 +99,7 @@ namespace OpenFindBearings.Api.Endpoints
                 IFormFile file,
                 [FromServices] ICurrentUserService currentUser,
                 [FromServices] IPermissionService permissionService,
-                [FromServices] IWebHostEnvironment environment,
+                [FromServices] IObjectStorageService storage,
                 HttpContext httpContext) =>
             {
                 if (!currentUser.UserId.HasValue)
@@ -123,20 +124,15 @@ namespace OpenFindBearings.Api.Endpoints
 
                 try
                 {
-                    // 改动说明：与用户头像同规范落 API wwwroot/uploads，文件名 {userId:N}_{UTC}{ext}；
+                    // 改动说明（v1.5.0）：落盘从直写 wwwroot 改走 IObjectStorageService（生产 MinIO / 开发本地盘），
+                    //   key 与 URL 形态不变（uploads/merchants/logo/...），展示层无感；
                     //   仅回相对 URL，DB 写入由维护页保存 profile 时带 logoUrl 完成（null 保留、非空覆盖）
-                    var uploadsFolder = Path.Combine(environment.WebRootPath, "uploads", "merchants", "logo");
-                    Directory.CreateDirectory(uploadsFolder);
-
+                    using var buffer = new MemoryStream();
+                    await file.CopyToAsync(buffer);
                     var fileName = $"{currentUser.UserId.Value:N}_{DateTime.UtcNow:yyyyMMddHHmmss}{fileExtension}";
-                    var filePath = Path.Combine(uploadsFolder, fileName);
-
-                    using (var stream = new FileStream(filePath, FileMode.Create))
-                    {
-                        await file.CopyToAsync(stream);
-                    }
-
-                    var fileUrl = $"/uploads/merchants/logo/{fileName}";
+                    var fileUrl = await storage.UploadAsync(
+                        $"uploads/merchants/logo/{fileName}", buffer.ToArray(),
+                        FileUploadHelper.ContentTypeFromExtension(fileExtension));
                     return ApiResponseHelper.Ok(new { url = fileUrl, message = "Logo 上传成功" }, httpContext: httpContext);
                 }
                 catch (Exception ex)
@@ -157,7 +153,7 @@ namespace OpenFindBearings.Api.Endpoints
             [FromForm] int type,
             [FromServices] ICurrentUserService currentUser,
             [FromServices] IMediator mediator,
-            [FromServices] IWebHostEnvironment environment,
+            [FromServices] IObjectStorageService storage,
             HttpContext httpContext) =>
             {
                 if (!currentUser.UserId.HasValue)
@@ -187,19 +183,14 @@ namespace OpenFindBearings.Api.Endpoints
                         return ApiResponseHelper.BadRequest("请先选择当前商户", httpContext: httpContext);
                     var merchantId = currentUser.CurrentMerchantId.Value;
 
-                    var uploadsFolder = Path.Combine(environment.WebRootPath, "uploads", "documents");
-                    Directory.CreateDirectory(uploadsFolder);
-
+                    // 改动说明（v1.5.0）：落盘改走 IObjectStorageService（生产 MinIO / 开发本地盘），key/URL 形态不变
                     // 时区规范修复：文件名时间戳统一 UTC（原 DateTime.Now 依赖服务器时区）
+                    using var buffer = new MemoryStream();
+                    await file.CopyToAsync(buffer);
                     var fileName = $"{merchantId}_{DateTime.UtcNow:yyyyMMddHHmmss}{fileExtension}";
-                    var filePath = Path.Combine(uploadsFolder, fileName);
-
-                    using (var stream = new FileStream(filePath, FileMode.Create))
-                    {
-                        await file.CopyToAsync(stream);
-                    }
-
-                    var fileUrl = $"/uploads/documents/{fileName}";
+                    var fileUrl = await storage.UploadAsync(
+                        $"uploads/documents/{fileName}", buffer.ToArray(),
+                        FileUploadHelper.ContentTypeFromExtension(fileExtension));
 
                     var documentCommand = new SubmitDocumentCommand
                     {
@@ -264,7 +255,7 @@ namespace OpenFindBearings.Api.Endpoints
             group.MapPost("/documents/upload", async (
             IFormFile file,
             [FromServices] ICurrentUserService currentUser,
-            [FromServices] IWebHostEnvironment environment,
+            [FromServices] IObjectStorageService storage,
             HttpContext httpContext) =>
             {
                 if (!currentUser.UserId.HasValue)
@@ -284,18 +275,14 @@ namespace OpenFindBearings.Api.Endpoints
 
                 try
                 {
-                    var uploadsFolder = Path.Combine(environment.WebRootPath, "uploads", "documents");
-                    Directory.CreateDirectory(uploadsFolder);
-
+                    // 改动说明（v1.5.0）：预上传同样走 IObjectStorageService，key/URL 形态不变
                     // 时区规范：文件名时间戳统一 UTC
+                    using var buffer = new MemoryStream();
+                    await file.CopyToAsync(buffer);
                     var fileName = $"pre_{currentUser.UserId.Value:N}_{DateTime.UtcNow:yyyyMMddHHmmss}{fileExtension}";
-                    var filePath = Path.Combine(uploadsFolder, fileName);
-                    using (var stream = new FileStream(filePath, FileMode.Create))
-                    {
-                        await file.CopyToAsync(stream);
-                    }
-
-                    var fileUrl = $"/uploads/documents/{fileName}";
+                    var fileUrl = await storage.UploadAsync(
+                        $"uploads/documents/{fileName}", buffer.ToArray(),
+                        FileUploadHelper.ContentTypeFromExtension(fileExtension));
                     return ApiResponseHelper.Ok(new { url = fileUrl }, httpContext: httpContext);
                 }
                 catch (Exception ex)
