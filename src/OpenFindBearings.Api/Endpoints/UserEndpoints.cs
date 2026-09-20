@@ -104,7 +104,8 @@ namespace OpenFindBearings.Api.Endpoints
                     return ApiResponseHelper.BadRequest("请上传文件", httpContext: httpContext);
 
                 var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
-                var fileExtension = Path.GetExtension(file.FileName).ToLower();
+                // 改动说明（v1.7.1）：扩展名缺失时按 MIME 推断（RN 客户端 multipart 文件名无扩展名）
+                var fileExtension = FileUploadHelper.GetSafeExtension(file);
                 if (!allowedExtensions.Contains(fileExtension))
                     return ApiResponseHelper.BadRequest("只支持 JPG、PNG、WEBP 格式", httpContext: httpContext);
 

@@ -113,7 +113,8 @@ namespace OpenFindBearings.Api.Endpoints
                     return ApiResponseHelper.BadRequest("请上传文件", httpContext: httpContext);
 
                 var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
-                var fileExtension = Path.GetExtension(file.FileName).ToLowerInvariant();
+                // 改动说明（v1.7.1）：扩展名缺失时按 MIME 推断（RN 客户端 multipart 文件名无扩展名）
+                var fileExtension = FileUploadHelper.GetSafeExtension(file);
                 if (!allowedExtensions.Contains(fileExtension))
                     return ApiResponseHelper.BadRequest("只支持 JPG、PNG、WEBP 图片格式", httpContext: httpContext);
 
@@ -170,7 +171,8 @@ namespace OpenFindBearings.Api.Endpoints
                     return ApiResponseHelper.BadRequest("材料类型无效", httpContext: httpContext);
 
                 var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".pdf" };
-                var fileExtension = Path.GetExtension(file.FileName).ToLowerInvariant();
+                // 改动说明（v1.7.1）：扩展名缺失时按 MIME 推断（RN 客户端 multipart 文件名无扩展名）
+                var fileExtension = FileUploadHelper.GetSafeExtension(file);
                 if (!allowedExtensions.Contains(fileExtension))
                     return ApiResponseHelper.BadRequest("只支持 JPG、PNG、PDF 格式", httpContext: httpContext);
 
@@ -272,7 +274,8 @@ namespace OpenFindBearings.Api.Endpoints
                     return ApiResponseHelper.BadRequest("请上传文件", httpContext: httpContext);
 
                 var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".pdf" };
-                var fileExtension = Path.GetExtension(file.FileName).ToLowerInvariant();
+                // 改动说明（v1.7.1）：扩展名缺失时按 MIME 推断（RN 客户端 multipart 文件名无扩展名）
+                var fileExtension = FileUploadHelper.GetSafeExtension(file);
                 if (!allowedExtensions.Contains(fileExtension))
                     return ApiResponseHelper.BadRequest("只支持 JPG、PNG、PDF 格式", httpContext: httpContext);
 
@@ -719,7 +722,8 @@ namespace OpenFindBearings.Api.Endpoints
                 if (file == null || file.Length == 0)
                     return ApiResponseHelper.BadRequest("请选择要上传的 Excel 文件", httpContext: httpContext);
 
-                var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+                // 改动说明（v1.7.1）：同材料端点，无扩展名按 MIME 推断
+                var ext = FileUploadHelper.GetSafeExtension(file);
                 if (ext != ".xlsx" && ext != ".xls")
                     return ApiResponseHelper.BadRequest("只支持 .xlsx 或 .xls 格式", httpContext: httpContext);
 
