@@ -23,10 +23,18 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                 .FirstOrDefaultAsync(l => l.Id == id, cancellationToken);
         }
 
+        /// <summary>
+        /// 入驻后材料变更队列：仅取待审材料，联载商家与提交人（队列列显示依赖），
+        /// 并排除入驻申请审核中（Pending）商户——随单材料在"入驻申请审批"抽屉内审结，
+        /// 双入口会造成审核人重复操作（v1.5.1 修复）
+        /// </summary>
         public async Task<PagedResult<MerchantDocument>> GetPendingAsync(int page, int pageSize, CancellationToken cancellationToken = default)
         {
             var query = _context.MerchantDocuments
-                .Where(l => l.Status == DocumentStatus.Pending)
+                .Include(l => l.Merchant)
+                .Include(l => l.Submitter)
+                .Where(l => l.Status == DocumentStatus.Pending
+                    && l.Merchant!.Status != MerchantStatus.Pending)
                 .OrderByDescending(l => l.SubmittedAt);
 
             var totalCount = await query.CountAsync(cancellationToken);
@@ -62,10 +70,12 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
             _context.MerchantDocuments.Update(document);
         }
 
+        /// <summary>待审材料数（仪表盘角标），与变更队列同口径：排除入驻审核中商户的随单材料</summary>
         public async Task<int> GetPendingCountAsync(CancellationToken cancellationToken = default)
         {
             return await _context.MerchantDocuments
-                .CountAsync(l => l.Status == DocumentStatus.Pending, cancellationToken);
+                .CountAsync(l => l.Status == DocumentStatus.Pending
+                    && l.Merchant!.Status != MerchantStatus.Pending, cancellationToken);
         }
     }
 }
