@@ -57,6 +57,11 @@
         public bool IsVerified { get; set; }
 
         /// <summary>
+        /// 商户是否已主动申请认证（v2.9.0：BFF application 透传给 Taro 按钮态；Admin 认证后清除）
+        /// </summary>
+        public bool VerifyRequested { get; set; }
+
+        /// <summary>
         /// 商家状态
         /// </summary>
         public string Status { get; set; } = string.Empty;
