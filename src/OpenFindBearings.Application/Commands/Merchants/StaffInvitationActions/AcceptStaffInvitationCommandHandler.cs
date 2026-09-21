@@ -87,6 +87,15 @@ namespace OpenFindBearings.Application.Commands.Merchants.StaffInvitationActions
             // 通知发起人：被邀人已同意入伙
             var merchant = await _merchantRepository.GetByIdAsync(invitation.MerchantId, cancellationToken);
             var newUser = await _userRepository.GetByIdAsync(request.UserId, cancellationToken);
+            // 改动说明（v2.11.1）：接受邀请时用邀请里的联系方式回填 User.Mobile（若空）——
+            //   管理员添加成员时已输入过手机号，这是比"等对方登录 JIT"更早的回填点，
+            //   修复被邀人未开过新版 App 时成员详情手机号"未留"
+            if (newUser != null && string.IsNullOrWhiteSpace(newUser.Mobile)
+                && !string.IsNullOrWhiteSpace(invitation.Phone))
+            {
+                newUser.SyncMobile(invitation.Phone);
+                await _userRepository.UpdateAsync(newUser, cancellationToken);
+            }
             await _notificationService.AddInAppAsync(
                 invitation.OperatorId,
                 Notification.TypeStaffJoinAccepted,
