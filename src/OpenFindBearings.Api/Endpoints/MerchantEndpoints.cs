@@ -443,7 +443,9 @@ namespace OpenFindBearings.Api.Endpoints
                     InvitationId = invitationId,
                     UserId = currentUser.UserId.Value,
                     AuthUserId = currentUser.AuthUserId,
-                    Phone = currentUser.Phone ?? string.Empty
+                    Phone = currentUser.Phone ?? string.Empty,
+                    // 改动说明（v2.11.0）：补传 Email——邮箱注册无手机号用户此前无法接受邀请（双路匹配缺一路）
+                    Email = currentUser.Email
                 });
                 return ApiResponseHelper.Ok("已接受邀请，正式加入商户", httpContext: httpContext);
             })
@@ -466,7 +468,10 @@ namespace OpenFindBearings.Api.Endpoints
                 await mediator.Send(new DeclineStaffInvitationCommand
                 {
                     InvitationId = invitationId,
-                    Phone = currentUser.Phone ?? string.Empty
+                    // 改动说明（v2.11.0）：补 UserId（核销邀请站内信需要收件人）与 Email（邮箱邀请匹配）
+                    UserId = currentUser.UserId.Value,
+                    Phone = currentUser.Phone ?? string.Empty,
+                    Email = currentUser.Email
                 });
                 return ApiResponseHelper.Ok("已拒绝邀请", httpContext: httpContext);
             })

@@ -18,6 +18,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.StaffInvitationActions
         private readonly IMerchantRepository _merchantRepository;
         private readonly IUserRepository _userRepository;
         private readonly INotificationService _notificationService;
+        private readonly INotificationRepository _notificationRepository;
         private readonly ILogger<AcceptStaffInvitationCommandHandler> _logger;
 
         public AcceptStaffInvitationCommandHandler(
@@ -26,6 +27,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.StaffInvitationActions
             IMerchantRepository merchantRepository,
             IUserRepository userRepository,
             INotificationService notificationService,
+            INotificationRepository notificationRepository,
             ILogger<AcceptStaffInvitationCommandHandler> logger)
         {
             _invitationRepository = invitationRepository;
@@ -33,6 +35,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.StaffInvitationActions
             _merchantRepository = merchantRepository;
             _userRepository = userRepository;
             _notificationService = notificationService;
+            _notificationRepository = notificationRepository;
             _logger = logger;
         }
 
@@ -75,6 +78,11 @@ namespace OpenFindBearings.Application.Commands.Merchants.StaffInvitationActions
 
             invitation.Complete(request.AuthUserId);
             await _invitationRepository.UpdateAsync(invitation, cancellationToken);
+
+            // 改动说明（v2.11.0）：核销本人的邀请站内信（TabBar"我的"角标随未读数即时减少，
+            //   不残留已处理邀请）；随 UnitOfWork 统一提交
+            await _notificationRepository.MarkReadByTypeAsync(
+                request.UserId, Notification.TypeStaffJoinInvited, invitation.MerchantId, cancellationToken);
 
             // 通知发起人：被邀人已同意入伙
             var merchant = await _merchantRepository.GetByIdAsync(invitation.MerchantId, cancellationToken);

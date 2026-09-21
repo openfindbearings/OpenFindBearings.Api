@@ -39,6 +39,12 @@ namespace OpenFindBearings.Domain.Aggregates
         public string? Address { get; private set; }
 
         /// <summary>
+        /// 手机号（v2.11.0 新增：从 JWT phone_number claim 在登录中间件 JIT 回填，
+        ///   供同商户成员详情展示；Identity 是事实源，此处仅缓存副本，不对外公开接口暴露）
+        /// </summary>
+        public string? Mobile { get; private set; }
+
+        /// <summary>
         /// 游客会话ID（仅游客用户）
         /// </summary>
         public string? GuestSessionId { get; private set; }
@@ -302,6 +308,17 @@ namespace OpenFindBearings.Domain.Aggregates
             Nickname = nickname;
             Avatar = avatar;
             Address = address;
+            UpdateTimestamp();
+        }
+
+        /// <summary>
+        /// 同步手机号缓存（v2.11.0：登录中间件按 JWT phone_number claim 回填/刷新，
+        ///   Identity 侧改手机后下次登录自动跟上；同值不触发脏标记避免无谓 UPDATE）
+        /// </summary>
+        public void SyncMobile(string? mobile)
+        {
+            if (Mobile == mobile) return;
+            Mobile = mobile;
             UpdateTimestamp();
         }
 

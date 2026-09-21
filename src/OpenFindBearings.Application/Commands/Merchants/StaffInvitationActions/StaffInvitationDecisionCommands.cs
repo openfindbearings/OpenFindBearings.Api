@@ -14,6 +14,11 @@ namespace OpenFindBearings.Application.Commands.Merchants.StaffInvitationActions
         public Guid InvitationId { get; init; }
 
         /// <summary>
+        /// 当前用户业务ID（v2.11.0：拒绝时核销本人邀请站内信用）
+        /// </summary>
+        public Guid UserId { get; init; }
+
+        /// <summary>
         /// 当前用户手机号（JWT claim，须与邀请目标一致）
         /// </summary>
         public string? Phone { get; init; }

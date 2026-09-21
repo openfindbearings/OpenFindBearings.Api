@@ -25,5 +25,13 @@ namespace OpenFindBearings.Domain.Repositories
 
         /// <summary>把收件人全部未读批量置已读，返回影响行数</summary>
         Task<int> MarkAllReadAsync(Guid userId, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 按"类型+业务对象"把收件人未读通知置已读，返回影响行数。
+        /// 改动说明（v2.11.0）：邀请被接受/拒绝时服务端自动核销对应邀请站内信，
+        ///   否则角标计数永远包含已处理邀请的残留未读。
+        /// </summary>
+        Task<int> MarkReadByTypeAsync(Guid userId, string type, Guid? bizId,
+            CancellationToken cancellationToken = default);
     }
 }
