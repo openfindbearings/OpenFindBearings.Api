@@ -49,6 +49,14 @@ namespace OpenFindBearings.Application.Commands.Merchants.ApplyMerchant
                 throw new InvalidOperationException("企业名称（营业执照全称）不能为空");
             }
 
+            // 改动说明（v2.11.0）：统一社会信用代码升必填——审核需比对执照代码，
+            //   且 Active 后该字段锁定（仅空值可补录一次），入驻时不填等于永久缺失
+            var creditCodeError = Application.DTOs.DocumentRequirements.ValidateCreditCode(request.UnifiedSocialCreditCode);
+            if (creditCodeError != null)
+            {
+                throw new InvalidOperationException(creditCodeError);
+            }
+
             // 改动说明（v2.7.0）：商家类型升必填——材料必备性矩阵按类型判定（授权经销商要授权书），
             //   此前 self 缺省 Trader 会让授权商钻"贸易商只需执照"的空子
             if (!request.Type.HasValue || !Enum.IsDefined(typeof(MerchantType), request.Type.Value))

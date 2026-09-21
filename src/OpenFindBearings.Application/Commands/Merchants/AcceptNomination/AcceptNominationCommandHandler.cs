@@ -117,6 +117,13 @@ namespace OpenFindBearings.Application.Commands.Merchants.AcceptNomination
                 logoUrl: merchant.LogoUrl,
                 website: merchant.Website);
 
+            // 改动说明（v2.11.0）：合并后信用代码必填（与 apply/resubmit 同口径）
+            var creditCodeError = Application.DTOs.DocumentRequirements.ValidateCreditCode(merchant.UnifiedSocialCreditCode);
+            if (creditCodeError != null)
+            {
+                throw new InvalidOperationException(creditCodeError);
+            }
+
             if (!string.IsNullOrWhiteSpace(request.ContactPerson) ||
                 !string.IsNullOrWhiteSpace(request.Phone) ||
                 !string.IsNullOrWhiteSpace(request.Mobile) ||

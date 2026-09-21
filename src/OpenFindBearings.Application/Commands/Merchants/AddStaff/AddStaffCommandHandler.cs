@@ -124,6 +124,20 @@ namespace OpenFindBearings.Application.Commands.Merchants.AddStaff
                 return AddStaffResult.AlreadyMember(merchantName);
             }
 
+            // 改动说明（v2.11.0）：同商户同联系方式的待确认邀请去重——
+            //   管理员连点两次会建多条 Pending 邀请（成员列表出现重复"已邀请"行），命中即幂等返回
+            var contactPhone = oidcUser.PhoneNumber ?? request.Phone;
+            var contactEmail = request.Email ?? oidcUser.Email;
+            var pendingInvitations = await _invitationRepository.GetPendingStaffInvitationsByMerchantAsync(
+                request.MerchantId, cancellationToken);
+            var duplicate = pendingInvitations.FirstOrDefault(i =>
+                (!string.IsNullOrEmpty(contactPhone) && i.Phone == contactPhone) ||
+                (!string.IsNullOrEmpty(contactEmail) && i.Email == contactEmail));
+            if (duplicate != null)
+            {
+                return AddStaffResult.InvitationSent(duplicate.Id, emailSent: false, smsSent: false);
+            }
+
             var targetRole = request.Role ?? MerchantMember.RoleMerchantStaff;
             var invitationCode = Guid.NewGuid().ToString("N")[..12];
             var invitation = new StaffInvitation(
@@ -160,6 +174,17 @@ namespace OpenFindBearings.Application.Commands.Merchants.AddStaff
         {
             _logger.LogInformation("用户不存在，发送邀请: Email={Email}, Phone={Phone}",
                 request.Email, request.Phone);
+
+            // 改动说明（v2.11.0）：未注册分支同样按联系方式去重待确认邀请，防连点重复建
+            var pendingInvitations = await _invitationRepository.GetPendingStaffInvitationsByMerchantAsync(
+                request.MerchantId, cancellationToken);
+            var duplicate = pendingInvitations.FirstOrDefault(i =>
+                (!string.IsNullOrEmpty(request.Phone) && i.Phone == request.Phone) ||
+                (!string.IsNullOrEmpty(request.Email) && i.Email == request.Email));
+            if (duplicate != null)
+            {
+                return AddStaffResult.InvitationSent(duplicate.Id, emailSent: false, smsSent: false);
+            }
 
             var invitationCode = Guid.NewGuid().ToString("N")[..12];
             var merchant = await _merchantRepository.GetByIdAsync(request.MerchantId, cancellationToken);

@@ -81,6 +81,14 @@ namespace OpenFindBearings.Application.Commands.Merchants.ResubmitApplication
                 logoUrl: merchant.LogoUrl,
                 website: merchant.Website);
 
+            // 改动说明（v2.11.0）：合并后信用代码必填（与 apply 同口径）——
+            //   存量已有有效值的商户不必重填，历史空值商户被拒重提时强制补录
+            var creditCodeError = Application.DTOs.DocumentRequirements.ValidateCreditCode(merchant.UnifiedSocialCreditCode);
+            if (creditCodeError != null)
+            {
+                throw new InvalidOperationException(creditCodeError);
+            }
+
             var c = merchant.Contact;
             merchant.UpdateContact(new ContactInfo(
                 request.ContactPerson ?? c?.ContactPerson,
