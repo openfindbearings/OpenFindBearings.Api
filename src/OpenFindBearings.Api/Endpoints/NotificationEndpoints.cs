@@ -2,6 +2,8 @@ using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using OpenFindBearings.Api.Helpers;
 using OpenFindBearings.Api.Services;
+using OpenFindBearings.Application.Commands.Notifications.ClearReadNotifications;
+using OpenFindBearings.Application.Commands.Notifications.DeleteNotification;
 using OpenFindBearings.Application.Commands.Notifications.MarkAllRead;
 using OpenFindBearings.Application.Commands.Notifications.MarkNotificationRead;
 using OpenFindBearings.Application.Queries.Notifications.GetNotifications;
@@ -102,6 +104,45 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("MarkAllNotificationsRead")
             .WithSummary("全部站内信标记已读")
             .WithDescription("批量将当前用户未读通知置为已读，返回影响条数");
+
+            /// <summary>
+            /// 删除单条站内信（v2.12.0 消息中心左滑删除；硬删，仅本人）
+            /// </summary>
+            group.MapDelete("/{id:guid}", async (
+                Guid id,
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                var deleted = await mediator.Send(new DeleteNotificationCommand { Id = id, UserId = currentUser.UserId.Value });
+                return deleted
+                    ? ApiResponseHelper.Ok("已删除", httpContext)
+                    : ApiResponseHelper.NotFound("消息不存在", httpContext: httpContext);
+            })
+            .WithName("DeleteNotification")
+            .WithSummary("删除单条站内信")
+            .WithDescription("硬删本人收件箱内的一条消息，不存在或非本人返回 404");
+
+            /// <summary>
+            /// 清空已读站内信（v2.12.0 消息中心"清空已读"；未读保留防误删漏看）
+            /// </summary>
+            group.MapDelete("/read", async (
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                var affected = await mediator.Send(new ClearReadNotificationsCommand { UserId = currentUser.UserId.Value });
+                return ApiResponseHelper.Ok(new { affected }, $"已清空 {affected} 条已读消息", httpContext);
+            })
+            .WithName("ClearReadNotifications")
+            .WithSummary("清空已读站内信")
+            .WithDescription("批量删除当前用户所有已读消息，未读不受影响，返回删除条数");
         }
     }
 }

@@ -83,5 +83,23 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                     .SetProperty(n => n.ReadAt, now)
                     .SetProperty(n => n.UpdatedAt, now), cancellationToken);
         }
+
+        /// <inheritdoc/>
+        public async Task<int> DeleteByIdForUserAsync(Guid id, Guid userId, CancellationToken cancellationToken = default)
+        {
+            // ExecuteDelete 单 SQL 直删（v2.12.0 左滑删除）；UserId 条件天然防越权删他人消息
+            return await _context.Set<Notification>()
+                .Where(n => n.Id == id && n.UserId == userId)
+                .ExecuteDeleteAsync(cancellationToken);
+        }
+
+        /// <inheritdoc/>
+        public async Task<int> DeleteReadAsync(Guid userId, CancellationToken cancellationToken = default)
+        {
+            // 只删已读（v2.12.0 清空已读）：未读保留，避免批量操作吞掉没看过的消息
+            return await _context.Set<Notification>()
+                .Where(n => n.UserId == userId && n.IsRead)
+                .ExecuteDeleteAsync(cancellationToken);
+        }
     }
 }
