@@ -42,6 +42,9 @@ namespace OpenFindBearings.Application.Queries.Merchants.GetMerchantStaff
                 Avatar = m.User?.Avatar,
                 Role = m.IsAdmin ? "管理员" : "员工",
                 Status = m.Status.ToString(),
+                // 改动说明（v2.11.0）：透传手机号供成员详情面板展示（JIT 登录时从 JWT claim 回填 User.Mobile）
+                Mobile = m.User?.Mobile,
+                JoinedAt = m.CreatedAt,
                 // 改动说明（v1.5.2）：后端标记本人行（成员管理 UI 隐藏自操作，守卫在前端不可靠）
                 IsSelf = request.CurrentUserId.HasValue && m.UserId == request.CurrentUserId.Value
             }).ToList();
@@ -57,6 +60,8 @@ namespace OpenFindBearings.Application.Queries.Merchants.GetMerchantStaff
                     Nickname = inv.Phone ?? inv.Email ?? "待确认",
                     Role = inv.Role == "MerchantAdmin" ? "管理员（待确认）" : "员工（待确认）",
                     Status = "Invited",
+                    // 改动说明（v2.11.0）：邀请行手机号同样透传（管理员自己输入的联系方式，详情面板展示）
+                    Mobile = inv.Phone,
                     InvitationId = inv.Id
                 });
             }

@@ -63,6 +63,17 @@
         public string? Avatar { get; set; }
 
         /// <summary>
+        /// 手机号（v2.11.0 员工详情用：同商户成员互见联系方式是协作刚需，钉钉同款；
+        ///   仅本商户成员列表端点返回，不对公开接口暴露）
+        /// </summary>
+        public string? Mobile { get; set; }
+
+        /// <summary>
+        /// 加入时间（成员行创建时间，v2.11.0 详情面板展示；邀请行为 null）
+        /// </summary>
+        public DateTime? JoinedAt { get; set; }
+
+        /// <summary>
         /// 在商家的角色
         /// </summary>
         public string? Role { get; set; }

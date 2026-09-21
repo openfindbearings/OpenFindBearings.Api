@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using OpenFindBearings.Application.Commands.Users.Commands;
 using OpenFindBearings.Application.Commands.Users.CreateUserFromAuth;
+using OpenFindBearings.Application.Commands.Users.SyncUserMobile;
 using OpenFindBearings.Application.Commands.Users.MigrateGuestData;
 using OpenFindBearings.Application.Queries.Users.GetUserByAuthId;
 using OpenFindBearings.Application.Queries.Users.GetUserBySessionId;
@@ -75,6 +76,7 @@ namespace OpenFindBearings.Api.Middleware
             try
             {
                 var user = await mediator.Send(new GetUserByAuthIdQuery { AuthUserId = authUserId });
+                Guid? resolvedUserId = null;
 
                 if (user == null)
                 {
@@ -90,6 +92,7 @@ namespace OpenFindBearings.Api.Middleware
                     };
                     var userId = await mediator.Send(createCommand);
                     context.Items["UserId"] = userId;
+                    resolvedUserId = userId;
                     // 改动说明：此处原为写入 UserType 枚举值，但 UserType 枚举与 User 实体字段均已移除，
                     //           项目已改走 RBAC 角色体系，恢复原代码会编译失败。
                     //           新创建用户尚未分配角色，按普通登录用户处理
@@ -109,6 +112,7 @@ namespace OpenFindBearings.Api.Middleware
                 else
                 {
                     context.Items["UserId"] = user.Id;
+                    resolvedUserId = user.Id;
 
                     // 解析当前商户上下文（支持一人多商户：X-Merchant-Id 指定或缺省首个），
                     //   返回该用户是否有在职商户成员关系（v2.1.0 起限流分档改用成员表，不再读已废弃的 User.MerchantId）
@@ -126,6 +130,17 @@ namespace OpenFindBearings.Api.Middleware
                     }
                 }
                 context.Items["AuthUserId"] = authUserId;
+
+                // 改动说明（v2.11.0）：手机号缓存 JIT 回填——按 phone_number claim 同步 User.Mobile，
+                //   供同商户成员详情展示；新建与既有用户统一在此处理（无 claim/同值时命令内部跳过）
+                if (resolvedUserId.HasValue)
+                {
+                    await mediator.Send(new SyncUserMobileCommand
+                    {
+                        UserId = resolvedUserId.Value,
+                        Mobile = context.User?.FindFirst("phone_number")?.Value
+                    });
+                }
             }
             catch (Exception ex)
             {

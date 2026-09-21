@@ -28,8 +28,12 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             builder.Property(u => u.Avatar)
                 .HasMaxLength(500);
 
-            builder.Property(u => u.Address)
-                .HasMaxLength(500);
+        builder.Property(u => u.Address)
+            .HasMaxLength(500);
+
+        // 改动说明（v2.11.0）：手机号缓存列（JWT claim JIT 回填），20 位足够国际格式
+        builder.Property(u => u.Mobile)
+            .HasMaxLength(20);
 
             // IsGuest 字段配置
             builder.Property(u => u.IsGuest)

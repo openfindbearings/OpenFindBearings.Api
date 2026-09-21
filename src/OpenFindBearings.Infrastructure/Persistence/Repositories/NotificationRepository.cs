@@ -68,5 +68,20 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                     .SetProperty(n => n.ReadAt, now)
                     .SetProperty(n => n.UpdatedAt, now), cancellationToken);
         }
+
+        /// <inheritdoc/>
+        public async Task<int> MarkReadByTypeAsync(Guid userId, string type, Guid? bizId,
+            CancellationToken cancellationToken = default)
+        {
+            var now = DateTime.UtcNow;
+            // ExecuteUpdate 直改（与 MarkAllRead 同款）：本方法在命令处理事务内执行，
+            //   随 UnitOfWork 管道统一提交，不走 AddInAppAsync 的独立提交语义
+            return await _context.Set<Notification>()
+                .Where(n => n.UserId == userId && !n.IsRead && n.Type == type && n.BizId == bizId)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(n => n.IsRead, true)
+                    .SetProperty(n => n.ReadAt, now)
+                    .SetProperty(n => n.UpdatedAt, now), cancellationToken);
+        }
     }
 }

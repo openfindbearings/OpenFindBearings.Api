@@ -1,4 +1,5 @@
 using MediatR;
+using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
 
@@ -10,10 +11,14 @@ namespace OpenFindBearings.Application.Commands.Merchants.StaffInvitationActions
     public class DeclineStaffInvitationCommandHandler : IRequestHandler<DeclineStaffInvitationCommand, bool>
     {
         private readonly IStaffInvitationRepository _invitationRepository;
+        private readonly INotificationRepository _notificationRepository;
 
-        public DeclineStaffInvitationCommandHandler(IStaffInvitationRepository invitationRepository)
+        public DeclineStaffInvitationCommandHandler(
+            IStaffInvitationRepository invitationRepository,
+            INotificationRepository notificationRepository)
         {
             _invitationRepository = invitationRepository;
+            _notificationRepository = notificationRepository;
         }
 
         /// <inheritdoc/>
@@ -35,6 +40,11 @@ namespace OpenFindBearings.Application.Commands.Merchants.StaffInvitationActions
 
             invitation.Decline();
             await _invitationRepository.UpdateAsync(invitation, cancellationToken);
+
+            // 改动说明（v2.11.0）：核销本人的邀请站内信——否则"我的"Tab 未读角标
+            //   永远包含已处理邀请的残留未读（服务端标已读，前端只需刷新计数）
+            await _notificationRepository.MarkReadByTypeAsync(
+                request.UserId, Notification.TypeStaffJoinInvited, invitation.MerchantId, cancellationToken);
             return true;
         }
     }
