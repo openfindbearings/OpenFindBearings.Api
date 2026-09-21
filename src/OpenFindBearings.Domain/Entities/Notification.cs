@@ -16,6 +16,9 @@ namespace OpenFindBearings.Domain.Entities
         public const string TypeNominationReceived = "nomination_received";
         /// <summary>通知类型：自己发出的提名已被接受</summary>
         public const string TypeNominationAccepted = "nomination_accepted";
+        // 改动说明（v2.9.0 邀请确认制）：员工邀请两类站内信——发给被邀人（待确认）与发给发起人（已同意）
+        public const string TypeStaffJoinInvited = "staff_join_invited";
+        public const string TypeStaffJoinAccepted = "staff_join_accepted";
         /// <summary>通知类型：系统通用</summary>
         public const string TypeSystem = "system";
 

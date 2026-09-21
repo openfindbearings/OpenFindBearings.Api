@@ -19,6 +19,16 @@ namespace OpenFindBearings.Api.Services
         string? AuthUserId { get; }
 
         /// <summary>
+        /// 当前用户手机号（JWT phone_number claim，v2.9.0 邀请确认制服务端比对用）
+        /// </summary>
+        string? Phone { get; }
+
+        /// <summary>
+        /// 当前用户邮箱（JWT email claim，v2.9.0 员工邀请无手机号时的兜底匹配）
+        /// </summary>
+        string? Email { get; }
+
+        /// <summary>
         /// 租户ID（从 JWT token claims 中读取）
         /// </summary>
         Guid? TenantId { get; }
@@ -76,6 +86,12 @@ namespace OpenFindBearings.Api.Services
 
         /// <inheritdoc/>
         public string? AuthUserId => _httpContextAccessor.HttpContext?.GetAuthUserId();
+
+        /// <inheritdoc/>
+        public string? Phone => _httpContextAccessor.HttpContext?.GetPhone();
+
+        /// <inheritdoc/>
+        public string? Email => _httpContextAccessor.HttpContext?.GetEmail();
 
         /// <inheritdoc/>
         public Guid? TenantId => _httpContextAccessor.HttpContext?.GetTenantId();

@@ -48,7 +48,8 @@ namespace OpenFindBearings.Application.DTOs
     }
 
     /// <summary>
-    /// 可认领爬虫商家DTO（入驻认领搜索项）
+    /// 入驻搜索项DTO（v2.9.0 由"仅可认领池"升级为"全量发现"：搜索结果含已入驻商户，
+    /// 带认领可行性标记，让用户在搜索阶段就避免重复新建，而非提交时撞 409）
     /// </summary>
     public class ClaimableMerchantDto
     {
@@ -71,5 +72,20 @@ namespace OpenFindBearings.Application.DTOs
         /// 商家类型
         /// </summary>
         public string Type { get; set; } = string.Empty;
+
+        /// <summary>
+        /// 是否可认领（未认证 + 无在职成员 + 无进行中提名锁定）
+        /// </summary>
+        public bool IsClaimable { get; set; }
+
+        /// <summary>
+        /// 当前登录用户是否已是该商户在职成员（"去管理"入口）
+        /// </summary>
+        public bool IsMine { get; set; }
+
+        /// <summary>
+        /// 状态文案：可认领 / 我的商户 / 已入驻 / 审核中 / 已认证
+        /// </summary>
+        public string StatusText { get; set; } = string.Empty;
     }
 }

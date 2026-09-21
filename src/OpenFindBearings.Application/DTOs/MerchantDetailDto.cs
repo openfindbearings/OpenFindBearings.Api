@@ -76,5 +76,10 @@
         /// 是否为当前登录用户本人（v1.5.2：成员管理页据此隐藏自操作按钮，前端 id 不同源无法自判）
         /// </summary>
         public bool IsSelf { get; set; }
+
+        /// <summary>
+        /// 邀请ID（v2.9.0 邀请确认制：Status=Invited 的行为待确认邀请而非成员，撤销操作用此ID）
+        /// </summary>
+        public Guid? InvitationId { get; set; }
     }
 }

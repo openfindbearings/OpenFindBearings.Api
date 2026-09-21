@@ -35,6 +35,11 @@ namespace OpenFindBearings.Domain.Repositories
         Task<List<MerchantMember>> GetActiveByMerchantAsync(Guid merchantId, CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// 批量获取多个商户的在职成员（v2.9.0 入驻发现搜索逐页标记可认领/我的商户，避免 N+1）
+        /// </summary>
+        Task<List<MerchantMember>> GetActiveByMerchantIdsAsync(IEnumerable<Guid> merchantIds, CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// 获取商户的全部成员（含 Removed/Suspended，用于彻底删除商户前清理成员外键）
         /// </summary>
         Task<List<MerchantMember>> GetAllByMerchantIdAsync(Guid merchantId, CancellationToken cancellationToken = default);

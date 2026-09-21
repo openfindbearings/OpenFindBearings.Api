@@ -60,6 +60,19 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                 .ToListAsync(cancellationToken);
         }
 
+        /// <summary>
+        /// 批量获取多个商户的在职成员（v2.9.0 入驻发现搜索标记用，一次查询防 N+1）
+        /// </summary>
+        public async Task<List<MerchantMember>> GetActiveByMerchantIdsAsync(IEnumerable<Guid> merchantIds, CancellationToken cancellationToken = default)
+        {
+            var ids = merchantIds.ToList();
+            if (ids.Count == 0) return [];
+
+            return await _context.Set<MerchantMember>()
+                .Where(m => ids.Contains(m.MerchantId) && m.Status == MerchantMemberStatus.Active)
+                .ToListAsync(cancellationToken);
+        }
+
         // 改动说明：self 撤回需彻底删除商户本体，而其成员行外键为 Restrict；
         //   用 IgnoreQueryFilters 捞出全部（含软删/停用）成员再物理删除，避免残留行阻塞商户删除
         public async Task<List<MerchantMember>> GetAllByMerchantIdAsync(Guid merchantId, CancellationToken cancellationToken = default)

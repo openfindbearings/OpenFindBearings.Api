@@ -1,6 +1,7 @@
-﻿using MediatR;
+using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.Commands.Merchants.Commands;
+using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
 using OpenFindBearings.Domain.ValueObjects;
 
@@ -30,6 +31,17 @@ namespace OpenFindBearings.Application.Commands.Merchants.UpdateMerchant
             if (merchant == null)
             {
                 throw new InvalidOperationException($"商家不存在: {request.Id}");
+            }
+
+            // 改动说明（v2.9.0 字段锁定）：入驻生效后企业主体信息（企业名称/统一社会信用代码）
+            //   与营业执照绑定、是平台认证依据，不允许自助修改（换主体=重新入驻）；
+            //   仅在请求真正试图改成不同值时拒绝，未传/传同值放行（兼容部分字段更新场景）
+            if (merchant.Status == MerchantStatus.Active)
+            {
+                if (request.CompanyName != null && request.CompanyName != merchant.CompanyName)
+                    throw new InvalidOperationException("企业名称入驻后不可修改，如需变更请联系平台");
+                if (request.UnifiedSocialCreditCode != null && request.UnifiedSocialCreditCode != merchant.UnifiedSocialCreditCode)
+                    throw new InvalidOperationException("统一社会信用代码入驻后不可修改，如需变更请联系平台");
             }
 
             // ✅ 修改：更新基本信息 - 传递所有6个参数
