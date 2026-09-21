@@ -323,6 +323,20 @@ namespace OpenFindBearings.Domain.Aggregates
         }
 
         /// <summary>
+        /// 回填昵称缓存（v2.11.1）：仅当前值为空时写入 claim 值，用户自改过的昵称永不覆盖。
+        /// 改动说明：JIT 建号时 Name claim 可能为空（Identity 用户未设昵称），
+        ///   成员详情显示"未命名"；建号后中间件按 Name→preferred_username→手机号兜底链持续回填。
+        /// </summary>
+        public void SyncNickname(string? nickname)
+        {
+            if (string.IsNullOrWhiteSpace(Nickname) && !string.IsNullOrWhiteSpace(nickname))
+            {
+                Nickname = nickname;
+                UpdateTimestamp();
+            }
+        }
+
+        /// <summary>
         /// 更新最后登录时间
         /// </summary>
         public void UpdateLastLogin()

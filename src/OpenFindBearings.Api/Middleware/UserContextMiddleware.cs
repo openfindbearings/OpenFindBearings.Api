@@ -1,7 +1,7 @@
 ﻿using MediatR;
 using OpenFindBearings.Application.Commands.Users.Commands;
 using OpenFindBearings.Application.Commands.Users.CreateUserFromAuth;
-using OpenFindBearings.Application.Commands.Users.SyncUserMobile;
+using OpenFindBearings.Application.Commands.Users.SyncUserProfile;
 using OpenFindBearings.Application.Commands.Users.MigrateGuestData;
 using OpenFindBearings.Application.Queries.Users.GetUserByAuthId;
 using OpenFindBearings.Application.Queries.Users.GetUserBySessionId;
@@ -64,6 +64,15 @@ namespace OpenFindBearings.Api.Middleware
         }
 
         /// <summary>
+        /// 昵称 claim 兜底链（v2.11.1）：Identity 用户可能未设昵称（Name claim 空），
+        /// 依次退到 preferred_username（登录名）→ 手机号，保证业务库昵称列可展示
+        /// </summary>
+        private static string? ResolveNicknameClaim(ClaimsPrincipal? user) =>
+            user?.FindFirst(ClaimTypes.Name)?.Value
+            ?? user?.FindFirst("preferred_username")?.Value
+            ?? user?.FindFirst("phone_number")?.Value;
+
+        /// <summary>
         /// 处理正式用户
         /// </summary>
         private async Task HandleAuthenticatedUserAsync(
@@ -87,7 +96,8 @@ namespace OpenFindBearings.Api.Middleware
                     {
                         AuthUserId = authUserId,
                         RegistrationSource = Domain.Enums.RegistrationSource.Web,
-                        Nickname = context.User?.FindFirst(ClaimTypes.Name)?.Value,
+                        // 改动说明（v2.11.1）：昵称 claim 走兜底链（Name 可能为空——Identity 用户未设昵称）
+                        Nickname = ResolveNicknameClaim(context.User),
                         InviteCode = inviteCode
                     };
                     var userId = await mediator.Send(createCommand);
@@ -133,12 +143,15 @@ namespace OpenFindBearings.Api.Middleware
 
                 // 改动说明（v2.11.0）：手机号缓存 JIT 回填——按 phone_number claim 同步 User.Mobile，
                 //   供同商户成员详情展示；新建与既有用户统一在此处理（无 claim/同值时命令内部跳过）
+                // 改动说明（v2.11.1）：扩展为资料同步（命令更名 SyncUserProfileCommand）——
+                //   昵称也按兜底链回填（仅空值补写），修复建号时 Name claim 为空导致的成员详情"未命名"
                 if (resolvedUserId.HasValue)
                 {
-                    await mediator.Send(new SyncUserMobileCommand
+                    await mediator.Send(new SyncUserProfileCommand
                     {
                         UserId = resolvedUserId.Value,
-                        Mobile = context.User?.FindFirst("phone_number")?.Value
+                        Mobile = context.User?.FindFirst("phone_number")?.Value,
+                        Nickname = ResolveNicknameClaim(context.User)
                     });
                 }
             }
