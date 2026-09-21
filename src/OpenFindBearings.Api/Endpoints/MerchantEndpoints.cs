@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using OpenFindBearings.Api.Helpers;
@@ -13,6 +13,8 @@ using OpenFindBearings.Application.Commands.Merchants.AddStaff;
 using OpenFindBearings.Application.Commands.Merchants.ChangeMerchantMemberRole;
 using OpenFindBearings.Application.Commands.Merchants.Commands;
 using OpenFindBearings.Application.Commands.Merchants.RemoveStaff;
+using OpenFindBearings.Application.Commands.Merchants.StaffInvitationActions;
+using OpenFindBearings.Application.Queries.Merchants.PendingStaffInvitations;
 using OpenFindBearings.Application.Commands.Merchants.SubmitDocument;
 using OpenFindBearings.Application.Services;
 using OpenFindBearings.Domain.Enums;
@@ -365,7 +367,9 @@ namespace OpenFindBearings.Api.Endpoints
                 };
 
                 var result = await mediator.Send(addCommand);
-                return ApiResponseHelper.Ok(new { id = result, message = "员工添加成功" }, httpContext: httpContext);
+                // 改动说明（v2.9.0 邀请确认制）：返回真实结果文案（邀请已发送/已是在职成员），
+                //   原硬编码"员工添加成功"与静默拉入语义一并废弃
+                return ApiResponseHelper.Ok(new { id = result, message = result.Message ?? "邀请已发送，对方同意后加入" }, httpContext: httpContext);
             })
             .WithName("AddStaff")
             .WithSummary("添加员工")
@@ -403,6 +407,95 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("RemoveStaff")
             .WithSummary("移除员工")
             .WithDescription("从当前商家移除员工（需商家管理员权限）");
+
+            /// <summary>
+            /// 待我确认的员工邀请列表（v2.9.0 邀请确认制：按 JWT 手机号匹配，登录后商户页横幅消费）
+            /// </summary>
+            group.MapGet("/staff/invitations/pending", async (
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                var items = await mediator.Send(new GetPendingStaffInvitationsQuery { Phone = currentUser.Phone, Email = currentUser.Email });
+                return ApiResponseHelper.Ok(items, httpContext: httpContext);
+            })
+            .WithName("GetPendingStaffInvitations")
+            .WithSummary("待我确认的员工邀请")
+            .WithDescription("被邀人查看发给自己的待确认商户邀请（按 JWT 手机号匹配）");
+
+            /// <summary>
+            /// 接受员工邀请（v2.9.0：建成员行入伙 + 通知发起人；手机号服务端比对防撞领）
+            /// </summary>
+            group.MapPost("/staff/invitations/{invitationId:guid}/accept", async (
+                Guid invitationId,
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue || string.IsNullOrEmpty(currentUser.AuthUserId))
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                await mediator.Send(new AcceptStaffInvitationCommand
+                {
+                    InvitationId = invitationId,
+                    UserId = currentUser.UserId.Value,
+                    AuthUserId = currentUser.AuthUserId,
+                    Phone = currentUser.Phone ?? string.Empty
+                });
+                return ApiResponseHelper.Ok("已接受邀请，正式加入商户", httpContext: httpContext);
+            })
+            .WithName("AcceptStaffInvitation")
+            .WithSummary("接受员工邀请")
+            .WithDescription("被邀人同意加入商户，创建成员行并通知发起人");
+
+            /// <summary>
+            /// 拒绝员工邀请（v2.9.0：邀请置 Declined，不建成员行）
+            /// </summary>
+            group.MapPost("/staff/invitations/{invitationId:guid}/decline", async (
+                Guid invitationId,
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                await mediator.Send(new DeclineStaffInvitationCommand
+                {
+                    InvitationId = invitationId,
+                    Phone = currentUser.Phone ?? string.Empty
+                });
+                return ApiResponseHelper.Ok("已拒绝邀请", httpContext: httpContext);
+            })
+            .WithName("DeclineStaffInvitation")
+            .WithSummary("拒绝员工邀请")
+            .WithDescription("被邀人拒绝商户邀请");
+
+            /// <summary>
+            /// 撤销员工邀请（v2.9.0：管理员撤回自己商户发出的待确认邀请，成员列表"已邀请"行操作）
+            /// </summary>
+            group.MapPost("/staff/invitations/{invitationId:guid}/revoke", async (
+                Guid invitationId,
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                await mediator.Send(new RevokeStaffInvitationCommand
+                {
+                    InvitationId = invitationId,
+                    OperatorId = currentUser.UserId.Value
+                });
+                return ApiResponseHelper.Ok("邀请已撤销", httpContext: httpContext);
+            })
+            .WithName("RevokeStaffInvitation")
+            .WithSummary("撤销员工邀请")
+            .WithDescription("商户管理员撤销待确认的员工邀请（需管理员权限）");
 
             /// <summary>
             /// 停用成员（管理员离职/异常处置，可恢复）

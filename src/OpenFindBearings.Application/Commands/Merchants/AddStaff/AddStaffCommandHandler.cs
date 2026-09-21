@@ -19,6 +19,8 @@ namespace OpenFindBearings.Application.Commands.Merchants.AddStaff
         private readonly IMerchantMemberRepository _merchantMemberRepository;
         private readonly IStaffInvitationRepository _invitationRepository;
         private readonly IIdentityService _identityService;
+        // 改动说明（v2.9.0）：邀请确认制需要给被邀人发站内信
+        private readonly INotificationService _notificationService;
         private readonly ILogger<AddStaffCommandHandler> _logger;
 
         public AddStaffCommandHandler(
@@ -27,6 +29,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.AddStaff
             IMerchantMemberRepository merchantMemberRepository,
             IStaffInvitationRepository invitationRepository,
             IIdentityService identityService,
+            INotificationService notificationService,
             ILogger<AddStaffCommandHandler> logger)
         {
             _userRepository = userRepository;
@@ -34,6 +37,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.AddStaff
             _merchantMemberRepository = merchantMemberRepository;
             _invitationRepository = invitationRepository;
             _identityService = identityService;
+            _notificationService = notificationService;
             _logger = logger;
         }
 
@@ -105,41 +109,52 @@ namespace OpenFindBearings.Application.Commands.Merchants.AddStaff
                 await _userRepository.AddAsync(user, cancellationToken);
             }
 
-            // 改动说明：一人多商户，同一用户可属于多个商户，取消"已是其他商家的员工"硬约束；
-            //           商户域角色写入成员表，取代全局角色分配
-            var targetRole = request.Role ?? MerchantMember.RoleMerchantStaff;
-            await EnsureMemberAsync(user, request.MerchantId, targetRole, request.OperatorId, cancellationToken);
+            // 改动说明（v2.9.0 邀请确认制）：已注册用户不再"静默拉入"（被邀人无感知、
+            //   列表却看不到成员，与钉钉/飞书邀请需本人同意的主流语义不符）。
+            //   改为建 Type=Staff 待确认邀请 + 站内信通知对方，对方在商户页同意后入伙。
+            var merchant = await _merchantRepository.GetByIdAsync(request.MerchantId, cancellationToken);
+            var merchantName = merchant?.Name ?? "商家";
+            var operatorUser = await _userRepository.GetByIdAsync(request.OperatorId, cancellationToken);
+            var operatorName = operatorUser?.Nickname ?? "商户管理员";
 
-            _logger.LogInformation("员工添加成功: UserId={UserId}, MerchantId={MerchantId}",
+            // 已有在职成员或已有待确认邀请 → 幂等提示，不重复发
+            var existingMember = await _merchantMemberRepository.GetByUserAndMerchantAsync(user.Id, request.MerchantId, cancellationToken);
+            if (existingMember != null && existingMember.Status == MerchantMemberStatus.Active)
+            {
+                return AddStaffResult.AlreadyMember(merchantName);
+            }
+
+            var targetRole = request.Role ?? MerchantMember.RoleMerchantStaff;
+            var invitationCode = Guid.NewGuid().ToString("N")[..12];
+            var invitation = new StaffInvitation(
+                request.MerchantId,
+                request.Email,
+                // 改动说明：邀请 Phone 优先取 Identity 档案手机号（被邀人 JWT claim 匹配依据），
+                //   再退请求手机号——管理员按邮箱添加时 request.Phone 为空，若记 null 被邀人永远匹配不到邀请
+                oidcUser.PhoneNumber ?? request.Phone,
+                targetRole,
+                invitationCode,
+                request.OperatorId,
+                type: InvitationType.Staff);
+            await _invitationRepository.AddAsync(invitation, cancellationToken);
+
+            await _notificationService.AddInAppAsync(
+                user.Id,
+                Notification.TypeStaffJoinInvited,
+                "商户邀请待确认",
+                $"{operatorName} 邀请你加入商户「{merchantName}」，请前往“我的-商家”页面查看并接受或拒绝。",
+                Notification.BizMerchant,
+                request.MerchantId,
+                cancellationToken);
+
+            _logger.LogInformation("员工邀请已发送（待确认）: UserId={UserId}, MerchantId={MerchantId}",
                 user.Id, request.MerchantId);
 
-            return AddStaffResult.Linked(user.Id);
+            return AddStaffResult.InvitationSent(invitation.Id, emailSent: false, smsSent: false);
         }
 
-        /// <summary>
-        /// 确保用户成为该商户在职成员（复用 Removed 行，不新增第二行）
-        /// </summary>
-        private async Task EnsureMemberAsync(
-            User user,
-            Guid merchantId,
-            string role,
-            Guid invitedBy,
-            CancellationToken cancellationToken)
-        {
-            var existingMember = await _merchantMemberRepository.GetByUserAndMerchantAsync(user.Id, merchantId, cancellationToken);
-            if (existingMember == null)
-            {
-                var member = new MerchantMember(user.Id, merchantId, role, invitedBy);
-                await _merchantMemberRepository.AddAsync(member, cancellationToken);
-            }
-            else
-            {
-                existingMember.Rejoin(role, invitedBy);
-                await _merchantMemberRepository.UpdateAsync(existingMember, cancellationToken);
-            }
-
-            // 改动说明：移除对已废弃 User.MerchantId 单值列的镜像写——成员表 MerchantMember 是唯一事实源
-        }
+        // 改动说明（v2.9.0）：EnsureMemberAsync 已移除——直接入伙路径被邀请确认制取代，
+        //   成员行创建逻辑移至 AcceptStaffInvitationCommand（被邀人同意时才建）
 
         private async Task<AddStaffResult> SendInvitationAsync(AddStaffCommand request, CancellationToken cancellationToken)
         {

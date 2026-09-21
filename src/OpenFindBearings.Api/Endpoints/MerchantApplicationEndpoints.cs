@@ -294,20 +294,23 @@ namespace OpenFindBearings.Api.Endpoints
             .WithDescription("被提名人接受提名并补全商户资料，提交后台审核");
 
             /// <summary>
-            /// 认领搜索爬虫商家
+            /// 入驻发现搜索（v2.9.0 全量匹配 + 认领可行性标记：可认领/我的商户/已入驻/审核中/已认证）
             /// </summary>
             group.MapGet("/claimable", async (
                 [FromQuery] string? keyword,
                 [FromQuery] int page,
                 [FromQuery] int pageSize,
                 [FromServices] IMediator mediator,
+                [FromServices] ICurrentUserService currentUser,
                 HttpContext httpContext) =>
             {
+                // 改动说明：登录用户的"我的商户"标记（匿名可搜但 IsMine 恒 false）
                 var result = await mediator.Send(new ClaimableMerchantsQuery
                 {
                     Keyword = keyword,
                     Page = page,
-                    PageSize = pageSize
+                    PageSize = pageSize,
+                    CurrentUserId = currentUser.UserId
                 });
 
                 return ApiResponseHelper.Paged(
@@ -318,8 +321,8 @@ namespace OpenFindBearings.Api.Endpoints
                     httpContext);
             })
             .WithName("GetClaimableMerchants")
-            .WithSummary("认领搜索爬虫商家")
-            .WithDescription("搜索可认领的爬虫来源商家（未被认领）");
+            .WithSummary("入驻发现搜索")
+            .WithDescription("搜索已有商户并标记认领可行性（可认领/我的商户/已入驻/审核中/已认证），避免重复新建");
 
             /// <summary>
             /// 待我接受的管理员提名列表（G2）

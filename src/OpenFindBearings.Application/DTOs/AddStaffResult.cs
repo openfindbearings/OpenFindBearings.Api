@@ -13,8 +13,11 @@
         public bool EmailSent { get; set; }
         public bool SmsSent { get; set; }
 
-        public static AddStaffResult Linked(Guid userId) =>
-            new() { Success = true, IsInvitationSent = false, UserId = userId, Message = "员工已添加" };
+        /// <summary>
+        /// 已是在职成员（幂等提示，v2.9.0 邀请确认制防重复邀请）
+        /// </summary>
+        public static AddStaffResult AlreadyMember(string merchantName) =>
+            new() { Success = true, IsInvitationSent = false, Message = $"该用户已是「{merchantName}」的在职成员" };
 
         public static AddStaffResult InvitationSent(Guid invitationId, bool emailSent, bool smsSent) =>
             new()

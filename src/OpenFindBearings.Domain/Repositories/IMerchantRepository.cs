@@ -1,4 +1,4 @@
-﻿using OpenFindBearings.Domain.Aggregates;
+using OpenFindBearings.Domain.Aggregates;
 using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Specifications;
 
@@ -71,9 +71,10 @@ namespace OpenFindBearings.Domain.Repositories
         Task<int> GetPendingApplicationCountAsync(CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// 获取可认领的爬虫商家（爬虫来源且无在职成员，用于入驻认领搜索）
+        /// <summary>
+        /// 入驻发现搜索（v2.9.0）：关键词匹配的非草稿商户全量分页（认领可行性标记由查询层计算）
         /// </summary>
-        Task<PagedResult<Merchant>> GetClaimableAsync(string? keyword, int page, int pageSize, CancellationToken cancellationToken = default);
+        Task<PagedResult<Merchant>> GetDiscoverableAsync(string? keyword, int page, int pageSize, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// 获取商家类型分布

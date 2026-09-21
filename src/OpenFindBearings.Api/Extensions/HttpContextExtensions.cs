@@ -22,6 +22,26 @@
         }
 
         /// <summary>
+        /// 获取当前用户手机号（JWT phone_number claim，OIDC 标准声明）。
+        /// 改动说明：v2.9.0 成员邀请确认制需要服务端权威比对"被邀手机号==登录者手机号"，
+        ///   不接受客户端自报参数，防拿他人手机号撞领邀请。
+        /// </summary>
+        public static string? GetPhone(this HttpContext httpContext)
+        {
+            return httpContext.User?.FindFirst("phone_number")?.Value;
+        }
+
+        /// <summary>
+        /// 获取当前用户邮箱（JWT email claim，OIDC 标准声明）。
+        /// 改动说明（v2.9.0）：邮箱注册无手机号的被邀人，员工邀请按 email 兜底匹配。
+        /// </summary>
+        public static string? GetEmail(this HttpContext httpContext)
+        {
+            return httpContext.User?.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
+                ?? httpContext.User?.FindFirst("email")?.Value;
+        }
+
+        /// <summary>
         /// 获取当前用户租户ID（从 JWT token claims 中读取 tenant_id）
         /// </summary>
         public static Guid? GetTenantId(this HttpContext httpContext)
