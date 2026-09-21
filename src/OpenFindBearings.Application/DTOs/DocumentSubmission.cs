@@ -38,6 +38,23 @@ namespace OpenFindBearings.Application.DTOs
         }
 
         /// <summary>
+        /// 统一社会信用代码校验（v2.11.0 入驻三入口必填）：非空 + 18 位执照标准字符集
+        /// （数字与大写字母，剔除易混 I/O/Z/S/V）。返回错误提示语，通过时返回 null。
+        /// 改动说明：此前选填导致锁定后空值商户永远补不了、审核无法比对执照代码，
+        ///   升必填；存量空值商户由 UpdateMerchant"一次性补录"通道放行。
+        /// </summary>
+        public static string? ValidateCreditCode(string? code)
+        {
+            if (string.IsNullOrWhiteSpace(code))
+                return "统一社会信用代码不能为空（见营业执照）";
+            var trimmed = code.Trim().ToUpperInvariant();
+            if (trimmed.Length != 18 ||
+                !System.Text.RegularExpressions.Regex.IsMatch(trimmed, @"^[0-9A-HJ-NP-RT-UWXY]{18}$"))
+                return "统一社会信用代码应为18位（营业执照上的数字与大写字母组合）";
+            return null;
+        }
+
+        /// <summary>
         /// 该商家类型申请"认证"前必须已审核通过的材料集合（VerifyMerchant 口径）
         /// </summary>
         public static DocumentType[] RequiredTypes(MerchantType type)

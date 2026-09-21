@@ -33,15 +33,27 @@ namespace OpenFindBearings.Application.Commands.Merchants.UpdateMerchant
                 throw new InvalidOperationException($"商家不存在: {request.Id}");
             }
 
-            // 改动说明（v2.9.0 字段锁定）：入驻生效后企业主体信息（企业名称/统一社会信用代码）
-            //   与营业执照绑定、是平台认证依据，不允许自助修改（换主体=重新入驻）；
-            //   仅在请求真正试图改成不同值时拒绝，未传/传同值放行（兼容部分字段更新场景）
+            // 改动说明（v2.11.0 调整）：Active 商户主体信息守卫细化——
+            //   企业名称：一律锁定（与执照绑定，换主体=重新入驻）；
+            //   信用代码：允许"空→一次性补录"（历史选填时代的空值商户需能补），
+            //     非空后改不同值拒绝；
+            //   商家类型：锁定——类型决定材料矩阵与认证标准（授权经销商必品牌授权书），
+            //     自助改类型=绕过审核换标准，变更需求走平台人工。
             if (merchant.Status == MerchantStatus.Active)
             {
                 if (request.CompanyName != null && request.CompanyName != merchant.CompanyName)
                     throw new InvalidOperationException("企业名称入驻后不可修改，如需变更请联系平台");
                 if (request.UnifiedSocialCreditCode != null && request.UnifiedSocialCreditCode != merchant.UnifiedSocialCreditCode)
-                    throw new InvalidOperationException("统一社会信用代码入驻后不可修改，如需变更请联系平台");
+                {
+                    if (!string.IsNullOrWhiteSpace(merchant.UnifiedSocialCreditCode))
+                        throw new InvalidOperationException("统一社会信用代码已录入，不可再次修改，如需变更请联系平台");
+                    // 空值补录：按入驻同口径校验格式
+                    var creditCodeError = Application.DTOs.DocumentRequirements.ValidateCreditCode(request.UnifiedSocialCreditCode);
+                    if (creditCodeError != null)
+                        throw new InvalidOperationException(creditCodeError);
+                }
+                if (request.Type.HasValue && request.Type.Value != merchant.Type)
+                    throw new InvalidOperationException("商家类型入驻后不可修改，如需变更请联系平台");
             }
 
             // ✅ 修改：更新基本信息 - 传递所有6个参数
@@ -84,11 +96,11 @@ namespace OpenFindBearings.Application.Commands.Merchants.UpdateMerchant
                 merchant.UpdateContact(newContact);
             }
 
-            // 更新类型
-            if (request.Type.HasValue)
+            // 更新类型（非 Active 可改；Active 已被上方守卫拦截）
+            // 改动说明（v2.11.0）：原调用被注释、类型编辑实为假动作，现真正接通
+            if (request.Type.HasValue && request.Type.Value != merchant.Type)
             {
-                // 注意：Merchant 实体可能需要添加 UpdateType 方法
-                // merchant.UpdateType(request.Type.Value);
+                merchant.UpdateType(request.Type.Value);
             }
 
             // 覆盖保护：人工维护（Admin 编辑/商户自改）过的数据标记为非爬虫来源，
