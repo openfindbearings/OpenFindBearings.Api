@@ -33,5 +33,17 @@ namespace OpenFindBearings.Domain.Repositories
         /// </summary>
         Task<int> MarkReadByTypeAsync(Guid userId, string type, Guid? bizId,
             CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 删除本人的一条站内信（硬删，收件人即唯一读者，无保留价值）。
+        /// 改动说明（v2.12.0）：消息中心支持左滑删除单条。
+        /// </summary>
+        Task<int> DeleteByIdForUserAsync(Guid id, Guid userId, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 清空本人全部已读站内信（未读保留，防误删漏看），返回删除行数。
+        /// 改动说明（v2.12.0）：消息中心"清空已读"批量出口。
+        /// </summary>
+        Task<int> DeleteReadAsync(Guid userId, CancellationToken cancellationToken = default);
     }
 }
