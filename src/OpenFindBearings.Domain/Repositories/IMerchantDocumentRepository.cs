@@ -1,4 +1,4 @@
-﻿using OpenFindBearings.Domain.Entities;
+using OpenFindBearings.Domain.Entities;
 
 namespace OpenFindBearings.Domain.Repositories
 {
@@ -36,5 +36,11 @@ namespace OpenFindBearings.Domain.Repositories
         /// 获取待审核记录数量
         /// </summary>
         Task<int> GetPendingCountAsync(CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 删除商户全部证照材料（v2.16.0 重新认领接管：旧认领人执照属其个人申请资料，
+        /// 不得泄露给新认领人）
+        /// </summary>
+        Task<int> DeleteByMerchantAsync(Guid merchantId, CancellationToken cancellationToken = default);
     }
 }

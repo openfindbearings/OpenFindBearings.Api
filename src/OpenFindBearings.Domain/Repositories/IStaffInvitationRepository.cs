@@ -1,4 +1,4 @@
-﻿using OpenFindBearings.Domain.Entities;
+using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Enums;
 
 namespace OpenFindBearings.Domain.Repositories
@@ -42,5 +42,10 @@ namespace OpenFindBearings.Domain.Repositories
 
         Task AddAsync(StaffInvitation invitation, CancellationToken cancellationToken = default);
         Task UpdateAsync(StaffInvitation invitation, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 商户全部待确认邀请（v2.16.0 接管清理用：StaffJoin 与 Nomination 均含）
+        /// </summary>
+        Task<List<StaffInvitation>> GetPendingByMerchantAsync(Guid merchantId, CancellationToken cancellationToken = default);
     }
 }

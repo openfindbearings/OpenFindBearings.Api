@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
@@ -165,6 +165,14 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         {
             return await _context.MerchantBearings
                 .CountAsync(mb => mb.IsPendingApproval, cancellationToken);
+        }
+
+        /// <summary>删除商户全部商品关联（ExecuteDelete 单 SQL，接管重置用）</summary>
+        public async Task<int> DeleteByMerchantAsync(Guid merchantId, CancellationToken cancellationToken = default)
+        {
+            return await _context.Set<MerchantBearing>()
+                .Where(mb => mb.MerchantId == merchantId)
+                .ExecuteDeleteAsync(cancellationToken);
         }
     }
 }
