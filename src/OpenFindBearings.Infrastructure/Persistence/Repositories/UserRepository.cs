@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using OpenFindBearings.Domain.Aggregates;
+using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
 using OpenFindBearings.Domain.Specifications;
@@ -155,12 +156,49 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         }
 
         /// <inheritdoc/>
-        public async Task<int> GetCountSinceAsync(DateTime since, CancellationToken cancellationToken = default)
-        {
-            return await _context.Users
-                .Where(u => u.IsActive && u.CreatedAt >= since)
-                .CountAsync(cancellationToken);
-        }
+    public async Task<int> GetCountSinceAsync(DateTime since, CancellationToken cancellationToken = default)
+    {
+        return await _context.Users
+            .Where(u => u.IsActive && u.CreatedAt >= since)
+            .CountAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<List<User>> GetDeactivatedBeforeAsync(DateTime cutoff, CancellationToken cancellationToken = default)
+    {
+        // 注销已满冷静期且未匿名化的用户（Job 每轮限量处理，防单轮事务过大）
+        return await _context.Users
+            .Where(u => u.DeactivatedAt != null && !u.IsAnonymized && u.DeactivatedAt <= cutoff)
+            .OrderBy(u => u.DeactivatedAt)
+            .Take(100)
+            .ToListAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task AnonymizeCascadeAsync(User user, CancellationToken cancellationToken = default)
+    {
+        // 级联清除个人数据（个保法删除义务）：收藏/关注/浏览历史/偏好逐表 ExecuteDelete，
+        //   行为日志（UserBehaviorLog）保留——匿名化后的统计聚合仍有效且不再关联自然人
+        await _context.Set<UserBearingFavorite>().Where(x => x.UserId == user.Id).ExecuteDeleteAsync(cancellationToken);
+        await _context.Set<UserMerchantFollow>().Where(x => x.UserId == user.Id).ExecuteDeleteAsync(cancellationToken);
+        await _context.Set<UserBearingHistory>().Where(x => x.UserId == user.Id).ExecuteDeleteAsync(cancellationToken);
+        await _context.Set<UserMerchantHistory>().Where(x => x.UserId == user.Id).ExecuteDeleteAsync(cancellationToken);
+        await _context.Set<UserPreference>().Where(x => x.UserId == user.Id).ExecuteDeleteAsync(cancellationToken);
+
+        user.MarkAnonymized();
+        await _context.Set<User>().Where(u => u.Id == user.Id)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(u => u.Nickname, user.Nickname)
+                .SetProperty(u => u.Avatar, user.Avatar)
+                .SetProperty(u => u.Mobile, user.Mobile)
+                .SetProperty(u => u.Address, user.Address)
+                .SetProperty(u => u.CompanyName, user.CompanyName)
+                .SetProperty(u => u.Industry, user.Industry)
+                .SetProperty(u => u.RegisterIp, user.RegisterIp)
+                .SetProperty(u => u.GuestSessionId, user.GuestSessionId)
+                .SetProperty(u => u.IsAnonymized, true)
+                .SetProperty(u => u.UpdatedAt, user.UpdatedAt), cancellationToken);
+    }
 
         /// <inheritdoc/>
         public async Task<Dictionary<string, int>> GetRoleDistributionAsync(CancellationToken cancellationToken = default)

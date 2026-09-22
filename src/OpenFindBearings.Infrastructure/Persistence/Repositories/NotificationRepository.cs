@@ -94,12 +94,22 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         }
 
         /// <inheritdoc/>
-        public async Task<int> DeleteReadAsync(Guid userId, CancellationToken cancellationToken = default)
-        {
-            // 只删已读（v2.12.0 清空已读）：未读保留，避免批量操作吞掉没看过的消息
-            return await _context.Set<Notification>()
-                .Where(n => n.UserId == userId && n.IsRead)
-                .ExecuteDeleteAsync(cancellationToken);
-        }
+    public async Task<int> DeleteReadAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        // 只删已读（v2.12.0 清空已读）：未读保留，避免批量操作吞掉没看过的消息
+        return await _context.Set<Notification>()
+            .Where(n => n.UserId == userId && n.IsRead)
+            .ExecuteDeleteAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// 删除用户全部通知（v2.12.0，账户注销清理个人数据）
+    /// </summary>
+    public async Task<int> DeleteAllForUserAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        return await _context.Set<Notification>()
+            .Where(n => n.UserId == userId)
+            .ExecuteDeleteAsync(cancellationToken);
+    }
     }
 }

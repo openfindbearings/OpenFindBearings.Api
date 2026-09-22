@@ -61,6 +61,16 @@ namespace OpenFindBearings.Domain.Repositories
         Task<int> GetCountSinceAsync(DateTime since, CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// 取注销已满冷静期且未匿名化的用户（v2.12.0，匿名化 Job 用）
+        /// </summary>
+        Task<List<User>> GetDeactivatedBeforeAsync(DateTime cutoff, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 匿名化用户并级联删除个人数据（v2.12.0）：清 PII 落终态 + 删收藏/关注/浏览历史/偏好
+        /// </summary>
+        Task AnonymizeCascadeAsync(User user, CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// 获取各角色的用户数量分布
         /// </summary>
         Task<Dictionary<string, int>> GetRoleDistributionAsync(CancellationToken cancellationToken = default);

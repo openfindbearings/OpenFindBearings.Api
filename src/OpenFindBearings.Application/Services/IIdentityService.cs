@@ -95,6 +95,16 @@
         Task<bool> ChangePasswordAsync(string authUserId, string currentPassword, string newPassword, CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// 注销认证账户（v2.12.0）：Identity 软删除 + 全设备刷新令牌吊销
+        /// </summary>
+        Task<bool> DeactivateUserAsync(string authUserId, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 匿名化认证账户（v2.12.0，冷静期满）：清除手机号/邮箱/用户名 PII
+        /// </summary>
+        Task<bool> AnonymizeUserAsync(string authUserId, CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// 更新手机号
         /// </summary>
         Task<bool> UpdatePhoneAsync(string authUserId, string phoneNumber, string verificationCode, CancellationToken cancellationToken = default);
