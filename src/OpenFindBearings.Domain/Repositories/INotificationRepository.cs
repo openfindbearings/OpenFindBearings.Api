@@ -45,5 +45,10 @@ namespace OpenFindBearings.Domain.Repositories
         /// 改动说明（v2.12.0）：消息中心"清空已读"批量出口。
         /// </summary>
         Task<int> DeleteReadAsync(Guid userId, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 删除用户全部通知（v2.12.0，账户注销时清理个人数据）
+        /// </summary>
+        Task<int> DeleteAllForUserAsync(Guid userId, CancellationToken cancellationToken = default);
     }
 }

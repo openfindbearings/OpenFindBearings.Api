@@ -178,6 +178,8 @@ namespace OpenFindBearings.Infrastructure
             // 添加后台任务队列服务
             services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
             services.AddHostedService<QueuedHostedService>();
+        // v2.12.0：注销冷静期到期匿名化 Job（每小时扫描，注销满 30 天清 PII）
+        services.AddHostedService<UserDeactivationJob>();
 
             return services;
         }

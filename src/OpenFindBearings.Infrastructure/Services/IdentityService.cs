@@ -295,6 +295,51 @@ namespace OpenFindBearings.Infrastructure.Services
             }
         }
 
+        /// <summary>
+        /// 注销认证账户（v2.12.0）：Identity 软删除 + 全设备刷新令牌吊销
+        /// </summary>
+        public async Task<bool> DeactivateUserAsync(string authUserId, CancellationToken cancellationToken = default)
+        {
+            return await PostToIdentityAsync("/api/users/deactivate", new { subject = authUserId },
+                "注销认证账户", authUserId, cancellationToken);
+        }
+
+        /// <summary>
+        /// 匿名化认证账户（v2.12.0，冷静期满）：清除手机号/邮箱/用户名 PII
+        /// </summary>
+        public async Task<bool> AnonymizeUserAsync(string authUserId, CancellationToken cancellationToken = default)
+        {
+            return await PostToIdentityAsync("/api/users/anonymize", new { subject = authUserId },
+                "匿名化认证账户", authUserId, cancellationToken);
+        }
+
+        /// <summary>
+        /// 向 Identity 用户 API POST JSON 的通用封装（注销/匿名化共用；失败仅记日志返回 false，
+        /// 调用方决定补偿策略——注销链失败会整体回滚，匿名化 Job 下轮重试）
+        /// </summary>
+        private async Task<bool> PostToIdentityAsync(string path, object body, string action,
+            string authUserId, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var content = new StringContent(
+                    JsonSerializer.Serialize(body, _jsonOptions),
+                    System.Text.Encoding.UTF8,
+                    "application/json");
+
+                var response = await _httpClient.PostAsync(
+                    $"{_configuration["Authentication:Authority"] ?? "https://localhost:7201"}{path}",
+                    content, cancellationToken);
+
+                return response.IsSuccessStatusCode;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "{Action}失败: AuthUserId={AuthUserId}", action, authUserId);
+                return false;
+            }
+        }
+
         public async Task<bool> UpdatePhoneAsync(string authUserId, string phoneNumber, string verificationCode, CancellationToken cancellationToken = default)
         {
             try

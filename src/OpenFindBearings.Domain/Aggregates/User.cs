@@ -144,6 +144,16 @@ namespace OpenFindBearings.Domain.Aggregates
         /// </summary>
         public Guid? MergedToUserId { get; private set; }
 
+    /// <summary>
+    /// 注销时间（v2.12.0）：软删除标记，非空即已注销；30 天冷静期内可撤销，期满匿名化
+    /// </summary>
+    public DateTime? DeactivatedAt { get; private set; }
+
+    /// <summary>
+    /// 已匿名化标记（v2.12.0）：冷静期满后 PII 清除完成，行仅保留结构关联
+    /// </summary>
+    public bool IsAnonymized { get; private set; }
+
         // 改动说明：移除废弃的 MerchantId 单值列 + Merchant 导航属性（"一人一商户"旧模型）；
         //   "谁属于哪个商户、什么角色"的唯一事实源已是 MerchantMember 成员表
 
@@ -334,6 +344,33 @@ namespace OpenFindBearings.Domain.Aggregates
                 Nickname = nickname;
                 UpdateTimestamp();
             }
+        }
+
+        /// <summary>
+        /// 注销账户（v2.12.0）：打软删标记，冷静期内可撤销，期满由匿名化 Job 清 PII
+        /// </summary>
+        public void Deactivate()
+        {
+            if (DeactivatedAt.HasValue) return;
+            DeactivatedAt = DateTime.UtcNow;
+            UpdateTimestamp();
+        }
+
+        /// <summary>
+        /// 匿名化完成（v2.12.0）：清除个人可识别信息并落终态标记（冷静期满 Job 调用，不可逆）
+        /// </summary>
+        public void MarkAnonymized()
+        {
+            Nickname = "已注销用户";
+            Avatar = null;
+            Mobile = null;
+            Address = null;
+            CompanyName = null;
+            Industry = null;
+            RegisterIp = null;
+            GuestSessionId = null;
+            IsAnonymized = true;
+            UpdateTimestamp();
         }
 
         /// <summary>

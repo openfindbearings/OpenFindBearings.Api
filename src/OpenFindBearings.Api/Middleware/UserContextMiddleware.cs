@@ -121,6 +121,15 @@ namespace OpenFindBearings.Api.Middleware
                 }
                 else
                 {
+                    // 改动说明（v2.12.0）：已注销账户拒绝访问——Identity 侧登录已被禁用，
+                    //   但存量 access token 在有效期内仍可达本 API，此处按软删标记拦截（401）
+                    if (user.DeactivatedAt.HasValue)
+                    {
+                        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                        await context.Response.WriteAsJsonAsync(new { message = "账户已注销" });
+                        return;
+                    }
+
                     context.Items["UserId"] = user.Id;
                     resolvedUserId = user.Id;
 

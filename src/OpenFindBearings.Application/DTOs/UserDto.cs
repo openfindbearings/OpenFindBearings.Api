@@ -82,5 +82,10 @@ namespace OpenFindBearings.Application.DTOs
         /// 最后登录时间
         /// </summary>
         public DateTime? LastLoginAt { get; set; }
+
+        /// <summary>
+        /// 注销时间（v2.12.0）：非空即已注销（软删冷静期），中间件按此拦截请求
+        /// </summary>
+        public DateTime? DeactivatedAt { get; set; }
     }
 }

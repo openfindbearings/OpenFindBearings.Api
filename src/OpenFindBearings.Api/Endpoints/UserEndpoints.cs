@@ -15,6 +15,7 @@ using OpenFindBearings.Application.Commands.History.DeleteMerchantHistory;
 using OpenFindBearings.Application.Commands.History.RecordBearingView;
 using OpenFindBearings.Application.Commands.History.RecordMerchantView;
 using OpenFindBearings.Application.Commands.Users.UpdateUserProfile;
+using OpenFindBearings.Application.Commands.Users.DeactivateUser;
 using OpenFindBearings.Application.Queries.Corrections.GetMyCorrectionDetail;
 using OpenFindBearings.Application.Queries.Corrections.Queries;
 using OpenFindBearings.Application.Queries.Favorites.CheckBearingFavorite;
@@ -165,6 +166,33 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("GetMyRoles")
             .WithSummary("获取当前用户角色")
             .WithDescription("获取当前登录用户拥有的所有角色列表");
+
+            /// <summary>
+            /// 注销当前账户（v2.12.0）：守卫式注销——唯一管理员的商户拦截、其余成员关系清理、
+            /// 待确认邀请作废、通知清空、Identity 禁用吊销；30 天冷静期后匿名化
+            /// </summary>
+            group.MapPost("/deactivate", async (
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                var command = new DeactivateUserCommand
+                {
+                    UserId = currentUser.UserId.Value,
+                    AuthUserId = currentUser.AuthUserId ?? string.Empty,
+                    Phone = currentUser.Phone,
+                    Email = currentUser.Email
+                };
+                await mediator.Send(command, httpContext.RequestAborted);
+
+                return ApiResponseHelper.Ok(new { message = "账户已注销" }, httpContext: httpContext);
+            })
+            .WithName("DeactivateUser")
+            .WithSummary("注销当前账户")
+            .WithDescription("注销账户：需先转让或删除所任唯一管理员的商户；进入 30 天冷静期，期满数据匿名化");
             #endregion
 
             // ============ 1.2 轴承收藏 ============

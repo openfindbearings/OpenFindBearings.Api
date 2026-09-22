@@ -24,6 +24,8 @@ namespace OpenFindBearings.Application.Extensions
                 FollowCount = user.FollowCount,
                 CreatedAt = user.CreatedAt,
                 LastLoginAt = user.LastLoginAt,
+                // 改动说明（v2.12.0）：透传注销标记，中间件据此拦截存量 token 的已注销账户请求
+                DeactivatedAt = user.DeactivatedAt,
                 CorrectionCount = 0
             };
         }
