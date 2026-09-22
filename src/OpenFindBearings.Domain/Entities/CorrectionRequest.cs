@@ -1,6 +1,7 @@
 ﻿using OpenFindBearings.Domain.Abstractions;
 using OpenFindBearings.Domain.Aggregates;
 using OpenFindBearings.Domain.Enums;
+using OpenFindBearings.Domain.Events;
 
 namespace OpenFindBearings.Domain.Entities
 {
@@ -197,6 +198,9 @@ namespace OpenFindBearings.Domain.Entities
             ReviewedBy = reviewedBy;
             ReviewedAt = DateTime.UtcNow;
             ReviewComment = comment;
+            // 改动说明（v2.14.0）：审核完成发领域事件——站内信通知提交人 + 积分奖励扩展点
+            AddDomainEvent(new CorrectionProcessedEvent(Id, TargetType, TargetId, SubmittedBy,
+                FieldName, approved: true, reviewComment: comment));
             UpdateTimestamp();
         }
 
@@ -216,6 +220,9 @@ namespace OpenFindBearings.Domain.Entities
             ReviewedBy = reviewedBy;
             ReviewedAt = DateTime.UtcNow;
             ReviewComment = comment;
+            // 改动说明（v2.14.0）：审核完成发领域事件（驳回同样通知提交人，附原因）
+            AddDomainEvent(new CorrectionProcessedEvent(Id, TargetType, TargetId, SubmittedBy,
+                FieldName, approved: false, reviewComment: comment));
             UpdateTimestamp();
         }
 
