@@ -223,30 +223,25 @@ namespace OpenFindBearings.Application.Commands.Merchants.ApplyMerchant
                 }
             }
 
-            // 改动说明：认领即真人接管该商户——应用向导第三步核对/补全的资料（字段级合并，未编辑项
-            //   回填原值，避免 UpdateBasicInfo/UpdateContact 全量覆盖清空 logo/website/businessScope），
-            //   并置来源为 Manual，使其不再被 Sync 爬虫覆盖（覆盖保护以 DataSource 为键，认领人已接管）。
+            // 改动说明（v2.13.1）：认领即真人全面接管——爬虫残留且认领表单未覆盖的字段显式清空
+            //   （邮箱/手机号/官网/英文名/经营范围：互联网数据常见字段错位，如邮箱列存着地址），
+            //   认领人在信息维护页全新自维护（空=清除语义已支持）；logo 保留（可能是真实品牌图，接管后可换）。
             merchant.UpdateBasicInfo(
                 companyName: request.CompanyName ?? merchant.CompanyName,
                 unifiedSocialCreditCode: request.UnifiedSocialCreditCode ?? merchant.UnifiedSocialCreditCode,
                 description: request.Description ?? merchant.Description,
-                businessScope: merchant.BusinessScope,
+                businessScope: null,
                 logoUrl: merchant.LogoUrl,
-                website: merchant.Website);
+                website: null);
+            merchant.SetEnglishName(null);
 
-            var hasContact = !string.IsNullOrWhiteSpace(request.ContactPerson) ||
-                !string.IsNullOrWhiteSpace(request.Phone) ||
-                !string.IsNullOrWhiteSpace(request.Mobile) ||
-                !string.IsNullOrWhiteSpace(request.Email) ||
-                !string.IsNullOrWhiteSpace(request.Address);
-            if (hasContact)
             {
                 var c = merchant.Contact;
                 merchant.UpdateContact(new ContactInfo(
                     request.ContactPerson ?? c?.ContactPerson,
                     request.Phone ?? c?.Phone,
-                    request.Mobile ?? c?.Mobile,
-                    request.Email ?? c?.Email,
+                    null,
+                    null,
                     request.Address ?? c?.Address));
             }
 
