@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
+using OpenFindBearings.Application.Commands.Merchants.ApplicationCleanup;
 using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Events;
 using OpenFindBearings.Domain.Repositories;
@@ -15,6 +16,8 @@ namespace OpenFindBearings.Application.Commands.Merchants.AcceptNomination
         private readonly IStaffInvitationRepository _invitationRepository;
         private readonly IMerchantRepository _merchantRepository;
         private readonly IMerchantDocumentRepository _documentRepository;
+        // 改动说明（v2.16.0）：提名已有商家接管重置需清商品关联，注入仓储
+        private readonly IMerchantBearingRepository _merchantBearingRepository;
         private readonly IUserRepository _userRepository;
         private readonly IMerchantMemberRepository _merchantMemberRepository;
         private readonly IMediator _mediator;
@@ -24,6 +27,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.AcceptNomination
             IStaffInvitationRepository invitationRepository,
             IMerchantRepository merchantRepository,
             IMerchantDocumentRepository documentRepository,
+            IMerchantBearingRepository merchantBearingRepository,
             IUserRepository userRepository,
             IMerchantMemberRepository merchantMemberRepository,
             IMediator mediator,
@@ -32,6 +36,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.AcceptNomination
             _invitationRepository = invitationRepository;
             _merchantRepository = merchantRepository;
             _documentRepository = documentRepository;
+            _merchantBearingRepository = merchantBearingRepository;
             _userRepository = userRepository;
             _merchantMemberRepository = merchantMemberRepository;
             _mediator = mediator;
@@ -98,6 +103,12 @@ namespace OpenFindBearings.Application.Commands.Merchants.AcceptNomination
                 {
                     throw new InvalidOperationException("该商家已被他人认领");
                 }
+
+                // 改动说明（v2.16.0）：提名已有商家=预认领语义，与认领同步做接管重置——
+                //   清互联网来源在售商品、历史被拒认领人的旧证照、待确认邀请；
+                //   Draft 提名（新建）不清（发起人随单材料属本次申请，非前任遗留）
+                await ApplicantApplicationCleanup.ResetOperationalDataForTakeoverAsync(
+                    merchant.Id, _merchantBearingRepository, _documentRepository, _invitationRepository, cancellationToken);
             }
 
             // 改动说明：接受提名补资料时企业名称必填（与 ApplyMerchant 同口径）——

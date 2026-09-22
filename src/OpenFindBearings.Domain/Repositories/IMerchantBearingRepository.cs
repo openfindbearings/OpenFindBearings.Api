@@ -1,4 +1,4 @@
-﻿using OpenFindBearings.Domain.Entities;
+using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Enums;
 
 namespace OpenFindBearings.Domain.Repositories
@@ -73,5 +73,10 @@ namespace OpenFindBearings.Domain.Repositories
         /// 分页查询商家的轴承关联（数据库级过滤与分页）
         /// </summary>
         Task<PagedResult<MerchantBearing>> GetMerchantBearingsPagedAsync(Guid merchantId, bool? onlyOnSale, bool? pendingOnly, DataSourceType? dataSource, int page, int pageSize, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 删除商户全部商品关联（v2.16.0 认领/提名接管：互联网来源在售数据不随接管继承）
+        /// </summary>
+        Task<int> DeleteByMerchantAsync(Guid merchantId, CancellationToken cancellationToken = default);
     }
 }

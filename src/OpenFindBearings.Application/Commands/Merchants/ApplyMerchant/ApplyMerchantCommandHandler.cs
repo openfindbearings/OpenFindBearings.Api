@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
+using OpenFindBearings.Application.Commands.Merchants.ApplicationCleanup;
 using OpenFindBearings.Application.Exceptions;
 using OpenFindBearings.Domain.Aggregates;
 using OpenFindBearings.Domain.Entities;
@@ -18,17 +19,24 @@ namespace OpenFindBearings.Application.Commands.Merchants.ApplyMerchant
         private readonly IMerchantRepository _merchantRepository;
         private readonly IMerchantMemberRepository _merchantMemberRepository;
         private readonly IMerchantDocumentRepository _documentRepository;
+        // 改动说明（v2.16.0）：接管重置需清商品关联与待确认邀请，注入两仓储
+        private readonly IMerchantBearingRepository _merchantBearingRepository;
+        private readonly IStaffInvitationRepository _invitationRepository;
         private readonly ILogger<ApplyMerchantCommandHandler> _logger;
 
         public ApplyMerchantCommandHandler(
             IMerchantRepository merchantRepository,
             IMerchantMemberRepository merchantMemberRepository,
             IMerchantDocumentRepository documentRepository,
+            IMerchantBearingRepository merchantBearingRepository,
+            IStaffInvitationRepository invitationRepository,
             ILogger<ApplyMerchantCommandHandler> logger)
         {
             _merchantRepository = merchantRepository;
             _merchantMemberRepository = merchantMemberRepository;
             _documentRepository = documentRepository;
+            _merchantBearingRepository = merchantBearingRepository;
+            _invitationRepository = invitationRepository;
             _logger = logger;
         }
 
@@ -248,6 +256,11 @@ namespace OpenFindBearings.Application.Commands.Merchants.ApplyMerchant
             merchant.SetDataSource(DataSource.FromManual(request.ApplicantUserId.ToString()));
             // 改动说明：标记入驻渠道为 Claim，申请人撤回时据此仅解除成员+退回爬虫、不删商户本体
             merchant.MarkApplicationMode(ApplicationMode.Claim);
+            // 改动说明（v2.16.0）：接管重置经营性数据——清互联网来源在售商品关联、
+            //   旧认领人证照（隐私）、待确认邀请（防旧邀请人混入新商户成员）。
+            //   含 B7"被拒后重新认领"分支（同走此路径，旧认领人未经审核的数据一律不继承）
+            await ApplicantApplicationCleanup.ResetOperationalDataForTakeoverAsync(
+                merchant.Id, _merchantBearingRepository, _documentRepository, _invitationRepository, cancellationToken);
             // 改动说明（v2.7.0）：认领向导核对/改选了商家类型则应用（爬虫默认类型不代表真人身份声明）
             var claimedType = (MerchantType)request.Type!.Value;
             if (merchant.Type != claimedType)

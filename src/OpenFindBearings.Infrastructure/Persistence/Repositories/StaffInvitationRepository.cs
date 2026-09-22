@@ -1,5 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using OpenFindBearings.Domain.Entities;
+using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
 using OpenFindBearings.Infrastructure.Persistence.Data;
 
@@ -148,6 +149,14 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         {
             _context.StaffInvitations.Update(invitation);
             
+        }
+
+        /// <summary>商户全部待确认邀请（StaffJoin+Nomination 均含，接管作废用）</summary>
+        public async Task<List<StaffInvitation>> GetPendingByMerchantAsync(Guid merchantId, CancellationToken cancellationToken = default)
+        {
+            return await _context.Set<StaffInvitation>()
+                .Where(i => i.MerchantId == merchantId && i.Status == InvitationStatus.Pending)
+                .ToListAsync(cancellationToken);
         }
     }
 }

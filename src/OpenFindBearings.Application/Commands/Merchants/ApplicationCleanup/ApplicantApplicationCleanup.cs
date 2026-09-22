@@ -48,5 +48,34 @@ namespace OpenFindBearings.Application.Commands.Merchants.ApplicationCleanup
             merchant.RevertClaimedToCrawler("apply-abandon");
             await merchantRepository.UpdateAsync(merchant, cancellationToken);
         }
+
+        /// <summary>
+        /// 商户被真人接管（认领/接受提名）时的经营性数据重置（v2.16.0）：
+        /// 1. 在售商品关联清空——爬虫抓的价格/库存/MOQ 未经核实，继承会误导寻货买家，
+        ///    且新认领人在商品管理页逐条删比重新录入更烦（对标高德/美团认领后商品从零自建）；
+        /// 2. 旧证照材料清空——上一任认领人（被拒重开场景）的营业执照属其个人申请资料，
+        ///    留给新认领人/Admin 抽屉可见是隐私泄露；
+        /// 3. 待确认邀请作废（StaffJoin+Nomination 全类型）——旧认领人发出的邀请若被接受，
+        ///    邀请人将成为新认领人商户的成员，必须随接管失效。
+        /// 关注关系不清（属买家用户自己的数据）；基础资料由认领表单逐项核对，不在本方法职责。
+        /// 仓储变更由 UnitOfWork 统一提交。
+        /// </summary>
+        public static async Task ResetOperationalDataForTakeoverAsync(
+            Guid merchantId,
+            IMerchantBearingRepository merchantBearingRepository,
+            IMerchantDocumentRepository documentRepository,
+            IStaffInvitationRepository invitationRepository,
+            CancellationToken cancellationToken)
+        {
+            await merchantBearingRepository.DeleteByMerchantAsync(merchantId, cancellationToken);
+            await documentRepository.DeleteByMerchantAsync(merchantId, cancellationToken);
+
+            var pendingInvitations = await invitationRepository.GetPendingByMerchantAsync(merchantId, cancellationToken);
+            foreach (var invitation in pendingInvitations)
+            {
+                invitation.Revoke();
+                await invitationRepository.UpdateAsync(invitation, cancellationToken);
+            }
+        }
     }
 }
