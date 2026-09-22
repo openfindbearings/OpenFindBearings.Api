@@ -21,6 +21,10 @@ namespace OpenFindBearings.Domain.Entities
         public const string TypeStaffJoinAccepted = "staff_join_accepted";
         /// <summary>通知类型：系统通用</summary>
         public const string TypeSystem = "system";
+        /// <summary>纠错审核结果通知类型（v2.14.0）</summary>
+        public const string TypeCorrectionProcessed = "correction_processed";
+        /// <summary>纠错业务对象类型（bizType，跳转定位纠错详情）</summary>
+        public const string BizCorrection = "correction";
 
         /// <summary>业务类型：商户（前端据此跳转商户页）</summary>
         public const string BizMerchant = "merchant";

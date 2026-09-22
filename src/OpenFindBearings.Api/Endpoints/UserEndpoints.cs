@@ -16,6 +16,7 @@ using OpenFindBearings.Application.Commands.History.RecordBearingView;
 using OpenFindBearings.Application.Commands.History.RecordMerchantView;
 using OpenFindBearings.Application.Commands.Users.UpdateUserProfile;
 using OpenFindBearings.Application.Commands.Users.DeactivateUser;
+using OpenFindBearings.Application.Queries.Corrections.GetCorrectableFields;
 using OpenFindBearings.Application.Queries.Corrections.GetMyCorrectionDetail;
 using OpenFindBearings.Application.Queries.Corrections.Queries;
 using OpenFindBearings.Application.Queries.Favorites.CheckBearingFavorite;
@@ -649,6 +650,27 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("GetMyCorrections")
             .WithSummary("获取我的纠错列表")
             .WithDescription("查看当前用户提交的所有纠错记录（包括审核中、已通过、已拒绝）");
+
+            /// <summary>
+            /// 可纠错字段清单（v2.14.0）：返回目标实体可纠错字段（键+中文名+当前值），
+            /// 供前端纠错表单渲染"选字段→核对当前值→填应改为"的结构化提交
+            /// </summary>
+            group.MapGet("/corrections/fields/{targetType}/{targetId:guid}", async (
+                string targetType,
+                Guid targetId,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                var result = await mediator.Send(new GetCorrectableFieldsQuery
+                {
+                    TargetType = targetType,
+                    TargetId = targetId
+                });
+                return ApiResponseHelper.Ok(result, httpContext: httpContext);
+            })
+            .WithName("GetCorrectableFields")
+            .WithSummary("可纠错字段清单")
+            .WithDescription("返回轴承/商家可提交纠错的字段键、中文名与当前值（与审批可应用字段一致）");
 
             /// <summary>
             /// 获取我的单条纠错详情
