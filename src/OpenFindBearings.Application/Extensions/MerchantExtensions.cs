@@ -29,6 +29,8 @@ namespace OpenFindBearings.Application.Extensions
                 //   补齐 Status 并新增 ApplicationMode/SubmittedAt/RejectReason 三字段供审批页使用
                 Status = merchant.Status.ToString(),
                 ApplicationMode = merchant.ApplicationMode.ToString(),
+            // v1.31.0：Admin 解除归属按钮可用性判定（None+Manual=提名已有 vs None+Crawler=公海）
+            DataSource = merchant.DataSource?.ToString(),
                 SubmittedAt = merchant.CreatedAt,
                 RejectReason = merchant.SuspensionReason
             };
@@ -63,6 +65,8 @@ namespace OpenFindBearings.Application.Extensions
                 Website = merchant.Website,
                 // 改动说明：详情同样补审批三字段（与 ToPublicDto 对齐，抽屉直查详情时不依赖列表）
                 ApplicationMode = merchant.ApplicationMode.ToString(),
+            // v1.31.0：Admin 解除归属按钮可用性判定（None+Manual=提名已有 vs None+Crawler=公海）
+            DataSource = merchant.DataSource?.ToString(),
                 SubmittedAt = merchant.CreatedAt,
                 RejectReason = merchant.SuspensionReason,
                 UnifiedSocialCreditCode = merchant.UnifiedSocialCreditCode
@@ -96,6 +100,8 @@ namespace OpenFindBearings.Application.Extensions
                 Website = merchant.Website,
                 // 改动说明：同上一重载，补审批三字段
                 ApplicationMode = merchant.ApplicationMode.ToString(),
+            // v1.31.0：Admin 解除归属按钮可用性判定（None+Manual=提名已有 vs None+Crawler=公海）
+            DataSource = merchant.DataSource?.ToString(),
                 SubmittedAt = merchant.CreatedAt,
                 RejectReason = merchant.SuspensionReason,
                 UnifiedSocialCreditCode = merchant.UnifiedSocialCreditCode,
