@@ -19,8 +19,8 @@ INSERT INTO ""Permissions"" (""Id"", ""Name"", ""Description"", ""CreatedAt"", "
 SELECT gen_random_uuid(), 'merchant.detach', '解除商户归属', now(), true
 WHERE NOT EXISTS (SELECT 1 FROM ""Permissions"" WHERE ""Name"" = 'merchant.detach');
 
-INSERT INTO ""RolePermissions"" (""RoleId"", ""PermissionId"")
-SELECT r.""Id"", p.""Id""
+INSERT INTO ""RolePermissions"" (""RoleId"", ""PermissionId"", ""Id"", ""CreatedAt"", ""IsActive"")
+SELECT r.""Id"", p.""Id"", gen_random_uuid(), now(), true
 FROM ""Roles"" r, ""Permissions"" p
 WHERE r.""Name"" = 'Admin' AND p.""Name"" = 'merchant.detach'
   AND NOT EXISTS (
