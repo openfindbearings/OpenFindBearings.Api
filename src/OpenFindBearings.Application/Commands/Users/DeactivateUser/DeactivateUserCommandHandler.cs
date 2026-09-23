@@ -24,6 +24,8 @@ namespace OpenFindBearings.Application.Commands.Users.DeactivateUser
         private readonly IMerchantMemberRepository _memberRepository;
         private readonly IStaffInvitationRepository _invitationRepository;
         private readonly INotificationRepository _notificationRepository;
+        // v2.17.0：注销清本人纠错 + HardDelete 前清纠错行（TargetId Restrict FK）
+        private readonly ICorrectionRequestRepository _correctionRepository;
         private readonly IIdentityService _identityService;
         private readonly ILogger<DeactivateUserCommandHandler> _logger;
 
@@ -33,6 +35,7 @@ namespace OpenFindBearings.Application.Commands.Users.DeactivateUser
             IMerchantMemberRepository memberRepository,
             IStaffInvitationRepository invitationRepository,
             INotificationRepository notificationRepository,
+            ICorrectionRequestRepository correctionRepository,
             IIdentityService identityService,
             ILogger<DeactivateUserCommandHandler> logger)
         {
@@ -41,6 +44,7 @@ namespace OpenFindBearings.Application.Commands.Users.DeactivateUser
             _memberRepository = memberRepository;
             _invitationRepository = invitationRepository;
             _notificationRepository = notificationRepository;
+            _correctionRepository = correctionRepository;
             _identityService = identityService;
             _logger = logger;
         }
@@ -70,8 +74,10 @@ namespace OpenFindBearings.Application.Commands.Users.DeactivateUser
             }
             if (blockingNames.Count > 0)
             {
+                // v2.17.0：文案对齐关店能力——注销前可自助关店（商户回公海）或转让管理员，
+            //   或联系平台解除归属（Admin detach），三选一后守卫自然放行
                 throw new InvalidOperationException(
-                    $"您仍是商户「{string.Join("、", blockingNames)}」的唯一管理员，请先在成员管理中转让管理员，或联系平台注销该商户后再注销账户");
+                    $"您仍是商户「{string.Join("、", blockingNames)}」的唯一管理员，请先在商户页关闭店铺或转让管理员，再注销账户");
             }
 
             // 第二遍执行：按商户状态分流清理
@@ -112,6 +118,21 @@ namespace OpenFindBearings.Application.Commands.Users.DeactivateUser
                 }
             }
 
+            // v2.17.0：本人发起的待确认提名邀请作废——提名属个人行为，
+            //   被提名人接受时发起人要入伙当成员，已注销用户不能复活为成员
+            var myNominations = await _invitationRepository.GetPendingNominationsByOperatorAsync(
+                request.UserId, cancellationToken);
+            foreach (var nomination in myNominations)
+            {
+                nomination.Revoke();
+                await _invitationRepository.UpdateAsync(nomination, cancellationToken);
+            }
+
+            // v2.17.0：本人待审纠错硬删——不删则 Admin 事后采纳会给已注销用户发站内信（孤儿通知），
+            //   且审核队列永远挂着无人续审的记录；历史已审行留到匿名化期级联清（冷静期可恢复）
+            await _correctionRepository.DeleteByUserAsync(
+                request.UserId, CorrectionStatus.Pending, cancellationToken);
+
             // 清空个人通知数据
             await _notificationRepository.DeleteAllForUserAsync(request.UserId, cancellationToken);
 
@@ -136,7 +157,7 @@ namespace OpenFindBearings.Application.Commands.Users.DeactivateUser
             if (merchant.ApplicationMode == ApplicationMode.Self)
             {
                 await ApplicantApplicationCleanup.HardDeleteMerchantWithMembersAsync(
-                    merchant, _merchantRepository, _memberRepository, cancellationToken);
+                    merchant, _merchantRepository, _memberRepository, _correctionRepository, cancellationToken);
             }
             else
             {

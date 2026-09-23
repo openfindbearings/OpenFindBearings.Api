@@ -15,6 +15,8 @@ namespace OpenFindBearings.Application.Commands.Merchants.DeleteRejectedApplicat
     {
         private readonly IMerchantRepository _merchantRepository;
         private readonly IMerchantMemberRepository _merchantMemberRepository;
+        // v2.17.0：HardDelete 前需先清纠错行（TargetId Restrict FK），注入纠错仓储
+        private readonly ICorrectionRequestRepository _correctionRepository;
         private readonly ILogger<DeleteRejectedApplicationCommandHandler> _logger;
 
         public DeleteRejectedApplicationCommandHandler(
@@ -52,7 +54,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.DeleteRejectedApplicat
             {
                 case ApplicationMode.Self:
                     await ApplicantApplicationCleanup.HardDeleteMerchantWithMembersAsync(
-                        merchant, _merchantRepository, _merchantMemberRepository, cancellationToken);
+                        merchant, _merchantRepository, _merchantMemberRepository, _correctionRepository, cancellationToken);
                     break;
                 case ApplicationMode.Claim:
                     await ApplicantApplicationCleanup.RemoveClaimAndRevertToCrawlerAsync(

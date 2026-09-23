@@ -47,5 +47,17 @@ namespace OpenFindBearings.Domain.Repositories
         /// 商户全部待确认邀请（v2.16.0 接管清理用：StaffJoin 与 Nomination 均含）
         /// </summary>
         Task<List<StaffInvitation>> GetPendingByMerchantAsync(Guid merchantId, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 本人发起的全部待确认提名邀请（v2.17.0 账户注销：提名是个人行为，发起人注销后
+        ///   被提名人若接受会把已注销用户插回成员表，须作废；员工邀请是商户行为不在此列）
+        /// </summary>
+        Task<List<StaffInvitation>> GetPendingNominationsByOperatorAsync(Guid operatorId, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 商户全部非终态邀请（Pending+Accepted，v2.17.0 释放清场：Accepted 提名残留会在
+        /// 公海商户再认领审批时把旧提名人自动插回新商户成员——越权雷，必须一并作废）
+        /// </summary>
+        Task<List<StaffInvitation>> GetOpenByMerchantAsync(Guid merchantId, CancellationToken cancellationToken = default);
     }
 }

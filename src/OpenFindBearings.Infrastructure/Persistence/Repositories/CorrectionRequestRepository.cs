@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
@@ -92,6 +92,26 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         {
             return await _context.CorrectionRequests
                 .CountAsync(c => c.CreatedAt >= since, cancellationToken);
+        }
+
+        /// <inheritdoc/>
+        public async Task<int> DeleteByTargetAsync(string targetType, Guid targetId, CancellationToken cancellationToken = default)
+        {
+            // v2.17.0：商户删除/解除归属前必须硬删其纠错行——TargetId 上挂 Merchants Restrict FK，
+            //   驳回/保留行都会让商户 DELETE 被 23503 拦截（withdraw/删被拒申请/注销同雷共享修复）
+            return await _context.CorrectionRequests
+                .Where(c => c.TargetType == targetType && c.TargetId == targetId)
+                .ExecuteDeleteAsync(cancellationToken);
+        }
+
+        /// <inheritdoc/>
+        public async Task<int> DeleteByUserAsync(Guid userId, CorrectionStatus? status = null, CancellationToken cancellationToken = default)
+        {
+            // v2.17.0：注销清本人待审纠错（防 Admin 事后采纳给幽灵用户发通知，status=Pending）；
+            //   匿名化清全部历史（status=null 全删，个保法个人数据删除义务）
+            return await _context.CorrectionRequests
+                .Where(c => c.SubmittedBy == userId && (status == null || c.Status == status))
+                .ExecuteDeleteAsync(cancellationToken);
         }
     }
 }

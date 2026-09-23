@@ -84,10 +84,12 @@ namespace OpenFindBearings.Application.Queries.Merchants.ClaimableMerchants
                     && !lockedIds.Contains(m.Id);
 
                 string statusText;
+                // v2.17.0 顺序修正：原"Pending 即审核中"会把公海商户（释放回池的也是 Pending、无成员）
+                //   误标"审核中"挡住认领认知——改为"有在职成员或有提名锁"才算申请中/已入驻，其余可认领
                 if (isMine) statusText = "我的商户";
-                else if (m.Status == MerchantStatus.Pending) statusText = "审核中";
                 else if (m.IsVerified) statusText = "已认证";
-                else if (merchantsWithMembers.Contains(m.Id) || lockedIds.Contains(m.Id)) statusText = "已入驻";
+                else if (merchantsWithMembers.Contains(m.Id) || lockedIds.Contains(m.Id))
+                    statusText = m.Status == MerchantStatus.Pending ? "审核中" : "已入驻";
                 else statusText = "可认领";
 
                 return new ClaimableMerchantDto

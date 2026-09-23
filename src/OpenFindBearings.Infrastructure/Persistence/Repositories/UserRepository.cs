@@ -184,6 +184,8 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         await _context.Set<UserBearingHistory>().Where(x => x.UserId == user.Id).ExecuteDeleteAsync(cancellationToken);
         await _context.Set<UserMerchantHistory>().Where(x => x.UserId == user.Id).ExecuteDeleteAsync(cancellationToken);
         await _context.Set<UserPreference>().Where(x => x.UserId == user.Id).ExecuteDeleteAsync(cancellationToken);
+        // v2.17.0：纠错历史属个人申请数据（含已审行），匿名化期一并删除（个保法删除义务）
+        await _context.Set<CorrectionRequest>().Where(x => x.SubmittedBy == user.Id).ExecuteDeleteAsync(cancellationToken);
 
         user.MarkAnonymized();
         await _context.Set<User>().Where(u => u.Id == user.Id)

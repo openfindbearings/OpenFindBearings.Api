@@ -54,6 +54,13 @@ namespace OpenFindBearings.Application.Commands.Merchants.ApproveMerchant
                 throw new OpenFindBearings.Application.Exceptions.MerchantAlreadyProcessedException(merchant.Status.ToString());
             }
 
+            // v2.17.0 双保险：公海商户（爬虫来源）无入驻申请不可审批——防释放商户残留的
+            //   Accepted 提名邀请经直调 approve 把旧提名人插回新商户成员（根源已由 detach 清 Accepted 封堵）
+            if (merchant.DataSource?.SourceType == DataSourceType.Crawler)
+            {
+                throw new InvalidOperationException("公海商户（爬虫来源）无入驻申请，不可审批");
+            }
+
             merchant.Approve();
             await _merchantRepository.UpdateAsync(merchant, cancellationToken);
 

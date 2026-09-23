@@ -158,5 +158,22 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                 .Where(i => i.MerchantId == merchantId && i.Status == InvitationStatus.Pending)
                 .ToListAsync(cancellationToken);
         }
+
+
+        /// <summary>商户全部非终态邀请（Pending+Accepted，v2.17.0 释放清场用）</summary>
+        public async Task<List<StaffInvitation>> GetOpenByMerchantAsync(Guid merchantId, CancellationToken cancellationToken = default)
+        {
+            return await _context.Set<StaffInvitation>()
+                .Where(i => i.MerchantId == merchantId && (i.Status == InvitationStatus.Pending || i.Status == InvitationStatus.Accepted))
+                .ToListAsync(cancellationToken);
+        }
+
+        /// <summary>本人发起的全部待确认提名邀请（v2.17.0 账户注销：提名属个人行为，发起人注销后须作废）</summary>
+        public async Task<List<StaffInvitation>> GetPendingNominationsByOperatorAsync(Guid operatorId, CancellationToken cancellationToken = default)
+        {
+            return await _context.Set<StaffInvitation>()
+                .Where(i => i.OperatorId == operatorId && i.Type == InvitationType.Nomination && i.Status == InvitationStatus.Pending)
+                .ToListAsync(cancellationToken);
+        }
     }
 }

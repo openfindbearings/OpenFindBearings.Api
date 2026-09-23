@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Domain.Aggregates;
@@ -94,6 +94,8 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
                 new("merchant.view", "查看商家"),
                 new("merchant.verify", "认证商家"),
                 new("merchant.manage", "管理商家"),
+                // v2.17.0：Admin 强制解除商户归属（存量库由迁移 AddMerchantDetachPermission 补插）
+                new("merchant.detach", "解除商户归属"),
                 new("correction.submit", "提交纠错"),
                 new("correction.review", "审核纠错"),
                 new("favorite.bearing", "收藏轴承"),
