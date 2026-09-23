@@ -39,6 +39,18 @@ spec:
         - configMapRef:
             name: openfindbearings-api-config
         
+        # 改动说明（v1.31.0）：启动探针——迁移+Seed 在端口监听前同步执行，慢迁移期 liveness 会误杀
+        #   （杀→重迁→恶性循环直到 rollout 超时回滚，API 发版高失败率根因）。startupProbe 给最长
+        #   5 分钟启动预算，成功前 liveness/readiness 不生效；成功后 60s 判定窗口接管
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 60
+
         livenessProbe:
           httpGet:
             path: /health
