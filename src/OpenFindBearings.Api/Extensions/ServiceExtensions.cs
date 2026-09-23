@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
@@ -28,6 +28,8 @@ namespace OpenFindBearings.Api.Extensions
             services.AddScoped<IApiCallLogRepository, ApiCallLogRepository>();
             // Sync 库存导入（服务间调用，sync-client 凭据）
             services.AddScoped<ISyncInventoryService, SyncInventoryService>();
+            // Sync staging 刷新唤醒（v2.17.0 关店/解除归属回公海后唤醒爬取覆盖通道）
+            services.AddScoped<ISyncStagingRefreshService, SyncStagingRefreshService>();
             // IStaffInvitationRepository 已在 Infrastructure.DependencyInjection 中注册
 
             // ============ IP 地区解析服务 ============

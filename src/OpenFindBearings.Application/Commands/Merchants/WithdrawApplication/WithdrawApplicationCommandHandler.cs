@@ -15,6 +15,8 @@ namespace OpenFindBearings.Application.Commands.Merchants.WithdrawApplication
     {
         private readonly IMerchantRepository _merchantRepository;
         private readonly IMerchantMemberRepository _merchantMemberRepository;
+        // v2.17.0：HardDelete 前需先清纠错行（TargetId Restrict FK），注入纠错仓储
+        private readonly ICorrectionRequestRepository _correctionRepository;
         private readonly ILogger<WithdrawApplicationCommandHandler> _logger;
 
         public WithdrawApplicationCommandHandler(
@@ -54,7 +56,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.WithdrawApplication
                 case ApplicationMode.Self:
                     // v2.6.0 改动说明：分支清理逻辑提取至 ApplicantApplicationCleanup 与"删除被拒申请"共用，此处仅换调用
                     await ApplicantApplicationCleanup.HardDeleteMerchantWithMembersAsync(
-                        merchant, _merchantRepository, _merchantMemberRepository, cancellationToken);
+                        merchant, _merchantRepository, _merchantMemberRepository, _correctionRepository, cancellationToken);
                     break;
                 case ApplicationMode.Claim:
                     await ApplicantApplicationCleanup.RemoveClaimAndRevertToCrawlerAsync(

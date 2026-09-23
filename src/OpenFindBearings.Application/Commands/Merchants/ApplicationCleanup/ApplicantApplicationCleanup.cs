@@ -1,5 +1,6 @@
 using OpenFindBearings.Domain.Aggregates;
 using OpenFindBearings.Domain.Entities;
+using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Commands.Merchants.ApplicationCleanup
@@ -16,13 +17,18 @@ namespace OpenFindBearings.Application.Commands.Merchants.ApplicationCleanup
         /// self 通道：硬删除商户本体 + 其全部成员行（外键 Restrict 须先删成员）。
         /// 未公示的草稿式商户放弃后彻底删除，避免残留同名/同代码记录干扰下次新建查重。
         /// 营业执照/商品等子表由 MerchantId 外键级联在 DB 层随商户删除一并清理。
+        /// 改动说明（v2.17.0）：先硬删 Merchant 纠错行——CorrectionRequest 对 Merchants.TargetId
+        ///   挂 Restrict FK，有纠错记录（含历史已审）的商户 DELETE 必被 23503 拦截，
+        ///   withdraw/删被拒申请/账户注销三条既有路径同雷一并修复。
         /// </summary>
         public static async Task HardDeleteMerchantWithMembersAsync(
             Merchant merchant,
             IMerchantRepository merchantRepository,
             IMerchantMemberRepository merchantMemberRepository,
+            ICorrectionRequestRepository correctionRepository,
             CancellationToken cancellationToken)
         {
+            await correctionRepository.DeleteByTargetAsync("Merchant", merchant.Id, cancellationToken);
             var members = await merchantMemberRepository.GetAllByMerchantIdAsync(merchant.Id, cancellationToken);
             foreach (var m in members)
             {
@@ -76,6 +82,58 @@ namespace OpenFindBearings.Application.Commands.Merchants.ApplicationCleanup
                 invitation.Revoke();
                 await invitationRepository.UpdateAsync(invitation, cancellationToken);
             }
+        }
+
+        /// <summary>
+        /// 商户解除归属（关店/Admin 强制 detach）清场重置（v2.17.0）——与"接管"ResetOperationalDataForTakeoverAsync
+        /// 语义分叉：接管=新主人进场清旧账，释放=全员离场归公海。差异点：
+        /// 1. 成员行全量清退（接管不动成员——认领人即新主人；释放必须清，否则认领门"有在职成员"永久挡住再认领）；
+        /// 2. 商品关联全删含爬虫行（历史爬虫关联释放后 staging 不会重推回填，保留=残缺混合体；
+        ///    ProductCount 归零由 Merchant.ReleaseToPool 负责）；
+        /// 3. 证照材料全删；
+        /// 4. 非终态邀请全作废——含 Accepted 提名行（接管只清 Pending；Accepted 提名残留会在公海商户
+        ///    被新认领人审批通过时，把旧提名的被提名人+发起人自动插回新认领人商户当成员——越权雷）；
+        /// 5. Merchant 纠错行全量硬删（TargetId Restrict FK + 无主商户的纠错无人可续审）。
+        /// 返回全部在职成员 userId 清单：调用方用于发"商户已关闭"站内信——领域事件在 commit 后派发，
+        /// 届时查在职成员必空，必须在本方法内预取。仓储变更由 UnitOfWork 统一提交。
+        /// </summary>
+        public static async Task<List<Guid>> ResetOperationalDataForReleaseAsync(
+            Guid merchantId,
+            IMerchantMemberRepository memberRepository,
+            IMerchantBearingRepository merchantBearingRepository,
+            IMerchantDocumentRepository documentRepository,
+            IStaffInvitationRepository invitationRepository,
+            ICorrectionRequestRepository correctionRepository,
+            CancellationToken cancellationToken)
+        {
+            // 1. 成员全清退（先取在职名单作通知收件人）
+            var members = await memberRepository.GetAllByMerchantIdAsync(merchantId, cancellationToken);
+            var notifyUserIds = members
+                .Where(m => m.Status == MerchantMemberStatus.Active)
+                .Select(m => m.UserId).Distinct().ToList();
+            foreach (var member in members)
+            {
+                if (member.Status == MerchantMemberStatus.Removed) continue;
+                member.Remove();
+                await memberRepository.UpdateAsync(member, cancellationToken);
+            }
+
+            // 2/3. 商品与证照全删（ExecuteDelete 批量，认领人真人来源与爬虫来源一并清）
+            await merchantBearingRepository.DeleteByMerchantAsync(merchantId, cancellationToken);
+            await documentRepository.DeleteByMerchantAsync(merchantId, cancellationToken);
+
+            // 4. 非终态邀请全作废（Pending + Accepted 提名复活雷）
+            var openInvitations = await invitationRepository.GetOpenByMerchantAsync(merchantId, cancellationToken);
+            foreach (var invitation in openInvitations)
+            {
+                invitation.Revoke();
+                await invitationRepository.UpdateAsync(invitation, cancellationToken);
+            }
+
+            // 5. 纠错行硬删（含历史已审，随商户离场归档删除；提交人"我的纠错"记录消失属注销级清场语义）
+            await correctionRepository.DeleteByTargetAsync("Merchant", merchantId, cancellationToken);
+
+            return notifyUserIds;
         }
     }
 }

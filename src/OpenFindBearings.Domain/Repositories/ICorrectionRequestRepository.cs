@@ -1,4 +1,4 @@
-﻿using OpenFindBearings.Domain.Entities;
+using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Enums;
 
 namespace OpenFindBearings.Domain.Repositories
@@ -53,5 +53,16 @@ namespace OpenFindBearings.Domain.Repositories
         /// 获取指定时间后提交的纠错数量
         /// </summary>
         Task<int> GetCountSinceAsync(DateTime since, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 硬删目标实体全部纠错记录（v2.17.0 商户删除/解除归属）：CorrectionRequest 对 Merchants.TargetId
+        /// 是 Restrict FK，"驳回不解 FK、必须删行"；含历史已审行（个人申请数据随商户离场归档删除）
+        /// </summary>
+        Task<int> DeleteByTargetAsync(string targetType, Guid targetId, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 硬删用户提交的全部纠错（v2.17.0 账户注销清待审 + 匿名化清历史，个保法个人数据删除义务）
+        /// </summary>
+        Task<int> DeleteByUserAsync(Guid userId, CorrectionStatus? status = null, CancellationToken cancellationToken = default);
     }
 }

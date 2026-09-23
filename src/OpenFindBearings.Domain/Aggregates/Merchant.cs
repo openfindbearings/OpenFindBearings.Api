@@ -485,6 +485,60 @@ namespace OpenFindBearings.Domain.Aggregates
             UpdateTimestamp();
         }
 
+        /// <summary>
+        /// 解除归属回公海（v2.17.0 商户关店/Admin 强制解除）：Active→Pending + 认领相关轴全部重置，
+        /// 实体存在性交还爬虫管线裁判（Sync refresh 重置 staging 行后，下轮爬取经
+        /// DataSource=Crawler 覆盖通道刷新；源头页面消亡则自然不再更新）。
+        /// 成员/商品/证照/邀请/纠错等关联行由 ApplicantApplicationCleanup.ResetOperationalDataForReleaseAsync 清理（聚合外职责）。
+        /// 保留轴：CompanyName/UnifiedSocialCreditCode/Type/Description/Logo——入驻审批已核实或属公开信息，
+        ///   Sync 覆盖通道不会回填这些字段，清掉反而丢失经核实的主体信息且误导预填。
+        /// 清空轴：Contact 全部（上一任认领人私人联系方式，管线刷新前不得在公海暴露——隐私止血）、
+        ///   Website（认领人自填且 Sync 不回填，错误值会误导买家）。
+        /// </summary>
+        /// <param name="crawlerSiteName">回退后归属的爬虫站点占位标识</param>
+        public void ReleaseToPool(string crawlerSiteName = "released")
+        {
+            // 守卫：仅生效商户可释放；Pending 走撤回、Suspended 走删申请，三态入口不混用
+            if (Status != MerchantStatus.Active)
+            {
+                throw new InvalidOperationException($"仅生效商户可解除归属，当前状态：{Status}");
+            }
+
+            Status = MerchantStatus.Pending; // 公海待认领态：重新认领提交后必再走审核（与爬虫新商户同构）
+            IsActive = true;                 // 保持搜索可见（公海商户可被发现/认领）
+            RevertClaimedToCrawler(crawlerSiteName); // DataSource 回 Crawler + ApplicationMode 归 None
+
+            // 认证轴重置：认领期获得的认证状态/申请标记/等级不带入公海
+            if (IsVerified)
+            {
+                Unverify(); // Unverify 未认证时抛异常，条件调用；内部清 VerifiedAt
+            }
+            else
+            {
+                VerifiedAt = null;
+            }
+            VerifyRequested = false;
+            if (Grade > MerchantGrade.Standard)
+            {
+                UpdateGrade(MerchantGrade.Standard);
+            }
+
+            // 数据核验轴重置：上一任认领期留下的"已核验"标记与新爬虫商户（天然 false）区分，必须清
+            IsDataVerified = false;
+            LastVerifiedAt = null;
+            VerifiedBy = null;
+            DataRemark = null;
+
+            // 认领人覆写的联系方式与官网清空（隐私+误导止血，Sync 管线刷新前保持空白）
+            Contact = new ContactInfo();
+            Website = null;
+
+            // 商品关联由 helper ExecuteDelete 清理（绕过导航），计数直接归零
+            ProductCount = 0;
+
+            UpdateTimestamp();
+        }
+
         // 改动说明：移除原"员工管理"节（AddStaff/RemoveStaff + _staff 集合）——
         //   它们依赖已废弃的 User.MerchantId 单值关系；商户成员改由 MerchantMember 成员表承载（见成员仓储与端点）
 

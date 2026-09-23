@@ -29,6 +29,8 @@ using OpenFindBearings.Application.Commands.Merchants.Commands;
 using OpenFindBearings.Application.Commands.Merchants.ApproveMerchant;
 using OpenFindBearings.Application.Commands.Merchants.DeleteMerchant;
 using OpenFindBearings.Application.Commands.Merchants.HardDeleteMerchant;
+using OpenFindBearings.Application.Commands.Merchants.DetachMerchant;
+using OpenFindBearings.Api.Services;
 using OpenFindBearings.Application.Commands.Merchants.RejectMerchant;
 using OpenFindBearings.Application.Commands.Merchants.RestoreMerchant;
 using OpenFindBearings.Application.Commands.Merchants.VerifyMerchant;
@@ -383,6 +385,30 @@ namespace OpenFindBearings.Api.Endpoints
             .WithSummary("彻底删除商家")
             .WithDescription("物理删除商家，不可恢复")
             .RequirePermission("data.harddelete");
+
+            /// <summary>
+            /// 强制解除商户归属（v2.17.0）：管理员跑路/僵尸无主/违规商户的平台侧处置——
+            /// 清场回公海（商品/证照/邀请/纠错全清、联系方式隐私止血），存在性交爬虫管线裁判；
+            /// self/提名新建商户无公海数据会被拒绝（应走删除）。成功后唤醒 Sync staging 刷新
+            /// </summary>
+            group.MapPost("/merchants/{id:guid}/detach", async (
+                Guid id,
+                [FromQuery] string? reason,
+                [FromServices] IMediator mediator,
+                [FromServices] ISyncStagingRefreshService syncRefresh,
+                HttpContext httpContext) =>
+            {
+                var result = await mediator.Send(new DetachMerchantCommand(id, reason));
+
+                // best-effort 唤醒爬取刷新，失败不回滚（Sync 端点幂等可手动补调）
+                await syncRefresh.RefreshMerchantAsync(result.MerchantName, httpContext.RequestAborted);
+
+                return ApiResponseHelper.Ok($"已解除商户「{result.MerchantName}」归属并退回公开信息池", httpContext);
+            })
+            .WithName("AdminDetachMerchant")
+            .WithSummary("强制解除商户归属")
+            .WithDescription("平台侧解除认领商户的归属：清场回公海可再认领，资料随互联网数据自然更新")
+            .RequirePermission("merchant.detach");
 
             /// <summary>
             /// 审核通过入驻申请（Pending -> Active，使商户生效）

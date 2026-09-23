@@ -9,6 +9,7 @@ using OpenFindBearings.Application.Commands.Merchants.NominateMerchant;
 using OpenFindBearings.Application.Commands.Merchants.ResubmitApplication;
 using OpenFindBearings.Application.Commands.Merchants.RequestVerifyMerchant;
 using OpenFindBearings.Application.Commands.Merchants.WithdrawApplication;
+using OpenFindBearings.Application.Commands.Merchants.CloseMerchant;
 using OpenFindBearings.Application.DTOs;
 using OpenFindBearings.Application.Queries.Merchants.ClaimableMerchants;
 using OpenFindBearings.Application.Queries.Merchants.GetApplicationDetail;
@@ -108,6 +109,37 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("WithdrawMerchantApplication")
             .WithSummary("撤回入驻申请")
             .WithDescription("申请人撤回自己待审核的入驻申请：新建商户将被删除，认领的商家退回公共池可再被认领");
+
+            /// <summary>
+            /// 商户自助关店（v2.17.0）：任一在职管理员发起。self/提名新建商户直接删除；
+            /// claim/提名已有商户解除归属回公海（商品/证照/邀请/纠错全清，联系方式隐私止血），
+            /// 并 best-effort 唤醒 Sync staging 刷新使下轮爬取数据接管
+            /// </summary>
+            group.MapPost("/{merchantId:guid}/close", async (
+                Guid merchantId,
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMediator mediator,
+                [FromServices] ISyncStagingRefreshService syncRefresh,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                var result = await mediator.Send(new CloseMerchantCommand(merchantId, currentUser.UserId.Value));
+
+                // release 分支才需唤醒爬取刷新（删除分支无 staging 行）；失败不回滚关店，可手动补调
+                if (result.IsReleased)
+                {
+                    await syncRefresh.RefreshMerchantAsync(result.MerchantName, httpContext.RequestAborted);
+                }
+
+                return ApiResponseHelper.Ok(
+                    result.IsReleased ? "店铺已关闭，商户退回公开信息池" : "店铺已关闭，商户资料已删除",
+                    httpContext: httpContext);
+            })
+            .WithName("CloseMerchant")
+            .WithSummary("商户关店")
+            .WithDescription("任一在职管理员自助关闭店铺：认领商户退回公开信息池（可再被认领，资料随互联网数据自然更新），自建商户直接删除");
 
             /// <summary>
             /// 商户主动申请认证（v2.9.0 申请-审核闭环）：材料矩阵校验通过后置申请标记，Admin 认证队列优先处理
