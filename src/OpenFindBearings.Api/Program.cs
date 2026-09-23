@@ -58,8 +58,29 @@ using (var migrateScope = app.Services.CreateScope())
         if (pendingMigrations.Count > 0)
         {
             app.Logger.LogInformation("检测到待应用迁移 {Count} 项，开始迁移数据库", pendingMigrations.Count);
-            await db.Database.MigrateAsync();
-            app.Logger.LogInformation("数据库迁移完成，已应用：{Migrations}", string.Join(", ", pendingMigrations));
+            // 改动说明（v1.31.0）：迁移加 Postgres 会话级咨询锁——滚动更新 surge/手动双实例场景下
+            //   防新旧 Pod 并发应用同一迁移（互相 DDL 死锁）；锁随连接关闭自动释放，Pod 被杀不留死锁。
+            //   先显式打开连接再迁移：MigrateAsync 复用同一连接，锁与迁移在同一会话上生效
+            var conn = db.Database.GetDbConnection();
+            await conn.OpenAsync();
+            try
+            {
+                await using (var lockCmd = conn.CreateCommand())
+                {
+                    lockCmd.CommandText = "SELECT pg_advisory_lock(63820515)"; // 锁键=本项目固定常量（ofb 谐音）
+                    await lockCmd.ExecuteScalarAsync();
+                }
+                await db.Database.MigrateAsync();
+                app.Logger.LogInformation("数据库迁移完成，已应用：{Migrations}", string.Join(", ", pendingMigrations));
+            }
+            finally
+            {
+                // 显式解锁后关连接（会话锁本随连接消亡，unlock 仅为语义清晰）
+                await using var unlockCmd = conn.CreateCommand();
+                unlockCmd.CommandText = "SELECT pg_advisory_unlock(63820515)";
+                await unlockCmd.ExecuteScalarAsync();
+                await conn.CloseAsync();
+            }
         }
         else
         {
