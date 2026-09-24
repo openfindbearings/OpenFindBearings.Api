@@ -8,6 +8,11 @@ metadata:
 spec:
   replicas: 1
   revisionHistoryLimit: 5
+  # 改动说明：发版失败根因之二——Deployment 服务端 progressDeadlineSeconds 默认 600s，
+  #   新 RS 10 分钟内未 ready 即判 rollout 失败（kubectl rollout status 随即报错、CI 回滚），
+  #   CI 侧 20m 客户端超时管不到它。GHCR 慢拉窗口下镜像下载就超 10 分钟，必踩。
+  #   放宽到 30 分钟，与 startupProbe（5m 启动预算）+ CI 20m 超时形成合理梯度
+  progressDeadlineSeconds: 1800
   selector:
     matchLabels:
       app: openfindbearings-api
