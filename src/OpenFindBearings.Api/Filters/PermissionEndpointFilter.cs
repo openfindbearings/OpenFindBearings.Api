@@ -1,4 +1,4 @@
-﻿using OpenFindBearings.Api.Services;
+using OpenFindBearings.Api.Services;
 
 namespace OpenFindBearings.Api.Filters
 {
@@ -37,38 +37,4 @@ namespace OpenFindBearings.Api.Filters
         }
     }
 
-    /// <summary>
-    /// 角色端点过滤器（API 层）
-    /// 要求用户已认证 + 校验角色
-    /// </summary>
-    public class RoleEndpointFilter : IEndpointFilter
-    {
-        private readonly string _roleName;
-
-        public RoleEndpointFilter(string roleName)
-        {
-            _roleName = roleName;
-        }
-
-        public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
-        {
-            var httpContext = context.HttpContext;
-            var currentUser = httpContext.RequestServices.GetRequiredService<ICurrentUserService>();
-
-            if (!currentUser.IsAuthenticated)
-            {
-                return Results.Unauthorized();
-            }
-
-            var permissionService = httpContext.RequestServices.GetRequiredService<IPermissionService>();
-            var hasRole = permissionService.HasRole(_roleName);
-
-            if (!hasRole)
-            {
-                return Results.Forbid();
-            }
-
-            return await next(context);
-        }
     }
-}

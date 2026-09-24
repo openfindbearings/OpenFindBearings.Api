@@ -32,11 +32,8 @@ using OpenFindBearings.Application.Commands.Merchants.HardDeleteMerchant;
 using OpenFindBearings.Application.Commands.Merchants.DetachMerchant;
 using OpenFindBearings.Api.Services;
 using OpenFindBearings.Application.Commands.Merchants.RejectMerchant;
-using OpenFindBearings.Application.Commands.Merchants.RestoreMerchant;
 using OpenFindBearings.Application.Commands.Merchants.VerifyMerchant;
-using OpenFindBearings.Application.Commands.Permissions.CreatePermission;
-using OpenFindBearings.Application.Commands.Permissions.DeletePermission;
-using OpenFindBearings.Application.Commands.Permissions.UpdatePermission;
+using OpenFindBearings.Application.Commands.Merchants.RestoreMerchant;
 using OpenFindBearings.Application.Commands.Roles.AssignPermissionsToRole;
 using OpenFindBearings.Application.Commands.Roles.AssignRoleToUser;
 using OpenFindBearings.Application.Commands.Roles.Commands;
@@ -64,6 +61,7 @@ using OpenFindBearings.Application.Queries.Roles.GetRoleDetail;
 using OpenFindBearings.Application.Queries.Roles.GetRoles;
 using OpenFindBearings.Application.Queries.SystemConfig.GetSystemConfigs;
 using OpenFindBearings.Application.Services;
+using OpenFindBearings.Application.Queries.Users.GetUserByAuthId;
 using OpenFindBearings.Application.Queries.Users.GetUserPermissions;
 using OpenFindBearings.Application.Queries.Users.GetUserRoles;
 using OpenFindBearings.Domain.Enums;
@@ -1261,106 +1259,6 @@ namespace OpenFindBearings.Api.Endpoints
             .RequirePermission("role.manage");
 
             /// <summary>
-            /// 创建权限
-            /// </summary>
-            group.MapPost("/permissions", async (
-                CreatePermissionCommand command,
-                [FromServices] IMediator mediator,
-                HttpContext httpContext) =>
-            {
-                var id = await mediator.Send(command);
-                return ApiResponseHelper.Ok(new { id }, "权限创建成功", httpContext);
-            })
-            .WithName("CreatePermission")
-            .WithSummary("创建权限")
-            .WithDescription("创建新权限")
-            .RequirePermission("role.manage");
-
-            /// <summary>
-            /// 更新权限
-            /// </summary>
-            group.MapPut("/permissions/{id:guid}", async (
-                Guid id,
-                UpdatePermissionCommand command,
-                [FromServices] IMediator mediator,
-                HttpContext httpContext) =>
-            {
-                command = command with { Id = id };
-                await mediator.Send(command);
-                return ApiResponseHelper.Ok("权限更新成功", httpContext);
-            })
-            .WithName("UpdatePermission")
-            .WithSummary("更新权限")
-            .WithDescription("更新权限信息")
-            .RequirePermission("role.manage");
-
-            /// <summary>
-            /// 删除权限
-            /// </summary>
-            group.MapDelete("/permissions/{id:guid}", async (
-                Guid id,
-                [FromServices] IMediator mediator,
-                HttpContext httpContext) =>
-            {
-                var command = new DeletePermissionCommand(id);
-                await mediator.Send(command);
-                return ApiResponseHelper.Ok("权限删除成功", httpContext);
-            })
-            .WithName("DeletePermission")
-            .WithSummary("删除权限")
-            .WithDescription("删除权限（不能删除已被使用的权限）")
-            .RequirePermission("role.manage");
-
-            // ============ 用户角色管理 ============
-
-            /// <summary>
-            /// 分配角色给用户
-            /// </summary>
-            group.MapPost("/users/{userId:guid}/roles", async (
-                Guid userId,
-                AssignRoleToUserCommand command,
-                [FromServices] ICurrentUserService currentUser,
-                [FromServices] IMediator mediator,
-                HttpContext httpContext) =>
-            {
-                if (!currentUser.UserId.HasValue)
-                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
-
-                await mediator.Send(command);
-                return ApiResponseHelper.Ok("角色分配成功", httpContext);
-            })
-            .WithName("AdminAssignRoleToUser")
-            .WithSummary("分配角色")
-            .WithDescription("分配角色给用户")
-            .RequirePermission("user.manage");
-
-            /// <summary>
-            /// 移除用户角色
-            /// </summary>
-            group.MapDelete("/users/{userId:guid}/roles/{roleName}", async (
-                Guid userId,
-                string roleName,
-                [FromServices] ICurrentUserService currentUser,
-                [FromServices] IMediator mediator,
-                HttpContext httpContext) =>
-            {
-                if (!currentUser.UserId.HasValue)
-                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
-
-                var command = new RemoveRoleFromUserCommand
-                {
-                    UserId = userId,
-                    RoleName = roleName
-                };
-                await mediator.Send(command);
-                return ApiResponseHelper.Ok("角色移除成功", httpContext);
-            })
-            .WithName("AdminRemoveRoleFromUser")
-            .WithSummary("移除角色")
-            .WithDescription("从用户移除角色")
-            .RequirePermission("user.manage");
-
-            /// <summary>
             /// 获取用户的角色列表
             /// </summary>
             group.MapGet("/users/{userId:guid}/roles", async (
@@ -1400,6 +1298,82 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("AdminGetUserPermissions")
             .WithSummary("获取用户权限")
             .WithDescription("获取用户的权限列表")
+            .RequirePermission("user.manage");
+
+            /// <summary>
+            /// 按认证主体（Identity sub）获取平台角色（v1.31.0）
+            /// </summary>
+            group.MapGet("/users/by-auth/{authUserId:guid}/roles", async (
+                Guid authUserId,
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                // 改动说明（v1.31.0）：Admin 用户页以 Identity 用户 ID（=sub=AuthUserId）为键管理
+                //   平台角色，API 业务用户 ID 与之不同，需先按 AuthUserId 解析；未 JIT 的用户返回空清单
+                var user = await mediator.Send(new GetUserByAuthIdQuery { AuthUserId = authUserId.ToString() });
+                if (user == null)
+                    return ApiResponseHelper.Ok(new List<string>(), httpContext: httpContext);
+
+                var roles = await mediator.Send(new GetUserRolesQuery { UserId = user.Id });
+                return ApiResponseHelper.Ok(roles, httpContext: httpContext);
+            })
+            .WithName("AdminGetUserRolesByAuth")
+            .WithSummary("按认证主体获取角色")
+            .WithDescription("以 Identity sub 为键查询平台角色，供 Admin 用户页角色分配")
+            .RequirePermission("user.manage");
+
+            /// <summary>
+            /// 按认证主体分配平台角色（v1.31.0）
+            /// </summary>
+            group.MapPost("/users/by-auth/{authUserId:guid}/roles", async (
+                Guid authUserId,
+                AssignRoleToUserCommand command,
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                var user = await mediator.Send(new GetUserByAuthIdQuery { AuthUserId = authUserId.ToString() });
+                if (user == null)
+                    return ApiResponseHelper.NotFound("该用户尚未登录过业务系统，无平台角色记录", httpContext);
+
+                await mediator.Send(command with { UserId = user.Id });
+                return ApiResponseHelper.Ok("角色分配成功", httpContext);
+            })
+            .WithName("AdminAssignRoleByAuth")
+            .WithSummary("按认证主体分配角色")
+            .WithDescription("以 Identity sub 为键分配平台角色")
+            .RequirePermission("user.manage");
+
+            /// <summary>
+            /// 按认证主体移除平台角色（v1.31.0）
+            /// </summary>
+            group.MapDelete("/users/by-auth/{authUserId:guid}/roles/{roleName}", async (
+                Guid authUserId,
+                string roleName,
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                var user = await mediator.Send(new GetUserByAuthIdQuery { AuthUserId = authUserId.ToString() });
+                if (user == null)
+                    return ApiResponseHelper.NotFound("该用户尚未登录过业务系统，无平台角色记录", httpContext);
+
+                await mediator.Send(new RemoveRoleFromUserCommand { UserId = user.Id, RoleName = roleName });
+                return ApiResponseHelper.Ok("角色移除成功", httpContext);
+            })
+            .WithName("AdminRemoveRoleByAuth")
+            .WithSummary("按认证主体移除角色")
+            .WithDescription("以 Identity sub 为键移除平台角色")
             .RequirePermission("user.manage");
         }
     }

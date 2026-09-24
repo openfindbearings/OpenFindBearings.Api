@@ -31,7 +31,9 @@ namespace OpenFindBearings.Application.Commands.Roles.DeleteRole
             }
 
             // 检查是否为系统角色（不可删除）
-            if (role.Name == "GlobalAdmin" || role.Name == "MerchantAdmin")
+            // 改动说明（v1.31.0）：内置角色名单对齐种子（Admin/Operator/Auditor/Individual），
+            //   旧名单 GlobalAdmin/MerchantAdmin 已不存在，守卫形同虚设
+            if (role.Name is "Admin" or "Operator" or "Auditor" or "Individual")
             {
                 throw new InvalidOperationException($"系统角色不可删除: {role.Name}");
             }
