@@ -108,17 +108,23 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
                 new("system.manage", "管理系统配置"),
                 new("data.restore", "恢复数据"),
                 new("data.harddelete", "彻底删除"),
+                // v1.31.0：同步数据审核/映射管理面板权限（Admin 菜单与 Controller 策略消费）
+                new("sync.review", "同步数据审核"),
             };
 
             await context.Permissions.AddRangeAsync(permissions);
             await context.SaveChangesAsync();
 
             // 创建角色
+            // 改动说明（v1.31.0）：删除 MerchantAdmin/MerchantStaff 僵尸种子——商户鉴权只信
+            //   MerchantMembers 成员表（PermissionService.IsMerchantAdmin），Roles 表同名角色
+            //   永无赋值与消费方；存量库由迁移清理。新增 Operator/Auditor 落地轻量三员分立：
+            //   管理员=全权、操作员=日常 CRUD+审核、审计员=只读+审计日志
             var roles = new List<Role>
             {
                 new("Admin", "平台管理员", true),
-                new("MerchantAdmin", "商家管理员", true),
-                new("MerchantStaff", "商家员工", true),
+                new("Operator", "操作员", true),
+                new("Auditor", "审计员", true),
                 new("Individual", "个人用户", true)
             };
 
@@ -127,8 +133,8 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
 
             // 分配权限给角色
             var adminRole = roles.First(r => r.Name == "Admin");
-            var merchantAdminRole = roles.First(r => r.Name == "MerchantAdmin");
-            var merchantStaffRole = roles.First(r => r.Name == "MerchantStaff");
+            var operatorRole = roles.First(r => r.Name == "Operator");
+            var auditorRole = roles.First(r => r.Name == "Auditor");
             var individualRole = roles.First(r => r.Name == "Individual");
 
             var rolePermissions = new List<RolePermission>();
@@ -139,19 +145,29 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
                 rolePermissions.Add(new RolePermission(adminRole.Id, permission.Id));
             }
 
-            // MerchantAdmin 拥有商家管理权限
+            // Operator 拥有日常运营权限（产品维护 + 商家认证 + 纠错/同步审核 + 数据恢复）
             rolePermissions.AddRange([
-                new(merchantAdminRole.Id, permissions.First(p => p.Name == "bearing.view").Id),
-                new(merchantAdminRole.Id, permissions.First(p => p.Name == "bearing.create").Id),
-                new(merchantAdminRole.Id, permissions.First(p => p.Name == "bearing.edit").Id),
-                new(merchantAdminRole.Id, permissions.First(p => p.Name == "merchant.view").Id),
-                new(merchantAdminRole.Id, permissions.First(p => p.Name == "merchant.manage").Id),
+                new(operatorRole.Id, permissions.First(p => p.Name == "bearing.view").Id),
+                new(operatorRole.Id, permissions.First(p => p.Name == "bearing.create").Id),
+                new(operatorRole.Id, permissions.First(p => p.Name == "bearing.edit").Id),
+                new(operatorRole.Id, permissions.First(p => p.Name == "merchant.view").Id),
+                new(operatorRole.Id, permissions.First(p => p.Name == "merchant.verify").Id),
+                new(operatorRole.Id, permissions.First(p => p.Name == "correction.submit").Id),
+                new(operatorRole.Id, permissions.First(p => p.Name == "correction.review").Id),
+                new(operatorRole.Id, permissions.First(p => p.Name == "sync.review").Id),
+                new(operatorRole.Id, permissions.First(p => p.Name == "dashboard.view").Id),
+                new(operatorRole.Id, permissions.First(p => p.Name == "data.restore").Id),
             ]);
 
-            // MerchantStaff 拥有查看权限
+            // Auditor 拥有只读 + 审计权限（无任何写权限点）
             rolePermissions.AddRange([
-                new(merchantStaffRole.Id, permissions.First(p => p.Name == "bearing.view").Id),
-                new(merchantStaffRole.Id, permissions.First(p => p.Name == "merchant.view").Id),
+                new(auditorRole.Id, permissions.First(p => p.Name == "dashboard.view").Id),
+                new(auditorRole.Id, permissions.First(p => p.Name == "audit.view").Id),
+                new(auditorRole.Id, permissions.First(p => p.Name == "system.view").Id),
+                new(auditorRole.Id, permissions.First(p => p.Name == "bearing.view").Id),
+                new(auditorRole.Id, permissions.First(p => p.Name == "merchant.view").Id),
+                new(auditorRole.Id, permissions.First(p => p.Name == "correction.review").Id),
+                new(auditorRole.Id, permissions.First(p => p.Name == "sync.review").Id),
             ]);
 
             // Individual 拥有基本权限
@@ -159,7 +175,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
                 new(individualRole.Id, permissions.First(p => p.Name == "bearing.view").Id),
                 new(individualRole.Id, permissions.First(p => p.Name == "correction.submit").Id),
                 new(individualRole.Id, permissions.First(p => p.Name == "favorite.bearing").Id),
-                new(individualRole.Id, permissions.First(p => p.Name == "favorite.merchant").Id),
+                new(individualRole.Id, permissions.First(p => p.Name == "favorite.merchant").Id)
             ]);
 
             await context.RolePermissions.AddRangeAsync(rolePermissions);
@@ -182,8 +198,10 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
                 users.AddRange([merchant1, merchant2, customer1, customer2]);
 
                 userRoles.AddRange([
-                    new UserRole(merchant1.Id, merchantAdminRole.Id),
-                    new UserRole(merchant2.Id, merchantAdminRole.Id),
+                    // 改动说明（v1.31.0）：MerchantAdmin 平台角色已删（商户鉴权走成员表），
+                    // 开发种子商户用户统一落 Individual，商户身份由 MerchantMembers 承载
+                    new UserRole(merchant1.Id, individualRole.Id),
+                    new UserRole(merchant2.Id, individualRole.Id),
                     new UserRole(customer1.Id, individualRole.Id),
                     new UserRole(customer2.Id, individualRole.Id),
                 ]);

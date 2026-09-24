@@ -750,6 +750,27 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("SubmitMerchantCorrection")
             .WithSummary("提交商家纠错")
             .WithDescription("对商家信息提交纠错请求");
+
+            /// <summary>
+            /// 获取当前用户角色与权限清单（v1.31.0）
+            /// </summary>
+            group.MapGet("/permissions", async (
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                // 改动说明（v1.31.0）：Admin 后台登录 gate/菜单渲染/30 分钟复核的统一数据源——
+                //   角色与权限一律以 API RBAC 表为准（token 角色不可信原则的自助查询出口）
+                var roles = await mediator.Send(new GetUserRolesQuery { UserId = currentUser.UserId.Value });
+                var permissions = await mediator.Send(new GetUserPermissionsQuery { UserId = currentUser.UserId.Value });
+                return ApiResponseHelper.Ok(new { roles, permissions }, httpContext: httpContext);
+            })
+            .WithName("GetMyPermissions")
+            .WithSummary("当前用户角色与权限")
+            .WithDescription("返回当前用户平台角色名与权限点清单，供 Admin 后台登录门禁与菜单渲染");
             #endregion
         }
     }
