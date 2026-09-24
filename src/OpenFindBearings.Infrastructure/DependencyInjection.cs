@@ -77,6 +77,11 @@ namespace OpenFindBearings.Infrastructure
         // 改动说明：站内信仓储（通知事件订阅者与消息中心端点共用）
         services.AddScoped<INotificationRepository, NotificationRepository>();
 
+        // v1.32.0 积分底座：账户/流水/规则仓储
+        services.AddScoped<IPointAccountRepository, PointAccountRepository>();
+        services.AddScoped<IPointTransactionRepository, PointTransactionRepository>();
+        services.AddScoped<IPointGrantRuleRepository, PointGrantRuleRepository>();
+
             // ============ 3. 注册缓存服务 ============
 
             // 读取缓存配置
@@ -141,6 +146,9 @@ namespace OpenFindBearings.Infrastructure
 
             // 通知服务
             services.AddScoped<INotificationService, NotificationService>();
+
+        // v1.32.0 积分底座：唯一写入口服务
+        services.AddScoped<IPointsService, PointsService>();
 
             // 轴承统计服务
             services.AddScoped<IBearingViewStatsService, BearingViewStatsService>();
