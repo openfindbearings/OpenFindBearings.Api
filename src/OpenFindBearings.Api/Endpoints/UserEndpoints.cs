@@ -129,26 +129,6 @@ namespace OpenFindBearings.Api.Endpoints
             .WithDescription("上传当前用户头像图片（jpg/png/webp，≤2MB），返回相对访问 URL");
 
             /// <summary>
-            /// 获取当前用户权限列表
-            /// </summary>
-            group.MapGet("/permissions", async (
-                [FromServices] ICurrentUserService currentUser,
-                [FromServices] IMediator mediator,
-                HttpContext httpContext) =>
-            {
-                if (!currentUser.UserId.HasValue)
-                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
-
-                var query = new GetUserPermissionsQuery { UserId = currentUser.UserId.Value };
-                var result = await mediator.Send(query);
-
-                return ApiResponseHelper.Ok(result, httpContext: httpContext);
-            })
-            .WithName("GetMyPermissions")
-            .WithSummary("获取当前用户权限")
-            .WithDescription("获取当前登录用户拥有的所有权限列表");
-
-            /// <summary>
             /// 获取当前用户角色列表
             /// </summary>
             group.MapGet("/roles", async (
