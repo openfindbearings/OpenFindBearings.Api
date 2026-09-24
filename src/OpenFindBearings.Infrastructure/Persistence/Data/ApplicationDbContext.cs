@@ -49,7 +49,12 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
         public DbSet<UserPreference> UserPreferences { get; set; }
 
     // 改动说明：站内信通知表（审核结果/提名邀请等事件订阅落库）
-    public DbSet<Notification> Notifications { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
+
+        // v1.32.0 积分底座：账户/流水/规则三表
+        public DbSet<PointAccount> PointAccounts { get; set; }
+        public DbSet<PointTransaction> PointTransactions { get; set; }
+        public DbSet<PointGrantRule> PointGrantRules { get; set; }
 
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
 

@@ -5,6 +5,8 @@ using OpenFindBearings.Application.Commands.Users.SyncUserProfile;
 using OpenFindBearings.Application.Commands.Users.MigrateGuestData;
 using OpenFindBearings.Application.Queries.Users.GetUserByAuthId;
 using OpenFindBearings.Application.Queries.Users.GetUserBySessionId;
+using OpenFindBearings.Application.Services;
+using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Repositories;
 using System.Security.Claims;
 
@@ -86,9 +88,12 @@ namespace OpenFindBearings.Api.Middleware
             {
                 var user = await mediator.Send(new GetUserByAuthIdQuery { AuthUserId = authUserId });
                 Guid? resolvedUserId = null;
+                // v1.32.0 积分：注册奖励判定标记（创建分支置 true，JIT 完成后按标记发分）
+                var isNewUser = false;
 
                 if (user == null)
                 {
+                    isNewUser = true;
                     // ✅ 修改：移除 UserType
                     var inviteCode = context.User?.FindFirst("invite_code")?.Value;
 
@@ -162,6 +167,19 @@ namespace OpenFindBearings.Api.Middleware
                         Mobile = context.User?.FindFirst("phone_number")?.Value,
                         Nickname = ResolveNicknameClaim(context.User)
                     });
+
+                    // 改动说明（v1.32.0 积分底座）：赚端两场景挂 JIT 链路——
+                    //   注册奖励=首次创建业务用户一次性（bizId 按用户幂等）；
+                    //   每日登录=当日首次请求（bizId 含 UTC 日期天然幂等，同日后续请求被服务层跳过）。
+                    //   GrantAsync 内部吞异常，积分失败不影响登录主流程
+                    var points = context.RequestServices.GetRequiredService<IPointsService>();
+                    if (isNewUser)
+                    {
+                        await points.GrantAsync(resolvedUserId.Value, PointTransaction.TypeRegisterBonus,
+                            $"register:{resolvedUserId.Value:N}", "新用户注册奖励");
+                    }
+                    await points.GrantAsync(resolvedUserId.Value, PointTransaction.TypeDailyLogin,
+                        $"daily_login:{resolvedUserId.Value:N}:{DateTime.UtcNow:yyyyMMdd}");
                 }
             }
             catch (Exception ex)

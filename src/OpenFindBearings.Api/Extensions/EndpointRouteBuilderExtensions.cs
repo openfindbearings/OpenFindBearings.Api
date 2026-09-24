@@ -34,6 +34,9 @@ namespace OpenFindBearings.Api.Extensions
         // 改动说明：站内信端点（消息中心/未读角标）
         app.MapNotificationEndpoints();
 
+        // v1.32.0 积分底座：账户/签到/流水 + Admin 规则配置
+        app.MapPointsEndpoints();
+
             // 系统配置接口（内部服务拉取）
             app.MapConfigEndpoints();
 
