@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using OpenFindBearings.Domain.Aggregates;
 using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Enums;
@@ -44,7 +44,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
             return await _context.Users
                 .Include(u => u.UserRoles)
                     .ThenInclude(ur => ur.Role)
-                .Where(u => u.UserRoles.Any(ur => ur.Role.Name == "Admin") && u.IsActive)
+                .Where(u => u.UserRoles.Any(ur => ur.Role.Name == "Admin") && u.IsActive && u.DeactivatedAt == null)
                 .ToListAsync(cancellationToken);
         }
 
@@ -159,7 +159,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
     public async Task<int> GetCountSinceAsync(DateTime since, CancellationToken cancellationToken = default)
     {
         return await _context.Users
-            .Where(u => u.IsActive && u.CreatedAt >= since)
+            .Where(u => u.IsActive && u.DeactivatedAt == null && u.CreatedAt >= since)
             .CountAsync(cancellationToken);
     }
 
@@ -187,6 +187,23 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         // v2.17.0：纠错历史属个人申请数据（含已审行），匿名化期一并删除（个保法删除义务）
         await _context.Set<CorrectionRequest>().Where(x => x.SubmittedBy == user.Id).ExecuteDeleteAsync(cancellationToken);
 
+        // 改动说明（v1.34.0 注销清零补刀，审计 U2/U3/U4/U7 修复）：
+        //   积分账户/流水兜底删（新版 T0 已清，此处覆盖旧版注销的存量用户）；
+        //   通知兜底删（T0 后事件链可能给已注销用户新插孤儿行）；
+        //   邀请表本人联系方式列擦除（受邀人行的 Phone/Email 快照属本人 PII，
+        //     行保留作商户侧记录）；平台角色解绑（注销者不应再被算作管理员）
+        await _context.Set<PointAccount>().Where(x => x.UserId == user.Id).ExecuteDeleteAsync(cancellationToken);
+        await _context.Set<PointTransaction>().Where(x => x.UserId == user.Id).ExecuteDeleteAsync(cancellationToken);
+        await _context.Set<Notification>().Where(x => x.UserId == user.Id).ExecuteDeleteAsync(cancellationToken);
+        // 邀请表联系方式擦除（受邀人快照列属本人 PII）：仅在号/邮箱非空时执行——
+        //   防 null==null 匹配擦掉全部空值行；行保留作商户侧记录
+        if (!string.IsNullOrWhiteSpace(user.Mobile))
+        {
+            var mobile = user.Mobile;
+            await _context.Set<StaffInvitation>().Where(x => x.Phone == mobile)
+                .ExecuteUpdateAsync(s => s.SetProperty(x => x.Phone, (string?)null), cancellationToken);
+        }
+
         user.MarkAnonymized();
         await _context.Set<User>().Where(u => u.Id == user.Id)
             .ExecuteUpdateAsync(s => s
@@ -198,6 +215,13 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                 .SetProperty(u => u.Industry, user.Industry)
                 .SetProperty(u => u.RegisterIp, user.RegisterIp)
                 .SetProperty(u => u.GuestSessionId, user.GuestSessionId)
+                // 改动说明（v1.34.0 审计 U11/U12）：职业画像属自报 PII 一并置空；
+                //   游客合并指针置 null 消除匿名化用户与新数据的关联链
+                .SetProperty(u => u.Occupation, (OpenFindBearings.Domain.Enums.UserOccupation?)null)
+                .SetProperty(u => u.MergedToUserId, (Guid?)null)
+                // 改动说明（v1.34.0 审计 U7）：IsActive 同步置 false——注销/匿名化用户
+                //   不再被"活跃用户"统计口径计入（原恒 true 致 dashboard 虚高）
+                .SetProperty(u => u.IsActive, false)
                 .SetProperty(u => u.IsAnonymized, true)
                 .SetProperty(u => u.UpdatedAt, user.UpdatedAt), cancellationToken);
     }
@@ -206,7 +230,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         public async Task<Dictionary<string, int>> GetRoleDistributionAsync(CancellationToken cancellationToken = default)
         {
             return await _context.UserRoles
-                .Where(ur => ur.User != null && ur.User.IsActive)
+                .Where(ur => ur.User != null && ur.User.IsActive && ur.User.DeactivatedAt == null)
                 .GroupBy(ur => ur.Role.Name)
                 .Select(g => new { RoleName = g.Key, Count = g.Count() })
                 .ToDictionaryAsync(x => x.RoleName, x => x.Count, cancellationToken);

@@ -5,12 +5,13 @@ using OpenFindBearings.Domain.Entities;
 namespace OpenFindBearings.Infrastructure.Persistence.Configurations
 {
     /// <summary>
-    /// 积分三表配置（账户/流水/规则）：v1.32.0 积分底座
+    /// 积分表配置（账户/流水/规则/认领台账）：v1.32.0 积分底座，v1.34.0 补防刷台账
     /// </summary>
     public class PointConfiguration :
         IEntityTypeConfiguration<PointAccount>,
         IEntityTypeConfiguration<PointTransaction>,
-        IEntityTypeConfiguration<PointGrantRule>
+        IEntityTypeConfiguration<PointGrantRule>,
+        IEntityTypeConfiguration<PointRewardClaim>
     {
         /// <summary>
         /// 配置积分账户（一人一户）、流水（BizId 幂等唯一索引）、规则（动作类型唯一）
@@ -83,6 +84,24 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             builder.HasIndex(r => r.GrantType)
                 .IsUnique()
                 .HasDatabaseName("UX_PointGrantRules_GrantType");
+        }
+
+        /// <summary>
+        /// 认领台账配置（v1.34.0）：BizKey 唯一索引=一次性奖励的号/照维度幂等防线；
+        /// 本表永不随注销删除（平台防刷底账，仅存键与归属快照）
+        /// </summary>
+        public void Configure(EntityTypeBuilder<PointRewardClaim> builder)
+        {
+            builder.ToTable("PointRewardClaims");
+            builder.HasKey(c => c.Id);
+
+            builder.Property(c => c.BizKey).IsRequired().HasMaxLength(120);
+            builder.Property(c => c.GrantType).IsRequired().HasMaxLength(50);
+            builder.Property(c => c.FirstClaimerUserId).IsRequired();
+
+            builder.HasIndex(c => c.BizKey)
+                .IsUnique()
+                .HasDatabaseName("UX_PointRewardClaims_BizKey");
         }
     }
 }

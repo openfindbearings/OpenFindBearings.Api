@@ -20,6 +20,20 @@ namespace OpenFindBearings.Application.Services
             string? remark = null, CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// 发放一次性奖励（v1.34.0 防刷）：先向认领台账原子占坑（键=手机号/信用代码等
+        /// 跨账号不变量），占到才 Grant。与 GrantAsync 的流水 bizId 幂等互补——
+        /// 流水随注销清空后，台账仍在，同号重注册/同照重入驻刷不动大额一次性分。
+        /// 同样吞异常返回 0，绝不阻塞业务主流程
+        /// </summary>
+        /// <param name="userId">获得积分的用户（当期操作人）</param>
+        /// <param name="grantType">一次性动作类型</param>
+        /// <param name="claimKey">台账幂等键（如 phone:138xxx:register、credit:91XXX:approved）</param>
+        /// <param name="remark">明细备注（可空）</param>
+        /// <returns>实际发放分值（0=台账已存在或规则停用/异常）</returns>
+        Task<int> GrantOneTimeAsync(Guid userId, string grantType, string claimKey,
+            string? remark = null, CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// 扣减积分（余额不足抛业务异常；扣分场景：商城兑换/寻货消耗，本期入口就位场景留白）
         /// </summary>
         /// <param name="userId">被扣分用户</param>

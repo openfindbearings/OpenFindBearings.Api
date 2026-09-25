@@ -24,6 +24,10 @@ namespace OpenFindBearings.Domain.Entities
         public const string TypeCorrectionAdopted = "correction_adopted";
         /// <summary>赚分动作类型：商户入驻审核通过（一次性）</summary>
         public const string TypeMerchantApproved = "merchant_approved";
+        /// <summary>赚分动作类型：商户资料完善度首次达标（一次性，bizId 绑信用代码防删店重入驻循环）</summary>
+        public const string TypeMerchantProfileComplete = "merchant_profile_complete";
+        /// <summary>赚分动作类型：商户首件商品上架（一次性，bizId 绑信用代码）</summary>
+        public const string TypeMerchantFirstProduct = "merchant_first_product";
 
         /// <summary>所属用户 ID</summary>
         public Guid UserId { get; private set; }

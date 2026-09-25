@@ -85,7 +85,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.CloseMerchant
             {
                 // 删除分支：成员/纠错行由共享 helper 清理，商品/证照/关注随 DB 级联
                 await ApplicantApplicationCleanup.HardDeleteMerchantWithMembersAsync(
-                    merchant, _merchantRepository, _memberRepository, _correctionRepository, cancellationToken);
+                    merchant, _merchantRepository, _memberRepository, _correctionRepository, _documentRepository, cancellationToken);
                 result = "deleted";
             }
             else

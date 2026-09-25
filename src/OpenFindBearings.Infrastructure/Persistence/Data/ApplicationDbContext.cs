@@ -55,6 +55,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
         public DbSet<PointAccount> PointAccounts { get; set; }
         public DbSet<PointTransaction> PointTransactions { get; set; }
         public DbSet<PointGrantRule> PointGrantRules { get; set; }
+        public DbSet<PointRewardClaim> PointRewardClaims { get; set; }
 
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
 

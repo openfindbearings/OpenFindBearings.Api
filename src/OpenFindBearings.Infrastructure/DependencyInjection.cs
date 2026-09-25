@@ -81,6 +81,8 @@ namespace OpenFindBearings.Infrastructure
         services.AddScoped<IPointAccountRepository, PointAccountRepository>();
         services.AddScoped<IPointTransactionRepository, PointTransactionRepository>();
         services.AddScoped<IPointGrantRuleRepository, PointGrantRuleRepository>();
+        // v1.34.0：一次性奖励认领台账（号/照维度防刷，永不随注销删除）
+        services.AddScoped<IPointRewardClaimRepository, PointRewardClaimRepository>();
 
             // ============ 3. 注册缓存服务 ============
 

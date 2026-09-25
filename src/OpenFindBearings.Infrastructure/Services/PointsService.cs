@@ -20,22 +20,26 @@ namespace OpenFindBearings.Infrastructure.Services
         private readonly IPointAccountRepository _accountRepository;
         private readonly IPointTransactionRepository _transactionRepository;
         private readonly IPointGrantRuleRepository _ruleRepository;
+        // v1.34.0：一次性奖励认领台账（号/照维度不变量，注销清流水后仍防重）
+        private readonly IPointRewardClaimRepository _claimRepository;
         private readonly IUnitOfWork _unitOfWork;
 
         /// <summary>
-        /// 构造：账户/流水/规则仓储 + 工作单元（独立提交用）
+        /// 构造：账户/流水/规则/台账仓储 + 工作单元（独立提交用）
         /// </summary>
         public PointsService(
             ILogger<PointsService> logger,
             IPointAccountRepository accountRepository,
             IPointTransactionRepository transactionRepository,
             IPointGrantRuleRepository ruleRepository,
+            IPointRewardClaimRepository claimRepository,
             IUnitOfWork unitOfWork)
         {
             _logger = logger;
             _accountRepository = accountRepository;
             _transactionRepository = transactionRepository;
             _ruleRepository = ruleRepository;
+            _claimRepository = claimRepository;
             _unitOfWork = unitOfWork;
         }
 
@@ -71,6 +75,28 @@ namespace OpenFindBearings.Infrastructure.Services
                 // 发放失败不阻塞业务主流程（登录/审批/事件链路与积分解耦）
                 _logger.LogWarning(ex, "积分发放失败: UserId={UserId}, Type={Type}, BizId={BizId}",
                     userId, grantType, bizId);
+                return 0;
+            }
+        }
+
+        /// <inheritdoc/>
+        public async Task<int> GrantOneTimeAsync(Guid userId, string grantType, string claimKey,
+            string? remark = null, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                // 先向台账原子占坑：键=手机号/信用代码等跨账号不变量。
+                // 占到坑才发奖；流水 bizId 同步写同键做第二道幂等（同日双击/重放场景）
+                var claimed = await _claimRepository.TryClaimAsync(claimKey, grantType, userId, cancellationToken);
+                if (!claimed)
+                    return 0; // 该号/照历史已领过：注销重注册/删店重入驻循环免疫
+                return await GrantAsync(userId, grantType, claimKey, remark, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                // 与 GrantAsync 同纪律：一次性奖励失败不反噬业务主流程
+                _logger.LogWarning(ex, "一次性积分发放失败: UserId={UserId}, Type={Type}, Key={Key}",
+                    userId, grantType, claimKey);
                 return 0;
             }
         }

@@ -15,6 +15,9 @@ namespace OpenFindBearings.Domain.Repositories
 
         /// <summary>标记变更（提交由 UnitOfWork 管道完成）</summary>
         Task UpdateAsync(PointAccount account, CancellationToken cancellationToken = default);
+
+        /// <summary>删除用户积分账户（v1.34.0 注销清零：人走账销，重注册即新人）</summary>
+        Task<int> DeleteByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
     }
 
     /// <summary>
@@ -61,5 +64,22 @@ namespace OpenFindBearings.Domain.Repositories
 
         /// <summary>标记变更</summary>
         Task UpdateAsync(PointGrantRule rule, CancellationToken cancellationToken = default);
+    }
+
+    /// <summary>
+    /// 一次性奖励认领台账仓储（v1.34.0 防刷）：BizKey 唯一键的原子认领
+    /// </summary>
+    public interface IPointRewardClaimRepository
+    {
+        /// <summary>
+        /// 尝试认领（INSERT ON CONFLICT DO NOTHING 原子操作）：
+        /// 返回 true=本次首次认领（应发奖）；false=该键历史已被认领（跳过发奖）。
+        /// 改动说明：走原生 SQL 而非 EF Add+SaveChanges——唯一冲突不污染外层
+        /// 变更跟踪器/事务，且天然并发安全（两请求同键只有一个 INSERT 生效）
+        /// </summary>
+        /// <param name="bizKey">号/照维度幂等键</param>
+        /// <param name="grantType">奖励动作类型</param>
+        /// <param name="userId">认领人（审计快照）</param>
+        Task<bool> TryClaimAsync(string bizKey, string grantType, Guid userId, CancellationToken cancellationToken = default);
     }
 }

@@ -16,19 +16,26 @@ namespace OpenFindBearings.Application.Commands.Merchants.ApplicationCleanup
         /// <summary>
         /// self 通道：硬删除商户本体 + 其全部成员行（外键 Restrict 须先删成员）。
         /// 未公示的草稿式商户放弃后彻底删除，避免残留同名/同代码记录干扰下次新建查重。
-        /// 营业执照/商品等子表由 MerchantId 外键级联在 DB 层随商户删除一并清理。
         /// 改动说明（v2.17.0）：先硬删 Merchant 纠错行——CorrectionRequest 对 Merchants.TargetId
         ///   挂 Restrict FK，有纠错记录（含历史已审）的商户 DELETE 必被 23503 拦截，
         ///   withdraw/删被拒申请/账户注销三条既有路径同雷一并修复。
+        /// 改动说明（v1.34.0 审计 U5 修复）：补删 MerchantDocument 证照行——原注释声称
+        ///   "证照随 MerchantId 外键级联清理"是失实的（该 FK 配置已注释，MerchantBearing 有
+        ///   级联成立、MerchantDocument 不成立），商户物理删除后证照行成孤儿、
+        ///   FileUrl 指向 MinIO 的营业执照影像永久无主；接管/释放路径本就显式清证照，
+        ///   此路径对齐。MinIO 对象删除列入 backlog（需存储层按 URL 反查键）
         /// </summary>
         public static async Task HardDeleteMerchantWithMembersAsync(
             Merchant merchant,
             IMerchantRepository merchantRepository,
             IMerchantMemberRepository merchantMemberRepository,
             ICorrectionRequestRepository correctionRepository,
+            IMerchantDocumentRepository documentRepository,
             CancellationToken cancellationToken)
         {
             await correctionRepository.DeleteByTargetAsync("Merchant", merchant.Id, cancellationToken);
+            // 证照行显式硬删（FK 级联不成立，见方法注释）
+            await documentRepository.DeleteByMerchantAsync(merchant.Id, cancellationToken);
             var members = await merchantMemberRepository.GetAllByMerchantIdAsync(merchant.Id, cancellationToken);
             foreach (var m in members)
             {

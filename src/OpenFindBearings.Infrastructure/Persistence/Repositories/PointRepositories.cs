@@ -33,6 +33,16 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
             _context.Set<PointAccount>().Update(account);
             return Task.CompletedTask;
         }
+
+        /// <summary>
+        /// 删除用户积分账户（注销清零，ExecuteDelete 单 SQL）
+        /// </summary>
+        public async Task<int> DeleteByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+        {
+            return await _context.Set<PointAccount>()
+                .Where(p => p.UserId == userId)
+                .ExecuteDeleteAsync(cancellationToken);
+        }
     }
 
     /// <summary>
@@ -134,6 +144,32 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         {
             _context.Set<PointGrantRule>().Update(rule);
             return Task.CompletedTask;
+        }
+    }
+/// <summary>
+    /// 一次性奖励认领台账仓储实现（v1.34.0）：原生 INSERT ON CONFLICT，原子幂等
+    /// </summary>
+    public class PointRewardClaimRepository : IPointRewardClaimRepository
+    {
+        private readonly ApplicationDbContext _context;
+
+        public PointRewardClaimRepository(ApplicationDbContext context)
+        {
+            _context = context;
+        }
+
+        /// <summary>
+        /// INSERT ... ON CONFLICT ("BizKey") DO NOTHING，受影响行数=1 即首次认领
+        /// </summary>
+        public async Task<bool> TryClaimAsync(string bizKey, string grantType, Guid userId, CancellationToken cancellationToken = default)
+        {
+            var affected = await _context.Database.ExecuteSqlRawAsync(
+                @"INSERT INTO ""PointRewardClaims"" (""Id"", ""BizKey"", ""GrantType"", ""FirstClaimerUserId"", ""CreatedAt"", ""IsActive"")
+                  VALUES (@p0, @p1, @p2, @p3, now(), true)
+                  ON CONFLICT (""BizKey"") DO NOTHING",
+                new object[] { Guid.NewGuid(), bizKey, grantType, userId },
+                cancellationToken);
+            return affected == 1;
         }
     }
 }
