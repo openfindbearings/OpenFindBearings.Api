@@ -46,7 +46,7 @@ namespace OpenFindBearings.Application.Commands.Sourcing
     /// <summary>
     /// 读取寻货免费额度配置（缺省兜底：发布 3 条/应答 20 条）
     /// </summary>
-    internal static class SourcingConfigReader
+    public static class SourcingConfigReader
     {
         /// <summary>
         /// 取整型配置值（仓储内部含类型转换与默认回退；负数视为无效回退默认）

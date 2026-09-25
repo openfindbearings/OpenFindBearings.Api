@@ -44,6 +44,12 @@ namespace OpenFindBearings.Domain.Repositories
         /// </summary>
         Task<HashSet<string>> GetGrantTypesAsync(Guid userId, DateTime? since, CancellationToken cancellationToken = default);
 
+        /// <summary>
+        /// 用户各动作流水次数统计（since 非空=仅统计该时刻之后）。
+        /// 改动说明（v1.34.0）：任务中心 daily 任务显示"今日已完成 n 次"计数
+        /// </summary>
+        Task<Dictionary<string, int>> GetGrantCountsAsync(Guid userId, DateTime? since, CancellationToken cancellationToken = default);
+
         /// <summary>删除用户全部流水（v1.32.0，注销匿名化级联清理）</summary>
         Task<int> DeleteAllForUserAsync(Guid userId, CancellationToken cancellationToken = default);
     }
