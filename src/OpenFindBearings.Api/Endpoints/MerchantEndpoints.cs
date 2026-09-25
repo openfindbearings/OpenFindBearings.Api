@@ -85,7 +85,7 @@ namespace OpenFindBearings.Api.Endpoints
                 if (merchant == null)
                     return ApiResponseHelper.NotFound("未找到所属商家", httpContext);
 
-                var updateCommand = command with { Id = merchant.Id };
+                var updateCommand = command with { Id = merchant.Id, UserId = currentUser.UserId.Value };
                 await mediator.Send(updateCommand);
 
                 return ApiResponseHelper.Ok("店铺信息更新成功", httpContext);

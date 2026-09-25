@@ -17,15 +17,23 @@ namespace OpenFindBearings.Application.Commands.Merchants.DeleteRejectedApplicat
         private readonly IMerchantMemberRepository _merchantMemberRepository;
         // v2.17.0：HardDelete 前需先清纠错行（TargetId Restrict FK），注入纠错仓储
         private readonly ICorrectionRequestRepository _correctionRepository;
+        // v1.34.0（审计 U5）：HardDelete 前显式清证照行（MerchantId FK 级联不成立）
+        private readonly IMerchantDocumentRepository _documentRepository;
         private readonly ILogger<DeleteRejectedApplicationCommandHandler> _logger;
 
         public DeleteRejectedApplicationCommandHandler(
             IMerchantRepository merchantRepository,
             IMerchantMemberRepository merchantMemberRepository,
+            ICorrectionRequestRepository correctionRepository,
+            IMerchantDocumentRepository documentRepository,
             ILogger<DeleteRejectedApplicationCommandHandler> logger)
         {
             _merchantRepository = merchantRepository;
             _merchantMemberRepository = merchantMemberRepository;
+            // 改动说明（v1.34.0 修复）：原 ctor 漏注入 _correctionRepository（字段声明未赋值，
+            //   走到 HardDelete 必 NRE），连同新增的证照仓储一并补齐
+            _correctionRepository = correctionRepository;
+            _documentRepository = documentRepository;
             _logger = logger;
         }
 
@@ -54,7 +62,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.DeleteRejectedApplicat
             {
                 case ApplicationMode.Self:
                     await ApplicantApplicationCleanup.HardDeleteMerchantWithMembersAsync(
-                        merchant, _merchantRepository, _merchantMemberRepository, _correctionRepository, cancellationToken);
+                        merchant, _merchantRepository, _merchantMemberRepository, _correctionRepository, _documentRepository, cancellationToken);
                     break;
                 case ApplicationMode.Claim:
                     await ApplicantApplicationCleanup.RemoveClaimAndRevertToCrawlerAsync(

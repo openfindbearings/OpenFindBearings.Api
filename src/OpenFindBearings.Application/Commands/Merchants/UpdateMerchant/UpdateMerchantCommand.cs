@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using OpenFindBearings.Application.Behaviors;
 using OpenFindBearings.Domain.Enums;
 
@@ -10,6 +10,11 @@ namespace OpenFindBearings.Application.Commands.Merchants.Commands
     public record UpdateMerchantCommand : IRequest, ICommand
     {
         public Guid Id { get; set; }
+
+        /// <summary>
+        /// 操作人用户 ID（v1.34.0：资料完善度达标奖励归属判定；null=非商户侧操作如 Admin 后台编辑，不触发发奖）
+        /// </summary>
+        public Guid? UserId { get; set; }
 
         // 基本信息
         public string? Name { get; set; }
