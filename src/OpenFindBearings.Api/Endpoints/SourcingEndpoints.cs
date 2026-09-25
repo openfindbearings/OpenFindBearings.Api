@@ -325,6 +325,60 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("GetMySourcingResponses")
             .WithSummary("商户寻货应答记录");
 
+            /// <summary>
+            /// 额度聚合（v1.34.0 额度可见化）：发布/应答的免费额度、今日已用、硬上限、
+            /// 积分单价与当前积分余额一次返回。
+            /// 改动说明：此前额度规则"撞墙才可见"（超限报错才提示花积分），前端无法前置
+            /// 展示额度条与按钮三态；口径与两个 Command handler 完全同源（同配置键/同规则键/
+            /// 同计数方法），保证展示与实际判定不分叉
+            /// </summary>
+            group.MapGet("/quota", async (
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] ISourcingDemandRepository demandRepository,
+                [FromServices] ISourcingResponseRepository responseRepository,
+                [FromServices] ISystemConfigRepository configRepository,
+                [FromServices] IPointGrantRuleRepository ruleRepository,
+                [FromServices] IPointAccountRepository pointAccountRepository,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                var userId = currentUser.UserId.Value;
+                var publishRule = await ruleRepository.GetEnabledByTypeAsync("sourcing_publish_bonus", httpContext.RequestAborted);
+                var respondRule = await ruleRepository.GetEnabledByTypeAsync("sourcing_respond_bonus", httpContext.RequestAborted);
+                var account = await pointAccountRepository.GetByUserIdAsync(userId, httpContext.RequestAborted);
+
+                // 发布额度（个人维度）；应答额度（当前商户维度，未入驻商户返回 0 已用）
+                var publishToday = await demandRepository.CountPublishedTodayAsync(userId, httpContext.RequestAborted);
+                var respondToday = currentUser.CurrentMerchantId.HasValue
+                    ? await responseRepository.CountRespondedTodayAsync(currentUser.CurrentMerchantId.Value, httpContext.RequestAborted)
+                    : 0;
+
+                return ApiResponseHelper.Ok(new
+                {
+                    publish = new
+                    {
+                        freeLimit = await SourcingConfigReader.GetIntAsync(configRepository, "Sourcing.FreePublishPerDay", 3),
+                        todayUsed = publishToday,
+                        hardLimit = publishRule?.DailyLimit ?? 10,
+                        pointsPrice = publishRule?.Amount ?? 20
+                    },
+                    respond = new
+                    {
+                        freeLimit = await SourcingConfigReader.GetIntAsync(configRepository, "Sourcing.FreeRespondPerDay", 20),
+                        todayUsed = respondToday,
+                        hardLimit = respondRule?.DailyLimit ?? 50,
+                        pointsPrice = respondRule?.Amount ?? 20
+                    },
+                    balance = account?.Balance ?? 0
+                }, httpContext: httpContext);
+            })
+            .RequireAuthorization()
+            .WithName("GetSourcingQuota")
+            .WithSummary("寻货额度聚合")
+            .WithDescription("发布/应答免费额度、今日已用、硬上限、积分单价与余额（额度条数据源）");
+
             // ============ Admin 治理端点 ============
             var adminGroup = app.MapGroup("/api/admin/sourcing").RequireAuthorization();
 

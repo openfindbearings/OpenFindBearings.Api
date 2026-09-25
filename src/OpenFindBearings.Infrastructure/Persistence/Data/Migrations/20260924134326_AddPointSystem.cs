@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -116,7 +116,7 @@ INSERT INTO ""PointGrantRules"" (""Id"", ""GrantType"", ""DisplayName"", ""Amoun
 SELECT gen_random_uuid(), 'register_bonus', '新用户注册奖励', 50, 0, NULL, true, '首次创建业务用户一次性发放（冷启动钩子）', now(), true
 WHERE NOT EXISTS (SELECT 1 FROM ""PointGrantRules"" WHERE ""GrantType"" = 'register_bonus');
 INSERT INTO ""PointGrantRules"" (""Id"", ""GrantType"", ""DisplayName"", ""Amount"", ""DailyLimit"", ""LadderJson"", ""IsEnabled"", ""Description"", ""CreatedAt"", ""IsActive"")
-SELECT gen_random_uuid(), 'correction_adopted', '纠错被采纳', 10, 100, NULL, true, '纠错审核采纳发放，每日上限 100 防灌水', now(), true
+SELECT gen_random_uuid(), 'correction_adopted', '', 纠错被采纳', 20, 100, NULL, true, '纠错审核采纳发放，每日上限 100 防灌水', now(), true
 WHERE NOT EXISTS (SELECT 1 FROM ""PointGrantRules"" WHERE ""GrantType"" = 'correction_adopted');
 INSERT INTO ""PointGrantRules"" (""Id"", ""GrantType"", ""DisplayName"", ""Amount"", ""DailyLimit"", ""LadderJson"", ""IsEnabled"", ""Description"", ""CreatedAt"", ""IsActive"")
 SELECT gen_random_uuid(), 'merchant_approved', '商户入驻通过', 100, 0, NULL, true, '入驻审核通过一次性发放（供给侧最高价值动作）', now(), true

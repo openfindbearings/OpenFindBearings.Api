@@ -102,6 +102,24 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
             return types.ToHashSet(StringComparer.OrdinalIgnoreCase);
         }
 
+        /// <summary>
+        /// 用户各动作流水次数统计（since 非空只看该时刻后）。
+        /// 改动说明（v1.34.0）：任务中心 daily 任务显示"今日已完成 n 次"，
+        /// 一次 group by 出全部计数，避免逐类型 Count 查询
+        /// </summary>
+        public async Task<Dictionary<string, int>> GetGrantCountsAsync(Guid userId, DateTime? since, CancellationToken cancellationToken = default)
+        {
+            var query = _context.Set<PointTransaction>()
+                .Where(t => t.UserId == userId && t.Direction == PointTransaction.DirectionCredit);
+            if (since.HasValue)
+                query = query.Where(t => t.CreatedAt >= since.Value);
+            var rows = await query
+                .GroupBy(t => t.GrantType)
+                .Select(g => new { Type = g.Key, Count = g.Count() })
+                .ToListAsync(cancellationToken);
+            return rows.ToDictionary(r => r.Type, r => r.Count, StringComparer.OrdinalIgnoreCase);
+        }
+
         public async Task<int> DeleteAllForUserAsync(Guid userId, CancellationToken cancellationToken = default)
         {
             return await _context.Set<PointTransaction>()

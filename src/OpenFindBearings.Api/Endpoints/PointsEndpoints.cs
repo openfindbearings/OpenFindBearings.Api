@@ -123,6 +123,8 @@ namespace OpenFindBearings.Api.Endpoints
                 var todayStart = DateTime.UtcNow.Date;
                 var doneToday = await transactionRepository.GetGrantTypesAsync(userId, todayStart);
                 var doneEver = await transactionRepository.GetGrantTypesAsync(userId, null);
+                // 改动说明（v1.34.0）：daily 任务今日完成次数（任务中心显示"今日 n/上限"）
+                var countsToday = await transactionRepository.GetGrantCountsAsync(userId, todayStart);
 
                 // 任务节奏类型：daily=每日可完成 / once=一次性
                 var dailyTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -142,7 +144,10 @@ namespace OpenFindBearings.Api.Endpoints
                         // 阶梯动作返回起步分值+阶梯数组，前端可展示"最高 X 分"
                         ladder = PointTaskHelper.ParseLadder(r.LadderJson),
                         daily = isDaily,
-                        done = isDaily ? doneToday.Contains(r.GrantType) : doneEver.Contains(r.GrantType)
+                        done = isDaily ? doneToday.Contains(r.GrantType) : doneEver.Contains(r.GrantType),
+                        // 今日完成次数与每日上限（daily 有意义；limit=0 表示不限）
+                        count = countsToday.TryGetValue(r.GrantType, out var cnt) ? cnt : 0,
+                        limit = r.DailyLimit
                     };
                 }).ToList();
                 return ApiResponseHelper.Ok(tasks, httpContext: httpContext);
