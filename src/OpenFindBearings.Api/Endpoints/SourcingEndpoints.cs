@@ -137,6 +137,8 @@ namespace OpenFindBearings.Api.Endpoints
                 {
                     id = demand.Id,
                     partNumber = demand.PartNumber,
+                    // 改动说明（v1.36.0）：透出 bearingId 供前端"我的在售同款"应答预填精确匹配
+                    bearingId = demand.BearingId,
                     brand = demand.Brand,
                     quantity = demand.Quantity,
                     expectedDelivery = demand.ExpectedDelivery,
@@ -378,6 +380,105 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("GetSourcingQuota")
             .WithSummary("寻货额度聚合")
             .WithDescription("发布/应答免费额度、今日已用、硬上限、积分单价与余额（额度条数据源）");
+
+            /// <summary>
+            /// 我的在售同款（v1.36.0 应答预填）：当前商户对该寻货型号的在售/补货中商品条目，
+            /// 应答表单据此预填报价/库存/交期——商户维护的商品数据第一次直接变成应答回报。
+            /// 匹配口径：bearingId 精确优先；无 id 时按型号文本精确查主数据再匹配
+            /// </summary>
+            group.MapGet("/my-offering", async (
+                [FromQuery] Guid? bearingId,
+                [FromQuery] string? partNumber,
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMerchantBearingRepository merchantBearingRepository,
+                [FromServices] IBearingRepository bearingRepository,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue || !currentUser.CurrentMerchantId.HasValue)
+                    return ApiResponseHelper.Ok(new { found = false }, httpContext: httpContext);
+
+                var bid = bearingId;
+                if (bid == null && !string.IsNullOrWhiteSpace(partNumber))
+                {
+                    var bearing = await bearingRepository.GetByPartNumberAsync(partNumber.Trim(), httpContext.RequestAborted);
+                    bid = bearing?.Id;
+                }
+                if (bid == null)
+                    return ApiResponseHelper.Ok(new { found = false }, httpContext: httpContext);
+
+                var relations = await merchantBearingRepository.GetByBearingAsync(bid.Value, httpContext.RequestAborted);
+                var mine = relations.Where(mb => mb.MerchantId == currentUser.CurrentMerchantId.Value).ToList();
+                // 在售条目优先，其次补货中条目（应答预填取最接近"现在能供"的状态）
+                var offering = mine.FirstOrDefault(mb => mb.IsOnSale)
+                    ?? mine.FirstOrDefault(mb => mb.IsRestocking);
+                if (offering == null)
+                    return ApiResponseHelper.Ok(new { found = false }, httpContext: httpContext);
+
+                return ApiResponseHelper.Ok(new
+                {
+                    found = true,
+                    isOnSale = offering.IsOnSale,
+                    isRestocking = offering.IsRestocking,
+                    price = offering.NumericPrice ?? (decimal?)null,
+                    priceDescription = offering.PriceDescription,
+                    stock = offering.StockDescription,
+                    minOrder = offering.MinOrderDescription,
+                    restockEta = offering.RestockEta,
+                    remarks = offering.Remarks
+                }, httpContext: httpContext);
+            })
+            .RequireAuthorization()
+            .WithName("GetMyOffering")
+            .WithSummary("我的在售同款（应答预填）")
+            .WithDescription("当前商户对该寻货型号的在售/补货中条目，应答表单预填数据源");
+
+            /// <summary>
+            /// 需求信号（v1.36.0 反向导购）：当前商户在售型号中，哪些正被寻货且尚无应答——
+            /// "你卖的型号有人要"横幅数据源。口径：进行中未应答寻货按型号聚合 × 商户在售型号集合
+            /// </summary>
+            group.MapGet("/opportunities", async (
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] ISourcingDemandRepository demandRepository,
+                [FromServices] IMerchantBearingRepository merchantBearingRepository,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue || !currentUser.CurrentMerchantId.HasValue)
+                    return ApiResponseHelper.Ok(Array.Empty<object>(), httpContext: httpContext);
+
+                // 在售型号集合（含补货中——补货中的型号收到需求同样值得商家知道）
+                var onSale = await merchantBearingRepository.GetOnSaleByMerchantAsync(
+                    currentUser.CurrentMerchantId.Value, httpContext.RequestAborted);
+                var myParts = onSale
+                    .Where(mb => mb.Bearing != null)
+                    .Select(mb => (mb.Bearing!.PartNumber ?? "").Trim().ToUpperInvariant())
+                    .Where(p => p.Length > 0)
+                    .ToHashSet();
+                if (myParts.Count == 0)
+                    return ApiResponseHelper.Ok(Array.Empty<object>(), httpContext: httpContext);
+
+                // 进行中未应答寻货（近 200 条内存聚合，冷启动量级足够；上量后改 SQL 聚合）
+                var (items, _) = await demandRepository.GetListAsync(
+                    status: SourcingDemand.StatusPublished, keyword: null, onlyOpen: true,
+                    page: 1, pageSize: 200, cancellationToken: httpContext.RequestAborted);
+                var opportunities = items
+                    .Where(d => d.ResponseCount == 0)
+                    .GroupBy(d => (d.PartNumber ?? "").Trim().ToUpperInvariant())
+                    .Where(g => myParts.Contains(g.Key))
+                    .Select(g => new
+                    {
+                        partNumber = g.First().PartNumber,
+                        demandCount = g.Count(),
+                        latestAt = g.Max(d => d.CreatedAt)
+                    })
+                    .OrderByDescending(x => x.demandCount)
+                    .Take(10)
+                    .ToList();
+                return ApiResponseHelper.Ok(opportunities, httpContext: httpContext);
+            })
+            .RequireAuthorization()
+            .WithName("GetSourcingOpportunities")
+            .WithSummary("需求信号（反向导购）")
+            .WithDescription("商户在售型号中被寻货且未应答的聚合清单（商家寻货页横幅数据源）");
 
             // ============ Admin 治理端点 ============
             var adminGroup = app.MapGroup("/api/admin/sourcing").RequireAuthorization();

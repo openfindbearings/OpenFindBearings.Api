@@ -9,7 +9,7 @@ namespace OpenFindBearings.Application.Queries.MerchantBearings.GetMerchantsByBe
 /// 获取销售指定轴承的商家列表查询（反向查询：轴承 -> 商家）
 /// 用于管理后台轴承列表页展示某型号轴承的多家在售商家
 /// </summary>
-public record GetMerchantsByBearingQuery : IRequest<PagedResult<MerchantDto>>, IQuery
+public record GetMerchantsByBearingQuery : IRequest<PagedResult<BearingMerchantDto>>, IQuery
 {
     /// <summary>
     /// 轴承ID
