@@ -35,6 +35,12 @@ namespace OpenFindBearings.Domain.Repositories
         Task<(List<PointTransaction> Items, int Total)> GetByUserAsync(Guid userId, int page, int pageSize,
             CancellationToken cancellationToken = default);
 
+        /// <summary>
+        /// 用户有流水记录的动作类型集合（since 非空=仅统计该时刻之后，任务中心完成态判定用）
+        /// 改动说明（v1.33.0）：一次查询取回类型集合供批量判任务，避免逐规则 Exists 的 N+1
+        /// </summary>
+        Task<HashSet<string>> GetGrantTypesAsync(Guid userId, DateTime? since, CancellationToken cancellationToken = default);
+
         /// <summary>删除用户全部流水（v1.32.0，注销匿名化级联清理）</summary>
         Task<int> DeleteAllForUserAsync(Guid userId, CancellationToken cancellationToken = default);
     }

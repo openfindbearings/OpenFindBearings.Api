@@ -104,6 +104,53 @@ namespace OpenFindBearings.Api.Endpoints
             .WithSummary("积分流水")
             .WithDescription("个人积分收支明细分页");
 
+            /// <summary>
+            /// 赚分任务清单（v1.33.0 任务中心数据源）：启用中的规则 + 本人完成态。
+            /// 完成态口径：daily 类看今日流水、once 类看历史流水；映射在代码（新 grantType
+            /// 本就要写消费场景代码，规则表只管分值不管语义）
+            /// </summary>
+            group.MapGet("/tasks", async (
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IPointGrantRuleRepository ruleRepository,
+                [FromServices] IPointTransactionRepository transactionRepository,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                var userId = currentUser.UserId.Value;
+                var rules = await ruleRepository.GetAllAsync();
+                var todayStart = DateTime.UtcNow.Date;
+                var doneToday = await transactionRepository.GetGrantTypesAsync(userId, todayStart);
+                var doneEver = await transactionRepository.GetGrantTypesAsync(userId, null);
+
+                // 任务节奏类型：daily=每日可完成 / once=一次性
+                var dailyTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    PointTransaction.TypeDailyLogin, PointTransaction.TypeDailyCheckin, PointTransaction.TypeCorrectionAdopted
+                };
+
+                var tasks = rules.Where(r => r.IsEnabled).Select(r =>
+                {
+                    var isDaily = dailyTypes.Contains(r.GrantType);
+                    return new
+                    {
+                        grantType = r.GrantType,
+                        displayName = r.DisplayName,
+                        amount = r.Amount,
+                        description = r.Description,
+                        // 阶梯动作返回起步分值+阶梯数组，前端可展示"最高 X 分"
+                        ladder = PointTaskHelper.ParseLadder(r.LadderJson),
+                        daily = isDaily,
+                        done = isDaily ? doneToday.Contains(r.GrantType) : doneEver.Contains(r.GrantType)
+                    };
+                }).ToList();
+                return ApiResponseHelper.Ok(tasks, httpContext: httpContext);
+            })
+            .WithName("GetPointTasks")
+            .WithSummary("赚分任务清单")
+            .WithDescription("任务中心数据源：启用规则+完成态（daily 看今日、once 看历史）");
+
             // ============ Admin 端（规则配置） ============
             var adminGroup = app.MapGroup("/api/admin/points").RequireAuthorization();
 
@@ -174,4 +221,25 @@ namespace OpenFindBearings.Api.Endpoints
     /// <param name="LadderJson">连续阶梯 JSON 数组</param>
     /// <param name="IsEnabled">启用开关</param>
     public record UpdatePointRuleRequest(int? Amount, int? DailyLimit, string? LadderJson, bool? IsEnabled);
+
+    internal static class PointTaskHelper
+    {
+        /// <summary>
+        /// 解析阶梯 JSON 数组（非法/空返回 null，任务中心据此展示"最高 X 分"）
+        /// </summary>
+        /// <param name="ladderJson">阶梯 JSON 字符串</param>
+        public static List<int>? ParseLadder(string? ladderJson)
+        {
+            if (string.IsNullOrWhiteSpace(ladderJson))
+                return null;
+            try
+            {
+                return System.Text.Json.JsonSerializer.Deserialize<List<int>>(ladderJson);
+            }
+            catch (System.Text.Json.JsonException)
+            {
+                return null;
+            }
+        }
+    }
 }

@@ -79,6 +79,19 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
             return (items, total);
         }
 
+        /// <summary>
+        /// 用户有流水的动作类型去重集合（since 非空只看该时刻后，任务中心完成态批量判定）
+        /// </summary>
+        public async Task<HashSet<string>> GetGrantTypesAsync(Guid userId, DateTime? since, CancellationToken cancellationToken = default)
+        {
+            var query = _context.Set<PointTransaction>()
+                .Where(t => t.UserId == userId && t.Direction == PointTransaction.DirectionCredit);
+            if (since.HasValue)
+                query = query.Where(t => t.CreatedAt >= since.Value);
+            var types = await query.Select(t => t.GrantType).Distinct().ToListAsync(cancellationToken);
+            return types.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        }
+
         public async Task<int> DeleteAllForUserAsync(Guid userId, CancellationToken cancellationToken = default)
         {
             return await _context.Set<PointTransaction>()
