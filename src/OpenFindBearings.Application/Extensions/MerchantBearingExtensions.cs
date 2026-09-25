@@ -1,4 +1,4 @@
-﻿using OpenFindBearings.Application.DTOs;
+using OpenFindBearings.Application.DTOs;
 using OpenFindBearings.Domain.Entities;
 
 namespace OpenFindBearings.Application.Extensions
@@ -46,6 +46,8 @@ namespace OpenFindBearings.Application.Extensions
                 MinOrderDescription = mb.MinOrderDescription,
                 Remarks = mb.Remarks,
                 IsOnSale = mb.IsOnSale,
+                IsRestocking = mb.IsRestocking,
+                RestockEta = mb.RestockEta,
                 IsFeatured = mb.IsFeatured,
                 IsPendingApproval = mb.IsPendingApproval,
                 ViewCount = mb.ViewCount,
@@ -87,6 +89,8 @@ namespace OpenFindBearings.Application.Extensions
                 MinOrderDescription = mb.MinOrderDescription,
                 Remarks = mb.Remarks,
                 IsOnSale = mb.IsOnSale,
+                IsRestocking = mb.IsRestocking,
+                RestockEta = mb.RestockEta,
                 IsFeatured = mb.IsFeatured,
                 IsPendingApproval = mb.IsPendingApproval,
                 ViewCount = mb.ViewCount,

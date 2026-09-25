@@ -124,8 +124,10 @@ namespace OpenFindBearings.Application.Commands.Sync.BatchCreateMerchantBearings
                             {
                                 existing.TakeOffShelf();
                             }
-                            else if (dto.IsOnSale && !existing.IsOnSale)
+                            else if (dto.IsOnSale && !existing.IsOnSale && !existing.IsRestocking)
                             {
+                                // 改动说明（v1.36.0）：加 !IsRestocking 守卫——商户显式声明补货中时，
+                                // 爬虫的库存信号不得自动把它重新上架（人工维护状态优先）
                                 existing.PutOnShelf();
                             }
 

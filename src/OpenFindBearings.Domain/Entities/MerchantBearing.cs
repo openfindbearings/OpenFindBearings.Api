@@ -86,6 +86,18 @@ namespace OpenFindBearings.Domain.Entities
         public bool IsOnSale { get; private set; } = true;
 
         /// <summary>
+        /// 是否补货中（v1.36.0 三态销售状态）：
+        /// 三态口径——在售=IsOnSale；补货中=!IsOnSale 且 IsRestocking（有该型号但暂时无货，
+        /// 买家侧商家列表仍展示带"补货中"徽标，不计入在售）；已下架=其余（不展示）
+        /// </summary>
+        public bool IsRestocking { get; private set; }
+
+        /// <summary>
+        /// 补货预计到货时间（自由文本，如"一周内""10月到货"；仅补货中有意义）
+        /// </summary>
+        public string? RestockEta { get; private set; }
+
+        /// <summary>
         /// 是否需要审核（用于商家创建/编辑产品）
         /// true: 待审核
         /// false: 已审核通过
@@ -137,6 +149,7 @@ namespace OpenFindBearings.Domain.Entities
 
         /// <summary>
         /// 商家下架产品
+        /// 改动说明（v1.36.0）：显式下架同时清除补货标记（下架=彻底不展示，与补货中互斥）
         /// </summary>
         /// <exception cref="InvalidOperationException">产品已下架时抛出</exception>
         public void TakeOffShelf()
@@ -145,6 +158,8 @@ namespace OpenFindBearings.Domain.Entities
                 throw new InvalidOperationException("产品已下架");
 
             IsOnSale = false;
+            IsRestocking = false;
+            RestockEta = null;
             UpdateTimestamp();
 
             // 触发产品下架事件
@@ -153,6 +168,7 @@ namespace OpenFindBearings.Domain.Entities
 
         /// <summary>
         /// 商家重新上架
+        /// 改动说明（v1.36.0）：回到在售时清除补货态（三态互斥）
         /// </summary>
         /// <exception cref="InvalidOperationException">产品已在售时抛出</exception>
         public void PutOnShelf()
@@ -161,10 +177,25 @@ namespace OpenFindBearings.Domain.Entities
                 throw new InvalidOperationException("产品已在售");
 
             IsOnSale = true;
+            IsRestocking = false;
+            RestockEta = null;
             UpdateTimestamp();
 
             // 触发产品上架事件
             AddDomainEvent(new BearingPutOnShelfEvent(Id, MerchantId, BearingId));
+        }
+
+        /// <summary>
+        /// 置为补货中（v1.36.0 三态）：有该型号但暂时缺货，商家列表仍展示带徽标；
+        /// 在售与补货中互斥，从在售转入时同步下架
+        /// </summary>
+        /// <param name="restockEta">预计到货时间（自由文本，可空）</param>
+        public void MarkAsRestocking(string? restockEta)
+        {
+            IsOnSale = false;
+            IsRestocking = true;
+            RestockEta = string.IsNullOrWhiteSpace(restockEta) ? null : restockEta.Trim();
+            UpdateTimestamp();
         }
 
         /// <summary>

@@ -37,6 +37,7 @@
 | v1.25.0 | 2026-09-21 | **员工邀请确认制 + 字段锁定 + 全量发现搜索**：① 商家端点组 19→23，新增 `GET /api/merchant/staff/invitations/pending`（待我确认员工邀请，JWT phone/email claim 服务端匹配）、`POST /api/merchant/staff/invitations/{invitationId:guid}/accept|decline|revoke`（接受建成员行+通知发起人 / 拒绝 / 管理员撤销）；`POST /api/merchant/staff` 对已注册用户由静默拉入改为创建 `StaffInvitation(Type=Staff)` 待确认邀请+站内信（message 透传真实文案），`GET /api/merchant/staff` 合并 `Status=Invited` 邀请行（含 `invitationId`）。② `PUT /api/merchant/{id}`（UpdateMerchant）Active 后拒绝变更企业名称/统一社会信用代码（与执照绑定，同值/未传放行，400）。③ `GET /api/merchant/claimable` 升级为全量发现搜索：DTO 加 `isClaimable/isMine/statusText`（可认领/我的商户/已入驻/审核中/已认证），搜索阶段阻断重复新建。④ 依赖 Identity 新增服务间端点 `GET /api/users/by-phone|by-email`（原 404 是添加成员静默走邀请分支的根因）。总端点数 140→144 |
 | v1.26.0 | 2026-09-21 | **信用代码必填 + 类型锁定 + 邀请去重**（对齐《06 v2.11.0》，端点数不变 144）：① `POST /api/merchant/apply` 信用代码必填（18 位执照字符集）；resubmit/accept-nomination 按合并后值校验（存量有效不要求重输）。② `PUT /api/merchant/{id}` 守卫细化：企业名称一律锁定；信用代码"空→一次性补录"放行（同口径格式校验）、非空改值拒绝；商家类型 Active 后锁定（并接通原注释掉的 UpdateType，非 Active 真正可改）。③ `POST /api/merchant/staff` 两分支按同商户+同联系方式去重 Pending 邀请（幂等返回既有 invitationId，修复重复"已邀请"行）。④ Taro 同步：apply 三路径必填校验、profile 类型只读+信用代码空可补。⑤ 同版本追加：`GET staff` 成员项加 `mobile`/`joinedAt`（成员详情面板，User.Mobile 缓存列经登录中间件 JIT 同步）；accept/decline 邀请服务端核销对应站内信（未读角标即时消减）且端点补传 Email claim 支持邮箱注册用户处理邀请。端点数不变 144。 |
 | v1.27.0 | 2026-09-21 | **站内信删除能力**（对齐《06 v2.12.0》，站内信组 4→6，总数 144→146）：① `DELETE /api/notifications/{id:guid}` 硬删本人单条（左滑删除，非本人/不存在 404）；② `DELETE /api/notifications/read` 清空本人全部已读（未读保留防误删漏看，返回 `{ affected }`）。ExecuteDelete 单 SQL 直删。 |
+| v1.36.0 | 2026-09-25 | **商品三态与寻货联动**（对齐《12-寻货功能设计 v1.2.0》）：① MerchantBearing 加 IsRestocking/RestockEta（迁移 AddMerchantBearingRestocking），三态=在售/补货中/已下架，新端点 POST /api/merchant/bearings/{id}/restock；爬虫 L 阶段自动上架加 !IsRestocking 守卫（人工补货声明不被爬虫覆盖）；② 轴承商家列表（GetMerchantsByBearing）契约改 BearingMerchantDto 行级结构（merchantId/merchantName/price/isOnSale/isRestocking/restockEta），在售筛选扩为在售+补货中；③ 寻货组 +2 端点：GET /api/sourcing/my-offering（应答预填数据源）、GET /api/sourcing/opportunities（需求信号）；寻货详情响应补 bearingId；④ 端点总数 166→170 |
 | v1.35.0 | 2026-09-25 | **寻货全链路 + 积分任务端点**（对齐《12-寻货功能设计 v1.1.0》《11-积分体系设计 v1.4.0》）：① 新增寻货组 /api/sourcing 9 端点（feed/详情/发布/应答/选定/取消/我的发布/我的应答/额度聚合）+ Admin 寻货治理 3 端点（列表/详情/下架）；② 积分组 /api/points 4 端点（account/checkin/transactions/tasks，v1.34.0 已声明但正文缺节，本次补齐）+ Admin 规则 2 端点；③ 纠错采纳默认分值 10→20（迁移种子，存量库 Admin 可调）；④ 端点总数修正为 166（此前概述 148 为 v1.29 旧数未随批次更新） |
 | v1.34.0 | 2026-09-24 | **积分底座上线**（对齐《11-积分体系设计 v1.0.0》）：新增积分组 3 端点 `GET /api/points/account`（余额/累计/今日签到态/连击数）、`POST /api/points/checkin`（阶梯签到）、`GET /api/points/transactions`（流水分页）；Admin 组新增 2 端点 `GET/PUT /api/admin/points/rules[/{id}]`（赚分规则配置，system.manage 权限，实时生效）；端点总数 151→156。赚端 5 场景（登录/签到/注册/纠错采纳/入驻通过）经 PointsService 唯一写入口接线，扣分入口就位场景留白。 |
 | v1.31.0 | 2026-09-24 | 权限体系接线（对齐《04 v1.6.0》）：① 用户组 25→26 新增 `GET /api/me/permissions`（当前用户角色+权限清单，Admin 登录门禁/菜单/复核数据源）；② Admin 组新增 by-auth 三端点 `GET/POST /api/admin/users/by-auth/{sub}/roles`、`DELETE .../roles/{roleName}`（Admin 用户页以 Identity sub 为键分配平台角色）；③ Admin 组删除权限写端点 POST/PUT/DELETE /api/admin/permissions（权限点目录只读）；端点总数 150→151。 |
@@ -49,7 +50,7 @@
 
 ## 1. 概述
 
-OpenFindBearings.Api（以下简称 API）共注册 **166** 个端点，按职责划分为 8 组。另提供内部配置端点 `/api/config/reliability` 供 Sync 拉取可信度阈值（不计入 8 组统计）。
+OpenFindBearings.Api（以下简称 API）共注册 **170** 个端点，按职责划分为 8 组。另提供内部配置端点 `/api/config/reliability` 供 Sync 拉取可信度阈值（不计入 8 组统计）。
 
 | 组 | 路由前缀 | 端点数量 | 认证策略 |
 |---|---------|---------|---------|
@@ -435,6 +436,8 @@ OpenFindBearings.Api（以下简称 API）共注册 **166** 个端点，按职�
 | GET | /my/demands | 我发布的寻货 | 登录 |
 | GET | /my/responses | 当前商户的应答记录 | 登录+商户 |
 | GET | /quota | 额度聚合（发布/应答免费额度、今日已用、硬上限、积分单价、余额——额度条数据源，v1.35.0） | 登录 |
+| GET | /my-offering | 我的在售同款（当前商户对该型号的在售/补货中条目，应答表单预填数据源，v1.36.0） | 登录+商户 |
+| GET | /opportunities | 需求信号（商户在售型号中被寻货且未应答的聚合清单，反向导购横幅数据源，v1.36.0） | 登录+商户 |
 
 ## 11. 积分端点 `/api/points`（4 个）
 

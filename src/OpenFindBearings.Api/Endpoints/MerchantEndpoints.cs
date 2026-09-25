@@ -5,6 +5,7 @@ using OpenFindBearings.Api.Helpers;
 using OpenFindBearings.Api.Services;
 using OpenFindBearings.Application.Commands.MerchantBearings.Commands;
 using OpenFindBearings.Application.Commands.MerchantBearings.PutOnShelf;
+using OpenFindBearings.Application.Commands.MerchantBearings.Restock;
 using OpenFindBearings.Application.Commands.MerchantBearings.SetPriceVisibility;
 using OpenFindBearings.Application.Commands.MerchantBearings.TakeOffShelf;
 using OpenFindBearings.Application.Commands.MerchantBearings.UpdateMerchantBearing;
@@ -782,6 +783,33 @@ namespace OpenFindBearings.Api.Endpoints
             .WithDescription("下架自家轴承产品");
 
             /// <summary>
+            /// 置为补货中（v1.36.0 三态）：有该型号暂时缺货——商家列表仍展示带"补货中"徽标
+            /// </summary>
+            group.MapPost("/bearings/{id:guid}/restock", async (
+                Guid id,
+                [FromBody] RestockBearingRequest request,
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                var command = new RestockMerchantBearingCommand
+                {
+                    MerchantBearingId = id,
+                    UserId = currentUser.UserId.Value,
+                    RestockEta = request.RestockEta
+                };
+                await mediator.Send(command);
+
+                return ApiResponseHelper.Ok("已置为补货中", httpContext);
+            })
+            .WithName("RestockMerchantBearing")
+            .WithSummary("置为补货中")
+            .WithDescription("商品有型号但暂时缺货时置为补货中（买家侧仍展示带徽标），与上架/下架构成三态");
+
+            /// <summary>
             /// Excel 批量导入在售商品（仅商户管理员）
             /// 解析能力复用 Sync /api/inventory/import，写库 DataSourceType=Manual（不被爬虫覆盖）
             /// </summary>
@@ -852,4 +880,7 @@ namespace OpenFindBearings.Api.Endpoints
     /// 变更成员角色请求体
     /// </summary>
     public record ChangeMerchantMemberRoleRequest(string Role);
+
+    /// <summary>置为补货中请求体（v1.36.0）：预计到货时间自由文本可空</summary>
+    public record RestockBearingRequest(string? RestockEta);
 }

@@ -1,4 +1,4 @@
-﻿using OpenFindBearings.Domain.Enums;
+using OpenFindBearings.Domain.Enums;
 
 namespace OpenFindBearings.Application.DTOs
 {
@@ -137,6 +137,16 @@ namespace OpenFindBearings.Application.DTOs
         /// 是否在售
         /// </summary>
         public bool IsOnSale { get; set; }
+
+        /// <summary>
+        /// 是否补货中（v1.36.0 三态：在售=IsOnSale；补货中=!IsOnSale 且 IsRestocking；其余=已下架）
+        /// </summary>
+        public bool IsRestocking { get; set; }
+
+        /// <summary>
+        /// 补货预计到货时间（自由文本，仅补货中有意义）
+        /// </summary>
+        public string? RestockEta { get; set; }
 
         /// <summary>
         /// 是否推荐/置顶
