@@ -28,6 +28,8 @@ namespace OpenFindBearings.Domain.Entities
         /// 关店/解除归属通知（v2.17.0）：商户离场时发给全部在职成员
         /// </summary>
         public const string TypeMerchantClosed = "merchant_closed";
+        /// <summary>寻货通知类型（v1.35.0）：收到新应答/被选定/需求关闭/已下架，前端图标映射同口径</summary>
+        public const string TypeSourcing = "sourcing";
         /// <summary>纠错业务对象类型（bizType，跳转定位纠错详情）</summary>
         public const string BizCorrection = "correction";
 

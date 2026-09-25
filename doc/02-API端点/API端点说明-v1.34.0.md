@@ -1,6 +1,6 @@
 # API 端点说明文档
 
-**版本：** v1.33.0
+**版本：** v1.34.0
 **日期：** 2026-09-24
 **状态：** 与代码同步
 
@@ -37,7 +37,7 @@
 | v1.25.0 | 2026-09-21 | **员工邀请确认制 + 字段锁定 + 全量发现搜索**：① 商家端点组 19→23，新增 `GET /api/merchant/staff/invitations/pending`（待我确认员工邀请，JWT phone/email claim 服务端匹配）、`POST /api/merchant/staff/invitations/{invitationId:guid}/accept|decline|revoke`（接受建成员行+通知发起人 / 拒绝 / 管理员撤销）；`POST /api/merchant/staff` 对已注册用户由静默拉入改为创建 `StaffInvitation(Type=Staff)` 待确认邀请+站内信（message 透传真实文案），`GET /api/merchant/staff` 合并 `Status=Invited` 邀请行（含 `invitationId`）。② `PUT /api/merchant/{id}`（UpdateMerchant）Active 后拒绝变更企业名称/统一社会信用代码（与执照绑定，同值/未传放行，400）。③ `GET /api/merchant/claimable` 升级为全量发现搜索：DTO 加 `isClaimable/isMine/statusText`（可认领/我的商户/已入驻/审核中/已认证），搜索阶段阻断重复新建。④ 依赖 Identity 新增服务间端点 `GET /api/users/by-phone|by-email`（原 404 是添加成员静默走邀请分支的根因）。总端点数 140→144 |
 | v1.26.0 | 2026-09-21 | **信用代码必填 + 类型锁定 + 邀请去重**（对齐《06 v2.11.0》，端点数不变 144）：① `POST /api/merchant/apply` 信用代码必填（18 位执照字符集）；resubmit/accept-nomination 按合并后值校验（存量有效不要求重输）。② `PUT /api/merchant/{id}` 守卫细化：企业名称一律锁定；信用代码"空→一次性补录"放行（同口径格式校验）、非空改值拒绝；商家类型 Active 后锁定（并接通原注释掉的 UpdateType，非 Active 真正可改）。③ `POST /api/merchant/staff` 两分支按同商户+同联系方式去重 Pending 邀请（幂等返回既有 invitationId，修复重复"已邀请"行）。④ Taro 同步：apply 三路径必填校验、profile 类型只读+信用代码空可补。⑤ 同版本追加：`GET staff` 成员项加 `mobile`/`joinedAt`（成员详情面板，User.Mobile 缓存列经登录中间件 JIT 同步）；accept/decline 邀请服务端核销对应站内信（未读角标即时消减）且端点补传 Email claim 支持邮箱注册用户处理邀请。端点数不变 144。 |
 | v1.27.0 | 2026-09-21 | **站内信删除能力**（对齐《06 v2.12.0》，站内信组 4→6，总数 144→146）：① `DELETE /api/notifications/{id:guid}` 硬删本人单条（左滑删除，非本人/不存在 404）；② `DELETE /api/notifications/read` 清空本人全部已读（未读保留防误删漏看，返回 `{ affected }`）。ExecuteDelete 单 SQL 直删。 |
-| v1.33.0 | 2026-09-24 | **积分底座上线**（对齐《11-积分体系设计 v1.0.0》）：新增积分组 3 端点 `GET /api/points/account`（余额/累计/今日签到态/连击数）、`POST /api/points/checkin`（阶梯签到）、`GET /api/points/transactions`（流水分页）；Admin 组新增 2 端点 `GET/PUT /api/admin/points/rules[/{id}]`（赚分规则配置，system.manage 权限，实时生效）；端点总数 151→156。赚端 5 场景（登录/签到/注册/纠错采纳/入驻通过）经 PointsService 唯一写入口接线，扣分入口就位场景留白。 |
+| v1.34.0 | 2026-09-24 | **积分底座上线**（对齐《11-积分体系设计 v1.0.0》）：新增积分组 3 端点 `GET /api/points/account`（余额/累计/今日签到态/连击数）、`POST /api/points/checkin`（阶梯签到）、`GET /api/points/transactions`（流水分页）；Admin 组新增 2 端点 `GET/PUT /api/admin/points/rules[/{id}]`（赚分规则配置，system.manage 权限，实时生效）；端点总数 151→156。赚端 5 场景（登录/签到/注册/纠错采纳/入驻通过）经 PointsService 唯一写入口接线，扣分入口就位场景留白。 |
 | v1.31.0 | 2026-09-24 | 权限体系接线（对齐《04 v1.6.0》）：① 用户组 25→26 新增 `GET /api/me/permissions`（当前用户角色+权限清单，Admin 登录门禁/菜单/复核数据源）；② Admin 组新增 by-auth 三端点 `GET/POST /api/admin/users/by-auth/{sub}/roles`、`DELETE .../roles/{roleName}`（Admin 用户页以 Identity sub 为键分配平台角色）；③ Admin 组删除权限写端点 POST/PUT/DELETE /api/admin/permissions（权限点目录只读）；端点总数 150→151。 |
 | v1.30.0 | 2026-09-23 | 关店与解除归属（对齐《06 v2.17.0》）：入驻端点组 7→8 新增 `POST /api/merchant/{merchantId:guid}/close`（任一在职管理员自助关店：claim/提名已有 release 回公海、self/提名新建删除；全员站内信）；Admin 端点组新增 `POST /api/admin/merchants/{id:guid}/detach`（merchant.detach 权限，强制解除归属回公海）；总数 148→150。注销增强（API 内部）：本人待审纠错硬删+发起提名作废+匿名化级联补纠错；既有 withdraw/删被拒/注销的商户删除路径共享修复纠错 TargetId Restrict FK（DeleteByTargetAsync）。 |
 | v1.29.0 | 2026-09-22 | 纠错闭环补齐（对齐《06 v2.15.0》）：① 用户端点组 24→25，新增 GET /api/me/corrections/fields/{targetType}/{targetId}（可纠错字段清单，与审批 Apply 分支严格同集合）；② 提交端点加去重守卫（同用户同实体同字段 Pending 幂等 400）；③ Approve/Reject 发 CorrectionProcessedEvent——站内信通知提交人结果，积分奖励订阅者预留扩展点。端点 147→148。

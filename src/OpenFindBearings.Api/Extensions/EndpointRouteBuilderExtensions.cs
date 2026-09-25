@@ -36,6 +36,8 @@ namespace OpenFindBearings.Api.Extensions
 
         // v1.32.0 积分底座：账户/签到/流水 + Admin 规则配置
         app.MapPointsEndpoints();
+        // v1.35.0 寻货：需求发布/应答/选定 + Admin 治理
+        app.MapSourcingEndpoints();
 
             // 系统配置接口（内部服务拉取）
             app.MapConfigEndpoints();
