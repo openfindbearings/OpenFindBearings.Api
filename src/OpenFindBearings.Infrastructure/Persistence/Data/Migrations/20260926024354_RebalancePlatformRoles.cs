@@ -5,7 +5,6 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
 {
     /// <inheritdoc />
-    [Microsoft.EntityFrameworkCore.Migrations.Migration("20260924030000_RebalancePlatformRoles")]
     public partial class RebalancePlatformRoles : Migration
     {
         /// <inheritdoc />
