@@ -127,7 +127,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
                 new("Admin", "平台管理员", true, "管理员"),
                 new("Operator", "操作员", true, "操作员"),
                 new("Auditor", "审计员", true, "审计员"),
-                new("Individual", "个人用户", true, "App用户")
+                new("Individual", "个人用户", true, "普通用户")
             };
 
             await context.Roles.AddRangeAsync(roles);

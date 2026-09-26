@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -24,7 +24,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     WHEN 'Admin' THEN '管理员'
                     WHEN 'Operator' THEN '操作员'
                     WHEN 'Auditor' THEN '审计员'
-                    WHEN 'Individual' THEN 'App用户'
+                    WHEN 'Individual' THEN '普通用户'
                 END
                 WHERE "Name" IN ('Admin','Operator','Auditor','Individual');
                 """);
