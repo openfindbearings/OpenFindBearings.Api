@@ -30,11 +30,11 @@ FROM ""Roles"" r, ""Permissions"" p
 WHERE r.""Name"" = 'Admin' AND p.""Name"" = 'sync.review'
   AND NOT EXISTS (SELECT 1 FROM ""RolePermissions"" rp WHERE rp.""RoleId"" = r.""Id"" AND rp.""PermissionId"" = p.""Id"");
 
-INSERT INTO ""Roles"" (""Id"", ""Name"", ""Description"", ""CreatedAt"", ""IsActive"")
-SELECT gen_random_uuid(), 'Operator', '操作员', now(), true
+INSERT INTO ""Roles"" (""Id"", ""Name"", ""Description"", ""IsSystem"", ""CreatedAt"", ""IsActive"")
+SELECT gen_random_uuid(), 'Operator', '操作员', true, now(), true
 WHERE NOT EXISTS (SELECT 1 FROM ""Roles"" WHERE ""Name"" = 'Operator');
-INSERT INTO ""Roles"" (""Id"", ""Name"", ""Description"", ""CreatedAt"", ""IsActive"")
-SELECT gen_random_uuid(), 'Auditor', '审计员', now(), true
+INSERT INTO ""Roles"" (""Id"", ""Name"", ""Description"", ""IsSystem"", ""CreatedAt"", ""IsActive"")
+SELECT gen_random_uuid(), 'Auditor', '审计员', true, now(), true
 WHERE NOT EXISTS (SELECT 1 FROM ""Roles"" WHERE ""Name"" = 'Auditor');
 
 INSERT INTO ""RolePermissions"" (""RoleId"", ""PermissionId"", ""Id"", ""CreatedAt"", ""IsActive"")
