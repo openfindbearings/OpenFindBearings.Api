@@ -22,5 +22,10 @@ namespace OpenFindBearings.Application.Commands.Roles.UpdateRole
         /// 角色描述
         /// </summary>
         public string? Description { get; init; }
+
+        /// <summary>
+        /// 人读显示名（可中文，v1.38.0）。Name 为鉴权机器标识不随本命令变更
+        /// </summary>
+        public string? DisplayName { get; init; }
     }
 }

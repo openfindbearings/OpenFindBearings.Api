@@ -61,6 +61,7 @@ using OpenFindBearings.Application.Queries.Roles.GetRoleDetail;
 using OpenFindBearings.Application.Queries.Roles.GetRoles;
 using OpenFindBearings.Application.Queries.SystemConfig.GetSystemConfigs;
 using OpenFindBearings.Application.Services;
+using OpenFindBearings.Application.Queries.Users.GetAllPlatformRoles;
 using OpenFindBearings.Application.Queries.Users.GetUserByAuthId;
 using OpenFindBearings.Application.Queries.Users.GetUserPermissions;
 using OpenFindBearings.Application.Queries.Users.GetUserRoles;
@@ -1374,6 +1375,28 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("AdminRemoveRoleByAuth")
             .WithSummary("按认证主体移除角色")
             .WithDescription("以 Identity sub 为键移除平台角色")
+            .RequirePermission("user.manage");
+
+            /// <summary>
+            /// 批量获取全部用户的平台角色映射（v1.38.0）
+            /// 改动说明：Admin 用户列表角色列需要按 Identity sub 合并 API 侧平台角色，
+            /// 逐行调 by-auth 会 N+1；后台角色人数有限，一次全量返回字典 sub→roles[]
+            /// </summary>
+            group.MapGet("/users/platform-roles", async (
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext,
+                CancellationToken cancellationToken) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                var map = await mediator.Send(new GetAllPlatformRolesQuery(), cancellationToken);
+                return ApiResponseHelper.Ok(map, httpContext: httpContext);
+            })
+            .WithName("AdminGetAllPlatformRoles")
+            .WithSummary("批量获取平台角色映射")
+            .WithDescription("返回所有挂了平台角色的用户 sub→角色名列表字典，供 Admin 用户列表合并展示")
             .RequirePermission("user.manage");
         }
     }

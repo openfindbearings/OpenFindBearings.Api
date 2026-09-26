@@ -120,12 +120,14 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
             //   MerchantMembers 成员表（PermissionService.IsMerchantAdmin），Roles 表同名角色
             //   永无赋值与消费方；存量库由迁移清理。新增 Operator/Auditor 落地轻量三员分立：
             //   管理员=全权、操作员=日常 CRUD+审核、审计员=只读+审计日志
+            // 改动说明（v1.38.0）：第 4 参为中文显示名（Name 保持英文机器标识），与存量库迁移
+            // AddRoleDisplayName 的 UPDATE 保持一致，新装/存量两轨同名
             var roles = new List<Role>
             {
-                new("Admin", "平台管理员", true),
-                new("Operator", "操作员", true),
-                new("Auditor", "审计员", true),
-                new("Individual", "个人用户", true)
+                new("Admin", "平台管理员", true, "管理员"),
+                new("Operator", "操作员", true, "操作员"),
+                new("Auditor", "审计员", true, "审计员"),
+                new("Individual", "个人用户", true, "App用户")
             };
 
             await context.Roles.AddRangeAsync(roles);

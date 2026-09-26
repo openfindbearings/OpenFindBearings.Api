@@ -11,9 +11,14 @@
         public Guid Id { get; set; }
 
         /// <summary>
-        /// 角色名称
+        /// 角色名称（英文机器标识，鉴权键）
         /// </summary>
         public string Name { get; set; } = string.Empty;
+
+        /// <summary>
+        /// 人读显示名（可中文，v1.38.0），空则界面回退显示 Name
+        /// </summary>
+        public string? DisplayName { get; set; }
 
         /// <summary>
         /// 角色描述
