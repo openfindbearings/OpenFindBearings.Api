@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Domain.Repositories;
 
@@ -30,10 +30,11 @@ namespace OpenFindBearings.Application.Commands.Roles.DeleteRole
                 throw new InvalidOperationException($"角色不存在: {request.Id}");
             }
 
-            // 检查是否为系统角色（不可删除）
-            // 改动说明（v1.31.0）：内置角色名单对齐种子（Admin/Operator/Auditor/Individual），
-            //   旧名单 GlobalAdmin/MerchantAdmin 已不存在，守卫形同虚设
-            if (role.Name is "Admin" or "Operator" or "Auditor" or "Individual")
+            // 检查是否为系统内置角色（不可删除）
+            // 改动说明（v1.39.0）：从硬编码名字名单改为读 Role.IsSystem 字段——
+            //   字段本就是"内置不可删"的设计载体（SeedData 落 true），此前写了没人读；
+            //   接通后管理员新建的自定义角色可删、内置四角色受字段保护，名单退役
+            if (role.IsSystem)
             {
                 throw new InvalidOperationException($"系统角色不可删除: {role.Name}");
             }
