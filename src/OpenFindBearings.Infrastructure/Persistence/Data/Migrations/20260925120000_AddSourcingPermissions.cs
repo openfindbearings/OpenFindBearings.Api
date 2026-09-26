@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
 {
     /// <inheritdoc />
+    [Microsoft.EntityFrameworkCore.Migrations.Migration("20260925120000_AddSourcingPermissions")]
     public partial class AddSourcingPermissions : Migration
     {
         /// <inheritdoc />
