@@ -4,6 +4,7 @@ using OpenFindBearings.Application.Shared.Interfaces;
 using OpenFindBearings.Application.Services;
 using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Repositories;
+using OpenFindBearings.Domain.Services;
 
 namespace OpenFindBearings.Infrastructure.Services
 {
@@ -127,8 +128,10 @@ namespace OpenFindBearings.Infrastructure.Services
         /// <inheritdoc/>
         public async Task<CheckinResult> CheckinAsync(Guid userId, CancellationToken cancellationToken = default)
         {
-            var today = DateTime.UtcNow.Date;
-            var bizId = $"checkin:{userId:N}:{today:yyyyMMdd}";
+            // 改动说明（v1.36.1 日界修复）：签到日键与连签基准从 UTC 日改为 BusinessClock 北京日——
+            // 北京时间早 8 点前的签到不再撞昨日 UTC 键导致漏发分；DB 写入仍纯 UTC 不变
+            var today = BusinessClock.Today;
+            var bizId = $"checkin:{userId:N}:{BusinessClock.DateKey}";
             if (await _transactionRepository.ExistsBizIdAsync(bizId, cancellationToken))
                 return new CheckinResult(0, 0, true);
 

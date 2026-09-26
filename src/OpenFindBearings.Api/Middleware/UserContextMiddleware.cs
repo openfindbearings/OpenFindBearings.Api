@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using OpenFindBearings.Application.Commands.Users.Commands;
 using OpenFindBearings.Application.Commands.Users.CreateUserFromAuth;
 using OpenFindBearings.Application.Commands.Users.SyncUserProfile;
@@ -7,6 +7,7 @@ using OpenFindBearings.Application.Queries.Users.GetUserByAuthId;
 using OpenFindBearings.Application.Queries.Users.GetUserBySessionId;
 using OpenFindBearings.Application.Services;
 using OpenFindBearings.Domain.Entities;
+using OpenFindBearings.Domain.Services;
 using OpenFindBearings.Domain.Repositories;
 using System.Security.Claims;
 
@@ -187,7 +188,7 @@ namespace OpenFindBearings.Api.Middleware
                             registerKey, "新用户注册奖励");
                     }
                     await points.GrantAsync(resolvedUserId.Value, PointTransaction.TypeDailyLogin,
-                        $"daily_login:{resolvedUserId.Value:N}:{DateTime.UtcNow:yyyyMMdd}");
+                        $"daily_login:{resolvedUserId.Value:N}:{BusinessClock.DateKey}");
                 }
             }
             catch (Exception ex)

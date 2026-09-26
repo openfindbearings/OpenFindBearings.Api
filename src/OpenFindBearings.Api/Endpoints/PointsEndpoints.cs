@@ -4,6 +4,7 @@ using OpenFindBearings.Api.Helpers;
 using OpenFindBearings.Api.Services;
 using OpenFindBearings.Application.Services;
 using OpenFindBearings.Domain.Entities;
+using OpenFindBearings.Domain.Services;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Api.Endpoints
@@ -36,7 +37,7 @@ namespace OpenFindBearings.Api.Endpoints
                 var userId = currentUser.UserId.Value;
                 var account = await accountRepository.GetByUserIdAsync(userId);
                 var todayCheckedIn = await transactionRepository.ExistsBizIdAsync(
-                    $"checkin:{userId:N}:{DateTime.UtcNow:yyyyMMdd}");
+                    $"checkin:{userId:N}:{BusinessClock.DateKey}");
 
                 return ApiResponseHelper.Ok(new
                 {
@@ -44,7 +45,9 @@ namespace OpenFindBearings.Api.Endpoints
                     totalEarned = account?.TotalEarned ?? 0,
                     totalSpent = account?.TotalSpent ?? 0,
                     todayCheckedIn,
-                    consecutiveDays = account?.ConsecutiveCheckinDays ?? 0
+                    consecutiveDays = account?.ConsecutiveCheckinDays ?? 0,
+                    // v1.36.1：下发业务日界偏移——前端日期条/对勾按此换算，防管理员改配置后前端硬编码 +8 漂移
+                    tzOffsetHours = (int)BusinessClock.Offset.TotalHours
                 }, httpContext: httpContext);
             })
             .WithName("GetPointAccount")
@@ -120,7 +123,7 @@ namespace OpenFindBearings.Api.Endpoints
 
                 var userId = currentUser.UserId.Value;
                 var rules = await ruleRepository.GetAllAsync();
-                var todayStart = DateTime.UtcNow.Date;
+                var todayStart = BusinessClock.TodayUtc;
                 var doneToday = await transactionRepository.GetGrantTypesAsync(userId, todayStart);
                 var doneEver = await transactionRepository.GetGrantTypesAsync(userId, null);
                 // 改动说明（v1.34.0）：daily 任务今日完成次数（任务中心显示"今日 n/上限"）
@@ -132,7 +135,14 @@ namespace OpenFindBearings.Api.Endpoints
                     PointTransaction.TypeDailyLogin, PointTransaction.TypeDailyCheckin, PointTransaction.TypeCorrectionAdopted
                 };
 
-                var tasks = rules.Where(r => r.IsEnabled).Select(r =>
+                // 改动说明（v1.36.1）：寻货加量两条规则是**消费定价**不是赚分任务，
+                // 从任务清单过滤（Admin 规则页保留可调价）；否则任务中心出现"自动发放"的伪任务
+                var pricingOnlyTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    "sourcing_publish_bonus", "sourcing_respond_bonus"
+                };
+
+                var tasks = rules.Where(r => r.IsEnabled && !pricingOnlyTypes.Contains(r.GrantType)).Select(r =>
                 {
                     var isDaily = dailyTypes.Contains(r.GrantType);
                     return new
