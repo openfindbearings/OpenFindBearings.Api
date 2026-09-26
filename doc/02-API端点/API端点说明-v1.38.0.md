@@ -10,7 +10,7 @@
 
 | 版本 | 日期 | 变更说明 |
 |------|------|----------|
-| v1.38.0 | 2026-09-26 | 角色显示名分离：Role 实体/RoleDto 新增 DisplayName（可空，Keycloak 式标识/显示分离）；CreateRole 的 Name 限英文标识（^[A-Za-z][A-Za-z0-9_]*$）、中文名走 DisplayName；迁移 AddRoleDisplayName（官方工具生成含 Designer）为内置四角色赋中文名（管理员/操作员/审计员/App用户）；GET /api/admin/users/platform-roles 批量端点（sub→roles[] 字典，Admin 用户列表角色列合并防 N+1）；修复 GetRoleDetailQuery 基类强转派生类 InvalidCastException 隐性 500 |
+| v1.38.0 | 2026-09-26 | 角色显示名分离：Role 实体/RoleDto 新增 DisplayName（可空，Keycloak 式标识/显示分离）；CreateRole 的 Name 限英文标识（^[A-Za-z][A-Za-z0-9_]*$）、中文名走 DisplayName；迁移 AddRoleDisplayName（官方工具生成含 Designer）为内置四角色赋中文名（管理员/操作员/审计员/App用户）；GET /api/admin/users/platform-roles 批量端点（sub→roles[] 字典，Admin 用户列表角色列合并防 N+1）；修复 GetRoleDetailQuery 基类强转派生类 InvalidCastException 隐性 500；POST /api/admin/users/provision 预置业务用户（按 sub find-or-create + 批量挂角色，解后台新建账号未登录过不能分配角色的 404 死结）；端点总数 166→167 |
 | v1.37.0 | 2026-09-26 | 备案拆分与客服电话接线：MobileConfigDto 新增 BeiAnApp/BeiAnMini 字段，GetMobileConfigQueryHandler 读 Mobile.BeiAnApp/Mobile.BeiAnMini 两键；SeedData 补两键（EnsureConfigKeys 幂等补全，无需迁移）并明确 Site.BeiAn=网站备案语义 |
 | v1.0.0 | 2026-06-12 | 初始版本 |
 | v1.1.0 | 2026-06-21 | 补充 Admin 端点权限表（17→46 端点） |

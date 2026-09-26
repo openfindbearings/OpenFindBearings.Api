@@ -61,6 +61,7 @@ using OpenFindBearings.Application.Queries.Roles.GetRoleDetail;
 using OpenFindBearings.Application.Queries.Roles.GetRoles;
 using OpenFindBearings.Application.Queries.SystemConfig.GetSystemConfigs;
 using OpenFindBearings.Application.Services;
+using OpenFindBearings.Application.Commands.Users.ProvisionUser;
 using OpenFindBearings.Application.Queries.Users.GetAllPlatformRoles;
 using OpenFindBearings.Application.Queries.Users.GetUserByAuthId;
 using OpenFindBearings.Application.Queries.Users.GetUserPermissions;
@@ -1397,6 +1398,29 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("AdminGetAllPlatformRoles")
             .WithSummary("批量获取平台角色映射")
             .WithDescription("返回所有挂了平台角色的用户 sub→角色名列表字典，供 Admin 用户列表合并展示")
+            .RequirePermission("user.manage");
+
+            /// <summary>
+            /// 预置业务用户并挂平台角色（v1.38.0）
+            /// 改动说明：后台新建 Identity 账号后业务库无 User 行（JIT 制），平台角色分配必 404；
+            /// 本端点 find-or-create 建行 + 批量授权，供 Admin"新建后台用户"弹窗建号即分配
+            /// </summary>
+            group.MapPost("/users/provision", async (
+                ProvisionUserCommand command,
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext,
+                CancellationToken cancellationToken) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                var id = await mediator.Send(command, cancellationToken);
+                return ApiResponseHelper.Ok(new { id }, "用户预置成功", httpContext);
+            })
+            .WithName("AdminProvisionUser")
+            .WithSummary("预置业务用户并挂角色")
+            .WithDescription("按 Identity sub find-or-create 业务用户行并批量授予平台角色（幂等）")
             .RequirePermission("user.manage");
         }
     }
