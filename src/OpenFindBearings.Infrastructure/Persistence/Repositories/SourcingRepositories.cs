@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using OpenFindBearings.Domain.Aggregates;
 using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Repositories;
+using OpenFindBearings.Domain.Services;
 using OpenFindBearings.Infrastructure.Persistence.Data;
 
 namespace OpenFindBearings.Infrastructure.Persistence.Repositories
@@ -70,7 +71,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         /// <inheritdoc/>
         public async Task<int> CountPublishedTodayAsync(Guid userId, CancellationToken cancellationToken = default)
             => await _context.Set<SourcingDemand>()
-                .CountAsync(d => d.PublisherUserId == userId && d.CreatedAt >= DateTime.UtcNow.Date, cancellationToken);
+                .CountAsync(d => d.PublisherUserId == userId && d.CreatedAt >= BusinessClock.TodayUtc, cancellationToken);
 
         /// <inheritdoc/>
         public async Task<int> ExpireOverdueAsync(CancellationToken cancellationToken = default)
@@ -134,7 +135,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         /// <inheritdoc/>
         public async Task<int> CountRespondedTodayAsync(Guid merchantId, CancellationToken cancellationToken = default)
             => await _context.Set<SourcingResponse>()
-                .CountAsync(r => r.MerchantId == merchantId && r.CreatedAt >= DateTime.UtcNow.Date, cancellationToken);
+                .CountAsync(r => r.MerchantId == merchantId && r.CreatedAt >= BusinessClock.TodayUtc, cancellationToken);
 
         /// <inheritdoc/>
         public async Task<List<SourcingResponse>> GetPendingByDemandAsync(Guid demandId, CancellationToken cancellationToken = default)

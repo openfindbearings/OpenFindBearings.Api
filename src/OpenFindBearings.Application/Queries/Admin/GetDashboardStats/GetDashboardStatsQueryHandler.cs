@@ -1,7 +1,8 @@
-﻿using MediatR;
+using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.DTOs;
 using OpenFindBearings.Domain.Repositories;
+using OpenFindBearings.Domain.Services;
 using OpenFindBearings.Domain.Specifications;
 
 namespace OpenFindBearings.Application.Queries.Admin.GetDashboardStats
@@ -47,10 +48,13 @@ namespace OpenFindBearings.Application.Queries.Admin.GetDashboardStats
             GetDashboardStatsQuery request,
             CancellationToken cancellationToken)
         {
-            var now = DateTime.UtcNow;
-            var todayStart = now.Date;
-            var weekStart = now.Date.AddDays(-(int)now.DayOfWeek + (int)DayOfWeek.Monday);
-            var monthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+            // 改动说明（v1.36.1 日界收口）：今日/本周/本月统计从 UTC 零点改为 BusinessClock 业务日界，
+            // 与积分/额度口径统一（全仓时间审计后 Api 侧最后一处自算"今天"）；
+            // 日历运算（周起点/月起点）在业务日历上做，减偏移折回 UTC 后与 timestamptz 列比较
+            var bizToday = BusinessClock.Today;
+            var todayStart = BusinessClock.TodayUtc;
+            var weekStart = bizToday.AddDays(-(int)bizToday.DayOfWeek + (int)DayOfWeek.Monday) - BusinessClock.Offset;
+            var monthStart = new DateTime(bizToday.Year, bizToday.Month, 1) - BusinessClock.Offset;
 
             var bearingTotal = await _bearingRepository.GetTotalCountAsync(new BearingSearchParams(), cancellationToken);
             var bearingToday = await _bearingRepository.GetCountSinceAsync(todayStart, cancellationToken);

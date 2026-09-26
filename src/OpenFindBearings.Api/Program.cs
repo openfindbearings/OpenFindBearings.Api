@@ -86,6 +86,35 @@ using (var migrateScope = app.Services.CreateScope())
         {
             app.Logger.LogDebug("数据库已是最新，无需迁移");
         }
+
+        // v1.36.1：读业务时区偏移（SystemConfig Business.TimeZoneOffsetHours，WordPress options 式
+        // 管理员定义配置；不读服务器/DB 会话时区——容器默认 UTC、连接串又钉 Timezone=UTC，取了必错）。
+        // BusinessClock 日界影响签到/登录/额度幂等键，启动即定、改后重启生效（滚动期新旧偏移并存
+        // 会导致部分用户当日双发）；配置缺失/读取失败保持默认 UTC+8，不阻塞启动
+        try
+        {
+            var tzConn = db.Database.GetDbConnection();
+            await tzConn.OpenAsync();
+            try
+            {
+                await using var tzCmd = tzConn.CreateCommand();
+                tzCmd.CommandText = "SELECT \"Value\" FROM \"SystemConfigs\" WHERE \"Key\" = 'Business.TimeZoneOffsetHours' LIMIT 1";
+                var tzVal = await tzCmd.ExecuteScalarAsync();
+                if (tzVal != null && int.TryParse(tzVal.ToString(), out var tzHours))
+                {
+                    OpenFindBearings.Domain.Services.BusinessClock.Configure(tzHours);
+                    app.Logger.LogInformation("业务日界偏移已配置：UTC{TzHours:+0;-0;+0}", tzHours);
+                }
+            }
+            finally
+            {
+                await tzConn.CloseAsync();
+            }
+        }
+        catch (Exception tzEx)
+        {
+            app.Logger.LogWarning(tzEx, "业务时区配置读取失败，使用默认 UTC+8");
+        }
     }
 }
 

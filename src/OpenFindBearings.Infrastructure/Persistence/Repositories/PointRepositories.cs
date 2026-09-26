@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Repositories;
+using OpenFindBearings.Domain.Services;
 using OpenFindBearings.Infrastructure.Persistence.Data;
 
 namespace OpenFindBearings.Infrastructure.Persistence.Repositories
@@ -69,8 +70,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 
         public async Task<int> SumTodayByTypeAsync(Guid userId, string grantType, CancellationToken cancellationToken = default)
         {
-            // 当日边界用 UTC 日期（全项目 UTC 规范）
-            var today = DateTime.UtcNow.Date;
+            // 改动说明（v1.36.1 日界修复）：日上限的"当日"从 UTC 日界改为北京日界
+            // （BusinessClock.TodayUtc 折回 UTC 后仍是 timestamptz 可比较的 UTC 时刻）
+            var today = BusinessClock.TodayUtc;
             var sum = await _context.Set<PointTransaction>()
                 .Where(t => t.UserId == userId && t.GrantType == grantType
                     && t.Direction == PointTransaction.DirectionCredit && t.CreatedAt >= today)
