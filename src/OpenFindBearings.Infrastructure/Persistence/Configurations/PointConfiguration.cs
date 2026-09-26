@@ -21,6 +21,12 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             builder.ToTable("PointAccounts");
             builder.HasKey(p => p.Id);
 
+            // 改动说明（M0/积分商城 v2.1.0）：补真并发令牌——此前"乐观并发"名不副实
+            // （无并发令牌），并发双扣读-改-写会丢更新。映射 PG 系统列 xmin 为并发令牌
+            // （每次 UPDATE 自增），无需 DDL（纯模型变更，不需迁移）；商城把扣分/结算/退款
+            // 变高频后此为 P0 前置
+            builder.Property<uint>("xmin").HasColumnType("xid").IsRowVersion().IsConcurrencyToken();
+
             // 一人一户：唯一索引兜底（服务层先查后建，并发冲突由索引拒绝）
             builder.HasIndex(p => p.UserId)
                 .IsUnique()

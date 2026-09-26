@@ -1,3 +1,5 @@
+using OpenFindBearings.Domain.Entities;
+
 namespace OpenFindBearings.Application.Services
 {
     /// <summary>
@@ -15,9 +17,11 @@ namespace OpenFindBearings.Application.Services
         /// <param name="grantType">动作类型（PointTransaction.Type* 常量，需规则表存在且启用）</param>
         /// <param name="bizId">幂等键（如 daily_login:{userId}:{yyyyMMdd}），重复直接跳过</param>
         /// <param name="remark">明细备注（可空）</param>
+        /// <param name="amountOverride">指定分值（可空=用规则表 Amount）。仅平台内部定义的分值
+        /// 场景使用（如成就解锁甜头按成就定义发），仍受规则存在/启用与日上限守卫</param>
         /// <returns>实际发放分值（0=被幂等/上限/停用拦截）</returns>
         Task<int> GrantAsync(Guid userId, string grantType, string? bizId = null,
-            string? remark = null, CancellationToken cancellationToken = default);
+            string? remark = null, int? amountOverride = null, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// 发放一次性奖励（v1.34.0 防刷）：先向认领台账原子占坑（键=手机号/信用代码等
@@ -44,6 +48,19 @@ namespace OpenFindBearings.Application.Services
         /// <returns>实际扣减分值</returns>
         Task<int> DeductAsync(Guid userId, string sceneType, int amount, string? bizId = null,
             string? remark = null, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 退款（v2.3.0 商城虚拟权益）：按指定分值原路退回，**不查规则表**（退款金额来自订单快照，
+        /// 规则表停用/改值都不应影响退款）；bizId 幂等防重复退；失败静默返回 0 不抛出
+        /// </summary>
+        /// <param name="userId">退款目标用户</param>
+        /// <param name="amount">退回分值（正数）</param>
+        /// <param name="bizId">幂等键（如 mall_refund:{orderId}）</param>
+        /// <param name="remark">明细备注</param>
+        /// <param name="grantType">流水类型（缺省 mall_refund）</param>
+        /// <returns>实际退回分值（0=幂等命中或异常）</returns>
+        Task<int> RefundAsync(Guid userId, int amount, string bizId, string? remark = null,
+            string grantType = PointTransaction.TypeMallRefund, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// 每日签到（阶梯分值+连续天数推进，bizId 幂等防同日重复）

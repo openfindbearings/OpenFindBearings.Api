@@ -60,17 +60,37 @@ namespace OpenFindBearings.Api.Endpoints
             group.MapPost("/checkin", async (
                 [FromServices] ICurrentUserService currentUser,
                 [FromServices] IPointsService pointsService,
+                [FromServices] IAchievementService achievementService,
                 HttpContext httpContext) =>
             {
                 if (!currentUser.UserId.HasValue)
                     return ApiResponseHelper.Unauthorized(httpContext: httpContext);
 
                 var result = await pointsService.CheckinAsync(currentUser.UserId.Value);
+
+                // 改动说明（v2.1.0 成就子系统）：签到成功后驱动忠诚类成就（连签仪表+签到总数计数）；
+                // 成就失败绝不影响签到主流程；新点亮键回传供前端 toast
+                var unlocked = new List<string>();
+                if (!result.AlreadyCheckedIn)
+                {
+                    try
+                    {
+                        unlocked.AddRange(await achievementService.SetGaugeAsync(
+                            Domain.Entities.AchievementScope.Personal, currentUser.UserId.Value,
+                            "checkin_streak", result.ConsecutiveDays));
+                        unlocked.AddRange(await achievementService.IncrementAsync(
+                            Domain.Entities.AchievementScope.Personal, currentUser.UserId.Value,
+                            "checkin_total", 1));
+                    }
+                    catch { /* 成就为旁路增强，吞掉不反噬签到 */ }
+                }
+
                 return ApiResponseHelper.Ok(new
                 {
                     amount = result.Amount,
                     consecutiveDays = result.ConsecutiveDays,
-                    alreadyCheckedIn = result.AlreadyCheckedIn
+                    alreadyCheckedIn = result.AlreadyCheckedIn,
+                    unlockedAchievements = unlocked
                 }, httpContext: httpContext);
             })
             .WithName("DailyCheckin")

@@ -1,5 +1,6 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
+using OpenFindBearings.Application.Services;
 using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
 
@@ -14,15 +15,18 @@ namespace OpenFindBearings.Application.Commands.Merchants.VerifyMerchant
     {
         private readonly IMerchantRepository _merchantRepository;
         private readonly IMerchantDocumentRepository _documentRepository;
+        private readonly IAchievementService _achievements;
         private readonly ILogger<VerifyMerchantCommandHandler> _logger;
 
         public VerifyMerchantCommandHandler(
             IMerchantRepository merchantRepository,
             IMerchantDocumentRepository documentRepository,
+            IAchievementService achievements,
             ILogger<VerifyMerchantCommandHandler> logger)
         {
             _merchantRepository = merchantRepository;
             _documentRepository = documentRepository;
+            _achievements = achievements;
             _logger = logger;
         }
 
@@ -52,6 +56,13 @@ namespace OpenFindBearings.Application.Commands.Merchants.VerifyMerchant
             //   使其不再被 Sync 爬虫同步覆盖（覆盖保护以 DataSource 为键，与认领轴解耦）。
             merchant.SetDataSource(OpenFindBearings.Domain.ValueObjects.DataSource.FromManual(request.VerifiedBy));
             await _merchantRepository.UpdateAsync(merchant, cancellationToken);
+
+            // 改动说明（v2.1.0 成就子系统）：认证通过设商户轨"认证商家"仪表成就（旁路，失败不反噬）
+            try
+            {
+                await _achievements.SetGaugeAsync(Domain.Entities.AchievementScope.Merchant, merchant.Id, "merchant_verified", 1, cancellationToken);
+            }
+            catch { /* 成就为旁路增强 */ }
 
             _logger.LogInformation("商家认证成功: {MerchantId}", request.Id);
         }

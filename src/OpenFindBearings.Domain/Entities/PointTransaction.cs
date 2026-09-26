@@ -28,6 +28,14 @@ namespace OpenFindBearings.Domain.Entities
         public const string TypeMerchantProfileComplete = "merchant_profile_complete";
         /// <summary>赚分动作类型：商户首件商品上架（一次性，bizId 绑信用代码）</summary>
         public const string TypeMerchantFirstProduct = "merchant_first_product";
+        // 改动说明（v2.1.0 成就子系统）：成就解锁一次性可花积分甜头（小额，bizId=ach:{key}:{owner} 幂等）
+        public const string TypeAchievementUnlock = "achievement_unlock";
+
+        /// <summary>商城兑换扣分场景（v2.3.0 商城虚拟权益，DeductAsync 的 sceneType）</summary>
+        public const string TypeMallRedeem = "mall_redeem";
+
+        /// <summary>商城兑换失败退分场景（v2.3.0，履约异常原路退回，GrantAsync 的 grantType 不走规则表——直接走退款专用路径）</summary>
+        public const string TypeMallRefund = "mall_refund";
 
         /// <summary>所属用户 ID</summary>
         public Guid UserId { get; private set; }
