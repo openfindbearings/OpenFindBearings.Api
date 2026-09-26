@@ -22,6 +22,10 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             builder.Property(r => r.Description)
                 .HasMaxLength(200);
 
+            // 改动说明（v1.38.0）：显示名可空列，中文人读名称；唯一索引仅 Name（机器标识）
+            builder.Property(r => r.DisplayName)
+                .HasMaxLength(50);
+
             builder.HasMany(r => r.UserRoles)
                 .WithOne(ur => ur.Role)
                 .HasForeignKey(ur => ur.RoleId)

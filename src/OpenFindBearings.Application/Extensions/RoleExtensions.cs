@@ -11,6 +11,7 @@ namespace OpenFindBearings.Application.Extensions
             {
                 Id = role.Id,
                 Name = role.Name,
+                DisplayName = role.DisplayName,
                 Description = role.Description,
                 Permissions = role.RolePermissions.Select(rp => rp.Permission?.Name ?? string.Empty).ToList(),
                 UserCount = role.UserRoles?.Count ?? 0,

@@ -41,8 +41,8 @@ namespace OpenFindBearings.Application.Commands.Roles.UpdateRole
             }
 
             role.UpdateDescription(request.Description);
-            // 如果需要更新名称，需要 Role 实体添加 UpdateName 方法
-            // role.UpdateName(request.Name);
+            // 改动说明（v1.38.0）：显示名可编辑（中文自由），Name 机器标识保持不可改（鉴权键稳定）
+            role.UpdateDisplayName(request.DisplayName);
 
             await _roleRepository.UpdateAsync(role, cancellationToken);
 

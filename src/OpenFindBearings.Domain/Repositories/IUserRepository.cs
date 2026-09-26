@@ -29,6 +29,13 @@ namespace OpenFindBearings.Domain.Repositories
         Task<IEnumerable<User>> GetAdminsAsync(CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// 获取所有挂了平台角色的用户（含 UserRoles→Role 导航）。
+        /// 改动说明（v1.38.0）：Admin 用户列表按 Identity sub 批量合并平台角色徽章用，
+        /// 后台角色人数有限全量返回，避免逐行 N+1 查询
+        /// </summary>
+        Task<IEnumerable<User>> GetUsersWithRolesAsync(CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// 搜索用户
         /// </summary>
         Task<PagedResult<User>> SearchAsync(

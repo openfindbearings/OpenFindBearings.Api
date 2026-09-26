@@ -44,7 +44,19 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
             return await _context.Users
                 .Include(u => u.UserRoles)
                     .ThenInclude(ur => ur.Role)
-                .Where(u => u.UserRoles.Any(ur => ur.Role.Name == "Admin") && u.IsActive && u.DeactivatedAt == null)
+                .Where(u => u.UserRoles.Any(ur => ur.Role.Name == "Admin") && u.IsActive)
+                .ToListAsync(cancellationToken);
+        }
+
+        /// <inheritdoc/>
+        // 改动说明（v1.38.0）：Admin 用户列表批量合并平台角色徽章（含已停用账号——列表要显示其历史角色），
+        // 只返回挂了至少一个角色的用户，Individual 全员默认挂故也在内，由 Admin 侧按角色名分类展示
+        public async Task<IEnumerable<User>> GetUsersWithRolesAsync(CancellationToken cancellationToken = default)
+        {
+            return await _context.Users
+                .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.Role)
+                .Where(u => u.UserRoles.Any())
                 .ToListAsync(cancellationToken);
         }
 
