@@ -85,33 +85,51 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
 
             #region 角色和权限
             // 创建权限
+            // 改动说明（v1.39.0 权限目录重排）：三段式"资源.动作"目录，与存量库迁移
+            // RebalancePermissionCatalog 双轨一致。拆分：品牌/类型/映射/任务/积分独立键；
+            // sync.review 更名 review.sync；认证管理拆 view/ban/manage/assign 四级（封禁可下放
+            // 操作员、角色分配 Admin 专属防提权）；删除 app 侧僵尸键 correction.submit/favorite.*
+            // （app 权限模型=登录态+业务资格，不走 RBAC）
             var permissions = new List<Permission>
             {
-                new("bearing.view", "查看产品"),
-                new("bearing.create", "创建产品"),
-                new("bearing.edit", "编辑产品"),
-                new("bearing.delete", "删除产品"),
-                new("merchant.view", "查看商家"),
-                new("merchant.verify", "认证商家"),
-                new("merchant.manage", "管理商家"),
-                // v2.17.0：Admin 强制解除商户归属（存量库由迁移 AddMerchantDetachPermission 补插）
-                new("merchant.detach", "解除商户归属"),
-                new("correction.submit", "提交纠错"),
-                new("correction.review", "审核纠错"),
-                new("favorite.bearing", "收藏轴承"),
-                new("favorite.merchant", "关注商家"),
-                new("user.manage", "管理用户"),
-                new("role.manage", "管理角色"),
                 new("dashboard.view", "查看仪表盘"),
-                new("audit.view", "查看审计日志"),
+                new("bearing.view", "查看轴承"),
+                new("bearing.create", "创建轴承"),
+                new("bearing.edit", "编辑轴承"),
+                new("bearing.delete", "删除轴承"),
+                new("brand.view", "查看品牌"),
+                new("brand.create", "创建品牌"),
+                new("brand.edit", "编辑品牌"),
+                new("brand.delete", "删除品牌"),
+                new("type.view", "查看型号"),
+                new("type.create", "创建型号"),
+                new("type.edit", "编辑型号"),
+                new("type.delete", "删除型号"),
+                new("merchant.view", "查看商家"),
+                new("merchant.manage", "编辑商家"),
+                new("merchant.verify", "认证审核商家"),
+                new("merchant.detach", "解除商家归属"),
+                new("merchant.import", "商家库存导入"),
+                new("data.restore", "恢复已删数据"),
+                new("data.harddelete", "彻底删除数据"),
+                new("mapping.view", "查看映射维护"),
+                new("mapping.manage", "管理映射关系"),
+                new("review.sync", "同步数据审核"),
+                new("correction.review", "审核纠错"),
+                new("sourcing.view", "查看寻货"),
+                new("sourcing.manage", "治理寻货"),
+                new("sync.run", "触发爬虫任务"),
+                new("user.view", "查看用户"),
+                new("user.ban", "封禁与解禁用户"),
+                new("user.manage", "管理用户账号"),
+                new("user.assign", "分配平台角色"),
+                new("role.manage", "管理角色"),
+                new("permission.view", "查看权限清单"),
                 new("system.view", "查看系统配置"),
-                new("system.manage", "管理系统配置"),
-                new("data.restore", "恢复数据"),
-                new("data.harddelete", "彻底删除"),
-                // v1.31.0：同步数据审核/映射管理面板权限（Admin 菜单与 Controller 策略消费）
-                new("sync.review", "同步数据审核"),
+                new("system.manage", "修改系统配置"),
+                new("points.manage", "配置积分任务"),
+                new("audit.view", "查看审计日志"),
             };
-
             await context.Permissions.AddRangeAsync(permissions);
             await context.SaveChangesAsync();
 
@@ -137,6 +155,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
             var adminRole = roles.First(r => r.Name == "Admin");
             var operatorRole = roles.First(r => r.Name == "Operator");
             var auditorRole = roles.First(r => r.Name == "Auditor");
+            // 开发种子用户挂 Individual 身份角色（v1.39.0：Individual 零权限点，仅作前端用户身份标记）
             var individualRole = roles.First(r => r.Name == "Individual");
 
             var rolePermissions = new List<RolePermission>();
@@ -147,39 +166,37 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
                 rolePermissions.Add(new RolePermission(adminRole.Id, permission.Id));
             }
 
-            // Operator 拥有日常运营权限（产品维护 + 商家认证 + 纠错/同步审核 + 数据恢复）
-            rolePermissions.AddRange([
-                new(operatorRole.Id, permissions.First(p => p.Name == "bearing.view").Id),
-                new(operatorRole.Id, permissions.First(p => p.Name == "bearing.create").Id),
-                new(operatorRole.Id, permissions.First(p => p.Name == "bearing.edit").Id),
-                new(operatorRole.Id, permissions.First(p => p.Name == "merchant.view").Id),
-                new(operatorRole.Id, permissions.First(p => p.Name == "merchant.verify").Id),
-                new(operatorRole.Id, permissions.First(p => p.Name == "correction.submit").Id),
-                new(operatorRole.Id, permissions.First(p => p.Name == "correction.review").Id),
-                new(operatorRole.Id, permissions.First(p => p.Name == "sync.review").Id),
-                new(operatorRole.Id, permissions.First(p => p.Name == "dashboard.view").Id),
-                new(operatorRole.Id, permissions.First(p => p.Name == "data.restore").Id),
-            ]);
+            // Operator（v1.39.0 重定义）= 仪表盘 + 数据管理 view/create/edit（无删除/恢复/解除归属）
+            // + 审核组全量 + 映射查看 + 用户封禁（客服常规处置）；
+            // 刻意不含：delete/restore/harddelete/detach/mapping.manage/sync.run/user.assign/role.manage
+            string[] operatorPerms = [
+                "dashboard.view",
+                "bearing.view", "bearing.create", "bearing.edit",
+                "brand.view", "brand.create", "brand.edit",
+                "type.view", "type.create", "type.edit",
+                "merchant.view", "merchant.manage", "merchant.verify", "merchant.import",
+                "mapping.view",
+                "review.sync", "correction.review", "sourcing.view", "sourcing.manage",
+                "user.view", "user.ban",
+            ];
+            foreach (var name in operatorPerms)
+            {
+                rolePermissions.Add(new RolePermission(operatorRole.Id, permissions.First(p => p.Name == name).Id));
+            }
 
-            // Auditor 拥有只读 + 审计权限（无任何写权限点）
-            rolePermissions.AddRange([
-                new(auditorRole.Id, permissions.First(p => p.Name == "dashboard.view").Id),
-                new(auditorRole.Id, permissions.First(p => p.Name == "audit.view").Id),
-                new(auditorRole.Id, permissions.First(p => p.Name == "system.view").Id),
-                new(auditorRole.Id, permissions.First(p => p.Name == "bearing.view").Id),
-                new(auditorRole.Id, permissions.First(p => p.Name == "merchant.view").Id),
-                new(auditorRole.Id, permissions.First(p => p.Name == "correction.review").Id),
-                new(auditorRole.Id, permissions.First(p => p.Name == "sync.review").Id),
-            ]);
+            // Auditor = 只读监察：全部 view 键 + 审计日志（无任何写权限点）
+            string[] auditorPerms = [
+                "dashboard.view", "bearing.view", "brand.view", "type.view", "merchant.view",
+                "mapping.view", "review.sync", "correction.review", "sourcing.view",
+                "user.view", "permission.view", "system.view", "audit.view",
+            ];
+            foreach (var name in auditorPerms)
+            {
+                rolePermissions.Add(new RolePermission(auditorRole.Id, permissions.First(p => p.Name == name).Id));
+            }
 
-            // Individual 拥有基本权限
-            rolePermissions.AddRange([
-                new(individualRole.Id, permissions.First(p => p.Name == "bearing.view").Id),
-                new(individualRole.Id, permissions.First(p => p.Name == "correction.submit").Id),
-                new(individualRole.Id, permissions.First(p => p.Name == "favorite.bearing").Id),
-                new(individualRole.Id, permissions.First(p => p.Name == "favorite.merchant").Id)
-            ]);
-
+            // Individual 零权限点（v1.39.0）：app 能力=登录态+业务资格，不走 RBAC；
+            // 角色仅作"前端用户"身份标记（Admin 用户页签归类、后台登录 gate 拒绝依据）
             await context.RolePermissions.AddRangeAsync(rolePermissions);
             await context.SaveChangesAsync();
             #endregion

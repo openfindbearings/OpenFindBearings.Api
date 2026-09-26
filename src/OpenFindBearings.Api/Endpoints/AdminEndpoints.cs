@@ -691,7 +691,7 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("AdminGetBrands")
             .WithSummary("获取品牌列表")
             .WithDescription("管理端品牌列表，支持显示已删除")
-            .RequirePermission("bearing.view");
+            .RequirePermission("brand.view");
 
             /// <summary>
             /// 创建品牌
@@ -710,7 +710,7 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("AdminCreateBrand")
             .WithSummary("创建品牌")
             .WithDescription("添加新品牌")
-            .RequirePermission("bearing.create");
+            .RequirePermission("brand.create");
 
             /// <summary>
             /// 更新品牌
@@ -728,7 +728,7 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("AdminUpdateBrand")
             .WithSummary("更新品牌")
             .WithDescription("更新品牌信息")
-            .RequirePermission("bearing.edit");
+            .RequirePermission("brand.edit");
 
             /// <summary>
             /// 删除品牌（软删除）
@@ -745,7 +745,7 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("AdminDeleteBrand")
             .WithSummary("删除品牌")
             .WithDescription("删除品牌（软删除）")
-            .RequirePermission("bearing.delete");
+            .RequirePermission("brand.delete");
 
             /// <summary>
             /// 恢复品牌
@@ -796,7 +796,7 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("AdminGetBearingTypes")
             .WithSummary("获取轴承类型列表")
             .WithDescription("管理端类型列表，支持显示已删除")
-            .RequirePermission("bearing.view");
+            .RequirePermission("type.view");
 
             /// <summary>
             /// 创建轴承类型
@@ -815,7 +815,7 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("AdminCreateBearingType")
             .WithSummary("创建轴承类型")
             .WithDescription("添加新轴承类型")
-            .RequirePermission("bearing.create");
+            .RequirePermission("type.create");
 
             /// <summary>
             /// 更新轴承类型
@@ -833,7 +833,7 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("AdminUpdateBearingType")
             .WithSummary("更新轴承类型")
             .WithDescription("更新轴承类型")
-            .RequirePermission("bearing.edit");
+            .RequirePermission("type.edit");
 
             /// <summary>
             /// 删除轴承类型（软删除）
@@ -850,7 +850,7 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("AdminDeleteBearingType")
             .WithSummary("删除轴承类型")
             .WithDescription("删除轴承类型（软删除）")
-            .RequirePermission("bearing.delete");
+            .RequirePermission("type.delete");
 
             /// <summary>
             /// 恢复轴承类型
@@ -1279,7 +1279,7 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("AdminGetUserRoles")
             .WithSummary("获取用户角色")
             .WithDescription("获取用户的角色列表")
-            .RequirePermission("user.manage");
+            .RequirePermission("user.assign");
 
             /// <summary>
             /// 获取用户的权限列表
@@ -1300,7 +1300,7 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("AdminGetUserPermissions")
             .WithSummary("获取用户权限")
             .WithDescription("获取用户的权限列表")
-            .RequirePermission("user.manage");
+            .RequirePermission("user.assign");
 
             /// <summary>
             /// 按认证主体（Identity sub）获取平台角色（v1.31.0）
@@ -1326,7 +1326,7 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("AdminGetUserRolesByAuth")
             .WithSummary("按认证主体获取角色")
             .WithDescription("以 Identity sub 为键查询平台角色，供 Admin 用户页角色分配")
-            .RequirePermission("user.manage");
+            .RequirePermission("user.assign");
 
             /// <summary>
             /// 按认证主体分配平台角色（v1.31.0）
@@ -1351,7 +1351,7 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("AdminAssignRoleByAuth")
             .WithSummary("按认证主体分配角色")
             .WithDescription("以 Identity sub 为键分配平台角色")
-            .RequirePermission("user.manage");
+            .RequirePermission("user.assign");
 
             /// <summary>
             /// 按认证主体移除平台角色（v1.31.0）
@@ -1376,7 +1376,7 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("AdminRemoveRoleByAuth")
             .WithSummary("按认证主体移除角色")
             .WithDescription("以 Identity sub 为键移除平台角色")
-            .RequirePermission("user.manage");
+            .RequirePermission("user.assign");
 
             /// <summary>
             /// 批量获取全部用户的平台角色映射（v1.38.0）
@@ -1398,7 +1398,7 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("AdminGetAllPlatformRoles")
             .WithSummary("批量获取平台角色映射")
             .WithDescription("返回所有挂了平台角色的用户 sub→角色名列表字典，供 Admin 用户列表合并展示")
-            .RequirePermission("user.manage");
+            .RequirePermission("user.view");
 
             /// <summary>
             /// 预置业务用户并挂平台角色（v1.38.0）
@@ -1421,7 +1421,7 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("AdminProvisionUser")
             .WithSummary("预置业务用户并挂角色")
             .WithDescription("按 Identity sub find-or-create 业务用户行并批量授予平台角色（幂等）")
-            .RequirePermission("user.manage");
+            .RequirePermission("user.assign");
         }
     }
 
