@@ -5,6 +5,9 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
 {
     /// <inheritdoc />
+    // 改动说明：手写迁移必须带 [Migration] 特性——EF 靠该特性（而非文件名）发现迁移类，
+    // 缺它会被 MigrateAsync 静默跳过（rc.30 迁移未执行的根因；纯 SQL 迁移无需 Designer/快照）
+    [Microsoft.EntityFrameworkCore.Migrations.Migration("20260926090000_AddBusinessTimeZoneAndCorrectionScore")]
     public partial class AddBusinessTimeZoneAndCorrectionScore : Migration
     {
         /// <inheritdoc />
