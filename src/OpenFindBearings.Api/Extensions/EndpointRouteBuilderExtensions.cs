@@ -38,6 +38,10 @@ namespace OpenFindBearings.Api.Extensions
         app.MapPointsEndpoints();
         // v1.35.0 寻货：需求发布/应答/选定 + Admin 治理
         app.MapSourcingEndpoints();
+        // v2.1.0 成就子系统：个人成就墙/我的徽章排 + 商户徽章排
+        app.MapAchievementEndpoints();
+        // v2.3.0 商城虚拟权益：目录/兑换/我的订单 + Admin 目录管理
+        app.MapMallEndpoints();
 
             // 系统配置接口（内部服务拉取）
             app.MapConfigEndpoints();

@@ -38,7 +38,7 @@ namespace OpenFindBearings.Application.EventHandlers
                 PointTransaction.TypeCorrectionAdopted,
                 $"correction:{notification.CorrectionId:N}",
                 null,
-                cancellationToken);
+                cancellationToken: cancellationToken);
 
             _logger.LogInformation("纠错采纳积分: CorrectionId={CorrectionId}, User={UserId}, Granted={Granted}",
                 notification.CorrectionId, notification.SubmittedBy, granted);

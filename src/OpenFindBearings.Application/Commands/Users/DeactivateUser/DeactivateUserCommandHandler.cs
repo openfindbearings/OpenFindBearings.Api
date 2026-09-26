@@ -31,6 +31,8 @@ namespace OpenFindBearings.Application.Commands.Users.DeactivateUser
         // v1.34.0：注销清零积分（账户+流水），防刷台账不随注销删除
         private readonly IPointAccountRepository _pointAccountRepository;
         private readonly IPointTransactionRepository _pointTransactionRepository;
+        // v2.3.0 商城：注销级联清理兑换订单（历史凭据随账号清零，与积分流水同口径）
+        private readonly IMallOrderRepository _mallOrderRepository;
         private readonly IIdentityService _identityService;
         private readonly ILogger<DeactivateUserCommandHandler> _logger;
 
@@ -45,6 +47,7 @@ namespace OpenFindBearings.Application.Commands.Users.DeactivateUser
             IMerchantDocumentRepository documentRepository,
             IPointAccountRepository pointAccountRepository,
             IPointTransactionRepository pointTransactionRepository,
+            IMallOrderRepository mallOrderRepository,
             IIdentityService identityService,
             ILogger<DeactivateUserCommandHandler> logger)
         {
@@ -57,6 +60,7 @@ namespace OpenFindBearings.Application.Commands.Users.DeactivateUser
             _documentRepository = documentRepository;
             _pointAccountRepository = pointAccountRepository;
             _pointTransactionRepository = pointTransactionRepository;
+            _mallOrderRepository = mallOrderRepository;
             _identityService = identityService;
             _logger = logger;
         }
@@ -154,6 +158,10 @@ namespace OpenFindBearings.Application.Commands.Users.DeactivateUser
             //   而 Identity 步骤失败，冷静期内可人工补，属可接受代价）
             await _pointTransactionRepository.DeleteAllForUserAsync(request.UserId, cancellationToken);
             await _pointAccountRepository.DeleteByUserIdAsync(request.UserId, cancellationToken);
+
+            // 改动说明（v2.3.0 商城）：兑换订单随账号清零（与积分流水同口径）——
+            //   订单只是兑换凭据，已生效的置顶权益挂在 MerchantBearing 上不随注销回滚
+            await _mallOrderRepository.DeleteByUserIdAsync(request.UserId, cancellationToken);
 
             // 软删标记（冷静期起点）+ Identity 禁用与全设备令牌吊销（失败抛异常整体回滚）
             user.Deactivate();

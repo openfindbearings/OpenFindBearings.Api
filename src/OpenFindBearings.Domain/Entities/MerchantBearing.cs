@@ -98,6 +98,26 @@ namespace OpenFindBearings.Domain.Entities
         public string? RestockEta { get; private set; }
 
         /// <summary>
+        /// 置顶到期时间（UTC，v2.3.0 商城置顶卡履约写入；null/过期=未置顶）。
+        /// 型号商家列表按"未过期置顶优先"排序，是商户花积分买曝光的唯一入口
+        /// </summary>
+        public DateTime? PinnedUntil { get; private set; }
+
+        /// <summary>当前是否处于置顶期（按传入 UTC now 判定，避免各处口径漂移）</summary>
+        public bool IsPinned(DateTime nowUtc) => PinnedUntil.HasValue && PinnedUntil.Value > nowUtc;
+
+        /// <summary>
+        /// 置顶/续期（商城置顶卡履约调用）：未过期则从到期时间续加，已过期则从现在起算——
+        /// 保证商户续买不亏时长
+        /// </summary>
+        public void Pin(DateTime nowUtc, int hours)
+        {
+            var baseline = (PinnedUntil.HasValue && PinnedUntil.Value > nowUtc) ? PinnedUntil.Value : nowUtc;
+            PinnedUntil = baseline.AddHours(hours);
+            UpdatedAt = nowUtc;
+        }
+
+        /// <summary>
         /// 是否需要审核（用于商家创建/编辑产品）
         /// true: 待审核
         /// false: 已审核通过

@@ -86,6 +86,8 @@ namespace OpenFindBearings.Infrastructure
         // v1.35.0 寻货：需求/应答仓储
         services.AddScoped<ISourcingDemandRepository, SourcingDemandRepository>();
         services.AddScoped<ISourcingResponseRepository, SourcingResponseRepository>();
+        // v2.1.0 成就子系统：定义目录 + 一表双轨解锁进度仓储
+        services.AddScoped<IAchievementRepository, AchievementRepository>();
 
             // ============ 3. 注册缓存服务 ============
 
@@ -154,6 +156,14 @@ namespace OpenFindBearings.Infrastructure
 
         // v1.32.0 积分底座：唯一写入口服务
         services.AddScoped<IPointsService, PointsService>();
+
+        // v2.1.0 成就子系统：事件驱动解锁 + 墙/徽章排查询服务
+        services.AddScoped<IAchievementService, AchievementService>();
+
+        // v2.3.0 商城虚拟权益：目录/订单仓储 + 兑换履约服务（扣分与履约同事务）
+        services.AddScoped<IMallItemRepository, MallItemRepository>();
+        services.AddScoped<IMallOrderRepository, MallOrderRepository>();
+        services.AddScoped<IMallService, MallService>();
 
             // 轴承统计服务
             services.AddScoped<IBearingViewStatsService, BearingViewStatsService>();

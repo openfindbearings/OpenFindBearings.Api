@@ -1,10 +1,12 @@
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.Shared.Interfaces;
 using OpenFindBearings.Application.Services;
 using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Repositories;
 using OpenFindBearings.Domain.Services;
+using OpenFindBearings.Infrastructure.Persistence.Data;
 
 namespace OpenFindBearings.Infrastructure.Services
 {
@@ -24,9 +26,12 @@ namespace OpenFindBearings.Infrastructure.Services
         // v1.34.0：一次性奖励认领台账（号/照维度不变量，注销清流水后仍防重）
         private readonly IPointRewardClaimRepository _claimRepository;
         private readonly IUnitOfWork _unitOfWork;
+        // 改动说明（v2.3.1 登录修复）：SaveChanges 失败后需清理本次挂入的实体——
+        // 吞异常但不清 tracker 会让脏行随请求 DbContext 外溢到业务写库（并行发放撞 23505 后登录 500 的根因）
+        private readonly ApplicationDbContext _context;
 
         /// <summary>
-        /// 构造：账户/流水/规则/台账仓储 + 工作单元（独立提交用）
+        /// 构造：账户/流水/规则/台账仓储 + 工作单元（独立提交用）+ 上下文（失败清理用）
         /// </summary>
         public PointsService(
             ILogger<PointsService> logger,
@@ -34,7 +39,8 @@ namespace OpenFindBearings.Infrastructure.Services
             IPointTransactionRepository transactionRepository,
             IPointGrantRuleRepository ruleRepository,
             IPointRewardClaimRepository claimRepository,
-            IUnitOfWork unitOfWork)
+            IUnitOfWork unitOfWork,
+            ApplicationDbContext context)
         {
             _logger = logger;
             _accountRepository = accountRepository;
@@ -42,22 +48,25 @@ namespace OpenFindBearings.Infrastructure.Services
             _ruleRepository = ruleRepository;
             _claimRepository = claimRepository;
             _unitOfWork = unitOfWork;
+            _context = context;
         }
 
         /// <inheritdoc/>
         public async Task<int> GrantAsync(Guid userId, string grantType, string? bizId = null,
-            string? remark = null, CancellationToken cancellationToken = default)
+            string? remark = null, int? amountOverride = null, CancellationToken cancellationToken = default)
         {
             try
             {
                 var rule = await _ruleRepository.GetEnabledByTypeAsync(grantType, cancellationToken);
                 if (rule == null)
-                    return 0; // 规则停用/不存在：静默跳过（运营关口的正常态）
+                    return 0; // 规则停用/不存在：默认关闭，运营开关动态生效
 
                 if (bizId != null && await _transactionRepository.ExistsBizIdAsync(bizId, cancellationToken))
                     return 0; // 幂等：同动作重复发放
 
-                var amount = rule.Amount;
+                // 改动说明（v2.1.0）：amountOverride 供平台内部定义分值场景（成就解锁甜头），
+                // 缺省回退规则表 Amount；仍受日上限截断守卫
+                var amount = amountOverride ?? rule.Amount;
                 if (rule.DailyLimit > 0)
                 {
                     var todaySum = await _transactionRepository.SumTodayByTypeAsync(userId, grantType, cancellationToken);
@@ -91,7 +100,7 @@ namespace OpenFindBearings.Infrastructure.Services
                 var claimed = await _claimRepository.TryClaimAsync(claimKey, grantType, userId, cancellationToken);
                 if (!claimed)
                     return 0; // 该号/照历史已领过：注销重注册/删店重入驻循环免疫
-                return await GrantAsync(userId, grantType, claimKey, remark, cancellationToken);
+                return await GrantAsync(userId, grantType, claimKey, remark, null, cancellationToken);
             }
             catch (Exception ex)
             {
@@ -117,12 +126,47 @@ namespace OpenFindBearings.Infrastructure.Services
 
             account.Debit(amount); // 余额不足在此抛出（调用方转 400 给用户）
             await _accountRepository.UpdateAsync(account, cancellationToken);
-            await _transactionRepository.AddAsync(new PointTransaction(
-                userId, PointTransaction.DirectionDebit, sceneType, amount, account.Balance, bizId, remark), cancellationToken);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            var tx = new PointTransaction(
+                userId, PointTransaction.DirectionDebit, sceneType, amount, account.Balance, bizId, remark);
+            await _transactionRepository.AddAsync(tx, cancellationToken);
+            // 改动说明（v2.3.1 登录修复）：扣分同样可能撞 23505（并发同 requestId）或 xmin 并发异常，
+            // 失败后清理 tracker 再抛——调用方（商城兑换/寻货超额）要接着走退款或返回错误，脏账不能外溢
+            try
+            {
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+            }
+            catch
+            {
+                await CleanupFailedGrantAsync(account, tx, false, cancellationToken);
+                throw;
+            }
 
             _logger.LogInformation("积分扣减: UserId={UserId}, Scene={Scene}, Amount={Amount}", userId, sceneType, amount);
             return amount;
+        }
+
+        /// <inheritdoc/>
+        public async Task<int> RefundAsync(Guid userId, int amount, string bizId, string? remark = null,
+            string grantType = PointTransaction.TypeMallRefund, CancellationToken cancellationToken = default)
+        {
+            // 改动说明（v2.3.0 商城）：退款刻意不查规则表——退款额来自订单快照，
+            // 规则被停用/改值都不该影响用户拿回自己的分；仍走 GrantCore 保持流水与余额一致
+            try
+            {
+                if (amount <= 0)
+                    return 0;
+                if (await _transactionRepository.ExistsBizIdAsync(bizId, cancellationToken))
+                    return 0; // 幂等：同笔退款重复提交
+
+                await GrantCoreAsync(userId, grantType, amount, bizId, remark, cancellationToken);
+                _logger.LogInformation("积分退款: UserId={UserId}, Amount={Amount}, BizId={BizId}", userId, amount, bizId);
+                return amount;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "积分退款失败（需人工介入）: UserId={UserId}, BizId={BizId}", userId, bizId);
+                return 0;
+            }
         }
 
         /// <inheritdoc/>
@@ -139,34 +183,50 @@ namespace OpenFindBearings.Infrastructure.Services
             if (rule == null)
                 return new CheckinResult(0, 0, true); // 签到口被运营停用
 
-            var account = await _accountRepository.GetByUserIdAsync(userId, cancellationToken)
-                ?? new PointAccount(userId);
+            var account = await _accountRepository.GetByUserIdAsync(userId, cancellationToken);
+            var accountWasNew = account == null;
+            account ??= new PointAccount(userId);
 
             // 阶梯：按连续天数取档（[2,3,4,5,5] 第 6 天起恒取末档 5）；无阶梯配置回退基础分值
             var streak = account.MarkCheckedIn(today);
             var amount = PickLadderAmount(rule.LadderJson, streak) ?? rule.Amount;
 
             account.Credit(amount);
-            if (account.Id == Guid.Empty)
+            if (accountWasNew)
                 await _accountRepository.AddAsync(account, cancellationToken);
             else
                 await _accountRepository.UpdateAsync(account, cancellationToken);
 
-            await _transactionRepository.AddAsync(new PointTransaction(
+            // 改动说明（v2.3.1 登录修复）：双端同时点签到存在与 daily_login 同型的查插竞态，
+            // 输者撞 23505 后必须清 tracker，否则连累同一请求的后续写库
+            var tx = new PointTransaction(
                 userId, PointTransaction.DirectionCredit, PointTransaction.TypeDailyCheckin,
-                amount, account.Balance, bizId, $"连续第 {streak} 天"), cancellationToken);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+                amount, account.Balance, bizId, $"连续第 {streak} 天");
+            await _transactionRepository.AddAsync(tx, cancellationToken);
+            try
+            {
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+            }
+            catch
+            {
+                await CleanupFailedGrantAsync(account, tx, accountWasNew, cancellationToken);
+                throw;
+            }
 
             return new CheckinResult(amount, streak, false);
         }
 
         /// <summary>
-        /// 开户或取已有账户 → 入账 → 写流水 → 独立提交（GrantCore 失败由调用方吞）
+        /// 开户或取已有账户 → 入账 → 写流水 → 独立提交（GrantCore 失败由调用方吞）。
+        /// 改动说明（v2.3.1 登录修复）：失败时必须清理 tracker——并行请求对同一 bizId 的
+        /// "查在否→插入"存在竞态，输者 23505 后本事务已整体回滚，但失败实体若仍挂 Added/Modified，
+        /// 会随请求 DbContext 外溢到登录 JIT 等业务写库（二次插入再抛 23505 → 登录 500 的根因）
         /// </summary>
         private async Task GrantCoreAsync(Guid userId, string grantType, int amount, string? bizId,
             string? remark, CancellationToken cancellationToken)
         {
             var account = await _accountRepository.GetByUserIdAsync(userId, cancellationToken);
+            var accountWasNew = account == null;
             if (account == null)
             {
                 account = new PointAccount(userId);
@@ -178,9 +238,32 @@ namespace OpenFindBearings.Infrastructure.Services
             }
 
             account.Credit(amount);
-            await _transactionRepository.AddAsync(new PointTransaction(
-                userId, PointTransaction.DirectionCredit, grantType, amount, account.Balance, bizId, remark), cancellationToken);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            var tx = new PointTransaction(
+                userId, PointTransaction.DirectionCredit, grantType, amount, account.Balance, bizId, remark);
+            await _transactionRepository.AddAsync(tx, cancellationToken);
+            try
+            {
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+            }
+            catch
+            {
+                await CleanupFailedGrantAsync(account, tx, accountWasNew, cancellationToken);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// SaveChanges 失败后清理挂账实体：流水行一律 Detached；新建账户 Detached（DB 无行），
+        /// 已有账户 Reload 还原内存余额与 xmin 令牌，保证同一请求后续业务写库不被污染
+        /// </summary>
+        private async Task CleanupFailedGrantAsync(PointAccount account, PointTransaction tx, bool accountWasNew,
+            CancellationToken cancellationToken)
+        {
+            _context.Entry(tx).State = EntityState.Detached;
+            if (accountWasNew)
+                _context.Entry(account).State = EntityState.Detached;
+            else
+                await _context.Entry(account).ReloadAsync(cancellationToken);
         }
 
         /// <summary>

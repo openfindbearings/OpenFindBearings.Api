@@ -60,6 +60,14 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
         public DbSet<SourcingDemand> SourcingDemands { get; set; }
         public DbSet<SourcingResponse> SourcingResponses { get; set; }
 
+        // v2.1.0 成就子系统：成就定义目录 + 一表双轨解锁进度（个人/商户）
+        public DbSet<AchievementDefinition> AchievementDefinitions { get; set; }
+        public DbSet<AchievementUnlock> AchievementUnlocks { get; set; }
+
+        // v2.3.0 商城虚拟权益：商品目录 + 兑换订单
+        public DbSet<MallItem> MallItems { get; set; }
+        public DbSet<MallOrder> MallOrders { get; set; }
+
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
