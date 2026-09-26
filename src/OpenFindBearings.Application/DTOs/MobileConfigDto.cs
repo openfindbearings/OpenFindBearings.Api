@@ -24,6 +24,15 @@
         /// <summary>备案号</summary>
         public string SiteBeiAn { get; set; } = string.Empty;
 
+        /// <summary>
+        /// App 备案号（工信部 2023 起 App/小程序/网站独立备案，各端展示各自号码）
+        /// 改动说明：v1.37.0 备案拆分——Taro RN 端关于页消费本字段
+        /// </summary>
+        public string BeiAnApp { get; set; } = string.Empty;
+
+        /// <summary>小程序备案号（Taro 微信端关于页消费）</summary>
+        public string BeiAnMini { get; set; } = string.Empty;
+
         /// <summary>客服联系方式</summary>
         public string CustomerService { get; set; } = string.Empty;
 

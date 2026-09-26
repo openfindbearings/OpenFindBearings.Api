@@ -438,8 +438,8 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
             // 站点设置（供移动端 /api/mobile/config 展示）
             ("SiteName", "OpenFindBearings", "Site", "网站名称", "string", true),
             ("SiteDescription", "轴承信息平台", "Site", "网站描述", "string", true),
-            ("Site.BeiAn", "", "Site", "备案号", "string", true),
-            ("Site.CustomerService", "", "Site", "客服联系方式", "string", true),
+            ("Site.BeiAn", "", "Site", "网站备案号（Admin 页脚与 H5 端关于页）", "string", true),
+            ("Site.CustomerService", "", "Site", "客服电话（全端共用：app 设置页拨打与法务文本）", "string", true),
 
             // 价格显示
             ("Price.DefaultVisibility", "LoginRequired", "Price", "价格默认可见性", "string", true),
@@ -464,6 +464,10 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
             // 媒体资源公网 base：图片经独立 nginx 媒体服务在 /media 直出（应用不再逐字节代理）；
             // 库内只存相对键（/images、/uploads、/avatars），客户端拼此 base。将来切对象存储只改此值
             ("Mobile.MediaBaseUrl", "https://bff.515813.xyz/media", "Mobile", "媒体资源公网 base（末尾无斜杠）", "string", true),
+            // 改动说明（v1.37.0 备案拆分）：工信部 App/小程序/网站独立备案各出号，App 与小程序关于页
+            // 分别消费下列两键（空=该行隐藏）；网站备案沿用 Site.BeiAn
+            ("Mobile.BeiAnApp", "", "Mobile", "App 备案号（RN 端关于页展示）", "string", true),
+            ("Mobile.BeiAnMini", "", "Mobile", "小程序备案号（微信端关于页展示）", "string", true),
         ];
 
         /// <summary>
