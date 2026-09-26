@@ -60,6 +60,13 @@ namespace OpenFindBearings.Application.Queries.Mobile.GetMobileConfig
             var beiAn = configs.FirstOrDefault(c => c.Key == "Site.BeiAn");
             if (beiAn != null) result.SiteBeiAn = beiAn.Value;
 
+            // 改动说明（v1.37.0 备案拆分）：App/小程序独立备案各一键，前端按平台取用
+            var beiAnApp = configs.FirstOrDefault(c => c.Key == "Mobile.BeiAnApp");
+            if (beiAnApp != null) result.BeiAnApp = beiAnApp.Value;
+
+            var beiAnMini = configs.FirstOrDefault(c => c.Key == "Mobile.BeiAnMini");
+            if (beiAnMini != null) result.BeiAnMini = beiAnMini.Value;
+
             var customerService = configs.FirstOrDefault(c => c.Key == "Site.CustomerService");
             if (customerService != null) result.CustomerService = customerService.Value;
 
