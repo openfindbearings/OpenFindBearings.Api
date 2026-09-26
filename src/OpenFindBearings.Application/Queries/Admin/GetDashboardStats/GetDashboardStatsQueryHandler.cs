@@ -54,7 +54,10 @@ namespace OpenFindBearings.Application.Queries.Admin.GetDashboardStats
             var bizToday = BusinessClock.Today;
             var todayStart = BusinessClock.TodayUtc;
             var weekStart = bizToday.AddDays(-(int)bizToday.DayOfWeek + (int)DayOfWeek.Monday) - BusinessClock.Offset;
-            var monthStart = new DateTime(bizToday.Year, bizToday.Month, 1) - BusinessClock.Offset;
+            // 改动说明（rc.32 崩溃修复）：new DateTime(y,m,d) 的 Kind=Unspecified，减 TimeSpan 也不改变 Kind，
+            // 直接进 Npgsql timestamptz 参数即抛 ArgumentException（dashboard 全 N/A 的根因）；
+            // 必须 SpecifyKind 显式标 UTC。weekStart 无此雷——bizToday 源自 UtcNow，AddDays/减法保留 Kind=Utc
+            var monthStart = DateTime.SpecifyKind(new DateTime(bizToday.Year, bizToday.Month, 1), DateTimeKind.Utc) - BusinessClock.Offset;
 
             var bearingTotal = await _bearingRepository.GetTotalCountAsync(new BearingSearchParams(), cancellationToken);
             var bearingToday = await _bearingRepository.GetCountSinceAsync(todayStart, cancellationToken);

@@ -35,7 +35,7 @@ public static class BusinessClock
     public static DateTime Today => Now.Date;
 
     /// <summary>业务日零点对应的 UTC 时刻——DB 范围查询专用（CreatedAt &gt;= TodayUtc 即"业务今天"）</summary>
-    public static DateTime TodayUtc => Today - _businessOffset;
+    public static DateTime TodayUtc => DateTime.SpecifyKind(Today - _businessOffset, DateTimeKind.Utc);
 
     /// <summary>业务日"昨天"零点对应的 UTC 时刻（连签连续性判断用）</summary>
     public static DateTime YesterdayUtc => TodayUtc - TimeSpan.FromDays(1);
