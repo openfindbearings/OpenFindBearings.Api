@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.DTOs;
 using OpenFindBearings.Application.Extensions;
@@ -53,13 +53,6 @@ namespace OpenFindBearings.Application.Queries.Roles.GetRoles
                 Page = request.Page,
                 PageSize = request.PageSize
             };
-        }
-
-        private bool IsSystemRole(string roleName)
-        {
-            // 改动说明（v1.31.0）：内置角色名单对齐种子（旧名单 GlobalAdmin/MerchantAdmin/
-            //   MerchantStaff/Customer 均已不存在，标记恒假）
-            return roleName is "Admin" or "Operator" or "Auditor" or "Individual";
         }
     }
 }
