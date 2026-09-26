@@ -192,7 +192,7 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("GetPointRules")
             .WithSummary("积分规则列表")
             .WithDescription("全部赚分规则（分值/每日上限/阶梯/开关）")
-            .RequirePermission("system.manage");
+            .RequirePermission("points.manage");
 
             /// <summary>
             /// 更新积分规则（分值/上限/阶梯/开关，改完实时生效）
@@ -224,7 +224,7 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("UpdatePointRule")
             .WithSummary("更新积分规则")
             .WithDescription("调整分值/每日上限/阶梯/启停，实时生效")
-            .RequirePermission("system.manage");
+            .RequirePermission("points.manage");
         }
     }
 
