@@ -40,6 +40,16 @@
         /// 是否已关注（针对当前登录用户）
         /// </summary>
         public bool IsFollowed { get; set; }
+
+        /// <summary>
+        /// v2.6.0 商家主页：当前登录用户是否该商家在职成员（"进入管理"横幅依据；未登录=false）
+        /// </summary>
+        public bool IsMerchantMember { get; set; }
+
+        /// <summary>
+        /// v2.6.0 商家主页：集体任务累计达成次数（勋章园卡"通关史"，所有访客可见）
+        /// </summary>
+        public int CompletedTaskCount { get; set; }
     }
 
     /// <summary>

@@ -13,15 +13,22 @@ namespace OpenFindBearings.Application.Queries.Merchants.GetMerchant
     {
         private readonly IMerchantRepository _merchantRepository;
         private readonly IMerchantBearingRepository _merchantBearingRepository;
+        // v2.6.0 商家主页：成员标记（成员区渲染依据）+ 集体任务达成数（勋章园卡通关史）
+        private readonly IMerchantMemberRepository _memberRepository;
+        private readonly IMerchantTaskRepository _taskRepository;
         private readonly ILogger<GetMerchantQueryHandler> _logger;
 
         public GetMerchantQueryHandler(
             IMerchantRepository merchantRepository,
             IMerchantBearingRepository merchantBearingRepository,
+            IMerchantMemberRepository memberRepository,
+            IMerchantTaskRepository taskRepository,
             ILogger<GetMerchantQueryHandler> logger)
         {
             _merchantRepository = merchantRepository;
             _merchantBearingRepository = merchantBearingRepository;
+            _memberRepository = memberRepository;
+            _taskRepository = taskRepository;
             _logger = logger;
         }
 
@@ -43,7 +50,20 @@ namespace OpenFindBearings.Application.Queries.Merchants.GetMerchant
 
             var products = merchantBearings.Select(mb => mb.ToDto(request.IsAuthenticated)).ToList();
 
-            return merchant.ToDetailDto(products, request.IsAuthenticated);
+            var dto = merchant.ToDetailDto(products, request.IsAuthenticated);
+
+            // v2.6.0 商家主页：集体任务累计达成数（公开信任信号，所有访客可见）
+            dto.CompletedTaskCount = await _taskRepository.CountCompletionsAsync(request.Id, cancellationToken);
+
+            // 成员标记：仅登录用户查一次在职成员关系（非成员/未登录保持 false）；
+            // 角色数据管理页走 store currentMerchant（成员列表接口），详情 DTO 不冗余暴露（v2.6.0 双界面拆分）
+            if (request.UserId.HasValue)
+            {
+                var membership = await _memberRepository.GetActiveByUserAndMerchantAsync(
+                    request.UserId.Value, request.Id, cancellationToken);
+                dto.IsMerchantMember = membership != null;
+            }
+            return dto;
         }
     }
 }

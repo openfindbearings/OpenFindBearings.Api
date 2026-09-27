@@ -81,15 +81,15 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         }
 
         /// <inheritdoc/>
-        public async Task<int> CountByUsersTypeSinceAsync(IEnumerable<Guid> userIds, string grantType, DateTime sinceUtc,
+        public async Task<int> CountByUserTypeBetweenAsync(Guid userId, string grantType, DateTime fromUtc, DateTime? toUtc,
             CancellationToken cancellationToken = default)
         {
-            // v2.6.0 集体任务 corrections 指标：成员集合维度的场景流水计数（空集合直接 0，防全表扫描）
-            var ids = userIds as Guid[] ?? userIds.ToArray();
-            if (ids.Length == 0) return 0;
+            // v2.6.0 集体任务 corrections 指标：单成员任职区间内场景流水计数（调用方逐成员求和；
+            // 区间 [JoinedAt, RemovedAt] 由服务层按 BusinessClock 窗口再收紧，离职者在职贡献不丢）
             return await _context.Set<PointTransaction>()
                 .CountAsync(t => t.IsActive && t.Direction == PointTransaction.DirectionCredit && t.GrantType == grantType
-                            && t.CreatedAt >= sinceUtc && ids.Contains(t.UserId), cancellationToken);
+                            && t.UserId == userId && t.CreatedAt >= fromUtc
+                            && (toUtc == null || t.CreatedAt <= toUtc), cancellationToken);
         }
 
         public async Task<(List<PointTransaction> Items, int Total)> GetByUserAsync(Guid userId, int page, int pageSize,

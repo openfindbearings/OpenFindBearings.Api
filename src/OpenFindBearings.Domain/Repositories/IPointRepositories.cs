@@ -34,8 +34,9 @@ namespace OpenFindBearings.Domain.Repositories
         /// <summary>统计用户当日某动作累计发放分值（日上限守卫用）</summary>
         Task<int> SumTodayByTypeAsync(Guid userId, string grantType, CancellationToken cancellationToken = default);
 
-        /// <summary>v2.6.0 集体任务 corrections 指标：指定成员集合在指定时间（UTC）后某收入场景的流水条数（被采纳纠错计数）</summary>
-        Task<int> CountByUsersTypeSinceAsync(IEnumerable<Guid> userIds, string grantType, DateTime sinceUtc,
+        /// <summary>v2.6.0 集体任务 corrections 指标：单用户在 [fromUtc, toUtc] 任职区间内某收入场景的流水条数
+        /// （toUtc=null=在职至今；逐成员区间计数，离职者在职贡献不丢）</summary>
+        Task<int> CountByUserTypeBetweenAsync(Guid userId, string grantType, DateTime fromUtc, DateTime? toUtc,
             CancellationToken cancellationToken = default);
 
         /// <summary>用户流水分页（时间倒序）</summary>

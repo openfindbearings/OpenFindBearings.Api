@@ -60,6 +60,15 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                 .ToListAsync(cancellationToken);
         }
 
+        /// <inheritdoc/>
+        public async Task<List<MerchantMember>> GetHistoryByMerchantAsync(Guid merchantId, CancellationToken cancellationToken = default)
+        {
+            // 全状态成员（含 Removed/Suspended）：任职区间回溯用；软删行保留 JoinedAt/RemovedAt 即历史证据
+            return await _context.Set<MerchantMember>()
+                .Where(m => m.MerchantId == merchantId && m.IsActive)
+                .ToListAsync(cancellationToken);
+        }
+
         /// <summary>
         /// 批量获取多个商户的在职成员（v2.9.0 入驻发现搜索标记用，一次查询防 N+1）
         /// </summary>
