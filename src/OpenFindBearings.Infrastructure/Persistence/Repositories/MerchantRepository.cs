@@ -225,5 +225,15 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         {
             _context.Merchants.Remove(merchant);
         }
+
+        /// <inheritdoc/>
+        public async Task<List<Guid>> GetActiveIdsAsync(CancellationToken cancellationToken = default)
+        {
+            // v2.6.0 集体任务结算：Active 商户全集（原型规模小，逐商户判定可接受）
+            return await _context.Merchants
+                .Where(m => m.Status == Domain.Enums.MerchantStatus.Active && m.IsActive)
+                .Select(m => m.Id)
+                .ToListAsync(cancellationToken);
+        }
     }
 }

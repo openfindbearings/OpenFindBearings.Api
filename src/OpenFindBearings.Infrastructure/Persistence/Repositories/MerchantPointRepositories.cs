@@ -82,6 +82,30 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         }
 
         /// <inheritdoc/>
+        public async Task<int> SumCreditAnySinceAsync(Guid merchantId, DateTime sinceUtc, CancellationToken cancellationToken = default)
+        {
+            var sum = await _context.Set<MerchantPointTransaction>()
+                .Where(t => t.MerchantId == merchantId && t.Direction == MerchantPointTransaction.DirectionCredit && t.CreatedAt >= sinceUtc)
+                .SumAsync(t => (int?)t.Amount, cancellationToken);
+            return sum ?? 0;
+        }
+
+        /// <inheritdoc/>
+        public async Task<List<(Guid MerchantId, int Total)>> GetTopMerchantsCreditAsync(DateTime sinceUtc, int limit,
+            CancellationToken cancellationToken = default)
+        {
+            // 排行榜：金库入账（trickle+结算+任务奖励全部计入"工会实力"）聚合降序
+            var rows = await _context.Set<MerchantPointTransaction>()
+                .Where(t => t.Direction == MerchantPointTransaction.DirectionCredit && t.CreatedAt >= sinceUtc && t.IsActive)
+                .GroupBy(t => t.MerchantId)
+                .Select(g => new { MerchantId = g.Key, Total = g.Sum(t => t.Amount) })
+                .OrderByDescending(x => x.Total)
+                .Take(limit)
+                .ToListAsync(cancellationToken);
+            return rows.Select(x => (x.MerchantId, x.Total)).ToList();
+        }
+
+        /// <inheritdoc/>
         public async Task<(List<MerchantPointTransaction> Items, int Total)> GetByMerchantPagedAsync(
             Guid merchantId, int page, int pageSize, CancellationToken cancellationToken = default)
         {

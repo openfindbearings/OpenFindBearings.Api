@@ -80,6 +80,18 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
             return sum ?? 0;
         }
 
+        /// <inheritdoc/>
+        public async Task<int> CountByUsersTypeSinceAsync(IEnumerable<Guid> userIds, string grantType, DateTime sinceUtc,
+            CancellationToken cancellationToken = default)
+        {
+            // v2.6.0 集体任务 corrections 指标：成员集合维度的场景流水计数（空集合直接 0，防全表扫描）
+            var ids = userIds as Guid[] ?? userIds.ToArray();
+            if (ids.Length == 0) return 0;
+            return await _context.Set<PointTransaction>()
+                .CountAsync(t => t.IsActive && t.Direction == PointTransaction.DirectionCredit && t.GrantType == grantType
+                            && t.CreatedAt >= sinceUtc && ids.Contains(t.UserId), cancellationToken);
+        }
+
         public async Task<(List<PointTransaction> Items, int Total)> GetByUserAsync(Guid userId, int page, int pageSize,
             CancellationToken cancellationToken = default)
         {
