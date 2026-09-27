@@ -244,18 +244,32 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 
         /// <summary>
         /// 随机取 N 个"有图片"的轴承（游戏中心连连看题库）。
-        /// 改动说明（v2.10.1）：同类型轴承照片高度相似难辨认，第一轮按类型去重轮询保证
-        /// 跨类型混搭一眼可辨，不足再回填候选池（数据里类型少时也能凑满棋盘）。
+        /// 改动说明（v2.10.2 真机反馈定案）：只认平台媒体库键（/images 前缀=已下载到 MinIO 可加载），
+        /// 爬虫原始 http 地址多防盗链/404 一律不选；3D 渲染图优先、2D 图纸补足；
+        /// 第一轮按类型去重轮询保证跨类型混搭一眼可辨。
         /// </summary>
         public async Task<IReadOnlyList<Bearing>> GetRandomWithImageAsync(int count, CancellationToken cancellationToken = default)
         {
             var poolSize = Math.Max(count * 4, 40);
             var candidates = await _context.Bearings
                 .AsNoTracking()
-                .Where(b => b.IsActive && (b.Image2DUrl != null || b.Image3DUrl != null))
+                .Where(b => b.IsActive && b.Image3DUrl != null && b.Image3DUrl.StartsWith("/images"))
                 .OrderBy(b => EF.Functions.Random())
                 .Take(poolSize)
                 .ToListAsync(cancellationToken);
+
+            if (candidates.Count < count)
+            {
+                var have = candidates.Select(b => b.Id).ToHashSet();
+                var fallback = await _context.Bearings
+                    .AsNoTracking()
+                    .Where(b => b.IsActive && (b.Image3DUrl == null || !b.Image3DUrl.StartsWith("/images"))
+                        && b.Image2DUrl != null && b.Image2DUrl.StartsWith("/images"))
+                    .OrderBy(b => EF.Functions.Random())
+                    .Take(poolSize)
+                    .ToListAsync(cancellationToken);
+                candidates.AddRange(fallback);
+            }
 
             var result = new List<Bearing>();
             var usedTypes = new HashSet<Guid>();
