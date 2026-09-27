@@ -37,11 +37,14 @@ namespace OpenFindBearings.Infrastructure.Services
             // pairs 夹在 6~24：防超大棋盘拉库/渲染爆炸（默认 18 对 = 6x6）
             var n = Math.Clamp(size ?? 18, 6, 24);
             var bearings = await _bearings.GetRandomWithImageAsync(n, cancellationToken);
+            // 改动说明（v2.10.2 真机反馈）：只取平台媒体库键（/images 前缀=已下载可加载）——
+            // 3D 是 /images 用 3D，否则用 /images 的 2D；爬虫原始 http 地址多死链不取
+            static bool IsMedia(string? u) => u != null && u.StartsWith("/images");
             return bearings.Select(b => new
             {
                 id = b.Id,
                 partNumber = b.PartNumber,
-                imageUrl = b.Image2DUrl ?? b.Image3DUrl
+                imageUrl = IsMedia(b.Image3DUrl) ? b.Image3DUrl : b.Image2DUrl
             });
         }
 
