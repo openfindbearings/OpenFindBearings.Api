@@ -52,7 +52,10 @@ namespace OpenFindBearings.Api.Endpoints
                         soldCount = i.SoldCount,
                         soldOut = i.SoldOut,
                         // v2.4.0 挂礼："来自 XX 商家"（平台权益为 null）
-                        ownerMerchantName = i.OwnerMerchantName
+                        ownerMerchantName = i.OwnerMerchantName,
+                        // 改动说明（v2.10.0 商家金 bug 修复）：公开目录此前漏出 targetKind，
+                        // 前端 ?? 1 兜底把寻货置顶卡误标"商家金"——置顶对象类型必须透传到展示层
+                        targetKind = i.TargetKind
                     }),
                     balance = catalog.Balance
                 }, httpContext: httpContext);
