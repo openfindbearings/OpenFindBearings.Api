@@ -70,6 +70,11 @@ namespace OpenFindBearings.Application.Queries.Mobile.GetMobileConfig
             var customerService = configs.FirstOrDefault(c => c.Key == "Site.CustomerService");
             if (customerService != null) result.CustomerService = customerService.Value;
 
+            // 改动说明（v2.10.0 商家金）：商品置顶个人代付汇率下发，支付面板展示折算价用
+            var goldRate = configs.FirstOrDefault(c => c.Key == "Business.MerchantGoldPayRate");
+            if (goldRate != null && int.TryParse(goldRate.Value, out var rate) && rate > 0)
+                result.MerchantGoldPayRate = rate;
+
             return result;
         }
     }

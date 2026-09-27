@@ -31,6 +31,8 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             builder.Property(i => i.Icon).IsRequired().HasMaxLength(256);
             builder.Property(i => i.Category).IsRequired();
             builder.Property(i => i.AuditRemark).HasMaxLength(256);
+            // 改动说明（v2.10.0 寻货置顶）：置顶对象类型（1=商品/2=需求），默认 1 兼容存量行
+            builder.Property(i => i.TargetKind).IsRequired().HasDefaultValue(1);
 
             // v2.4.0：商家礼品按归属商户查询（商户"我的礼品"+Admin 待审队列）
             builder.HasIndex(i => new { i.OwnerMerchantId, i.AuditState })

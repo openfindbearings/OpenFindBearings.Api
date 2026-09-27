@@ -193,7 +193,9 @@ namespace OpenFindBearings.Api.Endpoints
                     stock = i.Stock,
                     soldCount = i.SoldCount,
                     enabled = i.Enabled,
-                    sortOrder = i.SortOrder
+                    sortOrder = i.SortOrder,
+                    // 改动说明（v2.10.0）：置顶对象类型透传给 Admin 列表/编辑表单
+                    targetKind = i.TargetKind
                 }), httpContext: httpContext);
             })
             .WithName("AdminGetMallItems")
@@ -214,7 +216,7 @@ namespace OpenFindBearings.Api.Endpoints
 
                 item.Update(req.Name, req.Description, req.Icon, req.PointPrice,
                     req.FlashPrice, req.FlashStart, req.FlashEnd,
-                    req.DurationHours, req.Stock, req.Enabled, req.SortOrder);
+                    req.DurationHours, req.Stock, req.Enabled, req.SortOrder, req.TargetKind);
                 await repo.UpdateAsync(item);
                 // 端点直连仓储不走 MediatR 管道，必须显式提交（与积分规则 PUT 同模式）
                 await unitOfWork.SaveChangesAsync(httpContext.RequestAborted);
@@ -362,5 +364,7 @@ namespace OpenFindBearings.Api.Endpoints
     public record UpdateMallItemRequest(
         string Name, string Description, string Icon, int PointPrice,
         int? FlashPrice, DateTime? FlashStart, DateTime? FlashEnd,
-        int? DurationHours, int Stock, bool Enabled, int SortOrder);
+        int? DurationHours, int Stock, bool Enabled, int SortOrder,
+        // 改动说明（v2.10.0 寻货置顶）：置顶对象类型（1=商品/2=需求）可编辑
+        int TargetKind = 1);
 }

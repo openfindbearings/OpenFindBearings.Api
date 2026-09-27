@@ -62,6 +62,12 @@ namespace OpenFindBearings.Domain.Aggregates
         /// <summary>应答计数（列表展示用冗余列，应答时 +1；与子表行数的微小漂移可接受，避免列表 COUNT JOIN）</summary>
         public int ResponseCount { get; private set; }
 
+        /// <summary>
+        /// 置顶到期时刻（UTC，可空）。改动说明（v2.10.0 寻货置顶）：发布人兑换"寻货置顶卡"后
+        /// 需求在公开列表排前并带角标；叠加规则=未过期时续加时长（与商品置顶卡一致）
+        /// </summary>
+        public DateTime? PinnedUntil { get; private set; }
+
         /// <summary>EF 专用无参构造</summary>
         protected SourcingDemand() { }
 
@@ -133,6 +139,22 @@ namespace OpenFindBearings.Domain.Aggregates
 
         /// <summary>应答数+1（新应答落库时同步维护冗余列）</summary>
         public void IncrementResponseCount() => ResponseCount++;
+
+        /// <summary>
+        /// 置顶（v2.10.0 需求置顶卡履约）：有效期内续接（叠加到旧到期时刻之上），
+        /// 已过期/从未置顶从当前时刻起算——与商品置顶同语义，防"过期卡叠满未来"
+        /// </summary>
+        /// <param name="hours">置顶时长（小时）</param>
+        /// <param name="nowUtc">当前 UTC 时刻（调用方传入，保证与校验同源）</param>
+        public void Pin(int hours, DateTime nowUtc)
+        {
+            var baseline = (PinnedUntil.HasValue && PinnedUntil.Value > nowUtc) ? PinnedUntil.Value : nowUtc;
+            PinnedUntil = baseline.AddHours(hours);
+        }
+
+        /// <summary>是否处于置顶期（列表排序与角标判定）</summary>
+        /// <param name="nowUtc">当前 UTC 时刻</param>
+        public bool IsPinned(DateTime nowUtc) => PinnedUntil.HasValue && PinnedUntil.Value > nowUtc;
 
         /// <summary>
         /// 空值安全截断（超长直接截断，防脏数据入库；null 原样返回）

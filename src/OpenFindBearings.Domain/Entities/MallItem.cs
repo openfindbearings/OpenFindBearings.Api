@@ -59,6 +59,18 @@ namespace OpenFindBearings.Domain.Entities
         public Guid? OwnerMerchantId { get; private set; }
 
         /// <summary>
+        /// 置顶对象类型（v2.10.0：1=商家在售商品 / 2=个人寻货需求；非置顶卡恒为 1）。
+        /// 改动说明：置顶卡拆分双对象——商品置顶走金库/商家金定价，
+        /// 需求置顶走个人积分定价，兑换履约按此路由校验对象
+        /// </summary>
+        public int TargetKind { get; private set; } = TargetKindBearing;
+
+        /// <summary>置顶对象=商家在售商品</summary>
+        public const int TargetKindBearing = 1;
+        /// <summary>置顶对象=个人寻货需求</summary>
+        public const int TargetKindDemand = 2;
+
+        /// <summary>
         /// 礼品审核态（v2.4.0）：0=平台商品不适用（免审），1=待审，2=已通过，3=已驳回。
         /// 商家礼品必须过"审核定档"——上架与否、积分价格都由平台审核时敲定，杜绝定向转移
         /// </summary>
@@ -80,7 +92,8 @@ namespace OpenFindBearings.Domain.Entities
         /// 创建商品（迁移种子/Admin 新建共用）
         /// </summary>
         public static MallItem Create(string key, string name, string description, string icon,
-            MallItemCategory category, int pointPrice, int? durationHours, int stock, int sortOrder)
+            MallItemCategory category, int pointPrice, int? durationHours, int stock, int sortOrder,
+            int targetKind = TargetKindBearing)
         {
             return new MallItem
             {
@@ -93,6 +106,7 @@ namespace OpenFindBearings.Domain.Entities
                 DurationHours = durationHours,
                 Stock = stock,
                 SortOrder = sortOrder,
+                TargetKind = targetKind,
                 Enabled = true,
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
@@ -187,7 +201,8 @@ namespace OpenFindBearings.Domain.Entities
         /// </summary>
         public void Update(string name, string description, string icon, int pointPrice,
             int? flashPrice, DateTime? flashStart, DateTime? flashEnd,
-            int? durationHours, int stock, bool enabled, int sortOrder)
+            int? durationHours, int stock, bool enabled, int sortOrder,
+            int targetKind = TargetKindBearing)
         {
             Name = name;
             Description = description;
@@ -200,6 +215,8 @@ namespace OpenFindBearings.Domain.Entities
             Stock = stock;
             Enabled = enabled;
             SortOrder = sortOrder;
+            // 改动说明（v2.10.0）：置顶对象类型可编辑（Admin 配错商品/需求类型时纠正）
+            TargetKind = targetKind;
             UpdatedAt = DateTime.UtcNow;
         }
     }

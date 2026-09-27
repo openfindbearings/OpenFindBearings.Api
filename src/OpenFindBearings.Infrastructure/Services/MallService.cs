@@ -1,6 +1,8 @@
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.Shared.Interfaces;
 using OpenFindBearings.Application.Services;
+// 改动说明（v2.10.0 寻货置顶）：需求置顶履约引用寻货聚合
+using OpenFindBearings.Domain.Aggregates;
 using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
@@ -25,6 +27,8 @@ namespace OpenFindBearings.Infrastructure.Services
         private readonly IMerchantBearingRepository _bearings;
         private readonly IMerchantMemberRepository _members;
         private readonly IMerchantRepository _merchants;
+        // 改动说明（v2.10.0 寻货置顶）：需求置顶卡履约需要读写寻货聚合
+        private readonly ISourcingDemandRepository _demands;
         private readonly IPointsService _points;
         private readonly IPointAccountRepository _accounts;
         private readonly IMerchantPointsService _treasury;
@@ -43,6 +47,7 @@ namespace OpenFindBearings.Infrastructure.Services
             IMerchantBearingRepository bearings,
             IMerchantMemberRepository members,
             IMerchantRepository merchants,
+            ISourcingDemandRepository demands,
             IPointsService points,
             IPointAccountRepository accounts,
             IMerchantPointsService treasury,
@@ -58,6 +63,7 @@ namespace OpenFindBearings.Infrastructure.Services
             _bearings = bearings;
             _members = members;
             _merchants = merchants;
+            _demands = demands;
             _points = points;
             _accounts = accounts;
             _treasury = treasury;
@@ -90,7 +96,9 @@ namespace OpenFindBearings.Infrastructure.Services
                 i.IsFlashing(now) ? i.PointPrice : null,
                 i.IsFlashing(now), i.FlashEnd,
                 i.DurationHours, i.Stock, i.SoldCount, !i.HasStock(),
-                i.OwnerMerchantId.HasValue && ownerNames.TryGetValue(i.OwnerMerchantId.Value, out var n) ? n : null)).ToList();
+                i.OwnerMerchantId.HasValue && ownerNames.TryGetValue(i.OwnerMerchantId.Value, out var n) ? n : null,
+                // 改动说明（v2.10.0）：透传置顶对象类型，前端区分商品/需求置顶卡
+                i.TargetKind)).ToList();
 
             return new MallCatalogResult(list, account?.Balance ?? 0);
         }
@@ -112,57 +120,88 @@ namespace OpenFindBearings.Infrastructure.Services
 
             var now = DateTime.UtcNow;
             var price = item.EffectivePrice(now);
-            // 改动说明（v2.5.0 商家经济）：置顶卡按购买者最佳商家等级打折（Lv3 九折/Lv4 八折），
-            // 个人与金库两种支付通道同享——折扣是商家福利，不是价格豁免
-            var buyerMerchant = await _merchantGrades.GetBestForUserAsync(userId, cancellationToken);
-            price = MerchantBuffs.ApplyPinDiscount(price, buyerMerchant?.Grade ?? 0);
-            if (price <= 0)
-                return new RedeemResult(false, "商品价格配置异常，请联系平台", null, 0, null);
 
             if (item.Category != MallItemCategory.PinCard)
                 return new RedeemResult(false, "该权益即将上线，敬请期待", null, 0, null);
 
-            // 置顶卡目标校验（扣分前拦掉一切可预见失败）
+            // 改动说明（v2.10.0 置顶卡拆双对象）：商品置顶=商家经营权益（商家金定价、
+            // 等级折扣、金库/个人代付两通道）；需求置顶=个人权益（积分定价、原价、仅个人付）。
+            // TargetKind 路由校验与支付，扣分前拦掉一切可预见失败
+            var isDemandPin = item.TargetKind == MallItem.TargetKindDemand;
+            MerchantBearing? bearing = null;
+            SourcingDemand? demand = null;
+            MerchantMember? member = null;
+
             if (!targetRef.HasValue)
-                return new RedeemResult(false, "请选择要置顶的商品", null, 0, null);
-            var bearing = await _bearings.GetByIdAsync(targetRef.Value, cancellationToken);
-            if (bearing == null)
-                return new RedeemResult(false, "商品不存在", null, 0, null);
-            var member = await _members.GetActiveByUserAndMerchantAsync(userId, bearing.MerchantId, cancellationToken);
-            if (member == null)
-                return new RedeemResult(false, "只能置顶自己商户的商品", null, 0, null);
-            if (!bearing.IsOnSale)
-                return new RedeemResult(false, "仅在售商品可置顶", null, 0, null);
+                return new RedeemResult(false, isDemandPin ? "请选择要置顶的寻货需求" : "请选择要置顶的商品", null, 0, null);
+
+            if (isDemandPin)
+            {
+                demand = await _demands.GetByIdAsync(targetRef.Value, cancellationToken);
+                if (demand == null)
+                    return new RedeemResult(false, "寻货需求不存在", null, 0, null);
+                if (demand.PublisherUserId != userId)
+                    return new RedeemResult(false, "只能置顶自己发布的寻货需求", null, 0, null);
+                if (!demand.IsOpen)
+                    return new RedeemResult(false, "仅进行中的需求可置顶", null, 0, null);
+                if (useTreasury)
+                    return new RedeemResult(false, "寻货置顶仅支持个人积分支付", null, 0, null);
+            }
+            else
+            {
+                // 改动说明（v2.5.0 商家经济）：商品置顶按购买者最佳商家等级打折（Lv3 九折/Lv4 八折），
+                // 金库与个人代付同享——折扣是商家福利，不是价格豁免
+                var buyerMerchant = await _merchantGrades.GetBestForUserAsync(userId, cancellationToken);
+                price = MerchantBuffs.ApplyPinDiscount(price, buyerMerchant?.Grade ?? 0);
+                bearing = await _bearings.GetByIdAsync(targetRef.Value, cancellationToken);
+                if (bearing == null)
+                    return new RedeemResult(false, "商品不存在", null, 0, null);
+                member = await _members.GetActiveByUserAndMerchantAsync(userId, bearing.MerchantId, cancellationToken);
+                if (member == null)
+                    return new RedeemResult(false, "只能置顶自己商户的商品", null, 0, null);
+                if (!bearing.IsOnSale)
+                    return new RedeemResult(false, "仅在售商品可置顶", null, 0, null);
+            }
+
+            if (price <= 0)
+                return new RedeemResult(false, "商品价格配置异常，请联系平台", null, 0, null);
 
             var bizId = string.IsNullOrWhiteSpace(requestId) ? null : $"mall:{requestId}";
             if (bizId == null)
                 return new RedeemResult(false, "缺少幂等键，请重试", null, 0, null);
 
-            // 支出通道二选一：金库（管理员、同批提交）或个人（内部即提交）
+            // 支出通道：金库（仅管理员、商家金原价）或个人积分；
+            // 个人代付商品置顶按汇率折算多付（金库是攒出来的稀缺账本，引导经营支出走金库）
             if (useTreasury)
             {
-                if (!member.IsAdmin)
-                    return new RedeemResult(false, "仅商户管理员可用金库积分", null, 0, null);
+                if (member == null || !member.IsAdmin)
+                    return new RedeemResult(false, "仅商户管理员可用金库支付", null, 0, null);
                 bool spent;
                 try
                 {
-                    spent = await _treasury.SpendAsync(bearing.MerchantId, price, bizId,
+                    spent = await _treasury.SpendAsync(bearing!.MerchantId, price, bizId,
                         $"金库兑换：{item.Name}", cancellationToken);
                 }
                 catch (InvalidOperationException)
                 {
-                    return new RedeemResult(false, "商家金库余额不足", null, 0, null);
+                    return new RedeemResult(false, "商家金余额不足", null, 0, null);
                 }
                 if (!spent)
                     return new RedeemResult(false, "请勿重复提交", null, 0, null);
             }
             else
             {
+                if (!isDemandPin)
+                {
+                    var rate = await GetConfigAsync("Business.MerchantGoldPayRate", 2, cancellationToken);
+                    if (rate > 1)
+                        price *= rate;
+                }
                 int deducted;
                 try
                 {
                     deducted = await _points.DeductAsync(userId, PointTransaction.TypeMallRedeem, price, bizId,
-                        $"兑换：{item.Name}", cancellationToken);
+                        isDemandPin ? $"兑换：{item.Name}" : $"兑换：{item.Name}（个人代付折算）", cancellationToken);
                 }
                 catch (InvalidOperationException)
                 {
@@ -178,9 +217,21 @@ namespace OpenFindBearings.Infrastructure.Services
             {
                 await _orders.AddAsync(order, cancellationToken);
 
-                bearing.Pin(now, item.DurationHours ?? 24);
-                await _bearings.UpdateAsync(bearing, cancellationToken);
-                order.MarkFulfilled($"置顶至 {bearing.PinnedUntil:yyyy-MM-dd HH:mm} (UTC)");
+                // 改动说明（v2.10.0）：按 TargetKind 履约到商品或需求，置顶时长按卡配置
+                DateTime? pinnedUntil;
+                if (isDemandPin)
+                {
+                    demand!.Pin(item.DurationHours ?? 24, now);
+                    await _demands.UpdateAsync(demand, cancellationToken);
+                    pinnedUntil = demand.PinnedUntil;
+                }
+                else
+                {
+                    bearing!.Pin(now, item.DurationHours ?? 24);
+                    await _bearings.UpdateAsync(bearing, cancellationToken);
+                    pinnedUntil = bearing.PinnedUntil;
+                }
+                order.MarkFulfilled($"置顶至 {pinnedUntil:yyyy-MM-dd HH:mm} (UTC)");
 
                 item.ConsumeStock();
                 await _items.UpdateAsync(item, cancellationToken);
@@ -189,7 +240,7 @@ namespace OpenFindBearings.Infrastructure.Services
                 _logger.LogInformation("商城兑换成功: UserId={UserId}, Item={Key}, Points={Points}, Order={OrderId}, Treasury={T}",
                     userId, item.Key, price, order.Id, useTreasury);
 
-                return new RedeemResult(true, null, order.Id, price, bearing.PinnedUntil);
+                return new RedeemResult(true, null, order.Id, price, pinnedUntil);
             }
             catch (Exception ex)
             {
