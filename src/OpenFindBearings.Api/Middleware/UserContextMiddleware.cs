@@ -171,12 +171,14 @@ namespace OpenFindBearings.Api.Middleware
 
                     // 改动说明（v1.32.0 积分底座）：赚端两场景挂 JIT 链路——
                     //   注册奖励=首次创建业务用户一次性；每日登录=当日首次请求
-                    //   （bizId 含 UTC 日期天然幂等，同日后续请求被服务层跳过）。
+                    //   （bizId 含业务日键 BusinessClock.DateKey 天然幂等，同日后续请求被服务层跳过）。
                     //   GrantAsync 内部吞异常，积分失败不影响登录主流程
                     // 改动说明（v1.34.0 防刷）：注册奖励改走认领台账，键绑手机号而非 userId——
                     //   注销重注册 userId 会变、手机号不变（Identity 匿名化释放号码后同号可再注册），
                     //   台账保证同号一生只领一次 50 分；无手机号 claim 的账号（如后台账号）
                     //   回退 userId 键（非 App 刷分面）
+                    // 改动说明（v2.7.0 P2 订正）：此前注释误写"UTC 日期"，实际发放键一直走
+                    //   BusinessClock.DateKey（北京业务日界）；此处订正文字，避免误导后续维护
                     var points = context.RequestServices.GetRequiredService<IPointsService>();
                     // 改动说明（v2.6.0 新手旅程）：注册/登录同时喂成就计数引擎——
                     // 成就失败绝不反噬登录链路，逐点独立 try/catch 吞（与签到端点同款纪律）

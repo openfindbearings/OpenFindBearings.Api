@@ -138,6 +138,12 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                 .CountAsync(r => r.MerchantId == merchantId && r.CreatedAt >= BusinessClock.TodayUtc, cancellationToken);
 
         /// <inheritdoc/>
+        public async Task<int> CountRespondedTodayByUserAsync(Guid userId, CancellationToken cancellationToken = default)
+            // 改动说明（v2.7.0 G2 三件套）：按操作人统计今日新增应答（业务日界起点口径与额度评估一致）
+            => await _context.Set<SourcingResponse>()
+                .CountAsync(r => r.RespondedUserId == userId && r.CreatedAt >= BusinessClock.TodayUtc, cancellationToken);
+
+        /// <inheritdoc/>
         public async Task<List<SourcingResponse>> GetPendingByDemandAsync(Guid demandId, CancellationToken cancellationToken = default)
             => await _context.Set<SourcingResponse>()
                 .Where(r => r.DemandId == demandId && r.Status == SourcingResponse.StatusPending)

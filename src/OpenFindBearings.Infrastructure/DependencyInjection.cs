@@ -83,6 +83,8 @@ namespace OpenFindBearings.Infrastructure
         services.AddScoped<IPointGrantRuleRepository, PointGrantRuleRepository>();
         // v1.34.0：一次性奖励认领台账（号/照维度防刷，永不随注销删除）
         services.AddScoped<IPointRewardClaimRepository, PointRewardClaimRepository>();
+        // v2.7.0 G7：用户积分等级阈值仓储
+        services.AddScoped<IPointLevelRepository, PointLevelRepository>();
         // v1.35.0 寻货：需求/应答仓储
         services.AddScoped<ISourcingDemandRepository, SourcingDemandRepository>();
         services.AddScoped<ISourcingResponseRepository, SourcingResponseRepository>();

@@ -35,9 +35,11 @@ namespace OpenFindBearings.Infrastructure.Services
         // 改动说明（v2.5.0 商家经济）：成员被动加成——签到/登录/纠错按"最佳商家"等级加成，
         // 在日上限截顶之前套用（加成结果仍受 DailyLimit 约束，防叠出无顶收益）
         private readonly IMerchantGradeService _merchantGrades;
+        // 改动说明（v2.7.0 G2 三件套）：判定用户今日应答次数（寻货应答完成信号源）
+        private readonly ISourcingResponseRepository _sourcingResponses;
 
         /// <summary>
-        /// 构造：账户/流水/规则/台账仓储 + 工作单元（独立提交用）+ 上下文（失败清理用）+ 金库服务（trickle 挂钩）+ 等级服务（buff）
+        /// 构造：账户/流水/规则/台账仓储 + 工作单元（独立提交用）+ 上下文（失败清理用）+ 金库服务（trickle 挂钩）+ 等级服务（buff）+ 应答仓储（三件套判定）
         /// </summary>
         public PointsService(
             ILogger<PointsService> logger,
@@ -48,7 +50,8 @@ namespace OpenFindBearings.Infrastructure.Services
             IUnitOfWork unitOfWork,
             ApplicationDbContext context,
             IMerchantPointsService merchantPoints,
-            IMerchantGradeService grades)
+            IMerchantGradeService grades,
+            ISourcingResponseRepository sourcingResponses)
         {
             _logger = logger;
             _accountRepository = accountRepository;
@@ -59,6 +62,7 @@ namespace OpenFindBearings.Infrastructure.Services
             _context = context;
             _merchantPoints = merchantPoints;
             _merchantGrades = grades;
+            _sourcingResponses = sourcingResponses;
         }
 
         /// <inheritdoc/>
@@ -320,6 +324,45 @@ namespace OpenFindBearings.Infrastructure.Services
             {
                 _logger.LogWarning(ex, "商家 buff 查询失败（按无加成发放）: User={UserId}", userId);
                 return amount;
+            }
+        }
+
+        /// <inheritdoc/>
+        public async Task<int> TryGrantDailyComboAsync(Guid userId, CancellationToken cancellationToken = default)
+        {
+            // 改动说明（v2.7.0 G2 每日任务板三件套）：三处触发点（签到成功/纠错采纳/应答新增）
+            // 都调用本方法，无论哪项最后完成都会判定补发——bizId=daily_combo:{userId}:{业务日键} 幂等，
+            // 重复触发自然跳过。判定口径：签到与纠错看今日对应类型流水，应答看今日新增应答条数
+            try
+            {
+                var rule = await _ruleRepository.GetEnabledByTypeAsync(PointTransaction.TypeDailyCombo, cancellationToken);
+                if (rule == null)
+                    return 0;
+
+                var bizId = $"daily_combo:{userId:N}:{BusinessClock.DateKey}";
+                if (await _transactionRepository.ExistsBizIdAsync(bizId, cancellationToken))
+                    return 0;
+
+                var todayUtc = BusinessClock.TodayUtc;
+                var doneTypes = await _transactionRepository.GetGrantTypesAsync(userId, todayUtc, cancellationToken);
+                if (!doneTypes.Contains(PointTransaction.TypeDailyCheckin))
+                    return 0;
+                if (!doneTypes.Contains(PointTransaction.TypeCorrectionAdopted))
+                    return 0;
+                var respondedToday = await _sourcingResponses.CountRespondedTodayByUserAsync(userId, cancellationToken);
+                if (respondedToday <= 0)
+                    return 0;
+
+                // 三项全完成：走标准发放（日上限=1 天然防多次），失败吞掉不抛
+                var amount = await GrantAsync(userId, PointTransaction.TypeDailyCombo, bizId,
+                    "每日任务板三件套：签到 + 纠错 + 应答", null, cancellationToken);
+                _logger.LogInformation("三件套发放: User={UserId}, Type={Type}, Amount={Amount}", userId, PointTransaction.TypeDailyCombo, amount);
+                return amount;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "三件套判定失败（按未发放）: User={UserId}", userId);
+                return 0;
             }
         }
 

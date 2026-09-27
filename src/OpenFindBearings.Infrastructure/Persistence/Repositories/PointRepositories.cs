@@ -201,7 +201,46 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                   ON CONFLICT (""BizKey"") DO NOTHING",
                 new object[] { Guid.NewGuid(), bizKey, grantType, userId },
                 cancellationToken);
-            return affected == 1;
+return affected == 1;
+        }
+    }
+
+    /// <summary>
+    /// 用户积分等级阈值仓储实现（v2.7.0 G7）
+    /// </summary>
+    public class PointLevelRepository : IPointLevelRepository
+    {
+        private readonly ApplicationDbContext _context;
+
+        public PointLevelRepository(ApplicationDbContext context)
+        {
+            _context = context;
+        }
+
+        public async Task<List<PointLevel>> GetEnabledAsync(CancellationToken cancellationToken = default)
+        {
+            return await _context.Set<PointLevel>()
+                .Where(l => l.Enabled)
+                .OrderBy(l => l.MinTotalEarned)
+                .ToListAsync(cancellationToken);
+        }
+
+        public async Task<List<PointLevel>> GetAllAsync(CancellationToken cancellationToken = default)
+        {
+            return await _context.Set<PointLevel>()
+                .OrderBy(l => l.MinTotalEarned)
+                .ToListAsync(cancellationToken);
+        }
+
+        public async Task AddAsync(PointLevel level, CancellationToken cancellationToken = default)
+        {
+            await _context.Set<PointLevel>().AddAsync(level, cancellationToken);
+        }
+
+        public Task UpdateAsync(PointLevel level, CancellationToken cancellationToken = default)
+        {
+            _context.Set<PointLevel>().Update(level);
+            return Task.CompletedTask;
         }
     }
 }

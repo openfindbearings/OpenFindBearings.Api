@@ -93,4 +93,22 @@ namespace OpenFindBearings.Domain.Repositories
         /// <param name="userId">认领人（审计快照）</param>
         Task<bool> TryClaimAsync(string bizKey, string grantType, Guid userId, CancellationToken cancellationToken = default);
     }
+
+    /// <summary>
+    /// 用户积分等级阈值仓储（v2.7.0 G7）：读档位列表 + 按累计分落档
+    /// </summary>
+    public interface IPointLevelRepository
+    {
+        /// <summary>全部启用等级档（按阈值升序）</summary>
+        Task<List<PointLevel>> GetEnabledAsync(CancellationToken cancellationToken = default);
+
+        /// <summary>全部等级档（含停用，Admin 配置页）</summary>
+        Task<List<PointLevel>> GetAllAsync(CancellationToken cancellationToken = default);
+
+        /// <summary>新增等级档</summary>
+        Task AddAsync(PointLevel level, CancellationToken cancellationToken = default);
+
+        /// <summary>标记变更</summary>
+        Task UpdateAsync(PointLevel level, CancellationToken cancellationToken = default);
+    }
 }
