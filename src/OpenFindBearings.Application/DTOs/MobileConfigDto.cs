@@ -41,5 +41,11 @@
         /// 改动说明：图片改由独立媒体服务直出，前端据此拼相对键；下发以便换域名/切对象存储免发版
         /// </summary>
         public string MediaBaseUrl { get; set; } = string.Empty;
+
+        /// <summary>
+        /// 商品置顶个人代付汇率（1 商家金折算 N 个人积分，默认 2）。
+        /// 改动说明（v2.10.0 商家金）：Taro 商品置顶支付面板据此显示"个人代付折算"价格
+        /// </summary>
+        public int MerchantGoldPayRate { get; set; } = 2;
     }
 }

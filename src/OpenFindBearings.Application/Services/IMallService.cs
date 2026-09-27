@@ -47,7 +47,9 @@ namespace OpenFindBearings.Application.Services
         int Category, int Price, int? OriginalPrice, bool Flashing, DateTime? FlashEnd,
         int? DurationHours, int Stock, int SoldCount, bool SoldOut,
         // v2.4.0 挂礼：归属商户名（实物礼品展示"来自 XX 商家"；平台权益为 null）
-        string? OwnerMerchantName = null);
+        string? OwnerMerchantName = null,
+        // v2.10.0 寻货置顶：置顶对象类型（1=商品/2=需求），前端据此区分"商家金定价"与"积分定价"并路由选择器
+        int TargetKind = 1);
 
     /// <summary>目录结果（含余额，供"积分不足去赚"三态按钮）</summary>
     public record MallCatalogResult(List<MallCatalogItem> Items, int Balance);

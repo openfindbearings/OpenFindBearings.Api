@@ -41,8 +41,11 @@ namespace OpenFindBearings.Api.Endpoints
                 await demandRepository.ExpireOverdueAsync();
                 var (items, total) = await demandRepository.GetListAsync(
                     onlyOpen ? SourcingDemand.StatusPublished : null, keyword, onlyOpen,
-                    page <= 0 ? 1 : page, pageSize is > 0 and <= 50 ? pageSize : 20);
+                    page <= 0 ? 1 : page, pageSize is > 0 and <= 50 ? pageSize : 20,
+                    // 改动说明（v2.10.0）：公开大厅有效置顶排前
+                    pinFirst: true);
                 var userId = currentUser.UserId;
+                var nowUtc = DateTime.UtcNow;
                 return ApiResponseHelper.Ok(new
                 {
                     items = items.Select(d => new
@@ -56,6 +59,9 @@ namespace OpenFindBearings.Api.Endpoints
                         responseCount = d.ResponseCount,
                         createdAt = d.CreatedAt,
                         expiryAt = d.ExpiryAt,
+                        // 改动说明（v2.10.0 寻货置顶）：置顶标记下发，大厅角标与"我的"页置顶按钮态消费
+                        isPinned = d.PinnedUntil.HasValue && d.PinnedUntil.Value > nowUtc,
+                        pinnedUntil = d.PinnedUntil,
                         isMine = userId.HasValue && d.PublisherUserId == userId.Value
                     }),
                     total
@@ -273,6 +279,7 @@ namespace OpenFindBearings.Api.Endpoints
 
                 await demandRepository.ExpireOverdueAsync();
                 var items = await demandRepository.GetByPublisherAsync(currentUser.UserId.Value, httpContext.RequestAborted);
+                var nowPinned = DateTime.UtcNow;
                 return ApiResponseHelper.Ok(items.Select(d => new
                 {
                     id = d.Id,
@@ -282,7 +289,10 @@ namespace OpenFindBearings.Api.Endpoints
                     status = d.Status,
                     responseCount = d.ResponseCount,
                     createdAt = d.CreatedAt,
-                    expiryAt = d.ExpiryAt
+                    expiryAt = d.ExpiryAt,
+                    // 改动说明（v2.10.0 寻货置顶）："我的"页置顶按钮态数据源
+                    isPinned = d.PinnedUntil.HasValue && d.PinnedUntil.Value > nowPinned,
+                    pinnedUntil = d.PinnedUntil
                 }), httpContext: httpContext);
             })
             .RequireAuthorization()
@@ -508,7 +518,8 @@ namespace OpenFindBearings.Api.Endpoints
             {
                 await demandRepository.ExpireOverdueAsync();
                 var (items, total) = await demandRepository.GetListAsync(status, keyword, false,
-                    page <= 0 ? 1 : page, pageSize is > 0 and <= 100 ? pageSize : 20, httpContext.RequestAborted);
+                    page <= 0 ? 1 : page, pageSize is > 0 and <= 100 ? pageSize : 20,
+                    cancellationToken: httpContext.RequestAborted);
                 var list = new List<object>();
                 foreach (var d in items)
                 {

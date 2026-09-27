@@ -36,7 +36,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 
         /// <inheritdoc/>
         public async Task<(List<SourcingDemand> Items, int Total)> GetListAsync(int? status, string? keyword, bool onlyOpen,
-            int page, int pageSize, CancellationToken cancellationToken = default)
+            int page, int pageSize, bool pinFirst = false, CancellationToken cancellationToken = default)
         {
             var query = _context.Set<SourcingDemand>().AsQueryable();
 
@@ -52,8 +52,13 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
             }
 
             var total = await query.CountAsync(cancellationToken);
-            var items = await query
-                .OrderByDescending(d => d.CreatedAt)
+            // 改动说明（v2.10.0 寻货置顶）：公开大厅 pinFirst 时有效置顶排前——
+            // 排序键取"未过期的 PinnedUntil，否则最小时间"，过期旧值不插队
+            var items = await (pinFirst
+                ? query.OrderByDescending(d => d.PinnedUntil != null && d.PinnedUntil > DateTime.UtcNow
+                    ? d.PinnedUntil : DateTime.MinValue)
+                    .ThenByDescending(d => d.CreatedAt)
+                : query.OrderByDescending(d => d.CreatedAt))
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync(cancellationToken);
