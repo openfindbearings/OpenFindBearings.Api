@@ -42,6 +42,8 @@ namespace OpenFindBearings.Api.Extensions
         app.MapAchievementEndpoints();
         // v2.3.0 商城虚拟权益：目录/兑换/我的订单 + Admin 目录管理
         app.MapMallEndpoints();
+        // v2.4.0 工会经济：商家挂礼/金库/礼品订单 + 审核退款
+        app.MapMerchantGiftEndpoints();
 
             // 系统配置接口（内部服务拉取）
             app.MapConfigEndpoints();

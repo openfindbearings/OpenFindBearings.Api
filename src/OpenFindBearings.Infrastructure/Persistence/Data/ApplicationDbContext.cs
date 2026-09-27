@@ -68,6 +68,10 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
         public DbSet<MallItem> MallItems { get; set; }
         public DbSet<MallOrder> MallOrders { get; set; }
 
+        // v2.4.0 工会经济：商家金库账户与流水
+        public DbSet<MerchantPointAccount> MerchantPointAccounts { get; set; }
+        public DbSet<MerchantPointTransaction> MerchantPointTransactions { get; set; }
+
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

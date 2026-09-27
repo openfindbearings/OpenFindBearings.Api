@@ -27,8 +27,14 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             builder.Property(i => i.Key).IsRequired().HasMaxLength(64);
             builder.Property(i => i.Name).IsRequired().HasMaxLength(64);
             builder.Property(i => i.Description).IsRequired().HasMaxLength(512);
-            builder.Property(i => i.Icon).IsRequired().HasMaxLength(64);
+            // v2.4.0 商家挂礼：Icon 兼作礼品图片的对象存储相对路径，放宽到 256
+            builder.Property(i => i.Icon).IsRequired().HasMaxLength(256);
             builder.Property(i => i.Category).IsRequired();
+            builder.Property(i => i.AuditRemark).HasMaxLength(256);
+
+            // v2.4.0：商家礼品按归属商户查询（商户"我的礼品"+Admin 待审队列）
+            builder.HasIndex(i => new { i.OwnerMerchantId, i.AuditState })
+                .HasDatabaseName("IX_MallItems_Owner_Audit");
         }
 
         /// <summary>

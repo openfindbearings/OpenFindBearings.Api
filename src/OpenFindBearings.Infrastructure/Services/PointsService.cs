@@ -29,9 +29,12 @@ namespace OpenFindBearings.Infrastructure.Services
         // 改动说明（v2.3.1 登录修复）：SaveChanges 失败后需清理本次挂入的实体——
         // 吞异常但不清 tracker 会让脏行随请求 DbContext 外溢到业务写库（并行发放撞 23505 后登录 500 的根因）
         private readonly ApplicationDbContext _context;
+        // 改动说明（v2.4.0 工会经济）：成员合格赚分后向所属商户金库微量上供（trickle），
+        // 白名单与上限全部在金库服务内部裁决；发放成功后同上下文调用（同请求同库，无需新事务）
+        private readonly IMerchantPointsService _merchantPoints;
 
         /// <summary>
-        /// 构造：账户/流水/规则/台账仓储 + 工作单元（独立提交用）+ 上下文（失败清理用）
+        /// 构造：账户/流水/规则/台账仓储 + 工作单元（独立提交用）+ 上下文（失败清理用）+ 金库服务（trickle 挂钩）
         /// </summary>
         public PointsService(
             ILogger<PointsService> logger,
@@ -40,7 +43,8 @@ namespace OpenFindBearings.Infrastructure.Services
             IPointGrantRuleRepository ruleRepository,
             IPointRewardClaimRepository claimRepository,
             IUnitOfWork unitOfWork,
-            ApplicationDbContext context)
+            ApplicationDbContext context,
+            IMerchantPointsService merchantPoints)
         {
             _logger = logger;
             _accountRepository = accountRepository;
@@ -49,6 +53,7 @@ namespace OpenFindBearings.Infrastructure.Services
             _claimRepository = claimRepository;
             _unitOfWork = unitOfWork;
             _context = context;
+            _merchantPoints = merchantPoints;
         }
 
         /// <inheritdoc/>
@@ -250,6 +255,11 @@ namespace OpenFindBearings.Infrastructure.Services
                 await CleanupFailedGrantAsync(account, tx, accountWasNew, cancellationToken);
                 throw;
             }
+
+            // 改动说明（v2.4.0 工会经济）：入账成功后尝试向成员所属商户金库上供——
+            // 白名单（审核/交易类）在金库服务内部校验，登录/签到/注册等被动项自动跳过；
+            // 同上下文提交但金库自行吞失败，绝不反噬个人赚分
+            await _merchantPoints.TrickleForEarningAsync(userId, grantType, amount, bizId, cancellationToken);
         }
 
         /// <summary>

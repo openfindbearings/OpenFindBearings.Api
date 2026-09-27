@@ -19,6 +19,10 @@ namespace OpenFindBearings.Application.Commands.Merchants.DeleteRejectedApplicat
         private readonly ICorrectionRequestRepository _correctionRepository;
         // v1.34.0（审计 U5）：HardDelete 前显式清证照行（MerchantId FK 级联不成立）
         private readonly IMerchantDocumentRepository _documentRepository;
+        // v2.4.0 工会经济：硬删商户连带清金库两表与挂礼行（防无主僵尸数据）
+        private readonly IMerchantPointAccountRepository _treasuryAccountRepository;
+        private readonly IMerchantPointTransactionRepository _treasuryTxRepository;
+        private readonly IMallItemRepository _mallItemRepository;
         private readonly ILogger<DeleteRejectedApplicationCommandHandler> _logger;
 
         public DeleteRejectedApplicationCommandHandler(
@@ -26,6 +30,9 @@ namespace OpenFindBearings.Application.Commands.Merchants.DeleteRejectedApplicat
             IMerchantMemberRepository merchantMemberRepository,
             ICorrectionRequestRepository correctionRepository,
             IMerchantDocumentRepository documentRepository,
+            IMerchantPointAccountRepository treasuryAccountRepository,
+            IMerchantPointTransactionRepository treasuryTxRepository,
+            IMallItemRepository mallItemRepository,
             ILogger<DeleteRejectedApplicationCommandHandler> logger)
         {
             _merchantRepository = merchantRepository;
@@ -34,6 +41,9 @@ namespace OpenFindBearings.Application.Commands.Merchants.DeleteRejectedApplicat
             //   走到 HardDelete 必 NRE），连同新增的证照仓储一并补齐
             _correctionRepository = correctionRepository;
             _documentRepository = documentRepository;
+            _treasuryAccountRepository = treasuryAccountRepository;
+            _treasuryTxRepository = treasuryTxRepository;
+            _mallItemRepository = mallItemRepository;
             _logger = logger;
         }
 
@@ -61,8 +71,9 @@ namespace OpenFindBearings.Application.Commands.Merchants.DeleteRejectedApplicat
             switch (merchant.ApplicationMode)
             {
                 case ApplicationMode.Self:
-                    await ApplicantApplicationCleanup.HardDeleteMerchantWithMembersAsync(
-                        merchant, _merchantRepository, _merchantMemberRepository, _correctionRepository, _documentRepository, cancellationToken);
+                await ApplicantApplicationCleanup.HardDeleteMerchantWithMembersAsync(
+                    merchant, _merchantRepository, _merchantMemberRepository, _correctionRepository, _documentRepository,
+                    _treasuryAccountRepository, _treasuryTxRepository, _mallItemRepository, cancellationToken);
                     break;
                 case ApplicationMode.Claim:
                     await ApplicantApplicationCleanup.RemoveClaimAndRevertToCrawlerAsync(
