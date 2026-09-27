@@ -28,6 +28,8 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             builder.Property(a => a.Name).IsRequired().HasMaxLength(64);
             builder.Property(a => a.Description).IsRequired().HasMaxLength(256);
             builder.Property(a => a.Icon).IsRequired().HasMaxLength(64);
+            // 勋章图片相对媒体键（v2.6.0）：可空，键名含时间戳建议 128 长度
+            builder.Property(a => a.ImageKey).HasMaxLength(128);
             builder.Property(a => a.Category).IsRequired().HasMaxLength(32);
             builder.Property(a => a.MetricKey).IsRequired().HasMaxLength(64);
             builder.Property(a => a.TitleReward).HasMaxLength(64);

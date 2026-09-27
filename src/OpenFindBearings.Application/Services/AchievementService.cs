@@ -117,7 +117,7 @@ namespace OpenFindBearings.Application.Services
                 items.Add(new AchievementProgressView(
                     d.Key, d.Name, d.Description, d.Icon, d.Category,
                     (int)d.Scope, d.ProgressTarget, u?.Progress ?? 0, unlocked, u?.UnlockedAt,
-                    d.Rare, d.Hidden, d.MetaPoints, d.TitleReward));
+                    d.Rare, d.Hidden, d.MetaPoints, d.TitleReward, d.ImageKey));
             }
 
             var unlockedDefs = items.Where(i => i.Unlocked).ToList();

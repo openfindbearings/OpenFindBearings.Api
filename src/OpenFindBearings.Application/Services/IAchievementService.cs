@@ -6,7 +6,7 @@ namespace OpenFindBearings.Application.Services
     public record AchievementProgressView(
         string Key, string Name, string Description, string Icon, string Category,
         int Scope, int Target, int Progress, bool Unlocked, DateTime? UnlockedAt,
-        bool Rare, bool Hidden, int MetaPoints, string? TitleReward);
+        bool Rare, bool Hidden, int MetaPoints, string? TitleReward, string? ImageKey);
 
     /// <summary>成就墙视图（目录+本人进度+成就点合计+当前称号）</summary>
     public record AchievementWallView(
