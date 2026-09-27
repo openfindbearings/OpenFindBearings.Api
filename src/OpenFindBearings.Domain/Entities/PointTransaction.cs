@@ -36,6 +36,9 @@ namespace OpenFindBearings.Domain.Entities
         // 改动说明（v2.7.0 G2 每日任务板三件套）：签到 + 纠错采纳 + 寻货应答三项当日全完成额外 +30（bizId=每日键幂等）
         public const string TypeDailyCombo = "daily_combo";
 
+        // 改动说明（v2.10.1 游戏中心）：轴承连连看等小游戏胜利发分（bizId=minigame:{gameId} 每局幂等，日限走规则表；娱乐分不进 trickle 白名单）
+        public const string TypeMinigame = "minigame";
+
         /// <summary>商城兑换扣分场景（v2.3.0 商城虚拟权益，DeductAsync 的 sceneType）</summary>
         public const string TypeMallRedeem = "mall_redeem";
 

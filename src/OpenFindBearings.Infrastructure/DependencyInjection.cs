@@ -167,6 +167,10 @@ namespace OpenFindBearings.Infrastructure
         services.AddScoped<IMallOrderRepository, MallOrderRepository>();
         services.AddScoped<IMallService, MallService>();
 
+        // v2.10.1 游戏中心（方案 A 进程内插件）：每游戏一条注册，端点按 IGameProvider.Key 路由；
+        // 将来拆微服务时整组平移，此列表即"可平移单元"清单
+        services.AddScoped<IGameProvider, LinkupGameProvider>();
+
         // v2.4.0 商家经济：商家金库账户/流水仓储 + 记账服务（trickle/结算/消费/燃烧单一入口）
         services.AddScoped<IMerchantPointAccountRepository, MerchantPointAccountRepository>();
         services.AddScoped<IMerchantPointTransactionRepository, MerchantPointTransactionRepository>();
