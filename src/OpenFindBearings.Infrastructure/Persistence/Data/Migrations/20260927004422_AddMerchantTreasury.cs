@@ -129,7 +129,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                 table: "MallItems",
                 columns: new[] { "OwnerMerchantId", "AuditState" });
 
-            // 改动说明（v2.4.0 工会经济）：金库与工会等级参数走迁移种子（存量库 SeedData 短路不执行，
+            // 改动说明（v2.4.0 商家经济）：金库与商家等级参数走迁移种子（存量库 SeedData 短路不执行，
             // 与 MallItems 目录种子同理）；幂等 NOT EXISTS，列清单含全部 NOT NULL 列（Id/CreatedAt/IsActive）
             // 防踩坑：漏列必致启动迁移 CrashLoopBackOff
             migrationBuilder.Sql(@"
@@ -142,9 +142,9 @@ FROM (VALUES
  ('Business.GiftSettleMonthlyCap', '2000', '单商户金库每月挂礼结算上限'),
  ('Business.GiftReceiverMonthlyLimit', '3', '同一收货电话/地址每月礼品兑换单数上限（防刷闸）'),
  ('Business.GiftPriceCeiling', '3000', '商家礼品平台定档单价封顶（防定向积分转移）'),
- ('Business.GuildPremiumOnSaleMin', '5', '工会 Lv3 活跃供给：认证+在售达此数'),
- ('Business.GuildGoldOnSaleMin', '10', '工会 Lv4 金牌：认证+在售达此数'),
- ('Business.GuildGoldTreasuryMin', '500', '工会 Lv4 金牌：金库累计入账达此数')
+ ('Business.MerchantPremiumOnSaleMin', '5', '商家 Lv3 活跃供给：认证+在售达此数'),
+ ('Business.MerchantGoldOnSaleMin', '10', '商家 Lv4 金牌：认证+在售达此数'),
+ ('Business.MerchantGoldTreasuryMin', '500', '商家 Lv4 金牌：金库累计入账达此数')
 ) AS v(""Key"", ""Value"", ""Desc"")
 WHERE NOT EXISTS (SELECT 1 FROM ""SystemConfigs"" s WHERE s.""Key"" = v.""Key"");");
 

@@ -54,7 +54,7 @@ namespace OpenFindBearings.Domain.Entities
 
         /// <summary>
         /// 归属商户 ID（v2.4.0 商家挂礼：null=平台自营权益；非空=该商家发布的实物礼品）。
-        /// 金库类比"工会摆摊"：礼品兑换确认收货后的积分全额结算进该商户金库
+        /// 金库类比"商家摆摊"：礼品兑换确认收货后的积分全额结算进该商户金库
         /// </summary>
         public Guid? OwnerMerchantId { get; private set; }
 

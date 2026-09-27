@@ -33,8 +33,8 @@ namespace OpenFindBearings.Application.Commands.Sourcing
         private readonly ISystemConfigRepository _configRepository;
         private readonly IPointGrantRuleRepository _ruleRepository;
         private readonly IPointsService _pointsService;
-        // v2.5.0 工会经济：发布额度按最佳工会等级加成
-        private readonly IMerchantGradeService _guilds;
+        // v2.5.0 商家经济：发布额度按最佳商家等级加成
+        private readonly IMerchantGradeService _merchantGrades;
 
         /// <summary>
         /// 构造：需求仓储 + 配置/规则仓储 + 积分服务（加量扣分）
@@ -44,13 +44,13 @@ namespace OpenFindBearings.Application.Commands.Sourcing
             ISystemConfigRepository configRepository,
             IPointGrantRuleRepository ruleRepository,
             IPointsService pointsService,
-            IMerchantGradeService guilds)
+            IMerchantGradeService grades)
         {
             _demandRepository = demandRepository;
             _configRepository = configRepository;
             _ruleRepository = ruleRepository;
             _pointsService = pointsService;
-            _guilds = guilds;
+            _merchantGrades = grades;
         }
 
         /// <inheritdoc/>
@@ -64,9 +64,9 @@ namespace OpenFindBearings.Application.Commands.Sourcing
             // 额度评估：今日已发数（含取消单，防发了删删了发绕额度）
             var today = await _demandRepository.CountPublishedTodayAsync(request.UserId, cancellationToken);
             var freeLimit = await SourcingConfigReader.GetIntAsync(_configRepository, "Sourcing.FreePublishPerDay", 3);
-            // 改动说明（v2.5.0 工会经济）：Lv2+ 认证工会成员发布免费额度 +1（最佳工会口径）
-            var guild = await _guilds.GetBestForUserAsync(request.UserId, cancellationToken);
-            freeLimit += GuildBuffs.PublishQuotaBonus(guild?.Grade ?? 0);
+            // 改动说明（v2.5.0 商家经济）：Lv2+ 认证商家成员发布免费额度 +1（最佳商家口径）
+            var best = await _merchantGrades.GetBestForUserAsync(request.UserId, cancellationToken);
+            freeLimit += MerchantBuffs.PublishQuotaBonus(best?.Grade ?? 0);
             var rule = await _ruleRepository.GetEnabledByTypeAsync("sourcing_publish_bonus", cancellationToken);
             var hardLimit = rule?.DailyLimit ?? 10;
             var price = rule?.Amount ?? 20;

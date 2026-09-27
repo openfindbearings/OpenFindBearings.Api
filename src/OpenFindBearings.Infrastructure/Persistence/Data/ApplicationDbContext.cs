@@ -68,13 +68,13 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
         public DbSet<MallItem> MallItems { get; set; }
         public DbSet<MallOrder> MallOrders { get; set; }
 
-        // v2.4.0 工会经济：商家金库账户与流水
+        // v2.4.0 商家经济：商家金库账户与流水
         public DbSet<MerchantPointAccount> MerchantPointAccounts { get; set; }
         public DbSet<MerchantPointTransaction> MerchantPointTransactions { get; set; }
 
         // v2.6.0 集体任务与排行：任务定义 + 完成台账
-        public DbSet<GuildTaskDefinition> GuildTaskDefinitions { get; set; }
-        public DbSet<GuildTaskCompletion> GuildTaskCompletions { get; set; }
+        public DbSet<MerchantTaskDefinition> MerchantTaskDefinitions { get; set; }
+        public DbSet<MerchantTaskCompletion> MerchantTaskCompletions { get; set; }
 
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
 

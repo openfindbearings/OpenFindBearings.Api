@@ -165,14 +165,15 @@ namespace OpenFindBearings.Infrastructure
         services.AddScoped<IMallOrderRepository, MallOrderRepository>();
         services.AddScoped<IMallService, MallService>();
 
-        // v2.4.0 工会经济：商家金库账户/流水仓储 + 记账服务（trickle/结算/消费/燃烧单一入口）
+        // v2.4.0 商家经济：商家金库账户/流水仓储 + 记账服务（trickle/结算/消费/燃烧单一入口）
         services.AddScoped<IMerchantPointAccountRepository, MerchantPointAccountRepository>();
         services.AddScoped<IMerchantPointTransactionRepository, MerchantPointTransactionRepository>();
         services.AddScoped<IMerchantPointsService, MerchantPointsService>();
-        // v2.5.0 工会经济：等级重算与最佳工会解析（buff 唯一输入）
+        // v2.5.0 商家经济：等级重算与最佳商家解析（buff 唯一输入）
         services.AddScoped<IMerchantGradeService, MerchantGradeService>();
-        // v2.6.0 集体任务与排行：任务定义/完成台账仓储
-        services.AddScoped<IGuildTaskRepository, GuildTaskRepository>();
+        // v2.6.0 集体任务与排行：任务定义/完成台账仓储 + 结算与榜单服务
+        services.AddScoped<IMerchantTaskRepository, MerchantTaskRepository>();
+        services.AddScoped<IMerchantTaskService, MerchantTaskService>();
 
             // 轴承统计服务
             services.AddScoped<IBearingViewStatsService, BearingViewStatsService>();
@@ -212,7 +213,7 @@ namespace OpenFindBearings.Infrastructure
             services.AddHostedService<QueuedHostedService>();
         // v2.12.0：注销冷静期到期匿名化 Job（每小时扫描，注销满 30 天清 PII）
         services.AddHostedService<UserDeactivationJob>();
-        // v2.4.0 工会经济：礼品订单发货满 7 天自动确认收货并结算入金库
+        // v2.4.0 商家经济：礼品订单发货满 7 天自动确认收货并结算入金库
         services.AddHostedService<MallAutoConfirmJob>();
 
             return services;

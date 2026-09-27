@@ -8,7 +8,7 @@ using OpenFindBearings.Domain.Services;
 namespace OpenFindBearings.Infrastructure.Services
 {
     /// <summary>
-    /// 商家金库服务实现（v2.4.0 工会经济）。
+    /// 商家金库服务实现（v2.4.0 商家经济）。
     /// 所有参数走 SystemConfig（Business.* 键，Admin 可改实时生效），与个人积分规则表同理但更轻——
     /// 金库只有四个数，不建第二套规则表；日/月顶统计走流水索引单条 SUM
     /// </summary>
@@ -73,7 +73,7 @@ namespace OpenFindBearings.Infrastructure.Services
                 var memberships = (await _members.GetActiveByUserIdAsync(userId, cancellationToken))
                     .OrderBy(m => m.CreatedAt)
                     .ToList();
-                if (memberships.Count == 0) return; // 散人无公会
+                if (memberships.Count == 0) return; // 散人无商家
 
                 var n = memberships.Count;
                 var each = total / n;
@@ -166,7 +166,7 @@ namespace OpenFindBearings.Infrastructure.Services
             if (account == null || account.Balance <= 0)
                 return; // 无金库或已空：无需燃烧
 
-            // 工会解散仓库回收：余额全额出账，与释放/删除动作同事务提交（调用方 SaveChanges）
+            // 商家解散仓库回收：余额全额出账，与释放/删除动作同事务提交（调用方 SaveChanges）
             var amount = account.Balance;
             account.Debit(amount);
             await _accounts.UpdateAsync(account, cancellationToken);
@@ -195,7 +195,7 @@ namespace OpenFindBearings.Infrastructure.Services
             }
             account.Credit(amount);
             await _transactions.AddAsync(new MerchantPointTransaction(
-                merchantId, MerchantPointTransaction.DirectionCredit, MerchantPointTransaction.TypeGuildTaskReward,
+                merchantId, MerchantPointTransaction.DirectionCredit, MerchantPointTransaction.TypeMerchantTaskReward,
                 amount, account.Balance, bizId, remark), cancellationToken);
         }
 

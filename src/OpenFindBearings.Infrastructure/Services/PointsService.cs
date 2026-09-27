@@ -29,12 +29,12 @@ namespace OpenFindBearings.Infrastructure.Services
         // 改动说明（v2.3.1 登录修复）：SaveChanges 失败后需清理本次挂入的实体——
         // 吞异常但不清 tracker 会让脏行随请求 DbContext 外溢到业务写库（并行发放撞 23505 后登录 500 的根因）
         private readonly ApplicationDbContext _context;
-        // 改动说明（v2.4.0 工会经济）：成员合格赚分后向所属商户金库微量上供（trickle），
+        // 改动说明（v2.4.0 商家经济）：成员合格赚分后向所属商户金库微量上供（trickle），
         // 白名单与上限全部在金库服务内部裁决；发放成功后同上下文调用（同请求同库，无需新事务）
         private readonly IMerchantPointsService _merchantPoints;
-        // 改动说明（v2.5.0 工会经济）：成员被动加成——签到/登录/纠错按"最佳工会"等级加成，
+        // 改动说明（v2.5.0 商家经济）：成员被动加成——签到/登录/纠错按"最佳商家"等级加成，
         // 在日上限截顶之前套用（加成结果仍受 DailyLimit 约束，防叠出无顶收益）
-        private readonly IMerchantGradeService _guilds;
+        private readonly IMerchantGradeService _merchantGrades;
 
         /// <summary>
         /// 构造：账户/流水/规则/台账仓储 + 工作单元（独立提交用）+ 上下文（失败清理用）+ 金库服务（trickle 挂钩）+ 等级服务（buff）
@@ -48,7 +48,7 @@ namespace OpenFindBearings.Infrastructure.Services
             IUnitOfWork unitOfWork,
             ApplicationDbContext context,
             IMerchantPointsService merchantPoints,
-            IMerchantGradeService guilds)
+            IMerchantGradeService grades)
         {
             _logger = logger;
             _accountRepository = accountRepository;
@@ -58,7 +58,7 @@ namespace OpenFindBearings.Infrastructure.Services
             _unitOfWork = unitOfWork;
             _context = context;
             _merchantPoints = merchantPoints;
-            _guilds = guilds;
+            _merchantGrades = grades;
         }
 
         /// <inheritdoc/>
@@ -78,9 +78,9 @@ namespace OpenFindBearings.Infrastructure.Services
                 // 缺省回退规则表 Amount；仍受日上限截断守卫
                 var amount = amountOverride ?? rule.Amount;
 
-                // 改动说明（v2.5.0 工会经济）：工会 buff 在截顶前套用——
+                // 改动说明（v2.5.0 商家经济）：商家 buff 在截顶前套用——
                 // 登录 Lv2+1、纠错 Lv2×1.1/Lv3×1.2/Lv4×1.25；其余场景原额返回零查询
-                amount = await ApplyGuildBuffAsync(userId, grantType, amount, cancellationToken);
+                amount = await ApplyMerchantBuffAsync(userId, grantType, amount, cancellationToken);
 
                 if (rule.DailyLimit > 0)
                 {
@@ -205,15 +205,15 @@ namespace OpenFindBearings.Infrastructure.Services
             // 阶梯：按连续天数取档（[2,3,4,5,5] 第 6 天起恒取末档 5）；无阶梯配置回退基础分值
             var streak = account.MarkCheckedIn(today);
             var amount = PickLadderAmount(rule.LadderJson, streak) ?? rule.Amount;
-            // 改动说明（v2.5.0 工会经济）：签到加成为工会 Lv1~+1/Lv2+1/Lv3+2/Lv4+3（阶梯后叠加）
+            // 改动说明（v2.5.0 商家经济）：签到加成为商家 Lv1~+1/Lv2+1/Lv3+2/Lv4+3（阶梯后叠加）
             try
             {
-                var guild = await _guilds.GetBestForUserAsync(userId, cancellationToken);
-                amount += GuildBuffs.CheckinBonus(guild?.Grade ?? 0);
+                var best = await _merchantGrades.GetBestForUserAsync(userId, cancellationToken);
+                amount += MerchantBuffs.CheckinBonus(best?.Grade ?? 0);
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "签到工会 buff 查询失败（按无加成）: User={UserId}", userId);
+                _logger.LogWarning(ex, "签到商家 buff 查询失败（按无加成）: User={UserId}", userId);
             }
 
             account.Credit(amount);
@@ -276,7 +276,7 @@ namespace OpenFindBearings.Infrastructure.Services
                 throw;
             }
 
-            // 改动说明（v2.4.0 工会经济）：入账成功后尝试向成员所属商户金库上供——
+            // 改动说明（v2.4.0 商家经济）：入账成功后尝试向成员所属商户金库上供——
             // 白名单（审核/交易类）在金库服务内部校验，登录/签到/注册等被动项自动跳过；
             // 同上下文提交但金库自行吞失败，绝不反噬个人赚分
             await _merchantPoints.TrickleForEarningAsync(userId, grantType, amount, bizId, cancellationToken);
@@ -297,28 +297,28 @@ namespace OpenFindBearings.Infrastructure.Services
         }
 
         /// <summary>
-        /// 工会 buff 套用（v2.5.0）：仅白名单场景触发最佳工会查询（一次读，低频可接受）；
+        /// 商家 buff 套用（v2.5.0）：仅白名单场景触发最佳商家查询（一次读，低频可接受）；
         /// 查询异常时按无 buff 处理——加成是锦上添花，绝不阻断发放
         /// </summary>
-        private async Task<int> ApplyGuildBuffAsync(Guid userId, string grantType, int amount, CancellationToken ct)
+        private async Task<int> ApplyMerchantBuffAsync(Guid userId, string grantType, int amount, CancellationToken ct)
         {
             if (grantType != PointTransaction.TypeDailyLogin && grantType != PointTransaction.TypeCorrectionAdopted)
                 return amount;
             try
             {
-                var guild = await _guilds.GetBestForUserAsync(userId, ct);
-                if (guild == null)
+                var best = await _merchantGrades.GetBestForUserAsync(userId, ct);
+                if (best == null)
                     return amount;
                 return grantType switch
                 {
-                    PointTransaction.TypeDailyLogin => amount + GuildBuffs.LoginBonus(guild.Grade),
-                    PointTransaction.TypeCorrectionAdopted => GuildBuffs.ApplyCorrectionBonus(amount, guild.Grade),
+                    PointTransaction.TypeDailyLogin => amount + MerchantBuffs.LoginBonus(best.Grade),
+                    PointTransaction.TypeCorrectionAdopted => MerchantBuffs.ApplyCorrectionBonus(amount, best.Grade),
                     _ => amount
                 };
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "工会 buff 查询失败（按无加成发放）: User={UserId}", userId);
+                _logger.LogWarning(ex, "商家 buff 查询失败（按无加成发放）: User={UserId}", userId);
                 return amount;
             }
         }

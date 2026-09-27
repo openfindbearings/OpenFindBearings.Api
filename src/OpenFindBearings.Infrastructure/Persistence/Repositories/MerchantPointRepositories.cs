@@ -94,7 +94,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         public async Task<List<(Guid MerchantId, int Total)>> GetTopMerchantsCreditAsync(DateTime sinceUtc, int limit,
             CancellationToken cancellationToken = default)
         {
-            // 排行榜：金库入账（trickle+结算+任务奖励全部计入"工会实力"）聚合降序
+            // 排行榜：金库入账（trickle+结算+任务奖励全部计入"商家实力"）聚合降序
             var rows = await _context.Set<MerchantPointTransaction>()
                 .Where(t => t.Direction == MerchantPointTransaction.DirectionCredit && t.CreatedAt >= sinceUtc && t.IsActive)
                 .GroupBy(t => t.MerchantId)

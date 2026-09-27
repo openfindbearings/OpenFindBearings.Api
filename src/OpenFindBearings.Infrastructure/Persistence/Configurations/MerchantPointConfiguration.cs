@@ -5,7 +5,7 @@ using OpenFindBearings.Domain.Entities;
 namespace OpenFindBearings.Infrastructure.Persistence.Configurations
 {
     /// <summary>
-    /// 商家金库配置（v2.4.0 工会经济）：与个人积分同构——
+    /// 商家金库配置（v2.4.0 商家经济）：与个人积分同构——
     /// 账户商户维度唯一 + xmin 并发令牌（结算/消费高频后不丢更新）；
     /// 流水 BizId 部分唯一索引做幂等（trickle/settle/burn 三类键）
     /// </summary>

@@ -6,50 +6,50 @@ using OpenFindBearings.Infrastructure.Persistence.Data;
 namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 {
     /// <summary>
-    /// 工会集体任务仓储实现（v2.6.0）：定义/台账读写，全部显式仓储路径
+    /// 商家集体任务仓储实现（v2.6.0）：定义/台账读写，全部显式仓储路径
     /// </summary>
-    public class GuildTaskRepository : IGuildTaskRepository
+    public class MerchantTaskRepository : IMerchantTaskRepository
     {
         private readonly ApplicationDbContext _context;
 
-        public GuildTaskRepository(ApplicationDbContext context)
+        public MerchantTaskRepository(ApplicationDbContext context)
         {
             _context = context;
         }
 
         /// <inheritdoc/>
-        public Task<List<GuildTaskDefinition>> GetEnabledAsync(CancellationToken cancellationToken = default)
+        public Task<List<MerchantTaskDefinition>> GetEnabledAsync(CancellationToken cancellationToken = default)
         {
-            return _context.Set<GuildTaskDefinition>()
+            return _context.Set<MerchantTaskDefinition>()
                 .Where(t => t.Enabled && t.IsActive)
                 .OrderBy(t => t.SortOrder)
                 .ToListAsync(cancellationToken);
         }
 
         /// <inheritdoc/>
-        public Task<List<GuildTaskDefinition>> GetAllAsync(CancellationToken cancellationToken = default)
+        public Task<List<MerchantTaskDefinition>> GetAllAsync(CancellationToken cancellationToken = default)
         {
-            return _context.Set<GuildTaskDefinition>()
+            return _context.Set<MerchantTaskDefinition>()
                 .OrderBy(t => t.SortOrder)
                 .ToListAsync(cancellationToken);
         }
 
         /// <inheritdoc/>
-        public Task<GuildTaskDefinition?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+        public Task<MerchantTaskDefinition?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
         {
-            return _context.Set<GuildTaskDefinition>().FirstOrDefaultAsync(t => t.Id == id, cancellationToken);
+            return _context.Set<MerchantTaskDefinition>().FirstOrDefaultAsync(t => t.Id == id, cancellationToken);
         }
 
         /// <inheritdoc/>
-        public async Task AddDefinitionAsync(GuildTaskDefinition definition, CancellationToken cancellationToken = default)
+        public async Task AddDefinitionAsync(MerchantTaskDefinition definition, CancellationToken cancellationToken = default)
         {
-            await _context.Set<GuildTaskDefinition>().AddAsync(definition, cancellationToken);
+            await _context.Set<MerchantTaskDefinition>().AddAsync(definition, cancellationToken);
         }
 
         /// <inheritdoc/>
-        public Task UpdateDefinitionAsync(GuildTaskDefinition definition, CancellationToken cancellationToken = default)
+        public Task UpdateDefinitionAsync(MerchantTaskDefinition definition, CancellationToken cancellationToken = default)
         {
-            _context.Set<GuildTaskDefinition>().Update(definition);
+            _context.Set<MerchantTaskDefinition>().Update(definition);
             return Task.CompletedTask;
         }
 
@@ -57,7 +57,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         public async Task<HashSet<string>> GetCompletedTaskKeysAsync(Guid merchantId, string periodKey,
             CancellationToken cancellationToken = default)
         {
-            var keys = await _context.Set<GuildTaskCompletion>()
+            var keys = await _context.Set<MerchantTaskCompletion>()
                 .Where(c => c.MerchantId == merchantId && c.PeriodKey == periodKey && c.IsActive)
                 .Select(c => c.TaskKey)
                 .ToListAsync(cancellationToken);
@@ -65,15 +65,15 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         }
 
         /// <inheritdoc/>
-        public async Task AddCompletionAsync(GuildTaskCompletion completion, CancellationToken cancellationToken = default)
+        public async Task AddCompletionAsync(MerchantTaskCompletion completion, CancellationToken cancellationToken = default)
         {
-            await _context.Set<GuildTaskCompletion>().AddAsync(completion, cancellationToken);
+            await _context.Set<MerchantTaskCompletion>().AddAsync(completion, cancellationToken);
         }
 
         /// <inheritdoc/>
         public async Task<int> CountCompletionsAsync(Guid merchantId, CancellationToken cancellationToken = default)
         {
-            return await _context.Set<GuildTaskCompletion>()
+            return await _context.Set<MerchantTaskCompletion>()
                 .CountAsync(c => c.MerchantId == merchantId && c.IsActive, cancellationToken);
         }
     }

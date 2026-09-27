@@ -31,7 +31,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.CloseMerchant
         private readonly ICorrectionRequestRepository _correctionRepository;
         private readonly IUserRepository _userRepository;
         private readonly INotificationService _notificationService;
-        // v2.4.0 工会经济：删除分支清金库/挂礼，释放分支燃烧+下架
+        // v2.4.0 商家经济：删除分支清金库/挂礼，释放分支燃烧+下架
         private readonly IMerchantPointAccountRepository _treasuryAccountRepository;
         private readonly IMerchantPointTransactionRepository _treasuryTxRepository;
         private readonly IMallItemRepository _mallItemRepository;

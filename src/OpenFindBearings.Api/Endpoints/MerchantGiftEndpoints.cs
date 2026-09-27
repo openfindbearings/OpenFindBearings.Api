@@ -10,7 +10,7 @@ using OpenFindBearings.Domain.Repositories;
 namespace OpenFindBearings.Api.Endpoints
 {
     /// <summary>
-    /// 商家礼品挂售与金库端点（v2.4.0 工会经济）：
+    /// 商家礼品挂售与金库端点（v2.4.0 商家经济）：
     /// 挂礼申请/我的礼品/下架/礼品图上传 + 金库余额/流水 + 礼品订单查询/发货。
     /// 鉴权全部走业务资格（在职成员 + IsAdmin），无 RBAC 权限键——app 端能力靠登录态与成员表（定案）
     /// </summary>
@@ -166,7 +166,7 @@ namespace OpenFindBearings.Api.Endpoints
                     return ApiResponseHelper.Forbidden("仅商户管理员可查看金库", httpContext);
 
                 var account = await treasury.GetAccountAsync(merchantId.Value);
-                // v2.5.0 工会经济：金库页头部展示工会等级（入驻/认证/活跃供给/金牌）
+                // v2.5.0 商家经济：金库页头部展示商家等级（入驻/认证/活跃供给/金牌）
                 var merchant = await merchants.GetByIdAsync(merchantId.Value);
                 return ApiResponseHelper.Ok(new
                 {

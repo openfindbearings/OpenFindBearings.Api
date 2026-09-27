@@ -1,11 +1,11 @@
 namespace OpenFindBearings.Application.Services
 {
     /// <summary>
-    /// 工会 buff 目录（v2.5.0 工会经济）：等级 → 被动加成的静态规则表（承设计 6977 定案）。
+    /// 商家 buff 目录（v2.5.0 商家经济）：等级 → 被动加成的静态规则表（承设计 6977 定案）。
     /// 全部为"赚取加数/乘数、额度加数、消费折扣"四类的纯查表——无金库提分到个人路径（合规红线）；
     /// 加成结果仍受 PointGrantRule 日上限约束（先加成后截顶）
     /// </summary>
-    public static class GuildBuffs
+    public static class MerchantBuffs
     {
         /// <summary>等级数值 → 等级序数（Standard=1 入驻 / Verified=2 认证 / Premium=3 活跃供给 / Gold=4 金牌）。
         /// 枚举数值非单调（历史映射），一切比较必须走本函数</summary>
@@ -47,7 +47,7 @@ namespace OpenFindBearings.Application.Services
             _ => price
         };
 
-        /// <summary>buff 文案清单（任务中心工会福利卡展示用，按等级序数）</summary>
+        /// <summary>buff 文案清单（任务中心商家福利卡展示用，按等级序数）</summary>
         public static List<string> BuffLabels(int grade)
         {
             var r = Rank(grade);

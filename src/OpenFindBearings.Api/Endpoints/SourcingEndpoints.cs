@@ -342,7 +342,7 @@ namespace OpenFindBearings.Api.Endpoints
                 [FromServices] ISystemConfigRepository configRepository,
                 [FromServices] IPointGrantRuleRepository ruleRepository,
                 [FromServices] IPointAccountRepository pointAccountRepository,
-                [FromServices] IMerchantGradeService guilds,
+                [FromServices] IMerchantGradeService grades,
                 [FromServices] IMerchantRepository merchants,
                 HttpContext httpContext) =>
             {
@@ -355,8 +355,8 @@ namespace OpenFindBearings.Api.Endpoints
                 var account = await pointAccountRepository.GetByUserIdAsync(userId, httpContext.RequestAborted);
 
                 // 发布额度（个人维度）；应答额度（当前商户维度，未入驻商户返回 0 已用）
-                // v2.5.0 工会经济：展示口径与 Command handler 同源——发布按成员最佳工会加成，应答按当前商户等级加成
-                var guildInfo = await guilds.GetBestForUserAsync(userId, httpContext.RequestAborted);
+                // v2.5.0 商家经济：展示口径与 Command handler 同源——发布按成员最佳商家加成，应答按当前商户等级加成
+                var bestMerchant = await grades.GetBestForUserAsync(userId, httpContext.RequestAborted);
                 var currentGrade = 0;
                 if (currentUser.CurrentMerchantId.HasValue)
                 {
@@ -372,14 +372,14 @@ namespace OpenFindBearings.Api.Endpoints
                 {
                     publish = new
                     {
-                        freeLimit = await SourcingConfigReader.GetIntAsync(configRepository, "Sourcing.FreePublishPerDay", 3) + GuildBuffs.PublishQuotaBonus(guildInfo?.Grade ?? 0),
+                        freeLimit = await SourcingConfigReader.GetIntAsync(configRepository, "Sourcing.FreePublishPerDay", 3) + MerchantBuffs.PublishQuotaBonus(bestMerchant?.Grade ?? 0),
                         todayUsed = publishToday,
                         hardLimit = publishRule?.DailyLimit ?? 10,
                         pointsPrice = publishRule?.Amount ?? 20
                     },
                     respond = new
                     {
-                        freeLimit = await SourcingConfigReader.GetIntAsync(configRepository, "Sourcing.FreeRespondPerDay", 20) + GuildBuffs.RespondQuotaBonus(currentGrade),
+                        freeLimit = await SourcingConfigReader.GetIntAsync(configRepository, "Sourcing.FreeRespondPerDay", 20) + MerchantBuffs.RespondQuotaBonus(currentGrade),
                         todayUsed = respondToday,
                         hardLimit = respondRule?.DailyLimit ?? 50,
                         pointsPrice = respondRule?.Amount ?? 20

@@ -3,7 +3,7 @@ using OpenFindBearings.Domain.Abstractions;
 namespace OpenFindBearings.Domain.Entities
 {
     /// <summary>
-    /// 商家金库流水（v2.4.0 工会经济）：与个人 PointTransaction 平行的商户维度账本。
+    /// 商家金库流水（v2.4.0 商家经济）：与个人 PointTransaction 平行的商户维度账本。
     /// BizId 部分唯一索引做幂等（trickle:{源流水}:{商户}、settle:{订单}、burn:{商户}:{事件}），
     /// 上限统计（日/月）按 GrantType 汇总，不引入第二套规则表——金库参数走 SystemConfig
     /// </summary>
@@ -24,7 +24,7 @@ namespace OpenFindBearings.Domain.Entities
         public const string TypeBurn = "treasury_burn";
 
         /// <summary>集体任务达成奖励（v2.6.0 M3）</summary>
-        public const string TypeGuildTaskReward = "guild_task_reward";
+        public const string TypeMerchantTaskReward = "merchant_task_reward";
 
         /// <summary>所属商户 ID</summary>
         public Guid MerchantId { get; private set; }

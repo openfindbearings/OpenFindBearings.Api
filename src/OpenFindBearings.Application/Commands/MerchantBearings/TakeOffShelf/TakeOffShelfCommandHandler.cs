@@ -12,19 +12,19 @@ namespace OpenFindBearings.Application.Commands.MerchantBearings.TakeOffShelf
     {
         private readonly IMerchantBearingRepository _merchantBearingRepository;
         private readonly IMerchantMemberRepository _merchantMemberRepository;
-        // v2.5.0 工会经济：下架改变在售数，重算工会等级
-        private readonly IMerchantGradeService _guilds;
+        // v2.5.0 商家经济：下架改变在售数，重算商家等级
+        private readonly IMerchantGradeService _merchantGrades;
         private readonly ILogger<TakeOffShelfCommandHandler> _logger;
 
         public TakeOffShelfCommandHandler(
             IMerchantBearingRepository merchantBearingRepository,
             IMerchantMemberRepository merchantMemberRepository,
-            IMerchantGradeService guilds,
+            IMerchantGradeService grades,
             ILogger<TakeOffShelfCommandHandler> logger)
         {
             _merchantBearingRepository = merchantBearingRepository;
             _merchantMemberRepository = merchantMemberRepository;
-            _guilds = guilds;
+            _merchantGrades = grades;
             _logger = logger;
         }
 
