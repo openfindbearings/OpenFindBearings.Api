@@ -23,6 +23,9 @@ namespace OpenFindBearings.Domain.Entities
         /// <summary>关店/解除归属燃烧</summary>
         public const string TypeBurn = "treasury_burn";
 
+        /// <summary>集体任务达成奖励（v2.6.0 M3）</summary>
+        public const string TypeGuildTaskReward = "guild_task_reward";
+
         /// <summary>所属商户 ID</summary>
         public Guid MerchantId { get; private set; }
 

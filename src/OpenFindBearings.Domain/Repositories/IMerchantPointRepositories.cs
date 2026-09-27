@@ -34,6 +34,13 @@ namespace OpenFindBearings.Domain.Repositories
         /// <summary>某商户某场景自指定时间（UTC）以来的入账总额（trickle 日/月顶与结算月顶统计）</summary>
         Task<int> SumCreditSinceAsync(Guid merchantId, string grantType, DateTime sinceUtc, CancellationToken cancellationToken = default);
 
+        /// <summary>某商户任意场景自指定时间（UTC）以来的入账总额（v2.6.0 集体任务 treasury 指标）</summary>
+        Task<int> SumCreditAnySinceAsync(Guid merchantId, DateTime sinceUtc, CancellationToken cancellationToken = default);
+
+        /// <summary>v2.6.0 工会排行榜：自指定时间起各商户金库入账总额 TOP N（按金额降序）</summary>
+        Task<List<(Guid MerchantId, int Total)>> GetTopMerchantsCreditAsync(DateTime sinceUtc, int limit,
+            CancellationToken cancellationToken = default);
+
         /// <summary>金库明细分页（时间倒序）</summary>
         Task<(List<MerchantPointTransaction> Items, int Total)> GetByMerchantPagedAsync(Guid merchantId, int page, int pageSize, CancellationToken cancellationToken = default);
 

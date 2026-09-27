@@ -174,5 +174,13 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                 .Where(mb => mb.MerchantId == merchantId)
                 .ExecuteDeleteAsync(cancellationToken);
         }
+
+        /// <inheritdoc/>
+        public async Task<int> CountCreatedSinceAsync(Guid merchantId, DateTime sinceUtc, CancellationToken cancellationToken = default)
+        {
+            // v2.6.0 集体任务 products 指标：窗口内新上架的产品关联（含待审核，鼓励供给动作本身）
+            return await _context.Set<MerchantBearing>()
+                .CountAsync(mb => mb.MerchantId == merchantId && mb.IsActive && mb.CreatedAt >= sinceUtc, cancellationToken);
+        }
     }
 }

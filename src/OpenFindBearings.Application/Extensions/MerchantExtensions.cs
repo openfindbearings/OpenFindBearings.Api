@@ -21,6 +21,7 @@ namespace OpenFindBearings.Application.Extensions
                 IsVerified = merchant.IsVerified,
                 VerifyRequested = merchant.VerifyRequested,
                 Grade = merchant.Grade.ToString(),
+            GradeDisplay = merchant.GetGradeDisplayName(),
                 FollowerCount = merchant.FollowerCount,
                 ProductCount = merchant.ProductCount,
                 LogoUrl = merchant.LogoUrl,
@@ -54,6 +55,7 @@ namespace OpenFindBearings.Application.Extensions
                 // v2.9.0：申请认证标记透传（Taro 按钮态 / BFF application）
                 VerifyRequested = merchant.VerifyRequested,
                 Grade = merchant.Grade.ToString(),
+            GradeDisplay = merchant.GetGradeDisplayName(),
                 FollowerCount = merchant.FollowerCount,
                 ProductCount = merchant.MerchantBearings?.Count ?? 0,
                 Description = merchant.Description,
@@ -90,6 +92,7 @@ namespace OpenFindBearings.Application.Extensions
                 IsVerified = merchant.IsVerified,
                 VerifyRequested = merchant.VerifyRequested,
                 Grade = merchant.Grade.ToString(),
+            GradeDisplay = merchant.GetGradeDisplayName(),
                 FollowerCount = merchant.FollowerCount,
                 ProductCount = products.Count,
                 Description = merchant.Description,

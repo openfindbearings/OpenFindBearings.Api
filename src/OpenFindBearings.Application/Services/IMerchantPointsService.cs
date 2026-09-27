@@ -41,5 +41,11 @@ namespace OpenFindBearings.Application.Services
 
         /// <summary>关店/解除归属燃烧：余额清零记 treasury_burn 流水（与释放动作同事务）</summary>
         Task BurnOnReleaseAsync(Guid merchantId, string bizId, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 集体任务达成奖励入账（v2.6.0 M3）：只挂账不提交，与完成台账同批 SaveChanges 保原子；bizId 幂等
+        /// </summary>
+        Task RewardTreasuryAsync(Guid merchantId, int amount, string bizId, string? remark,
+            CancellationToken cancellationToken = default);
     }
 }

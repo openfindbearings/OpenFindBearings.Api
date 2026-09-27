@@ -72,6 +72,10 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
         public DbSet<MerchantPointAccount> MerchantPointAccounts { get; set; }
         public DbSet<MerchantPointTransaction> MerchantPointTransactions { get; set; }
 
+        // v2.6.0 集体任务与排行：任务定义 + 完成台账
+        public DbSet<GuildTaskDefinition> GuildTaskDefinitions { get; set; }
+        public DbSet<GuildTaskCompletion> GuildTaskCompletions { get; set; }
+
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

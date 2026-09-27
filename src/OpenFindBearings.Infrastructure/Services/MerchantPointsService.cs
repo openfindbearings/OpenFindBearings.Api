@@ -175,6 +175,30 @@ namespace OpenFindBearings.Infrastructure.Services
                 amount, account.Balance, bizId, "关店/解除归属：金库余额燃烧"), cancellationToken);
         }
 
+        /// <inheritdoc/>
+        public async Task RewardTreasuryAsync(Guid merchantId, int amount, string bizId, string? remark,
+            CancellationToken cancellationToken = default)
+        {
+            // v2.6.0 集体任务奖励入账：幂等命中直接跳过；不在此提交（调用方与完成台账同批保原子）
+            if (await _transactions.ExistsBizIdAsync(bizId, cancellationToken))
+                return;
+
+            var account = await _accounts.GetByMerchantIdAsync(merchantId, cancellationToken);
+            if (account == null)
+            {
+                account = new MerchantPointAccount(merchantId);
+                await _accounts.AddAsync(account, cancellationToken);
+            }
+            else
+            {
+                await _accounts.UpdateAsync(account, cancellationToken);
+            }
+            account.Credit(amount);
+            await _transactions.AddAsync(new MerchantPointTransaction(
+                merchantId, MerchantPointTransaction.DirectionCredit, MerchantPointTransaction.TypeGuildTaskReward,
+                amount, account.Balance, bizId, remark), cancellationToken);
+        }
+
         /// <summary>
         /// 受日上限/月上限约束的单家入账（超限部分直接放弃——顶是防刷闸不是欠账）；
         /// 日/月已用量内部按 BusinessClock 口径统计；不在此 SaveChanges，由调用方统一提交

@@ -78,5 +78,8 @@ namespace OpenFindBearings.Domain.Repositories
         /// 删除商户全部商品关联（v2.16.0 认领/提名接管：互联网来源在售数据不随接管继承）
         /// </summary>
         Task<int> DeleteByMerchantAsync(Guid merchantId, CancellationToken cancellationToken = default);
+
+        /// <summary>v2.6.0 集体任务 products 指标：本周期内新创建的产品关联数</summary>
+        Task<int> CountCreatedSinceAsync(Guid merchantId, DateTime sinceUtc, CancellationToken cancellationToken = default);
     }
 }
