@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Mvc;
 using OpenFindBearings.Api.Extensions;
 using OpenFindBearings.Api.Helpers;
 using OpenFindBearings.Api.Middleware;
-using OpenFindBearings.Api.Services;
 using OpenFindBearings.Application.Commands.Admin.ApproveDocument;
 using OpenFindBearings.Application.Commands.Admin.RejectDocument;
 // 改动说明 G4：平台兜底指定商户成员（命令与实体引用）

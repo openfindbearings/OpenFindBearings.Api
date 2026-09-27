@@ -28,8 +28,8 @@ namespace OpenFindBearings.Infrastructure.Services
         private readonly IPointsService _points;
         private readonly IPointAccountRepository _accounts;
         private readonly IMerchantPointsService _treasury;
-        // v2.5.0 工会经济：置顶折扣输入 + 结算后金牌重算
-        private readonly IMerchantGradeService _guilds;
+        // v2.5.0 商家经济：置顶折扣输入 + 结算后金牌重算
+        private readonly IMerchantGradeService _merchantGrades;
         private readonly INotificationService _notifications;
         private readonly ISystemConfigRepository _configs;
         private readonly IUnitOfWork _unitOfWork;
@@ -46,7 +46,7 @@ namespace OpenFindBearings.Infrastructure.Services
             IPointsService points,
             IPointAccountRepository accounts,
             IMerchantPointsService treasury,
-            IMerchantGradeService guilds,
+            IMerchantGradeService grades,
             INotificationService notifications,
             ISystemConfigRepository configs,
             IUnitOfWork unitOfWork,
@@ -61,7 +61,7 @@ namespace OpenFindBearings.Infrastructure.Services
             _points = points;
             _accounts = accounts;
             _treasury = treasury;
-            _guilds = guilds;
+            _merchantGrades = grades;
             _notifications = notifications;
             _configs = configs;
             _unitOfWork = unitOfWork;
@@ -112,10 +112,10 @@ namespace OpenFindBearings.Infrastructure.Services
 
             var now = DateTime.UtcNow;
             var price = item.EffectivePrice(now);
-            // 改动说明（v2.5.0 工会经济）：置顶卡按购买者最佳工会等级打折（Lv3 九折/Lv4 八折），
-            // 个人与金库两种支付通道同享——折扣是工会福利，不是价格豁免
-            var buyerGuild = await _guilds.GetBestForUserAsync(userId, cancellationToken);
-            price = GuildBuffs.ApplyPinDiscount(price, buyerGuild?.Grade ?? 0);
+            // 改动说明（v2.5.0 商家经济）：置顶卡按购买者最佳商家等级打折（Lv3 九折/Lv4 八折），
+            // 个人与金库两种支付通道同享——折扣是商家福利，不是价格豁免
+            var buyerMerchant = await _merchantGrades.GetBestForUserAsync(userId, cancellationToken);
+            price = MerchantBuffs.ApplyPinDiscount(price, buyerMerchant?.Grade ?? 0);
             if (price <= 0)
                 return new RedeemResult(false, "商品价格配置异常，请联系平台", null, 0, null);
 
@@ -322,9 +322,9 @@ namespace OpenFindBearings.Infrastructure.Services
                 : 0;
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            // 改动说明（v2.5.0 工会经济）：结算入金推高金库累计，可能达成金牌（Lv4）定级条件
+            // 改动说明（v2.5.0 商家经济）：结算入金推高金库累计，可能达成金牌（Lv4）定级条件
             if (settled > 0 && item.OwnerMerchantId.HasValue)
-                await _guilds.RecomputeAsync(item.OwnerMerchantId.Value, cancellationToken);
+                await _merchantGrades.RecomputeAsync(item.OwnerMerchantId.Value, cancellationToken);
 
             if (settled > 0 && item.OwnerMerchantId.HasValue)
             {

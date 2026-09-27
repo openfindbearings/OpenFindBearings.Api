@@ -25,7 +25,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.DetachMerchant
         private readonly IStaffInvitationRepository _invitationRepository;
         private readonly ICorrectionRequestRepository _correctionRepository;
         private readonly INotificationService _notificationService;
-        // v2.4.0 工会经济：强制释放同自助关店——挂礼下架 + 金库燃烧
+        // v2.4.0 商家经济：强制释放同自助关店——挂礼下架 + 金库燃烧
         private readonly IMallItemRepository _mallItemRepository;
         private readonly OpenFindBearings.Application.Services.IMerchantPointsService _merchantPoints;
         private readonly ILogger<DetachMerchantCommandHandler> _logger;

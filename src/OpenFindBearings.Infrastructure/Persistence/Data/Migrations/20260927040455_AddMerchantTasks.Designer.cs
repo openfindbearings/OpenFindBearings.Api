@@ -12,8 +12,8 @@ using OpenFindBearings.Infrastructure.Persistence.Data;
 namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260927023524_AddGuildTasks")]
-    partial class AddGuildTasks
+    [Migration("20260927040455_AddMerchantTasks")]
+    partial class AddMerchantTasks
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -1029,108 +1029,6 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     b.ToTable("CorrectionRequests", (string)null);
                 });
 
-            modelBuilder.Entity("OpenFindBearings.Domain.Entities.GuildTaskCompletion", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<Guid>("MerchantId")
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("MetricValue")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("PeriodKey")
-                        .IsRequired()
-                        .HasMaxLength(16)
-                        .HasColumnType("character varying(16)");
-
-                    b.Property<string>("TaskKey")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("TaskKey", "MerchantId", "PeriodKey")
-                        .IsUnique()
-                        .HasDatabaseName("UX_GuildTaskCompletions_Task_Merchant_Period");
-
-                    b.ToTable("GuildTaskCompletions", (string)null);
-                });
-
-            modelBuilder.Entity("OpenFindBearings.Domain.Entities.GuildTaskDefinition", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
-
-                    b.Property<bool>("Enabled")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("MetricKey")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
-                    b.Property<int>("Period")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("RewardAmount")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("RewardType")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("SortOrder")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("TargetValue")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("TaskKey")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("TaskKey")
-                        .IsUnique()
-                        .HasDatabaseName("UX_GuildTaskDefinitions_Key");
-
-                    b.ToTable("GuildTaskDefinitions", (string)null);
-                });
-
             modelBuilder.Entity("OpenFindBearings.Domain.Entities.MallItem", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1614,6 +1512,108 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                         .HasDatabaseName("IX_MerchantPointTx_Merchant_Type_Created");
 
                     b.ToTable("MerchantPointTransactions", (string)null);
+                });
+
+            modelBuilder.Entity("OpenFindBearings.Domain.Entities.MerchantTaskCompletion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("MerchantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("MetricValue")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("PeriodKey")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("TaskKey")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TaskKey", "MerchantId", "PeriodKey")
+                        .IsUnique()
+                        .HasDatabaseName("UX_MerchantTaskCompletions_Task_Merchant_Period");
+
+                    b.ToTable("MerchantTaskCompletions", (string)null);
+                });
+
+            modelBuilder.Entity("OpenFindBearings.Domain.Entities.MerchantTaskDefinition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("MetricKey")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<int>("Period")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("RewardAmount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("RewardType")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TargetValue")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("TaskKey")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TaskKey")
+                        .IsUnique()
+                        .HasDatabaseName("UX_MerchantTaskDefinitions_Key");
+
+                    b.ToTable("MerchantTaskDefinitions", (string)null);
                 });
 
             modelBuilder.Entity("OpenFindBearings.Domain.Entities.Notification", b =>

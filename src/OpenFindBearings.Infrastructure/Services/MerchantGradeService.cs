@@ -8,8 +8,8 @@ using OpenFindBearings.Domain.Repositories;
 namespace OpenFindBearings.Infrastructure.Services
 {
     /// <summary>
-    /// 工会等级服务实现（v2.5.0 工会经济）：等级重算规则 + 成员最佳工会解析。
-    /// 阈值走 SystemConfig（Business.Guild* 键，Admin 可调实时生效）；
+    /// 商家等级服务实现（v2.5.0 商家经济）：等级重算规则 + 成员最佳商家解析。
+    /// 阈值走 SystemConfig（Business.Merchant* 键，Admin 可调实时生效）；
     /// 重算吞失败（等级是附属计算值），解析路径纯读不写
     /// </summary>
     public class MerchantGradeService : IMerchantGradeService
@@ -53,9 +53,9 @@ namespace OpenFindBearings.Infrastructure.Services
                 if (merchant == null || merchant.Status != MerchantStatus.Active)
                     return; // 非在营商户不定级（释放路径已由域方法落 Standard）
 
-                var lv3Min = await GetConfigAsync("Business.GuildPremiumOnSaleMin", 5, cancellationToken);
-                var lv4Min = await GetConfigAsync("Business.GuildGoldOnSaleMin", 10, cancellationToken);
-                var lv4Treasury = await GetConfigAsync("Business.GuildGoldTreasuryMin", 500, cancellationToken);
+                var lv3Min = await GetConfigAsync("Business.MerchantPremiumOnSaleMin", 5, cancellationToken);
+                var lv4Min = await GetConfigAsync("Business.MerchantGoldOnSaleMin", 10, cancellationToken);
+                var lv4Treasury = await GetConfigAsync("Business.MerchantGoldTreasuryMin", 500, cancellationToken);
                 var account = await _treasury.GetByMerchantIdAsync(merchantId, cancellationToken);
                 var treasuryEarned = account?.TotalEarned ?? 0;
                 // 定级口径用实时在售明细数而非 Merchant.ProductCount 冗余列——
@@ -71,25 +71,25 @@ namespace OpenFindBearings.Infrastructure.Services
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "工会等级重算失败: Merchant={MerchantId}", merchantId);
+                _logger.LogWarning(ex, "商家等级重算失败: Merchant={MerchantId}", merchantId);
             }
         }
 
         /// <inheritdoc/>
-        public async Task<MemberGuildInfo?> GetBestForUserAsync(Guid userId, CancellationToken cancellationToken = default)
+        public async Task<MemberMerchantInfo?> GetBestForUserAsync(Guid userId, CancellationToken cancellationToken = default)
         {
             var memberships = await _members.GetActiveByUserIdAsync(userId, cancellationToken);
             if (memberships.Count == 0)
-                return null; // 散人无工会
+                return null; // 散人无商家
 
-            MemberGuildInfo? best = null;
+            MemberMerchantInfo? best = null;
             foreach (var membership in memberships.OrderBy(m => m.CreatedAt))
             {
                 var merchant = await _merchants.GetByIdAsync(membership.MerchantId, cancellationToken);
                 if (merchant == null || merchant.Status != MerchantStatus.Active)
                     continue;
-                var info = new MemberGuildInfo(merchant.Id, merchant.Name, (int)merchant.Grade);
-                if (best == null || GuildBuffs.Rank(info.Grade) > GuildBuffs.Rank(best.Grade))
+                var info = new MemberMerchantInfo(merchant.Id, merchant.Name, (int)merchant.Grade);
+                if (best == null || MerchantBuffs.Rank(info.Grade) > MerchantBuffs.Rank(best.Grade))
                     best = info; // 平级保持先加入（OrderBy CreatedAt）——确定性口径
             }
             return best;

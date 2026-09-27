@@ -71,7 +71,7 @@ namespace OpenFindBearings.Application.DTOs
         /// </summary>
         public string Grade { get; set; } = string.Empty;
 
-    /// <summary>等级中文展示名（入驻/认证/活跃供给/金牌，v2.5.0 工会经济）</summary>
+    /// <summary>等级中文展示名（入驻/认证/活跃供给/金牌，v2.5.0 商家经济）</summary>
     public string GradeDisplay { get; set; } = string.Empty;
 
         /// <summary>

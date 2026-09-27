@@ -30,6 +30,8 @@ namespace OpenFindBearings.Domain.Entities
         public const string TypeMerchantFirstProduct = "merchant_first_product";
         // 改动说明（v2.1.0 成就子系统）：成就解锁一次性可花积分甜头（小额，bizId=ach:{key}:{owner} 幂等）
         public const string TypeAchievementUnlock = "achievement_unlock";
+        // 改动说明（v2.6.0 M3 商家集体任务）：集体任务达标后全体在职成员各得一笔（bizId 含任务/商家/周期/用户四段幂等，分值由任务定义 amountOverride 覆盖）
+        public const string TypeMerchantTask = "merchant_task";
 
         /// <summary>商城兑换扣分场景（v2.3.0 商城虚拟权益，DeductAsync 的 sceneType）</summary>
         public const string TypeMallRedeem = "mall_redeem";

@@ -5,7 +5,6 @@ using OpenFindBearings.Application.Commands.Merchants.Commands;
 using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
-using OpenFindBearings.Application.Services;
 using OpenFindBearings.Domain.ValueObjects;
 
 namespace OpenFindBearings.Application.Commands.Merchants.UpdateMerchant

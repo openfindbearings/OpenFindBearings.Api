@@ -3,11 +3,11 @@ using OpenFindBearings.Domain.Abstractions;
 namespace OpenFindBearings.Domain.Entities
 {
     /// <summary>
-    /// 工会集体任务定义（v2.6.0 M3 集体任务）：全公会成员共同推进的周期性目标（帮派 raid 类比）。
-    /// 达标即结算（不等周期结束），同周期防重复由 GuildTaskCompletion 台账唯一键保证；
+    /// 商家集体任务定义（v2.6.0 M3 集体任务）：全商家成员共同推进的周期性目标（商家 raid 类比）。
+    /// 达标即结算（不等周期结束），同周期防重复由 MerchantTaskCompletion 台账唯一键保证；
     /// 数值与开关 Admin 可配实时生效（与积分规则表同治理模式）
     /// </summary>
-    public class GuildTaskDefinition : BaseEntity
+    public class MerchantTaskDefinition : BaseEntity
     {
         /// <summary>周期：每自然周（业务日界口径）</summary>
         public const int PeriodWeekly = 1;
@@ -19,7 +19,14 @@ namespace OpenFindBearings.Domain.Entities
         /// <summary>奖励对象：商家金库入账</summary>
         public const int RewardTreasury = 2;
 
-        /// <summary>任务键（唯一，奖励 bizId 前缀与指标路由依据，如 guild_corrections_week）</summary>
+        /// <summary>指标：本周期成员纠错被采纳数</summary>
+        public const string MetricCorrections = "corrections";
+        /// <summary>指标：本周期金库入账总额</summary>
+        public const string MetricTreasury = "treasury";
+        /// <summary>指标：本周期新上架商品数</summary>
+        public const string MetricProducts = "products";
+
+        /// <summary>任务键（唯一，奖励 bizId 前缀与指标路由依据，如 merchant_corrections_week）</summary>
         public string TaskKey { get; private set; } = string.Empty;
 
         /// <summary>任务名（成员可见文案）</summary>
@@ -50,13 +57,13 @@ namespace OpenFindBearings.Domain.Entities
         public int SortOrder { get; private set; }
 
         /// <summary>EF 无参构造</summary>
-        protected GuildTaskDefinition() { }
+        protected MerchantTaskDefinition() { }
 
         /// <summary>创建集体任务（Admin 新建/迁移种子共用）</summary>
-        public static GuildTaskDefinition Create(string taskKey, string name, string description,
+        public static MerchantTaskDefinition Create(string taskKey, string name, string description,
             string metricKey, int targetValue, int period, int rewardType, int rewardAmount, int sortOrder)
         {
-            return new GuildTaskDefinition
+            return new MerchantTaskDefinition
             {
                 TaskKey = taskKey,
                 Name = name,
@@ -91,11 +98,11 @@ namespace OpenFindBearings.Domain.Entities
     }
 
     /// <summary>
-    /// 工会集体任务完成台账（v2.6.0）：一个任务×一个商户×一个周期只结算一次。
+    /// 商家集体任务完成台账（v2.6.0）：一个任务×一个商户×一个周期只结算一次。
     /// (TaskKey, MerchantId, PeriodKey) 唯一索引=防重铁闸；PeriodKey 为业务日界周期串
     /// （周=周一 yyyyMMdd，月=yyyyMM，BusinessClock 口径与幂等键一致）
     /// </summary>
-    public class GuildTaskCompletion : BaseEntity
+    public class MerchantTaskCompletion : BaseEntity
     {
         /// <summary>任务键</summary>
         public string TaskKey { get; private set; } = string.Empty;
@@ -110,10 +117,10 @@ namespace OpenFindBearings.Domain.Entities
         public int MetricValue { get; private set; }
 
         /// <summary>EF 无参构造</summary>
-        protected GuildTaskCompletion() { }
+        protected MerchantTaskCompletion() { }
 
         /// <summary>记一笔完成（达标结算时写入；唯一索引冲突即该周期已结算）</summary>
-        public GuildTaskCompletion(string taskKey, Guid merchantId, string periodKey, int metricValue)
+        public MerchantTaskCompletion(string taskKey, Guid merchantId, string periodKey, int metricValue)
         {
             TaskKey = taskKey;
             MerchantId = merchantId;

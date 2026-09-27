@@ -31,7 +31,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.ApplicationCleanup
             IMerchantMemberRepository merchantMemberRepository,
             ICorrectionRequestRepository correctionRepository,
             IMerchantDocumentRepository documentRepository,
-            // v2.4.0 工会经济：硬删商户同时清金库两表与挂礼目录行（不留无主金库/幽灵礼品）
+            // v2.4.0 商家经济：硬删商户同时清金库两表与挂礼目录行（不留无主金库/幽灵礼品）
             IMerchantPointAccountRepository treasuryAccountRepository,
             IMerchantPointTransactionRepository treasuryTxRepository,
             IMallItemRepository mallItemRepository,
@@ -119,7 +119,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.ApplicationCleanup
             IMerchantDocumentRepository documentRepository,
             IStaffInvitationRepository invitationRepository,
             ICorrectionRequestRepository correctionRepository,
-            // v2.4.0 工会经济：释放=仓库清算——挂礼批量下架（留行供历史订单），金库余额燃烧
+            // v2.4.0 商家经济：释放=仓库清算——挂礼批量下架（留行供历史订单），金库余额燃烧
             IMallItemRepository mallItemRepository,
             OpenFindBearings.Application.Services.IMerchantPointsService merchantPoints,
             CancellationToken cancellationToken)
@@ -151,7 +151,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.ApplicationCleanup
             // 5. 纠错行硬删（含历史已审，随商户离场归档删除；提交人"我的纠错"记录消失属注销级清场语义）
             await correctionRepository.DeleteByTargetAsync("Merchant", merchantId, cancellationToken);
 
-            // 6. v2.4.0 工会经济：挂礼批量下架（保留行供历史订单快照，仅停售）+ 金库燃烧（工会解散仓库回收）
+            // 6. v2.4.0 商家经济：挂礼批量下架（保留行供历史订单快照，仅停售）+ 金库燃烧（商家解散仓库回收）
             await mallItemRepository.OffShelfByOwnerAsync(merchantId, cancellationToken);
             await merchantPoints.BurnOnReleaseAsync(merchantId, $"burn:{merchantId:N}:release", cancellationToken);
 

@@ -1,10 +1,10 @@
 ﻿namespace OpenFindBearings.Domain.Enums
 {
     /// <summary>
-    /// 商家等级枚举（v2.5.0 工会经济：与"工会等级"统一为同一把梯子，不另设字段——
+    /// 商家等级枚举（v2.5.0 商家经济：与"商家等级"统一为同一把梯子，不另设字段——
     ///   Standard=入驻 / Verified=认证 / Premium=活跃供给 / Gold=金牌，
     ///   由 IMerchantGradeService 按"认证态+在售数+金库累计"规则重算，
-    ///   等级是工会 buff 的唯一输入：成员取全部在职商户中最高的一家享受被动加成）
+    ///   等级是商家 buff 的唯一输入：成员取全部在职商户中最高的一家享受被动加成）
     /// 注意：数值保留历史映射（Standard=1/Premium=2/Verified=3/Gold=4），推进路径
     ///   为 Standard→Verified→Premium→Gold，与数值大小无关，比较请以规则函数为准
     /// </summary>

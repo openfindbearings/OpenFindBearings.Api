@@ -58,6 +58,9 @@ namespace OpenFindBearings.Domain.Repositories
         /// <summary>v2.6.0 集体任务结算：全部 Active 商户 ID（Job 逐商户判定用）</summary>
         Task<List<Guid>> GetActiveIdsAsync(CancellationToken cancellationToken = default);
 
+        /// <summary>v2.6.0 商家排行榜：按 ID 集合批量取商户（榜单行名称/等级一次补齐，防 N+1）</summary>
+        Task<List<Merchant>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default);
+
         /// <summary>
         /// 获取指定时间后创建的商家数量
         /// </summary>

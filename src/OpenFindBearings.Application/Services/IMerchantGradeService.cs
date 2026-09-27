@@ -1,8 +1,8 @@
 namespace OpenFindBearings.Application.Services
 {
     /// <summary>
-    /// 工会等级服务接口（v2.5.0 工会经济）：等级重算与"成员最高等级工会"解析。
-    /// 等级是工会 buff 的唯一输入（无主工会概念——buff 取全部在职商户中等级最高的一家，
+    /// 商家等级服务接口（v2.5.0 商家经济）：等级重算与"成员最高等级商家"解析。
+    /// 等级是商家 buff 的唯一输入（无主商家概念——buff 取全部在职商户中等级最高的一家，
     /// 对应定案"养多家公司至少有一家在干活"）
     /// </summary>
     public interface IMerchantGradeService
@@ -15,15 +15,15 @@ namespace OpenFindBearings.Application.Services
         Task RecomputeAsync(Guid merchantId, CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// 解析成员的"最佳工会"：全部在职 Active 商户中等级最高的一家（平级取最早加入），
+        /// 解析成员的"最佳商家"：全部在职 Active 商户中等级最高的一家（平级取最早加入），
         /// 无归属返回 null（散人）
         /// </summary>
-        Task<MemberGuildInfo?> GetBestForUserAsync(Guid userId, CancellationToken cancellationToken = default);
+        Task<MemberMerchantInfo?> GetBestForUserAsync(Guid userId, CancellationToken cancellationToken = default);
     }
 
-    /// <summary>成员最佳工会信息（buff 展示与计算输入）</summary>
+    /// <summary>成员最佳商家信息（buff 展示与计算输入）</summary>
     /// <param name="MerchantId">商户 ID</param>
     /// <param name="MerchantName">商户名</param>
     /// <param name="Grade">等级（1 入驻/3 认证/2 活跃/4 金牌，数值非单调语义见枚举注释）</param>
-    public record MemberGuildInfo(Guid MerchantId, string MerchantName, int Grade);
+    public record MemberMerchantInfo(Guid MerchantId, string MerchantName, int Grade);
 }

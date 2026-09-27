@@ -7,7 +7,7 @@ using OpenFindBearings.Domain.Repositories;
 namespace OpenFindBearings.Infrastructure.Services
 {
     /// <summary>
-    /// 礼品订单自动确认收货 Job（v2.4.0 工会经济）：每小时扫描"发货满 7 天仍未确认"的实物单，
+    /// 礼品订单自动确认收货 Job（v2.4.0 商家经济）：每小时扫描"发货满 7 天仍未确认"的实物单，
     /// 自动确认并结算进发布商户金库（买家忘点收货的兜底，商家发货义务的真实闭环）。
     /// 商户已退出（非 Active）时只终止订单不再结算——金库已燃烧，防止"释放后再生金"
     /// </summary>
@@ -81,7 +81,7 @@ namespace OpenFindBearings.Infrastructure.Services
                     if (owner != null && owner.Status == Domain.Enums.MerchantStatus.Active)
                     {
                         settled = await treasury.SettleOrderAsync(fresh, item.OwnerMerchantId.Value, ct);
-                        // v2.5.0 工会经济：自动结算同样可能触发金牌定级
+                        // v2.5.0 商家经济：自动结算同样可能触发金牌定级
                         if (settled > 0)
                             await scope.ServiceProvider.GetRequiredService<IMerchantGradeService>().RecomputeAsync(item.OwnerMerchantId.Value, ct);
                         if (settled > 0)

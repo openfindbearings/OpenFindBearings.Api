@@ -3,8 +3,8 @@ using OpenFindBearings.Domain.Entities;
 namespace OpenFindBearings.Application.Services
 {
     /// <summary>
-    /// 商家金库服务接口（v2.4.0 工会经济）。
-    /// 工会类比"公会仓库"的单一记账入口：成员 trickle、挂礼结算、金库消费、终局燃烧。
+    /// 商家金库服务接口（v2.4.0 商家经济）。
+    /// 商家类比"商家仓库"的单一记账入口：成员 trickle、挂礼结算、金库消费、终局燃烧。
     /// 与个人 PointsService 平行——两个账本之间永远没有直接转账路径（合规红线），
     /// 桥只有两条：成员赚分按比例进仓库（单向被动），兑换仓库主人的礼品后结算入仓库（真实交易）
     /// </summary>

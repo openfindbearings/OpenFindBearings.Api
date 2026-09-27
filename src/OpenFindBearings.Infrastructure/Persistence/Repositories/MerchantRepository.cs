@@ -235,5 +235,16 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                 .Select(m => m.Id)
                 .ToListAsync(cancellationToken);
         }
+
+        /// <inheritdoc/>
+        public async Task<List<Merchant>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default)
+        {
+            // v2.6.0 商家排行榜：榜单行需要商户名与等级展示，批量一次取回
+            var idList = ids as Guid[] ?? ids.ToArray();
+            if (idList.Length == 0) return new List<Merchant>();
+            return await _context.Merchants
+                .Where(m => idList.Contains(m.Id))
+                .ToListAsync(cancellationToken);
+        }
     }
 }

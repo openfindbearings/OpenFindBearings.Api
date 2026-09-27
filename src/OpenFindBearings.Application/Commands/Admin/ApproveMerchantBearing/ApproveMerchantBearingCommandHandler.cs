@@ -11,17 +11,17 @@ namespace OpenFindBearings.Application.Commands.Admin.ApproveMerchantBearing
     public class ApproveMerchantBearingCommandHandler : IRequestHandler<ApproveMerchantBearingCommand>
     {
         private readonly IMerchantBearingRepository _merchantBearingRepository;
-        // v2.5.0 工会经济：审核通过使商品转为在售，需重算商户工会等级
-        private readonly IMerchantGradeService _guilds;
+        // v2.5.0 商家经济：审核通过使商品转为在售，需重算商户商家等级
+        private readonly IMerchantGradeService _merchantGrades;
         private readonly ILogger<ApproveMerchantBearingCommandHandler> _logger;
 
         public ApproveMerchantBearingCommandHandler(
             IMerchantBearingRepository merchantBearingRepository,
-            IMerchantGradeService guilds,
+            IMerchantGradeService grades,
             ILogger<ApproveMerchantBearingCommandHandler> logger)
         {
             _merchantBearingRepository = merchantBearingRepository;
-            _guilds = guilds;
+            _merchantGrades = grades;
             _logger = logger;
         }
 
@@ -38,7 +38,7 @@ namespace OpenFindBearings.Application.Commands.Admin.ApproveMerchantBearing
 
             merchantBearing.Approve();
             await _merchantBearingRepository.UpdateAsync(merchantBearing, cancellationToken);
-            await _guilds.RecomputeAsync(merchantBearing.MerchantId, cancellationToken);
+            await _merchantGrades.RecomputeAsync(merchantBearing.MerchantId, cancellationToken);
 
             _logger.LogInformation("商家产品审核通过成功: MerchantBearingId={MerchantBearingId}", merchantBearing.Id);
         }

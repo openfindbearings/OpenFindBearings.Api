@@ -3,7 +3,7 @@ using OpenFindBearings.Domain.Entities;
 namespace OpenFindBearings.Domain.Repositories
 {
     /// <summary>
-    /// 商家金库账户仓储（v2.4.0 工会经济）
+    /// 商家金库账户仓储（v2.4.0 商家经济）
     /// </summary>
     public interface IMerchantPointAccountRepository
     {
@@ -37,7 +37,7 @@ namespace OpenFindBearings.Domain.Repositories
         /// <summary>某商户任意场景自指定时间（UTC）以来的入账总额（v2.6.0 集体任务 treasury 指标）</summary>
         Task<int> SumCreditAnySinceAsync(Guid merchantId, DateTime sinceUtc, CancellationToken cancellationToken = default);
 
-        /// <summary>v2.6.0 工会排行榜：自指定时间起各商户金库入账总额 TOP N（按金额降序）</summary>
+        /// <summary>v2.6.0 商家排行榜：自指定时间起各商户金库入账总额 TOP N（按金额降序）</summary>
         Task<List<(Guid MerchantId, int Total)>> GetTopMerchantsCreditAsync(DateTime sinceUtc, int limit,
             CancellationToken cancellationToken = default);
 

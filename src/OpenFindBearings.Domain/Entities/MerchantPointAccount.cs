@@ -3,8 +3,8 @@ using OpenFindBearings.Domain.Abstractions;
 namespace OpenFindBearings.Domain.Entities
 {
     /// <summary>
-    /// 商家积分金库账户（v2.4.0 工会经济）：一商一户的商家维度积分余额。
-    /// 工会类比=公会仓库：成员行为 trickle 与挂礼结算两条流入渠道都进这里；
+    /// 商家积分金库账户（v2.4.0 商家经济）：一商一户的商家维度积分余额。
+    /// 商家类比=商家仓库：成员行为 trickle 与挂礼结算两条流入渠道都进这里；
     /// 仅商户管理员可在平台内消费（置顶卡等权益），永不折现、不可转给个人——
     /// 与 PointAccount（个人账本，键 UserId）平行存在、互不通融
     /// </summary>

@@ -4,14 +4,14 @@ namespace OpenFindBearings.Domain.Entities
 {
     /// <summary>
     /// 成就归属范围（v2.1.0 成就子系统）：Personal=个人轨（OwnerId=UserId），
-    /// Merchant=商户/工会轨（OwnerId=MerchantId）。定义与解锁共用此枚举，一表双轨
+    /// Merchant=商户/商家轨（OwnerId=MerchantId）。定义与解锁共用此枚举，一表双轨
     /// </summary>
     public enum AchievementScope
     {
         /// <summary>个人成就（挂个人资料页徽章排）</summary>
         Personal = 1,
 
-        /// <summary>商户/工会成就（挂商户详情+卡片徽章排，B2B 信任信号）</summary>
+        /// <summary>商户/商家成就（挂商户详情+卡片徽章排，B2B 信任信号）</summary>
         Merchant = 2
     }
 
