@@ -35,6 +35,44 @@ namespace OpenFindBearings.Application.Services
         }
 
         /// <summary>
+        /// 注册序号限量解锁（v2.8.0 G11）：注册链路按注册序号调用——凡启用且 IsLimited=true、
+        /// LimitedOrdinal >= ordinal 的成就直接点亮。与计数引擎解耦（限量窗口只认序号，
+        /// 不参与 MetricKey 累加）；执行纪律=绝版不返场，错过窗口的旧用户不补发
+        /// </summary>
+        public async Task<IReadOnlyList<string>> UnlockLimitedByOrdinalAsync(AchievementScope scope, Guid ownerId, int ordinal, CancellationToken cancellationToken = default)
+        {
+            var defs = await _repo.GetEnabledAsync(scope, cancellationToken);
+            var eligible = defs.Where(d => d.IsLimited && d.LimitedOrdinal.HasValue && ordinal <= d.LimitedOrdinal.Value).ToList();
+            if (eligible.Count == 0)
+                return Array.Empty<string>();
+
+            var unlockedKeys = new List<string>();
+            foreach (var def in eligible)
+            {
+                var unlock = await _repo.GetUnlockAsync(scope, ownerId, def.Key, cancellationToken);
+                if (unlock?.IsUnlocked == true)
+                    continue;
+                if (unlock == null)
+                {
+                    unlock = new AchievementUnlock(scope, ownerId, def.Key);
+                    await _repo.AddUnlockAsync(unlock, cancellationToken);
+                }
+                unlock.AddProgress(1);
+                _repo.UpdateUnlock(unlock);
+                unlockedKeys.Add(def.Key);
+                _logger.LogInformation("限量成就点亮: Scope={Scope}, Owner={OwnerId}, Key={Key}, Ordinal={Ordinal}", scope, ownerId, def.Key, ordinal);
+
+                // 个人轨解锁甜头：小额可花积分（限量徽章不常用，但保留统一规则）
+                if (def.RewardPoints > 0)
+                {
+                    await _pointsService.GrantAsync(ownerId, PointTransaction.TypeAchievementUnlock,
+                        $"ach:{def.Key}:{ownerId:N}", $"成就解锁：{def.Name}", def.RewardPoints, cancellationToken);
+                }
+            }
+            return unlockedKeys;
+        }
+
+        /// <summary>
         /// 对匹配 metricKey 的启用成就逐个累加/设值；跨阈值者点亮并发解锁甜头（仅个人轨发可花积分，
         /// 商户轨 M1-a 仅记 meta，金库结算留 M1-c）。返回新点亮键供调用方 toast
         /// </summary>
@@ -117,7 +155,8 @@ namespace OpenFindBearings.Application.Services
                 items.Add(new AchievementProgressView(
                     d.Key, d.Name, d.Description, d.Icon, d.Category,
                     (int)d.Scope, d.ProgressTarget, u?.Progress ?? 0, unlocked, u?.UnlockedAt,
-                    d.Rare, d.Hidden, d.MetaPoints, d.TitleReward, d.ImageKey));
+                    d.Rare, d.Hidden, d.MetaPoints, d.TitleReward, d.ImageKey,
+                    d.IsLimited, d.LimitedOrdinal));
             }
 
             var unlockedDefs = items.Where(i => i.Unlocked).ToList();

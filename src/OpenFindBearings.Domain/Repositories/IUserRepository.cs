@@ -68,6 +68,13 @@ namespace OpenFindBearings.Domain.Repositories
         Task<int> GetCountSinceAsync(DateTime since, CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// 注册序号（v2.8.0 G11 限量徽章判定）：该用户是第几位注册的业务用户。
+        /// 口径=注册时间（CreatedAt）早于该用户的活跃业务用户数 + 1——注销/匿名化用户不再占用序号，
+        /// 窗口按"当前仍在平台注册序列"截断；创站元老等限量徽章据此判定
+        /// </summary>
+        Task<int> GetRegistrationOrdinalAsync(DateTime registeredAt, CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// 取注销已满冷静期且未匿名化的用户（v2.12.0，匿名化 Job 用）
         /// </summary>
         Task<List<User>> GetDeactivatedBeforeAsync(DateTime cutoff, CancellationToken cancellationToken = default);

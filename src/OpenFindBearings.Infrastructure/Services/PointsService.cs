@@ -86,6 +86,10 @@ namespace OpenFindBearings.Infrastructure.Services
                 // 登录 Lv2+1、纠错 Lv2×1.1/Lv3×1.2/Lv4×1.25；其余场景原额返回零查询
                 amount = await ApplyMerchantBuffAsync(userId, grantType, amount, cancellationToken);
 
+                // 改动说明（v2.8.0 G1 暴击）：服务端 RNG 判定——传说优先（×5），其次双倍（×2），
+                // 命中后仍受下方 DailyLimit 截断（金额不足时余量封顶为剩余额度）
+                amount = RollCrit(rule, amount);
+
                 if (rule.DailyLimit > 0)
                 {
                     var todaySum = await _transactionRepository.SumTodayByTypeAsync(userId, grantType, cancellationToken);
@@ -220,6 +224,32 @@ namespace OpenFindBearings.Infrastructure.Services
                 _logger.LogWarning(ex, "签到商家 buff 查询失败（按无加成）: User={UserId}", userId);
             }
 
+            // 改动说明（v2.8.0 G1 暴击）：签到命中暴击——传说 ×5 / 双倍 ×2，
+            // 暴击倍数回传前端播动画；仍受下方 DailyLimit 截断（截断后倍数按实际发放缩水）
+            var critMultiplier = 1;
+            if (rule.DoubleChance > 0 || rule.LegendChance > 0)
+            {
+                var roll = Random.Shared.Next(1, 101);
+                if (rule.LegendChance > 0 && roll <= rule.LegendChance)
+                    critMultiplier = 5;
+                else if (rule.DoubleChance > 0 && roll <= rule.DoubleChance + rule.LegendChance)
+                    critMultiplier = 2;
+                amount *= critMultiplier;
+            }
+
+            if (rule.DailyLimit > 0)
+            {
+                var todaySum = await _transactionRepository.SumTodayByTypeAsync(userId, PointTransaction.TypeDailyCheckin, cancellationToken);
+                if (todaySum >= rule.DailyLimit)
+                {
+                    // 同日已签到（幂等命中，正常分支）；不重复暴击
+                    return new CheckinResult(0, streak, true);
+                }
+                amount = Math.Min(amount, rule.DailyLimit - todaySum);
+                if (amount <= 0)
+                    return new CheckinResult(0, streak, true);
+            }
+
             account.Credit(amount);
             if (accountWasNew)
                 await _accountRepository.AddAsync(account, cancellationToken);
@@ -242,7 +272,7 @@ namespace OpenFindBearings.Infrastructure.Services
                 throw;
             }
 
-            return new CheckinResult(amount, streak, false);
+            return new CheckinResult(amount, streak, false, critMultiplier);
         }
 
         /// <summary>
@@ -384,6 +414,25 @@ namespace OpenFindBearings.Infrastructure.Services
             {
                 return null;
             }
+        }
+
+        /// <summary>
+        /// 暴击判定（v2.8.0 G1）：规则配置了暴击概率才生效——先掷传说（×5）再掷双倍（×2）；
+        /// 两者皆未中返回原额。RNG 全程服务端，客户端只展示动画不参与判定（防伪造）
+        /// </summary>
+        /// <param name="rule">发放规则（携带暴击概率配置）</param>
+        /// <param name="amount">基础金额（已含商家 buff）</param>
+        /// <returns>暴击后的金额（未中=原额）</returns>
+        private static int RollCrit(PointGrantRule rule, int amount)
+        {
+            if (rule.DoubleChance <= 0 && rule.LegendChance <= 0)
+                return amount;
+            var roll = Random.Shared.Next(1, 101);
+            if (rule.LegendChance > 0 && roll <= rule.LegendChance)
+                return amount * 5;
+            if (rule.DoubleChance > 0 && roll <= rule.DoubleChance + rule.LegendChance)
+                return amount * 2;
+            return amount;
         }
     }
 }

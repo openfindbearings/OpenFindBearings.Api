@@ -29,6 +29,18 @@ namespace OpenFindBearings.Domain.Entities
         /// <summary>规则说明</summary>
         public string? Description { get; private set; }
 
+        /// <summary>
+        /// 双倍暴击概率（0-100，默认 0=不暴击；v2.8.0 G1）。服务端 GrantAsync/CheckinAsync
+        /// 发放时 RNG 判定：命中则分值 ×2；仍受 DailyLimit 截断（金额不足时余量封顶为剩余额度）
+        /// </summary>
+        public int DoubleChance { get; private set; }
+
+        /// <summary>
+        /// 传说暴击概率（0-100，默认 0=不暴击；v2.8.0 G1）。判定优先级高于双倍，
+        /// 命中则分值 ×5（"传说掉落"）；仍受 DailyLimit 截断
+        /// </summary>
+        public int LegendChance { get; private set; }
+
         /// <summary>EF 构造函数</summary>
         protected PointGrantRule() { }
 
@@ -41,8 +53,11 @@ namespace OpenFindBearings.Domain.Entities
         /// <param name="dailyLimit">每日上限（0=不限）</param>
         /// <param name="ladderJson">连续阶梯 JSON（可空）</param>
         /// <param name="description">说明（可空）</param>
+        /// <param name="doubleChance">双倍暴击概率（0-100，默认 0）</param>
+        /// <param name="legendChance">传说暴击概率（0-100，默认 0）</param>
         public PointGrantRule(string grantType, string displayName, int amount,
-            int dailyLimit = 0, string? ladderJson = null, string? description = null)
+            int dailyLimit = 0, string? ladderJson = null, string? description = null,
+            int doubleChance = 0, int legendChance = 0)
         {
             GrantType = grantType;
             DisplayName = displayName;
@@ -51,6 +66,8 @@ namespace OpenFindBearings.Domain.Entities
             LadderJson = ladderJson;
             Description = description;
             IsEnabled = true;
+            DoubleChance = doubleChance;
+            LegendChance = legendChance;
         }
 
         /// <summary>
@@ -94,6 +111,24 @@ namespace OpenFindBearings.Domain.Entities
         public void SetEnabled(bool enabled)
         {
             IsEnabled = enabled;
+            UpdateTimestamp();
+        }
+
+        /// <summary>
+        /// 调整暴击概率（v2.8.0 G1）：双倍与传说概率各 0-100，任一起 0 即该档不暴击
+        /// </summary>
+        /// <param name="doubleChance">双倍暴击概率（0-100）</param>
+        /// <param name="legendChance">传说暴击概率（0-100）</param>
+        public void ChangeCritChances(int doubleChance, int legendChance)
+        {
+            if (doubleChance < 0 || doubleChance > 100)
+                throw new ArgumentException("双倍暴击概率须在 0-100 之间", nameof(doubleChance));
+            if (legendChance < 0 || legendChance > 100)
+                throw new ArgumentException("传说暴击概率须在 0-100 之间", nameof(legendChance));
+            if (doubleChance + legendChance > 100)
+                throw new ArgumentException("双倍与传说概率之和不能超过 100", nameof(doubleChance));
+            DoubleChance = doubleChance;
+            LegendChance = legendChance;
             UpdateTimestamp();
         }
     }

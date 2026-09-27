@@ -101,6 +101,8 @@ namespace OpenFindBearings.Api.Endpoints
                     amount = result.Amount,
                     consecutiveDays = result.ConsecutiveDays,
                     alreadyCheckedIn = result.AlreadyCheckedIn,
+                    // v2.8.0 G1：暴击倍数（1=无暴击 / 2=双倍 / 5=传说），前端播动画
+                    critMultiplier = result.CritMultiplier,
                     unlockedAchievements = unlocked
                 }, httpContext: httpContext);
             })

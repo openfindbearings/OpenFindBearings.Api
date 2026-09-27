@@ -197,6 +197,17 @@ namespace OpenFindBearings.Api.Middleware
                                 resolvedUserId.Value, "register_total", 1);
                         }
                         catch { /* 成就旁路，吞 */ }
+
+                        // 改动说明（v2.8.0 G11 限量徽章）：注册序号=当前活跃用户数+1，
+                        // 凡窗口 ≥ 序号的限量成就（如创站元老前 100）直接点亮；绝版不返场
+                        try
+                        {
+                            var users = context.RequestServices.GetRequiredService<OpenFindBearings.Domain.Repositories.IUserRepository>();
+                            var ordinal = await users.GetRegistrationOrdinalAsync(DateTime.UtcNow);
+                            await achievements.UnlockLimitedByOrdinalAsync(
+                                Domain.Entities.AchievementScope.Personal, resolvedUserId.Value, ordinal);
+                        }
+                        catch { /* 限量成就旁路，吞 */ }
                     }
                     var loginAmount = await points.GrantAsync(resolvedUserId.Value, PointTransaction.TypeDailyLogin,
                         $"daily_login:{resolvedUserId.Value:N}:{BusinessClock.DateKey}");

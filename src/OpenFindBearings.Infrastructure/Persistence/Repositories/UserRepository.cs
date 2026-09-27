@@ -168,12 +168,20 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         }
 
         /// <inheritdoc/>
-    public async Task<int> GetCountSinceAsync(DateTime since, CancellationToken cancellationToken = default)
-    {
-        return await _context.Users
-            .Where(u => u.IsActive && u.DeactivatedAt == null && u.CreatedAt >= since)
-            .CountAsync(cancellationToken);
-    }
+        public async Task<int> GetCountSinceAsync(DateTime since, CancellationToken cancellationToken = default)
+        {
+            return await _context.Users
+                .Where(u => u.IsActive && u.DeactivatedAt == null && u.CreatedAt >= since)
+                .CountAsync(cancellationToken);
+        }
+
+        /// <inheritdoc/>
+        public async Task<int> GetRegistrationOrdinalAsync(DateTime registeredAt, CancellationToken cancellationToken = default)
+        {
+            // 改动说明（v2.8.0 G11）：注册序号 = 活跃业务用户中 CreatedAt 早于本次注册的数量 + 1
+            return await _context.Users
+                .CountAsync(u => u.IsActive && u.DeactivatedAt == null && u.CreatedAt < registeredAt, cancellationToken) + 1;
+        }
 
     /// <inheritdoc/>
     public async Task<List<User>> GetDeactivatedBeforeAsync(DateTime cutoff, CancellationToken cancellationToken = default)

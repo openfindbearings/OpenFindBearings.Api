@@ -69,6 +69,18 @@ namespace OpenFindBearings.Domain.Entities
         /// <summary>隐藏成就（未解锁不在墙上显示，解锁后才现身）</summary>
         public bool Hidden { get; private set; }
 
+        /// <summary>
+        /// 限量徽章（v2.8.0 G11）：true=有注册序号窗口限制，窗口关闭后绝版不再返场。
+        /// 执行纪律：限量徽章永不补发、永不回填，错过了就是错过（Feats of Strength 模型）
+        /// </summary>
+        public bool IsLimited { get; private set; }
+
+        /// <summary>
+        /// 限量窗口序号（v2.8.0 G11，IsLimited=true 时生效）：注册序号 ≤ 此值的用户可解锁，
+        /// 之后注册的用户窗口关闭永远拿不到（如"创站元老"=前 100 注册）
+        /// </summary>
+        public int? LimitedOrdinal { get; private set; }
+
         /// <summary>是否启用（Admin 可停用以隐藏）</summary>
         public bool Enabled { get; private set; } = true;
 
@@ -81,7 +93,7 @@ namespace OpenFindBearings.Domain.Entities
         public AchievementDefinition(string key, string name, string description, string icon,
             AchievementScope scope, string category, string metricKey, int progressTarget,
             int metaPoints, int rewardPoints = 0, string? titleReward = null,
-            bool rare = false, bool hidden = false)
+            bool rare = false, bool hidden = false, bool isLimited = false, int? limitedOrdinal = null)
         {
             Key = key;
             Name = name;
@@ -96,11 +108,15 @@ namespace OpenFindBearings.Domain.Entities
             TitleReward = titleReward;
             Rare = rare;
             Hidden = hidden;
+            // 改动说明（v2.8.0 G11）：限量字段默认非限量；限量必须带窗口序号（否则无意义）
+            IsLimited = isLimited;
+            LimitedOrdinal = isLimited ? (limitedOrdinal ?? 0) : null;
         }
 
         /// <summary>Admin 编辑（分值/阈值/启停/文案/勋章图键）</summary>
         public void Update(string name, string description, int progressTarget, int metaPoints,
-            int rewardPoints, string? titleReward, bool enabled, string? imageKey = null)
+            int rewardPoints, string? titleReward, bool enabled, string? imageKey = null,
+            bool isLimited = false, int? limitedOrdinal = null)
         {
             Name = name;
             Description = description;
@@ -109,6 +125,9 @@ namespace OpenFindBearings.Domain.Entities
             RewardPoints = rewardPoints;
             TitleReward = titleReward;
             Enabled = enabled;
+            // 改动说明（v2.8.0 G11）：限量字段随编辑写回（限量必须带窗口序号）
+            IsLimited = isLimited;
+            LimitedOrdinal = isLimited ? (limitedOrdinal ?? 0) : null;
             // 改动说明（v2.6.0）：勋章图键随编辑一并写回；单独上传端点走专用方法设置
             if (imageKey is not null)
                 ImageKey = imageKey;

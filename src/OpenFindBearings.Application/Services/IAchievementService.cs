@@ -6,7 +6,8 @@ namespace OpenFindBearings.Application.Services
     public record AchievementProgressView(
         string Key, string Name, string Description, string Icon, string Category,
         int Scope, int Target, int Progress, bool Unlocked, DateTime? UnlockedAt,
-        bool Rare, bool Hidden, int MetaPoints, string? TitleReward, string? ImageKey);
+        bool Rare, bool Hidden, int MetaPoints, string? TitleReward, string? ImageKey,
+        bool IsLimited = false, int? LimitedOrdinal = null);
 
     /// <summary>成就墙视图（目录+本人进度+成就点合计+当前称号）</summary>
     public record AchievementWallView(
@@ -23,6 +24,17 @@ namespace OpenFindBearings.Application.Services
 
         /// <summary>仪表设值（取较大值防回退，如连签天数/在售数），返回新点亮键</summary>
         Task<IReadOnlyList<string>> SetGaugeAsync(AchievementScope scope, Guid ownerId, string metricKey, int value, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 注册序号限量解锁（v2.8.0 G11）：注册链路按"当前注册序号"调用——凡启用且
+        /// IsLimited=true、LimitedOrdinal >= ordinal 的成就直接点亮（绝版不返场，非回调补发）。
+        /// 与 MetricKey 计数引擎解耦：限量窗口只认注册序号，不参与事件累加
+        /// </summary>
+        /// <param name="scope">成就范围（个人）</param>
+        /// <param name="ownerId">用户 Id</param>
+        /// <param name="ordinal">当前注册序号（1 起）</param>
+        /// <returns>本次新点亮的成就键</returns>
+        Task<IReadOnlyList<string>> UnlockLimitedByOrdinalAsync(AchievementScope scope, Guid ownerId, int ordinal, CancellationToken cancellationToken = default);
 
         /// <summary>个人成就墙（全目录+本人进度，隐藏成就未解锁不显示）</summary>
         Task<AchievementWallView> GetWallAsync(Guid userId, CancellationToken cancellationToken = default);

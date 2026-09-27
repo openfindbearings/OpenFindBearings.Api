@@ -33,6 +33,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             builder.Property(a => a.Category).IsRequired().HasMaxLength(32);
             builder.Property(a => a.MetricKey).IsRequired().HasMaxLength(64);
             builder.Property(a => a.TitleReward).HasMaxLength(64);
+            // 改动说明（v2.8.0 G11）：限量标志与窗口序号（默认非限量）
+            builder.Property(a => a.IsLimited).IsRequired().HasDefaultValue(false);
+            builder.Property(a => a.LimitedOrdinal);
         }
 
         /// <summary>

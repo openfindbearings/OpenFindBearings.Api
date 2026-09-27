@@ -81,8 +81,9 @@ namespace OpenFindBearings.Application.Services
     /// <summary>
     /// 签到结果
     /// </summary>
-    /// <param name="Amount">本次发放分值（阶梯档）</param>
+    /// <param name="Amount">本次发放分值（阶梯档 + 暴击后）</param>
     /// <param name="ConsecutiveDays">本次签到后的连续天数</param>
     /// <param name="AlreadyCheckedIn">今日是否已签（true 时 Amount=0）</param>
-    public record CheckinResult(int Amount, int ConsecutiveDays, bool AlreadyCheckedIn);
+    /// <param name="CritMultiplier">暴击倍数（v2.8.0 G1：1=无暴击 / 2=双倍 / 5=传说，前端播动画用）</param>
+    public record CheckinResult(int Amount, int ConsecutiveDays, bool AlreadyCheckedIn, int CritMultiplier = 1);
 }
