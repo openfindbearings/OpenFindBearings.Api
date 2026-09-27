@@ -31,6 +31,11 @@ namespace OpenFindBearings.Application.Commands.Merchants.CloseMerchant
         private readonly ICorrectionRequestRepository _correctionRepository;
         private readonly IUserRepository _userRepository;
         private readonly INotificationService _notificationService;
+        // v2.4.0 工会经济：删除分支清金库/挂礼，释放分支燃烧+下架
+        private readonly IMerchantPointAccountRepository _treasuryAccountRepository;
+        private readonly IMerchantPointTransactionRepository _treasuryTxRepository;
+        private readonly IMallItemRepository _mallItemRepository;
+        private readonly OpenFindBearings.Application.Services.IMerchantPointsService _merchantPoints;
         private readonly ILogger<CloseMerchantCommandHandler> _logger;
 
         public CloseMerchantCommandHandler(
@@ -42,6 +47,10 @@ namespace OpenFindBearings.Application.Commands.Merchants.CloseMerchant
             ICorrectionRequestRepository correctionRepository,
             IUserRepository userRepository,
             INotificationService notificationService,
+            IMerchantPointAccountRepository treasuryAccountRepository,
+            IMerchantPointTransactionRepository treasuryTxRepository,
+            IMallItemRepository mallItemRepository,
+            OpenFindBearings.Application.Services.IMerchantPointsService merchantPoints,
             ILogger<CloseMerchantCommandHandler> logger)
         {
             _merchantRepository = merchantRepository;
@@ -52,6 +61,10 @@ namespace OpenFindBearings.Application.Commands.Merchants.CloseMerchant
             _correctionRepository = correctionRepository;
             _userRepository = userRepository;
             _notificationService = notificationService;
+            _treasuryAccountRepository = treasuryAccountRepository;
+            _treasuryTxRepository = treasuryTxRepository;
+            _mallItemRepository = mallItemRepository;
+            _merchantPoints = merchantPoints;
             _logger = logger;
         }
 
@@ -85,7 +98,8 @@ namespace OpenFindBearings.Application.Commands.Merchants.CloseMerchant
             {
                 // 删除分支：成员/纠错行由共享 helper 清理，商品/证照/关注随 DB 级联
                 await ApplicantApplicationCleanup.HardDeleteMerchantWithMembersAsync(
-                    merchant, _merchantRepository, _memberRepository, _correctionRepository, _documentRepository, cancellationToken);
+                    merchant, _merchantRepository, _memberRepository, _correctionRepository, _documentRepository,
+                    _treasuryAccountRepository, _treasuryTxRepository, _mallItemRepository, cancellationToken);
                 result = "deleted";
             }
             else
@@ -93,7 +107,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.CloseMerchant
                 // release 分支：清场 helper（成员全清/商品/证照/全部邀请含 Accepted 提名/纠错硬删）
                 await ApplicantApplicationCleanup.ResetOperationalDataForReleaseAsync(
                     merchant.Id, _memberRepository, _merchantBearingRepository, _documentRepository,
-                    _invitationRepository, _correctionRepository, cancellationToken);
+                    _invitationRepository, _correctionRepository, _mallItemRepository, _merchantPoints, cancellationToken);
                 // 归属轴重置（DataSource 回 Crawler/认证与核验轴清/Contact 隐私止血/ProductCount 归零）
                 merchant.ReleaseToPool();
                 await _merchantRepository.UpdateAsync(merchant, cancellationToken);

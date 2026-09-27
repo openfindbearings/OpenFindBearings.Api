@@ -25,6 +25,9 @@ namespace OpenFindBearings.Application.Commands.Merchants.DetachMerchant
         private readonly IStaffInvitationRepository _invitationRepository;
         private readonly ICorrectionRequestRepository _correctionRepository;
         private readonly INotificationService _notificationService;
+        // v2.4.0 工会经济：强制释放同自助关店——挂礼下架 + 金库燃烧
+        private readonly IMallItemRepository _mallItemRepository;
+        private readonly OpenFindBearings.Application.Services.IMerchantPointsService _merchantPoints;
         private readonly ILogger<DetachMerchantCommandHandler> _logger;
 
         public DetachMerchantCommandHandler(
@@ -35,6 +38,8 @@ namespace OpenFindBearings.Application.Commands.Merchants.DetachMerchant
             IStaffInvitationRepository invitationRepository,
             ICorrectionRequestRepository correctionRepository,
             INotificationService notificationService,
+            IMallItemRepository mallItemRepository,
+            OpenFindBearings.Application.Services.IMerchantPointsService merchantPoints,
             ILogger<DetachMerchantCommandHandler> logger)
         {
             _merchantRepository = merchantRepository;
@@ -44,6 +49,8 @@ namespace OpenFindBearings.Application.Commands.Merchants.DetachMerchant
             _invitationRepository = invitationRepository;
             _correctionRepository = correctionRepository;
             _notificationService = notificationService;
+            _mallItemRepository = mallItemRepository;
+            _merchantPoints = merchantPoints;
             _logger = logger;
         }
 
@@ -71,7 +78,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.DetachMerchant
             // 清场 + 归属轴重置（与自助关店 release 分支同构）
             var notifyUserIds = await ApplicantApplicationCleanup.ResetOperationalDataForReleaseAsync(
                 merchant.Id, _memberRepository, _merchantBearingRepository, _documentRepository,
-                _invitationRepository, _correctionRepository, cancellationToken);
+                _invitationRepository, _correctionRepository, _mallItemRepository, _merchantPoints, cancellationToken);
 
             merchant.ReleaseToPool();
             await _merchantRepository.UpdateAsync(merchant, cancellationToken);

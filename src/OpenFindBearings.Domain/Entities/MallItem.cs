@@ -52,6 +52,27 @@ namespace OpenFindBearings.Domain.Entities
         /// <summary>排序权重（小者靠前）</summary>
         public int SortOrder { get; private set; }
 
+        /// <summary>
+        /// 归属商户 ID（v2.4.0 商家挂礼：null=平台自营权益；非空=该商家发布的实物礼品）。
+        /// 金库类比"工会摆摊"：礼品兑换确认收货后的积分全额结算进该商户金库
+        /// </summary>
+        public Guid? OwnerMerchantId { get; private set; }
+
+        /// <summary>
+        /// 礼品审核态（v2.4.0）：0=平台商品不适用（免审），1=待审，2=已通过，3=已驳回。
+        /// 商家礼品必须过"审核定档"——上架与否、积分价格都由平台审核时敲定，杜绝定向转移
+        /// </summary>
+        public int AuditState { get; private set; }
+
+        /// <summary>审核备注（驳回原因/定档说明，商户可见）</summary>
+        public string? AuditRemark { get; private set; }
+
+        /// <summary>是否商家实物礼品（需审核+收货结算路径）</summary>
+        public bool IsMerchantGift => OwnerMerchantId.HasValue && Category == MallItemCategory.Gift;
+
+        /// <summary>商家礼品是否可售（审核通过 + 上架 + 有效）</summary>
+        public bool IsGiftSellable => !IsMerchantGift || (AuditState == 2 && Enabled && IsActive);
+
         /// <summary>EF 无参构造</summary>
         protected MallItem() { }
 
@@ -76,6 +97,59 @@ namespace OpenFindBearings.Domain.Entities
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
             };
+        }
+
+        /// <summary>
+        /// 商家申请挂礼（v2.4.0）：进待审态且默认下架——审核定档（平台定价+放行）后才可兑换。
+        /// Key 由调用方生成（gift:{商户短码}:{时间戳} 之类全局唯一串），审核只改价不改 Key
+        /// </summary>
+        public static MallItem CreateGift(string key, Guid ownerMerchantId, string name,
+            string description, string imageKey, int stock)
+        {
+            return new MallItem
+            {
+                Key = key,
+                Name = name,
+                Description = description,
+                Icon = imageKey,
+                Category = MallItemCategory.Gift,
+                PointPrice = 0, // 价格由平台审核定档，申请时不生效
+                Stock = stock,
+                SortOrder = 100,
+                OwnerMerchantId = ownerMerchantId,
+                AuditState = 1,
+                Enabled = false, // 待审即下架，通过后放行
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            };
+        }
+
+        /// <summary>
+        /// 审核通过并定档（v2.4.0）：平台统一定价（杜绝商家自定形成定向转移），放行上架
+        /// </summary>
+        public void PassGiftAudit(int pointPrice, string? remark)
+        {
+            PointPrice = pointPrice;
+            AuditState = 2;
+            AuditRemark = remark;
+            Enabled = true;
+            UpdatedAt = DateTime.UtcNow;
+        }
+
+        /// <summary>审核驳回（原因商户可见，可修改后重新申请）</summary>
+        public void RejectGiftAudit(string reason)
+        {
+            AuditState = 3;
+            AuditRemark = reason;
+            Enabled = false;
+            UpdatedAt = DateTime.UtcNow;
+        }
+
+        /// <summary>商家主动下架自己的礼品（存量订单不受影响）</summary>
+        public void TakeOffShelfByOwner()
+        {
+            Enabled = false;
+            UpdatedAt = DateTime.UtcNow;
         }
 
         /// <summary>

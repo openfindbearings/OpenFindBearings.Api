@@ -165,6 +165,11 @@ namespace OpenFindBearings.Infrastructure
         services.AddScoped<IMallOrderRepository, MallOrderRepository>();
         services.AddScoped<IMallService, MallService>();
 
+        // v2.4.0 工会经济：商家金库账户/流水仓储 + 记账服务（trickle/结算/消费/燃烧单一入口）
+        services.AddScoped<IMerchantPointAccountRepository, MerchantPointAccountRepository>();
+        services.AddScoped<IMerchantPointTransactionRepository, MerchantPointTransactionRepository>();
+        services.AddScoped<IMerchantPointsService, MerchantPointsService>();
+
             // 轴承统计服务
             services.AddScoped<IBearingViewStatsService, BearingViewStatsService>();
 
@@ -203,6 +208,8 @@ namespace OpenFindBearings.Infrastructure
             services.AddHostedService<QueuedHostedService>();
         // v2.12.0：注销冷静期到期匿名化 Job（每小时扫描，注销满 30 天清 PII）
         services.AddHostedService<UserDeactivationJob>();
+        // v2.4.0 工会经济：礼品订单发货满 7 天自动确认收货并结算入金库
+        services.AddHostedService<MallAutoConfirmJob>();
 
             return services;
         }

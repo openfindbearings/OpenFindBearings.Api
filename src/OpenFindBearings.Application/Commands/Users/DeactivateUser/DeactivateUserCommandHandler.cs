@@ -33,6 +33,10 @@ namespace OpenFindBearings.Application.Commands.Users.DeactivateUser
         private readonly IPointTransactionRepository _pointTransactionRepository;
         // v2.3.0 商城：注销级联清理兑换订单（历史凭据随账号清零，与积分流水同口径）
         private readonly IMallOrderRepository _mallOrderRepository;
+        // v2.4.0 工会经济：注销清理的 self 商户连带硬删金库两表与挂礼行
+        private readonly IMerchantPointAccountRepository _treasuryAccountRepository;
+        private readonly IMerchantPointTransactionRepository _treasuryTxRepository;
+        private readonly IMallItemRepository _mallItemRepository;
         private readonly IIdentityService _identityService;
         private readonly ILogger<DeactivateUserCommandHandler> _logger;
 
@@ -48,6 +52,9 @@ namespace OpenFindBearings.Application.Commands.Users.DeactivateUser
             IPointAccountRepository pointAccountRepository,
             IPointTransactionRepository pointTransactionRepository,
             IMallOrderRepository mallOrderRepository,
+            IMerchantPointAccountRepository treasuryAccountRepository,
+            IMerchantPointTransactionRepository treasuryTxRepository,
+            IMallItemRepository mallItemRepository,
             IIdentityService identityService,
             ILogger<DeactivateUserCommandHandler> logger)
         {
@@ -61,6 +68,9 @@ namespace OpenFindBearings.Application.Commands.Users.DeactivateUser
             _pointAccountRepository = pointAccountRepository;
             _pointTransactionRepository = pointTransactionRepository;
             _mallOrderRepository = mallOrderRepository;
+            _treasuryAccountRepository = treasuryAccountRepository;
+            _treasuryTxRepository = treasuryTxRepository;
+            _mallItemRepository = mallItemRepository;
             _identityService = identityService;
             _logger = logger;
         }
@@ -184,7 +194,8 @@ namespace OpenFindBearings.Application.Commands.Users.DeactivateUser
             if (merchant.ApplicationMode == ApplicationMode.Self)
             {
                 await ApplicantApplicationCleanup.HardDeleteMerchantWithMembersAsync(
-                    merchant, _merchantRepository, _memberRepository, _correctionRepository, _documentRepository, cancellationToken);
+                    merchant, _merchantRepository, _memberRepository, _correctionRepository, _documentRepository,
+                    _treasuryAccountRepository, _treasuryTxRepository, _mallItemRepository, cancellationToken);
             }
             else
             {

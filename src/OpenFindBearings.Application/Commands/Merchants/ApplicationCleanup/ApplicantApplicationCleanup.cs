@@ -31,11 +31,19 @@ namespace OpenFindBearings.Application.Commands.Merchants.ApplicationCleanup
             IMerchantMemberRepository merchantMemberRepository,
             ICorrectionRequestRepository correctionRepository,
             IMerchantDocumentRepository documentRepository,
+            // v2.4.0 工会经济：硬删商户同时清金库两表与挂礼目录行（不留无主金库/幽灵礼品）
+            IMerchantPointAccountRepository treasuryAccountRepository,
+            IMerchantPointTransactionRepository treasuryTxRepository,
+            IMallItemRepository mallItemRepository,
             CancellationToken cancellationToken)
         {
             await correctionRepository.DeleteByTargetAsync("Merchant", merchant.Id, cancellationToken);
-            // 证照行显式硬删（FK 级联不成立，见方法注释）
+            // 证照显式硬删（FK 无级联，原注释失实已订正）
             await documentRepository.DeleteByMerchantAsync(merchant.Id, cancellationToken);
+            // v2.4.0：金库流水→账户→挂礼行顺序删除（礼品订单行保留——买家凭据快照自足，不指向已删商户）
+            await treasuryTxRepository.DeleteByMerchantIdAsync(merchant.Id, cancellationToken);
+            await treasuryAccountRepository.DeleteByMerchantIdAsync(merchant.Id, cancellationToken);
+            await mallItemRepository.DeleteByOwnerAsync(merchant.Id, cancellationToken);
             var members = await merchantMemberRepository.GetAllByMerchantIdAsync(merchant.Id, cancellationToken);
             foreach (var m in members)
             {
@@ -111,6 +119,9 @@ namespace OpenFindBearings.Application.Commands.Merchants.ApplicationCleanup
             IMerchantDocumentRepository documentRepository,
             IStaffInvitationRepository invitationRepository,
             ICorrectionRequestRepository correctionRepository,
+            // v2.4.0 工会经济：释放=仓库清算——挂礼批量下架（留行供历史订单），金库余额燃烧
+            IMallItemRepository mallItemRepository,
+            OpenFindBearings.Application.Services.IMerchantPointsService merchantPoints,
             CancellationToken cancellationToken)
         {
             // 1. 成员全清退（先取在职名单作通知收件人）
@@ -139,6 +150,10 @@ namespace OpenFindBearings.Application.Commands.Merchants.ApplicationCleanup
 
             // 5. 纠错行硬删（含历史已审，随商户离场归档删除；提交人"我的纠错"记录消失属注销级清场语义）
             await correctionRepository.DeleteByTargetAsync("Merchant", merchantId, cancellationToken);
+
+            // 6. v2.4.0 工会经济：挂礼批量下架（保留行供历史订单快照，仅停售）+ 金库燃烧（工会解散仓库回收）
+            await mallItemRepository.OffShelfByOwnerAsync(merchantId, cancellationToken);
+            await merchantPoints.BurnOnReleaseAsync(merchantId, $"burn:{merchantId:N}:release", cancellationToken);
 
             return notifyUserIds;
         }
