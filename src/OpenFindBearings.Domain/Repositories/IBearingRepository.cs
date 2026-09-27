@@ -49,6 +49,13 @@ namespace OpenFindBearings.Domain.Repositories
         Task<bool> ExistsByPartNumberAsync(string partNumber, CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// 随机取 N 个"有图片"的轴承（游戏中心连连看题库用）。
+        /// 改动说明（v2.10.1）：按类型打散优先取——同类型轴承照片高度相似，
+        /// 视觉难辨会让连连看变成找不同，跨类型混搭保证一眼可辨。
+        /// </summary>
+        Task<IReadOnlyList<Bearing>> GetRandomWithImageAsync(int count, CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// 获取热门轴承
         /// </summary>
         Task<IEnumerable<Bearing>> GetHotBearingsAsync(int count, CancellationToken cancellationToken = default);

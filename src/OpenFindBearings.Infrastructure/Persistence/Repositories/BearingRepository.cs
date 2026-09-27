@@ -242,6 +242,36 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                 .AnyAsync(b => b.PartNumber == partNumber, cancellationToken);
         }
 
+        /// <summary>
+        /// 随机取 N 个"有图片"的轴承（游戏中心连连看题库）。
+        /// 改动说明（v2.10.1）：同类型轴承照片高度相似难辨认，第一轮按类型去重轮询保证
+        /// 跨类型混搭一眼可辨，不足再回填候选池（数据里类型少时也能凑满棋盘）。
+        /// </summary>
+        public async Task<IReadOnlyList<Bearing>> GetRandomWithImageAsync(int count, CancellationToken cancellationToken = default)
+        {
+            var poolSize = Math.Max(count * 4, 40);
+            var candidates = await _context.Bearings
+                .AsNoTracking()
+                .Where(b => b.IsActive && (b.Image2DUrl != null || b.Image3DUrl != null))
+                .OrderBy(b => EF.Functions.Random())
+                .Take(poolSize)
+                .ToListAsync(cancellationToken);
+
+            var result = new List<Bearing>();
+            var usedTypes = new HashSet<Guid>();
+            foreach (var b in candidates)
+            {
+                if (result.Count >= count) break;
+                if (usedTypes.Add(b.BearingTypeId)) result.Add(b);
+            }
+            foreach (var b in candidates)
+            {
+                if (result.Count >= count) break;
+                if (!result.Contains(b)) result.Add(b);
+            }
+            return result;
+        }
+
         public async Task<IEnumerable<Bearing>> GetHotBearingsAsync(int count, CancellationToken cancellationToken = default)
         {
             return await _context.Bearings

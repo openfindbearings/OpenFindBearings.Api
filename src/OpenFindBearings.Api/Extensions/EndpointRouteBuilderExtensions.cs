@@ -44,6 +44,8 @@ namespace OpenFindBearings.Api.Extensions
         app.MapMallEndpoints();
         // v2.4.0 商家经济：商家挂礼/金库/礼品订单 + 审核退款
         app.MapMerchantGiftEndpoints();
+        // v2.10.1 游戏中心：/api/games/{key}/* 插件式统一端点（IGameProvider 按 Key 路由）
+        app.MapGameEndpoints();
 
             // 系统配置接口（内部服务拉取）
             app.MapConfigEndpoints();
