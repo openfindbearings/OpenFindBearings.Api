@@ -5,13 +5,15 @@ using OpenFindBearings.Domain.Entities;
 namespace OpenFindBearings.Infrastructure.Persistence.Configurations
 {
     /// <summary>
-    /// 积分表配置（账户/流水/规则/认领台账）：v1.32.0 积分底座，v1.34.0 补防刷台账
+    /// 积分表配置（账户/流水/规则/认领台账/等级阈值）：v1.32.0 积分底座，v1.34.0 补防刷台账，
+    /// v2.7.0 补 G7 用户积分等级阈值表
     /// </summary>
     public class PointConfiguration :
         IEntityTypeConfiguration<PointAccount>,
         IEntityTypeConfiguration<PointTransaction>,
         IEntityTypeConfiguration<PointGrantRule>,
-        IEntityTypeConfiguration<PointRewardClaim>
+        IEntityTypeConfiguration<PointRewardClaim>,
+        IEntityTypeConfiguration<PointLevel>
     {
         /// <summary>
         /// 配置积分账户（一人一户）、流水（BizId 幂等唯一索引）、规则（动作类型唯一）
@@ -108,6 +110,20 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             builder.HasIndex(c => c.BizKey)
                 .IsUnique()
                 .HasDatabaseName("UX_PointRewardClaims_BizKey");
+        }
+
+        /// <summary>
+        /// 等级阈值表配置（v2.7.0 G7）：Level 唯一递增，MinTotalEarned 落档线
+        /// </summary>
+        public void Configure(EntityTypeBuilder<PointLevel> builder)
+        {
+            builder.ToTable("PointLevels");
+            builder.HasKey(l => l.Id);
+
+            builder.Property(l => l.Level).IsRequired();
+            builder.Property(l => l.MinTotalEarned).IsRequired();
+            builder.Property(l => l.Name).IsRequired().HasMaxLength(32);
+            builder.Property(l => l.Enabled).IsRequired().HasDefaultValue(true);
         }
     }
 }

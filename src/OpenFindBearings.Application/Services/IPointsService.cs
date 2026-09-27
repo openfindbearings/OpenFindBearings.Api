@@ -68,6 +68,14 @@ namespace OpenFindBearings.Application.Services
         /// <param name="userId">签到用户</param>
         /// <returns>本次发放分值与连续天数；AlreadyCheckedIn=true 表示今日已签</returns>
         Task<CheckinResult> CheckinAsync(Guid userId, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 每日任务板三件套（v2.7.0 G2）：今日 签到 + 纠错被采纳 + 寻货应答 三项全完成后额外 +30。
+        /// 由签到成功 / 纠错采纳 / 应答新增三处触发点调用，幂等（bizId=daily_combo:{userId}:{业务日键}），
+        /// 无论哪项最后完成都会触发补发，重复触发自然跳过；未达标静默返回 0
+        /// </summary>
+        /// <returns>本次发放分值（0=未达标/已发/规则停用）</returns>
+        Task<int> TryGrantDailyComboAsync(Guid userId, CancellationToken cancellationToken = default);
     }
 
     /// <summary>

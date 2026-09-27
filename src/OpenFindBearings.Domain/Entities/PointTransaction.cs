@@ -33,6 +33,9 @@ namespace OpenFindBearings.Domain.Entities
         // 改动说明（v2.6.0 M3 商家集体任务）：集体任务达标后全体在职成员各得一笔（bizId 含任务/商家/周期/用户四段幂等，分值由任务定义 amountOverride 覆盖）
         public const string TypeMerchantTask = "merchant_task";
 
+        // 改动说明（v2.7.0 G2 每日任务板三件套）：签到 + 纠错采纳 + 寻货应答三项当日全完成额外 +30（bizId=每日键幂等）
+        public const string TypeDailyCombo = "daily_combo";
+
         /// <summary>商城兑换扣分场景（v2.3.0 商城虚拟权益，DeductAsync 的 sceneType）</summary>
         public const string TypeMallRedeem = "mall_redeem";
 

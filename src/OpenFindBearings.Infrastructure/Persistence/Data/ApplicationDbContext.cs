@@ -56,6 +56,8 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
         public DbSet<PointTransaction> PointTransactions { get; set; }
         public DbSet<PointGrantRule> PointGrantRules { get; set; }
         public DbSet<PointRewardClaim> PointRewardClaims { get; set; }
+        // v2.7.0 G7：用户积分等级阈值表（按累计获得积分落档，纯展示）
+        public DbSet<PointLevel> PointLevels { get; set; }
         // v1.35.0 寻货：需求与应答（零内联依赖聚合，只存外部 Id）
         public DbSet<SourcingDemand> SourcingDemands { get; set; }
         public DbSet<SourcingResponse> SourcingResponses { get; set; }

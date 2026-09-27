@@ -53,11 +53,18 @@ namespace OpenFindBearings.Domain.Repositories
         /// <summary>商户的同需求既有应答（重复应答=更新语义判定）</summary>
         Task<SourcingResponse?> GetByDemandAndMerchantAsync(Guid demandId, Guid merchantId, CancellationToken cancellationToken = default);
 
+        /// <summary>
+        /// 商户今日应答条数（额度评估用，商户维度）
+        /// </summary>
+        Task<int> CountRespondedTodayAsync(Guid merchantId, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 操作人今日新增应答条数（v2.7.0 G2 每日三件套判定用：次日刷新，重复更新不计新增）
+        /// </summary>
+        Task<int> CountRespondedTodayByUserAsync(Guid userId, CancellationToken cancellationToken = default);
+
         /// <summary>我的应答列表（商家维度，时间倒序）</summary>
         Task<List<SourcingResponse>> GetByMerchantAsync(Guid merchantId, CancellationToken cancellationToken = default);
-
-        /// <summary>商户今日应答数（免费额度判定）</summary>
-        Task<int> CountRespondedTodayAsync(Guid merchantId, CancellationToken cancellationToken = default);
 
         /// <summary>需求下全部待处理应答（关闭时批量转 NotSelected / 通知全体应答者）</summary>
         Task<List<SourcingResponse>> GetPendingByDemandAsync(Guid demandId, CancellationToken cancellationToken = default);

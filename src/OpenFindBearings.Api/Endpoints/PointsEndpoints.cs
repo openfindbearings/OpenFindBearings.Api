@@ -29,6 +29,7 @@ namespace OpenFindBearings.Api.Endpoints
                 [FromServices] ICurrentUserService currentUser,
                 [FromServices] IPointAccountRepository accountRepository,
                 [FromServices] IPointTransactionRepository transactionRepository,
+                [FromServices] IPointLevelRepository levelRepository,
                 HttpContext httpContext) =>
             {
                 if (!currentUser.UserId.HasValue)
@@ -39,6 +40,10 @@ namespace OpenFindBearings.Api.Endpoints
                 var todayCheckedIn = await transactionRepository.ExistsBizIdAsync(
                     $"checkin:{userId:N}:{BusinessClock.DateKey}");
 
+                // 改动说明（v2.7.0 G7）：按累计获得积分落档（纯展示，无特权）；无账户=等级 1
+                var levels = await levelRepository.GetEnabledAsync();
+                var level = levels.LastOrDefault(l => l.MinTotalEarned <= (account?.TotalEarned ?? 0));
+
                 return ApiResponseHelper.Ok(new
                 {
                     balance = account?.Balance ?? 0,
@@ -46,6 +51,8 @@ namespace OpenFindBearings.Api.Endpoints
                     totalSpent = account?.TotalSpent ?? 0,
                     todayCheckedIn,
                     consecutiveDays = account?.ConsecutiveCheckinDays ?? 0,
+                    level = level?.Level ?? 1,
+                    levelName = level?.Name ?? "初出茅庐",
                     // v1.36.1：下发业务日界偏移——前端日期条/对勾按此换算，防管理员改配置后前端硬编码 +8 漂移
                     tzOffsetHours = (int)BusinessClock.Offset.TotalHours
                 }, httpContext: httpContext);
@@ -83,6 +90,10 @@ namespace OpenFindBearings.Api.Endpoints
                             "checkin_total", 1));
                     }
                     catch { /* 成就为旁路增强，吞掉不反噬签到 */ }
+
+                    // 改动说明（v2.7.0 G2 三件套）：签到是三项之一，成功后触发补发判定
+                    // （应答/纠错已发生时，此处一次性补齐 combo；未完成则静默跳过）
+                    await pointsService.TryGrantDailyComboAsync(currentUser.UserId.Value, httpContext.RequestAborted);
                 }
 
                 return ApiResponseHelper.Ok(new
@@ -152,7 +163,9 @@ namespace OpenFindBearings.Api.Endpoints
                 // 任务节奏类型：daily=每日可完成 / once=一次性
                 var dailyTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
                 {
-                    PointTransaction.TypeDailyLogin, PointTransaction.TypeDailyCheckin, PointTransaction.TypeCorrectionAdopted
+                    PointTransaction.TypeDailyLogin, PointTransaction.TypeDailyCheckin, PointTransaction.TypeCorrectionAdopted,
+                    // 改动说明（v2.7.0 G2）：三件套每日可完成（今日已完成=combo 已发放）
+                    PointTransaction.TypeDailyCombo
                 };
 
                 // 改动说明（v1.36.1）：寻货加量两条规则是**消费定价**不是赚分任务，

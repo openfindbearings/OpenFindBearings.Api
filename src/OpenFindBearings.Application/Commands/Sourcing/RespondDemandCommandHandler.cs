@@ -132,6 +132,10 @@ namespace OpenFindBearings.Application.Commands.Sourcing
             //   订阅者只发站内信（不读应答表），无时序依赖，安全
             await _mediator.Publish(new SourcingRespondedEvent(
                 demand.Id, demand.PublisherUserId, merchant.Id, merchant.Name, demand.PartNumber), cancellationToken);
+
+            // 改动说明（v2.7.0 G2 三件套）：应答成功（新增，非更新）是三项之一，
+            // 触发补发判定——操作人（商户成员）当日已签到+纠错采纳时补齐 combo
+            await _pointsService.TryGrantDailyComboAsync(request.UserId, cancellationToken);
         }
     }
 }

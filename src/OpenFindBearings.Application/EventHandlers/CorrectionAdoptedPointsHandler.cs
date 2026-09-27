@@ -40,6 +40,9 @@ namespace OpenFindBearings.Application.EventHandlers
                 null,
                 cancellationToken: cancellationToken);
 
+            // 改动说明（v2.7.0 G2 三件套）：纠错采纳是三项之一，采纳成功后触发补发判定
+            await _pointsService.TryGrantDailyComboAsync(notification.SubmittedBy, cancellationToken);
+
             _logger.LogInformation("纠错采纳积分: CorrectionId={CorrectionId}, User={UserId}, Granted={Granted}",
                 notification.CorrectionId, notification.SubmittedBy, granted);
         }
