@@ -32,8 +32,15 @@ namespace OpenFindBearings.Domain.Entities
         /// <summary>成就描述 / 未解锁时的"如何获得"提示</summary>
         public string Description { get; private set; } = string.Empty;
 
-        /// <summary>图标名（前端 Icon 组件键）</summary>
+        /// <summary>图标名（前端 Icon 组件键，无图时的占位图标）</summary>
         public string Icon { get; private set; } = string.Empty;
+
+        /// <summary>
+        /// 勋章图片相对媒体键（可空；v2.6.0 勋章图片管线上线后，后台上传的可替换图片来源）。
+        /// 相对键入库，展示层由 Taro usableImage 统一解析为绝对地址——键变则 URL 变，
+        /// 替换无需发版且无缓存残留（与商家 Logo / 用户头像同一管线）
+        /// </summary>
+        public string? ImageKey { get; private set; }
 
         /// <summary>归属范围（个人/商户）</summary>
         public AchievementScope Scope { get; private set; }
@@ -91,9 +98,9 @@ namespace OpenFindBearings.Domain.Entities
             Hidden = hidden;
         }
 
-        /// <summary>Admin 编辑（分值/阈值/启停/文案）</summary>
+        /// <summary>Admin 编辑（分值/阈值/启停/文案/勋章图键）</summary>
         public void Update(string name, string description, int progressTarget, int metaPoints,
-            int rewardPoints, string? titleReward, bool enabled)
+            int rewardPoints, string? titleReward, bool enabled, string? imageKey = null)
         {
             Name = name;
             Description = description;
@@ -102,6 +109,19 @@ namespace OpenFindBearings.Domain.Entities
             RewardPoints = rewardPoints;
             TitleReward = titleReward;
             Enabled = enabled;
+            // 改动说明（v2.6.0）：勋章图键随编辑一并写回；单独上传端点走专用方法设置
+            if (imageKey is not null)
+                ImageKey = imageKey;
+        }
+
+        /// <summary>
+        /// 替换勋章图片键（v2.6.0 上传端点专用：上传成功后更新键并刷新更新时间戳，
+        /// 旧键由上传端点先删除，保证可替换且不留孤儿对象）
+        /// </summary>
+        public void SetImageKey(string imageKey)
+        {
+            ImageKey = imageKey;
+            UpdateTimestamp();
         }
     }
 }

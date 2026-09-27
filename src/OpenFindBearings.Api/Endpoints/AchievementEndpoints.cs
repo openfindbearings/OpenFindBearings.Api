@@ -84,6 +84,7 @@ namespace OpenFindBearings.Api.Endpoints
                     name = d.Name,
                     description = d.Description,
                     icon = d.Icon,
+                    imageKey = d.ImageKey,
                     scope = (int)d.Scope,
                     category = d.Category,
                     metricKey = d.MetricKey,
@@ -112,7 +113,7 @@ namespace OpenFindBearings.Api.Endpoints
                 if (def == null)
                     return ApiResponseHelper.NotFound(httpContext: httpContext);
                 def.Update(req.Name, req.Description, req.ProgressTarget, req.MetaPoints,
-                    req.RewardPoints, req.TitleReward, req.Enabled);
+                    req.RewardPoints, req.TitleReward, req.Enabled, req.ImageKey);
                 repo.UpdateDefinition(def);
                 // 端点直连仓储不走 MediatR 管道，必须显式提交（与积分规则 PUT 同模式）
                 await unitOfWork.SaveChangesAsync(httpContext.RequestAborted);
@@ -121,11 +122,61 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("AdminUpdateAchievement")
             .WithSummary("编辑成就")
             .RequirePermission("system.manage");
+
+            /// <summary>
+            /// 上传/替换勋章图（v2.6.0 勋章图片管线）：仅 jpg/png/webp ≤2MB。
+            /// 可替换语义：先删旧键再传新键（新键含时间戳，键变 URL 变，前端无缓存残留），
+            /// 成功后更新实体 ImageKey 回落库——反复上传即反复替换，不留孤儿对象
+            /// </summary>
+            admin.MapPost("/{id:guid}/image", async (
+                Guid id,
+                IFormFile file,
+                [FromServices] IAchievementRepository repo,
+                [FromServices] IObjectStorageService storage,
+                [FromServices] OpenFindBearings.Application.Shared.Interfaces.IUnitOfWork unitOfWork,
+                HttpContext httpContext) =>
+            {
+                var def = await repo.GetDefinitionByIdAsync(id);
+                if (def == null)
+                    return ApiResponseHelper.NotFound(httpContext: httpContext);
+
+                if (file == null || file.Length == 0)
+                    return ApiResponseHelper.BadRequest("请上传文件", httpContext: httpContext);
+
+                // 改动说明（v2.6.0）：白名单与大小限制沿用头像端点口径，扩展名缺失回退 MIME 推断
+                var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
+                var fileExtension = FileUploadHelper.GetSafeExtension(file);
+                if (!allowedExtensions.Contains(fileExtension))
+                    return ApiResponseHelper.BadRequest("只支持 JPG、PNG、WEBP 格式", httpContext: httpContext);
+                if (file.Length > 2 * 1024 * 1024)
+                    return ApiResponseHelper.BadRequest("图片文件不能超过2MB", httpContext: httpContext);
+
+                // 可替换关键：先落新键名（时间戳版本），再存对象、再删旧键——顺序保证任何一步失败都不丢图。
+                // ImageKey 存 URL 形态（带前导 /，与 LogoUrl/Avatar 一致，usableImage 只渲染 / 开头）；
+                // 删旧时对 URL 形态 TrimStart('/') 还原裸 key 供对象存储删除
+                var newKey = $"uploads/achievements/{def.Key}_{DateTime.UtcNow:yyyyMMddHHmmss}{fileExtension}";
+                using var buffer = new MemoryStream();
+                await file.CopyToAsync(buffer);
+                var fileUrl = await storage.UploadAsync(newKey, buffer.ToArray(),
+                    FileUploadHelper.ContentTypeFromExtension(fileExtension), httpContext.RequestAborted);
+                if (!string.IsNullOrEmpty(def.ImageKey))
+                    await storage.DeleteAsync(def.ImageKey.TrimStart('/'), httpContext.RequestAborted);
+                def.SetImageKey(fileUrl);
+                repo.UpdateDefinition(def);
+                // 端点直连仓储不走 MediatR 管道，必须显式提交（与 PUT 同模式）
+                await unitOfWork.SaveChangesAsync(httpContext.RequestAborted);
+                return ApiResponseHelper.Ok(new { url = fileUrl, imageKey = fileUrl }, httpContext: httpContext);
+            })
+            .WithName("AdminUploadAchievementImage")
+            .WithSummary("上传/替换勋章图")
+            .WithDescription("上传勋章图片（jpg/png/webp ≤2MB）；重复上传即替换旧图")
+            .DisableAntiforgery()
+            .RequirePermission("system.manage");
         }
     }
 
     /// <summary>Admin 编辑成就请求体</summary>
     public record UpdateAchievementRequest(
         string Name, string Description, int ProgressTarget, int MetaPoints,
-        int RewardPoints, string? TitleReward, bool Enabled);
+        int RewardPoints, string? TitleReward, bool Enabled, string? ImageKey = null);
 }
