@@ -17,6 +17,8 @@ namespace OpenFindBearings.Application.Commands.MerchantBearings.PutOnShelf
         private readonly IMerchantRepository _merchantRepository;
         // v1.34.0：首件商品上架一次性积分（bizId 绑信用代码，删店重入驻不重复发）
         private readonly IPointsService _pointsService;
+        // v2.5.0 工会经济：上架改变在售数，重算等级
+        private readonly IMerchantGradeService _guilds;
         private readonly ILogger<PutOnShelfCommandHandler> _logger;
 
         public PutOnShelfCommandHandler(
@@ -24,12 +26,14 @@ namespace OpenFindBearings.Application.Commands.MerchantBearings.PutOnShelf
             IMerchantMemberRepository merchantMemberRepository,
             IMerchantRepository merchantRepository,
             IPointsService pointsService,
+            IMerchantGradeService guilds,
             ILogger<PutOnShelfCommandHandler> logger)
         {
             _merchantBearingRepository = merchantBearingRepository;
             _merchantMemberRepository = merchantMemberRepository;
             _merchantRepository = merchantRepository;
             _pointsService = pointsService;
+            _guilds = guilds;
             _logger = logger;
         }
 
@@ -72,6 +76,9 @@ namespace OpenFindBearings.Application.Commands.MerchantBearings.PutOnShelf
             }
 
             _logger.LogInformation("产品上架成功: MerchantBearingId={MerchantBearingId}", merchantBearing.Id);
+
+            // 改动说明（v2.5.0 工会经济）：在售数量变化影响工会等级（Lv3/Lv4 阈值），上架后重算
+            await _guilds.RecomputeAsync(merchantBearing.MerchantId, cancellationToken);
         }
     }
 }

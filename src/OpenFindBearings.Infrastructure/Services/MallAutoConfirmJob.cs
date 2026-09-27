@@ -81,6 +81,9 @@ namespace OpenFindBearings.Infrastructure.Services
                     if (owner != null && owner.Status == Domain.Enums.MerchantStatus.Active)
                     {
                         settled = await treasury.SettleOrderAsync(fresh, item.OwnerMerchantId.Value, ct);
+                        // v2.5.0 工会经济：自动结算同样可能触发金牌定级
+                        if (settled > 0)
+                            await scope.ServiceProvider.GetRequiredService<IMerchantGradeService>().RecomputeAsync(item.OwnerMerchantId.Value, ct);
                         if (settled > 0)
                         {
                             // 通知全体在职管理员（金库入账可见）

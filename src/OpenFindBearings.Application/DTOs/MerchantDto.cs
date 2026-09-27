@@ -1,4 +1,4 @@
-﻿namespace OpenFindBearings.Application.DTOs
+namespace OpenFindBearings.Application.DTOs
 {
     /// <summary>
     /// 商家列表项DTO
@@ -70,6 +70,9 @@
         /// 商家等级
         /// </summary>
         public string Grade { get; set; } = string.Empty;
+
+    /// <summary>等级中文展示名（入驻/认证/活跃供给/金牌，v2.5.0 工会经济）</summary>
+    public string GradeDisplay { get; set; } = string.Empty;
 
         /// <summary>
         /// 粉丝数量

@@ -1,26 +1,34 @@
 ﻿namespace OpenFindBearings.Domain.Enums
 {
     /// <summary>
-    /// 商家等级枚举
-    /// 用于搜索结果排序和权益区分
+    /// 商家等级枚举（v2.5.0 工会经济：与"工会等级"统一为同一把梯子，不另设字段——
+    ///   Standard=入驻 / Verified=认证 / Premium=活跃供给 / Gold=金牌，
+    ///   由 IMerchantGradeService 按"认证态+在售数+金库累计"规则重算，
+    ///   等级是工会 buff 的唯一输入：成员取全部在职商户中最高的一家享受被动加成）
+    /// 注意：数值保留历史映射（Standard=1/Premium=2/Verified=3/Gold=4），推进路径
+    ///   为 Standard→Verified→Premium→Gold，与数值大小无关，比较请以规则函数为准
     /// </summary>
     public enum MerchantGrade
     {
         /// <summary>
-        /// 未知/未评级
+        /// 未知/未定级
         /// </summary>
         Unknown = 0,
         /// <summary>
-        /// 标准商家
+        /// 入驻商家（Lv1：Active 即得）
         /// </summary>
         Standard = 1,
         /// <summary>
-        /// 优质商家
+        /// 活跃供给商家（Lv3：认证 + 在售商品达阈值）
         /// </summary>
         Premium = 2,
         /// <summary>
-        /// 认证商家
+        /// 认证商家（Lv2：证照审核通过）
         /// </summary>
-        Verified = 3
+        Verified = 3,
+        /// <summary>
+        /// 金牌商家（Lv4：认证 + 在售达阈值 + 金库累计入账达阈值）
+        /// </summary>
+        Gold = 4
     }
 }

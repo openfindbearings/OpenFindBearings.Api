@@ -186,6 +186,43 @@ namespace OpenFindBearings.Api.Endpoints
             .WithSummary("赚分任务清单")
             .WithDescription("任务中心数据源：启用规则+完成态（daily 看今日、once 看历史）");
 
+            /// <summary>
+            /// 工会福利卡（v2.5.0 工会经济）：成员最佳工会等级 + buff 清单 + 升下一级条件。
+            /// 散人返回 grade=0 空清单（前端展示"加入商家可享工会加成"引导）
+            /// </summary>
+            group.MapGet("/guild-buff", async (
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMerchantGradeService guilds,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                var guild = await guilds.GetBestForUserAsync(currentUser.UserId.Value, httpContext.RequestAborted);
+                var rank = guild == null ? 0 : OpenFindBearings.Application.Services.GuildBuffs.Rank(guild.Grade);
+                string nextHint = rank switch
+                {
+                    0 => "加入认证商家可享：签到 +1、寻货应答 +1/日",
+                    1 => "商户通过认证后解锁：登录 +1、纠错 +10%、发布 +1/日",
+                    2 => "在售满 5 件升活跃供给：纠错 +20%、应答 +3/日、置顶 9 折",
+                    3 => "在售满 10 件且金库累计 500 升金牌：纠错 +25%、应答 +5/日、置顶 8 折",
+                    _ => "已达最高等级"
+                };
+
+                return ApiResponseHelper.Ok(new
+                {
+                    guildId = guild?.MerchantId,
+                    guildName = guild?.MerchantName,
+                    grade = guild?.Grade ?? 0,
+                    rank,
+                    labels = OpenFindBearings.Application.Services.GuildBuffs.BuffLabels(guild?.Grade ?? 0),
+                    nextHint
+                }, httpContext: httpContext);
+            })
+            .WithName("GetGuildBuff")
+            .WithSummary("工会福利卡")
+            .WithDescription("成员被动加成数据源：等级/福利清单/升级提示（散人为空）");
+
             // ============ Admin 端（规则配置） ============
             var adminGroup = app.MapGroup("/api/admin/points").RequireAuthorization();
 

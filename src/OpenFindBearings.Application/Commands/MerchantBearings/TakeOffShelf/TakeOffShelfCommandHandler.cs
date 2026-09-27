@@ -1,4 +1,5 @@
-﻿using MediatR;
+using MediatR;
+using OpenFindBearings.Application.Services;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Domain.Repositories;
 
@@ -11,15 +12,19 @@ namespace OpenFindBearings.Application.Commands.MerchantBearings.TakeOffShelf
     {
         private readonly IMerchantBearingRepository _merchantBearingRepository;
         private readonly IMerchantMemberRepository _merchantMemberRepository;
+        // v2.5.0 工会经济：下架改变在售数，重算工会等级
+        private readonly IMerchantGradeService _guilds;
         private readonly ILogger<TakeOffShelfCommandHandler> _logger;
 
         public TakeOffShelfCommandHandler(
             IMerchantBearingRepository merchantBearingRepository,
             IMerchantMemberRepository merchantMemberRepository,
+            IMerchantGradeService guilds,
             ILogger<TakeOffShelfCommandHandler> logger)
         {
             _merchantBearingRepository = merchantBearingRepository;
             _merchantMemberRepository = merchantMemberRepository;
+            _guilds = guilds;
             _logger = logger;
         }
 

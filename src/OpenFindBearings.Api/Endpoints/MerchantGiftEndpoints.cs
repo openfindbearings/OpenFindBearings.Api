@@ -156,6 +156,7 @@ namespace OpenFindBearings.Api.Endpoints
                 [FromServices] ICurrentUserService currentUser,
                 [FromServices] IMerchantPointsService treasury,
                 [FromServices] IMerchantMemberRepository members,
+                [FromServices] IMerchantRepository merchants,
                 HttpContext httpContext) =>
             {
                 var merchantId = RequireCurrentMerchant(currentUser, httpContext, out var fail);
@@ -165,11 +166,15 @@ namespace OpenFindBearings.Api.Endpoints
                     return ApiResponseHelper.Forbidden("仅商户管理员可查看金库", httpContext);
 
                 var account = await treasury.GetAccountAsync(merchantId.Value);
+                // v2.5.0 工会经济：金库页头部展示工会等级（入驻/认证/活跃供给/金牌）
+                var merchant = await merchants.GetByIdAsync(merchantId.Value);
                 return ApiResponseHelper.Ok(new
                 {
                     balance = account?.Balance ?? 0,
                     totalEarned = account?.TotalEarned ?? 0,
-                    totalSpent = account?.TotalSpent ?? 0
+                    totalSpent = account?.TotalSpent ?? 0,
+                    grade = (int)(merchant?.Grade ?? Domain.Enums.MerchantGrade.Unknown),
+                    gradeDisplay = merchant?.GetGradeDisplayName() ?? "未定级"
                 }, httpContext: httpContext);
             })
             .WithName("GetMerchantTreasury")

@@ -32,9 +32,12 @@ namespace OpenFindBearings.Infrastructure.Services
         // 改动说明（v2.4.0 工会经济）：成员合格赚分后向所属商户金库微量上供（trickle），
         // 白名单与上限全部在金库服务内部裁决；发放成功后同上下文调用（同请求同库，无需新事务）
         private readonly IMerchantPointsService _merchantPoints;
+        // 改动说明（v2.5.0 工会经济）：成员被动加成——签到/登录/纠错按"最佳工会"等级加成，
+        // 在日上限截顶之前套用（加成结果仍受 DailyLimit 约束，防叠出无顶收益）
+        private readonly IMerchantGradeService _guilds;
 
         /// <summary>
-        /// 构造：账户/流水/规则/台账仓储 + 工作单元（独立提交用）+ 上下文（失败清理用）+ 金库服务（trickle 挂钩）
+        /// 构造：账户/流水/规则/台账仓储 + 工作单元（独立提交用）+ 上下文（失败清理用）+ 金库服务（trickle 挂钩）+ 等级服务（buff）
         /// </summary>
         public PointsService(
             ILogger<PointsService> logger,
@@ -44,7 +47,8 @@ namespace OpenFindBearings.Infrastructure.Services
             IPointRewardClaimRepository claimRepository,
             IUnitOfWork unitOfWork,
             ApplicationDbContext context,
-            IMerchantPointsService merchantPoints)
+            IMerchantPointsService merchantPoints,
+            IMerchantGradeService guilds)
         {
             _logger = logger;
             _accountRepository = accountRepository;
@@ -54,6 +58,7 @@ namespace OpenFindBearings.Infrastructure.Services
             _unitOfWork = unitOfWork;
             _context = context;
             _merchantPoints = merchantPoints;
+            _guilds = guilds;
         }
 
         /// <inheritdoc/>
@@ -72,6 +77,11 @@ namespace OpenFindBearings.Infrastructure.Services
                 // 改动说明（v2.1.0）：amountOverride 供平台内部定义分值场景（成就解锁甜头），
                 // 缺省回退规则表 Amount；仍受日上限截断守卫
                 var amount = amountOverride ?? rule.Amount;
+
+                // 改动说明（v2.5.0 工会经济）：工会 buff 在截顶前套用——
+                // 登录 Lv2+1、纠错 Lv2×1.1/Lv3×1.2/Lv4×1.25；其余场景原额返回零查询
+                amount = await ApplyGuildBuffAsync(userId, grantType, amount, cancellationToken);
+
                 if (rule.DailyLimit > 0)
                 {
                     var todaySum = await _transactionRepository.SumTodayByTypeAsync(userId, grantType, cancellationToken);
@@ -195,6 +205,16 @@ namespace OpenFindBearings.Infrastructure.Services
             // 阶梯：按连续天数取档（[2,3,4,5,5] 第 6 天起恒取末档 5）；无阶梯配置回退基础分值
             var streak = account.MarkCheckedIn(today);
             var amount = PickLadderAmount(rule.LadderJson, streak) ?? rule.Amount;
+            // 改动说明（v2.5.0 工会经济）：签到加成为工会 Lv1~+1/Lv2+1/Lv3+2/Lv4+3（阶梯后叠加）
+            try
+            {
+                var guild = await _guilds.GetBestForUserAsync(userId, cancellationToken);
+                amount += GuildBuffs.CheckinBonus(guild?.Grade ?? 0);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "签到工会 buff 查询失败（按无加成）: User={UserId}", userId);
+            }
 
             account.Credit(amount);
             if (accountWasNew)
@@ -274,6 +294,33 @@ namespace OpenFindBearings.Infrastructure.Services
                 _context.Entry(account).State = EntityState.Detached;
             else
                 await _context.Entry(account).ReloadAsync(cancellationToken);
+        }
+
+        /// <summary>
+        /// 工会 buff 套用（v2.5.0）：仅白名单场景触发最佳工会查询（一次读，低频可接受）；
+        /// 查询异常时按无 buff 处理——加成是锦上添花，绝不阻断发放
+        /// </summary>
+        private async Task<int> ApplyGuildBuffAsync(Guid userId, string grantType, int amount, CancellationToken ct)
+        {
+            if (grantType != PointTransaction.TypeDailyLogin && grantType != PointTransaction.TypeCorrectionAdopted)
+                return amount;
+            try
+            {
+                var guild = await _guilds.GetBestForUserAsync(userId, ct);
+                if (guild == null)
+                    return amount;
+                return grantType switch
+                {
+                    PointTransaction.TypeDailyLogin => amount + GuildBuffs.LoginBonus(guild.Grade),
+                    PointTransaction.TypeCorrectionAdopted => GuildBuffs.ApplyCorrectionBonus(amount, guild.Grade),
+                    _ => amount
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "工会 buff 查询失败（按无加成发放）: User={UserId}", userId);
+                return amount;
+            }
         }
 
         /// <summary>

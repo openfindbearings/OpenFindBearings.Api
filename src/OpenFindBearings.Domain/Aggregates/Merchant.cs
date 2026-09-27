@@ -394,9 +394,9 @@ namespace OpenFindBearings.Domain.Aggregates
             // 改动说明（v2.9.0）：认证完成即清除商户的待处理申请标记
             VerifyRequested = false;
 
-            // 认证后升级等级
-            if (Grade < MerchantGrade.Verified)
-                Grade = MerchantGrade.Verified;
+            // 改动说明（v2.5.0 工会经济）：等级数值非单调（Premium=2 语义却是 Lv3），
+            // 不能再按"<"比较定级——认证一律落 Lv2，Lv3/4 由重算服务在供给/金库事件时上修
+            Grade = MerchantGrade.Verified;
 
             UpdateTimestamp();
 
@@ -413,6 +413,9 @@ namespace OpenFindBearings.Domain.Aggregates
 
             IsVerified = false;
             VerifiedAt = null;
+            // 改动说明（v2.5.0 工会经济）：认证是 Lv2+ 的硬前提，撤销认证等级即回落实
+            // （回 Standard，后续供给事件会按规则重新上修）
+            Grade = MerchantGrade.Standard;
             UpdateTimestamp();
 
             AddDomainEvent(new MerchantUnverifiedEvent(Id, Name));
@@ -698,10 +701,12 @@ namespace OpenFindBearings.Domain.Aggregates
         /// </summary>
         public string GetGradeDisplayName() => Grade switch
         {
-            MerchantGrade.Standard => "标准商家",
-            MerchantGrade.Premium => "优质商家",
+            // v2.5.0 工会经济：等级=工会等级（buff 唯一输入），文案与 Lv1-4 定案一致
+            MerchantGrade.Standard => "入驻商家",
             MerchantGrade.Verified => "认证商家",
-            _ => "未评级"
+            MerchantGrade.Premium => "活跃供给",
+            MerchantGrade.Gold => "金牌商家",
+            _ => "未定级"
         };
     }
 }

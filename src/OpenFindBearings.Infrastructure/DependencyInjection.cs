@@ -169,6 +169,8 @@ namespace OpenFindBearings.Infrastructure
         services.AddScoped<IMerchantPointAccountRepository, MerchantPointAccountRepository>();
         services.AddScoped<IMerchantPointTransactionRepository, MerchantPointTransactionRepository>();
         services.AddScoped<IMerchantPointsService, MerchantPointsService>();
+        // v2.5.0 工会经济：等级重算与最佳工会解析（buff 唯一输入）
+        services.AddScoped<IMerchantGradeService, MerchantGradeService>();
 
             // 轴承统计服务
             services.AddScoped<IBearingViewStatsService, BearingViewStatsService>();
