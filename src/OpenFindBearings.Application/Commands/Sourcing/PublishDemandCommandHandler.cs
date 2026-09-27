@@ -35,22 +35,26 @@ namespace OpenFindBearings.Application.Commands.Sourcing
         private readonly IPointsService _pointsService;
         // v2.5.0 商家经济：发布额度按最佳商家等级加成
         private readonly IMerchantGradeService _merchantGrades;
+        // v2.6.0 新手旅程：发布计数喂成就引擎
+        private readonly IAchievementService _achievements;
 
         /// <summary>
-        /// 构造：需求仓储 + 配置/规则仓储 + 积分服务（加量扣分）
+        /// 构造：需求仓储 + 配置/规则仓储 + 积分服务（加量扣分）+ 商家等级（额度 buff）+ 成就引擎（发布计数）
         /// </summary>
         public PublishDemandCommandHandler(
             ISourcingDemandRepository demandRepository,
             ISystemConfigRepository configRepository,
             IPointGrantRuleRepository ruleRepository,
             IPointsService pointsService,
-            IMerchantGradeService grades)
+            IMerchantGradeService grades,
+            IAchievementService achievements)
         {
             _demandRepository = demandRepository;
             _configRepository = configRepository;
             _ruleRepository = ruleRepository;
             _pointsService = pointsService;
             _merchantGrades = grades;
+            _achievements = achievements;
         }
 
         /// <inheritdoc/>
@@ -91,6 +95,14 @@ namespace OpenFindBearings.Application.Commands.Sourcing
             var demand = SourcingDemand.Create(request.UserId, request.PartNumber, request.BearingId,
                 request.Brand, request.Quantity, request.ExpectedDelivery, request.Region, request.Description);
             await _demandRepository.AddAsync(demand, cancellationToken);
+            // 改动说明（v2.6.0 新手旅程）：发布成功喂 sourcing_publish_total 计数（"旗开得胜"勋章）；
+            // 成就失败绝不反噬发布主流程（需求行仍由 UnitOfWork 管道提交），吞异常继续
+            try
+            {
+                await _achievements.IncrementAsync(Domain.Entities.AchievementScope.Personal,
+                    request.UserId, "sourcing_publish_total", 1, cancellationToken);
+            }
+            catch { /* 成就旁路，吞 */ }
             return demand.Id;
         }
     }

@@ -178,6 +178,9 @@ namespace OpenFindBearings.Api.Middleware
                     //   台账保证同号一生只领一次 50 分；无手机号 claim 的账号（如后台账号）
                     //   回退 userId 键（非 App 刷分面）
                     var points = context.RequestServices.GetRequiredService<IPointsService>();
+                    // 改动说明（v2.6.0 新手旅程）：注册/登录同时喂成就计数引擎——
+                    // 成就失败绝不反噬登录链路，逐点独立 try/catch 吞（与签到端点同款纪律）
+                    var achievements = context.RequestServices.GetRequiredService<IAchievementService>();
                     if (isNewUser)
                     {
                         var registerPhone = context.User?.FindFirst("phone_number")?.Value;
@@ -186,9 +189,25 @@ namespace OpenFindBearings.Api.Middleware
                             : $"phone:{registerPhone}:register";
                         await points.GrantOneTimeAsync(resolvedUserId.Value, PointTransaction.TypeRegisterBonus,
                             registerKey, "新用户注册奖励");
+                        try
+                        {
+                            await achievements.IncrementAsync(Domain.Entities.AchievementScope.Personal,
+                                resolvedUserId.Value, "register_total", 1);
+                        }
+                        catch { /* 成就旁路，吞 */ }
                     }
-                    await points.GrantAsync(resolvedUserId.Value, PointTransaction.TypeDailyLogin,
+                    var loginAmount = await points.GrantAsync(resolvedUserId.Value, PointTransaction.TypeDailyLogin,
                         $"daily_login:{resolvedUserId.Value:N}:{BusinessClock.DateKey}");
+                    // 仅实际发放成功（>0，即当日首次）才计登录天数，防每请求重复累加
+                    if (loginAmount > 0)
+                    {
+                        try
+                        {
+                            await achievements.IncrementAsync(Domain.Entities.AchievementScope.Personal,
+                                resolvedUserId.Value, "login_total", 1);
+                        }
+                        catch { /* 成就旁路，吞 */ }
+                    }
                 }
             }
             catch (Exception ex)

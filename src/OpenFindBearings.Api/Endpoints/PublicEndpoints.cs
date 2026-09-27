@@ -276,12 +276,15 @@ namespace OpenFindBearings.Api.Endpoints
                 IMediator mediator,
                 HttpContext httpContext) =>
             {
-                var isAuthenticated = httpContext.GetUserId().HasValue;  // 获取登录状态
+                var currentUserId = httpContext.GetUserId();
+                var isAuthenticated = currentUserId.HasValue;  // 获取登录状态
 
+                // 改动说明（v2.6.0 商家主页）：透传 UserId——详情据此输出成员标记/角色/集体任务达成数
                 var query = new GetMerchantQuery
                 {
                     Id = id,
-                    IsAuthenticated = isAuthenticated  // 传递登录状态
+                    IsAuthenticated = isAuthenticated,
+                    UserId = currentUserId
                 };
                 var result = await mediator.Send(query);
 

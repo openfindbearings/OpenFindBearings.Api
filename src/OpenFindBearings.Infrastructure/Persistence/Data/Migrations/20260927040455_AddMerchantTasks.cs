@@ -102,6 +102,27 @@ UPDATE ""SystemConfigs"" SET ""Key"" = 'Business.MerchantGoldTreasuryMin'
 DELETE FROM ""SystemConfigs"" WHERE ""Key"" IN ('Business.GuildPremiumOnSaleMin', 'Business.GuildGoldOnSaleMin', 'Business.GuildGoldTreasuryMin');
 UPDATE ""PointGrantRules"" SET ""GrantType"" = 'merchant_task', ""DisplayName"" = '商家集体任务奖励', ""Description"" = '商家集体任务达标结算发放（分值按任务定义覆盖，Job 自动发放）'
  WHERE ""GrantType"" = 'guild_task';");
+
+            // v2.6.0 新手旅程成就：低门槛勋章让新用户首日即可点亮（勋章卡冷启动问题）；
+            // register_total/login_total/sourcing_publish_total 为本批新挂计数键，其余复用既有键。
+            // 幂等写法与 AddAchievements 种子同款
+            migrationBuilder.Sql(@"
+INSERT INTO ""AchievementDefinitions"" (""Id"",""Key"",""Name"",""Description"",""Icon"",""Scope"",""Category"",""MetricKey"",""ProgressTarget"",""MetaPoints"",""RewardPoints"",""TitleReward"",""Rare"",""Hidden"",""Enabled"",""CreatedAt"",""IsActive"")
+SELECT gen_random_uuid(), v.""Key"", v.""Name"", v.""Description"", v.""Icon"", v.""Scope"", v.""Category"", v.""MetricKey"", v.""Target"", v.""Meta"", v.""Reward"", v.""Title"", v.""Rare"", v.""Hidden"", true, now(), true
+FROM (VALUES
+ ('checkin_first','初次签到','完成首次每日签到','check',1,'新手旅程','checkin_total',1,5,5,NULL,false,false),
+ ('checkin_3','三日之约','连续签到 3 天','calendar',1,'新手旅程','checkin_streak',3,10,5,NULL,false,false),
+ ('checkin_total_10','签到集锦','累计签到 10 次','calendar-check',1,'新手旅程','checkin_total',10,25,10,NULL,false,false),
+ ('register_first','初来乍到','注册加入平台','sparkles',1,'新手旅程','register_total',1,5,5,NULL,false,false),
+ ('login_7','七日陪伴','累计登录 7 天','flame',1,'新手旅程','login_total',7,20,10,NULL,false,false),
+ ('sourcing_first','旗开得胜','发布首条寻货需求','flag',1,'新手旅程','sourcing_publish_total',1,15,5,NULL,false,false)
+) AS v(""Key"",""Name"",""Description"",""Icon"",""Scope"",""Category"",""MetricKey"",""Target"",""Meta"",""Reward"",""Title"",""Rare"",""Hidden"")
+WHERE NOT EXISTS (SELECT 1 FROM ""AchievementDefinitions"" a WHERE a.""Key"" = v.""Key"");");
+
+            // 术语统一（成就/徽章→勋章）：解锁奖励规则的用户可见名/说明搬运（幂等，新旧库一致收敛）
+            migrationBuilder.Sql(@"
+UPDATE ""PointGrantRules"" SET ""DisplayName"" = '勋章解锁奖励', ""Description"" = '勋章点亮一次性可花积分甜头（实际分值按勋章定义覆盖）'
+ WHERE ""GrantType"" = 'achievement_unlock';");
         }
 
         /// <inheritdoc />

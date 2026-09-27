@@ -226,30 +226,54 @@ namespace OpenFindBearings.Api.Endpoints
             .WithDescription("成员被动加成数据源：等级/福利清单/升级提示（散人为空）");
 
             /// <summary>
-            /// 商家集体任务板（v2.6.0 M3）：成员视角——最佳商家的启用任务 + 本周期进度 + 完成态。
-            /// 散人返回空清单（与福利卡同口径：任务跟随最佳商家，不要求切换当前商户上下文）
+            /// 商家集体任务板（v2.6.0 M3）：启用任务 + 本周期进度 + 完成态。
+            /// 缺省取最佳商家（与福利卡同口径，不要求切换当前商户上下文）；
+            /// 改动说明（v2.6.0 商家主页）：merchantId 显式指定时校验请求者为该商家在职成员（防窥探他店任务板），
+            /// 商家主页成员区按主页所属商家查询
             /// </summary>
             group.MapGet("/merchant-tasks", async (
                 [FromServices] ICurrentUserService currentUser,
                 [FromServices] IMerchantGradeService grades,
                 [FromServices] IMerchantTaskService taskService,
                 [FromServices] IMerchantTaskRepository taskRepository,
-                HttpContext httpContext) =>
+                [FromServices] IMerchantMemberRepository memberRepository,
+                [FromServices] OpenFindBearings.Domain.Repositories.IMerchantRepository merchantRepository,
+                HttpContext httpContext,
+                [FromQuery] Guid? merchantId = null) =>
             {
                 if (!currentUser.UserId.HasValue)
                     return ApiResponseHelper.Unauthorized(httpContext: httpContext);
 
-                var best = await grades.GetBestForUserAsync(currentUser.UserId.Value, httpContext.RequestAborted);
-                if (best == null)
-                    return ApiResponseHelper.Ok(new { merchantId = (Guid?)null, merchantName = (string?)null, tasks = Array.Empty<object>(), completedTotal = 0 }, httpContext: httpContext);
+                Guid targetId;
+                string targetName;
+                if (merchantId.HasValue)
+                {
+                    var membership = await memberRepository.GetActiveByUserAndMerchantAsync(
+                        currentUser.UserId.Value, merchantId.Value, httpContext.RequestAborted);
+                    if (membership == null)
+                        return ApiResponseHelper.Forbidden("仅该商家在职成员可查看其任务板", httpContext);
+                    var merchant = await merchantRepository.GetByIdAsync(merchantId.Value, httpContext.RequestAborted);
+                    if (merchant == null)
+                        return ApiResponseHelper.NotFound("商家不存在", httpContext);
+                    targetId = merchant.Id;
+                    targetName = merchant.Name;
+                }
+                else
+                {
+                    var best = await grades.GetBestForUserAsync(currentUser.UserId.Value, httpContext.RequestAborted);
+                    if (best == null)
+                        return ApiResponseHelper.Ok(new { merchantId = (Guid?)null, merchantName = (string?)null, tasks = Array.Empty<object>(), completedTotal = 0 }, httpContext: httpContext);
+                    targetId = best.MerchantId;
+                    targetName = best.MerchantName;
+                }
 
-                var tasks = await taskService.GetTasksForMerchantAsync(best.MerchantId, httpContext.RequestAborted);
+                var tasks = await taskService.GetTasksForMerchantAsync(targetId, httpContext.RequestAborted);
                 // 累计完成次数（raid 团本通关数，展示商家集体成就感）
-                var completedTotal = await taskRepository.CountCompletionsAsync(best.MerchantId, httpContext.RequestAborted);
+                var completedTotal = await taskRepository.CountCompletionsAsync(targetId, httpContext.RequestAborted);
                 return ApiResponseHelper.Ok(new
                 {
-                    merchantId = best.MerchantId,
-                    merchantName = best.MerchantName,
+                    merchantId = targetId,
+                    merchantName = targetName,
                     tasks = tasks.Select(t => new
                     {
                         taskKey = t.TaskKey,
