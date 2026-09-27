@@ -543,3 +543,7 @@ OpenFindBearings.Api（以下简称 API）共注册 **170** 个端点，按职�
 
 > v1.42.0 追加（商家主页批次）：GET /api/points/merchant-tasks 支持 ?merchantId=（校验请求者在职成员，防窥探他店任务板）；
 > GET /api/merchants/{id} 响应新增 isMerchantMember/memberRole/completedTaskCount 三字段（登录透传身份，匿名保持缺省）。端点总数不变。
+
+> v1.42.0 再追加（任务中心拆分+归属回溯）：GET /api/points/merchant-buff 与 /api/points/merchant-ranking 支持 ?merchantId=
+> （商家管理页"本店视角"，校验在职成员）；商家详情 isMerchantMember 保留、memberRole 删除（角色走成员列表接口，详情不冗余）；
+> 集体任务 corrections 指标改按成员任职区间 [JoinedAt,RemovedAt] 回溯计数（离职者在职贡献不丢，Rejoin 多段任职为已知盲区）。

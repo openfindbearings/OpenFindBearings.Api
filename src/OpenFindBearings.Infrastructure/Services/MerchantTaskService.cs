@@ -78,16 +78,6 @@ namespace OpenFindBearings.Infrastructure.Services
             var doneWeek = await _tasks.GetCompletedTaskKeysAsync(merchantId, weekly.Key, cancellationToken);
             var doneMonth = await _tasks.GetCompletedTaskKeysAsync(merchantId, monthly.Key, cancellationToken);
 
-            // corrections 指标才需要成员名单，存在该类任务时才取一次
-            List<Guid>? memberIds = null;
-            if (defs.Any(d => d.MetricKey == MerchantTaskDefinition.MetricCorrections
-                              && !((d.Period == MerchantTaskDefinition.PeriodMonthly ? doneMonth : doneWeek)
-                                  .Contains(d.TaskKey, StringComparer.Ordinal))))
-            {
-                memberIds = (await _members.GetActiveByMerchantAsync(merchantId, cancellationToken))
-                    .Select(m => m.UserId).ToList();
-            }
-
             var result = new List<MerchantTaskProgress>(defs.Count);
             foreach (var def in defs)
             {
@@ -96,7 +86,7 @@ namespace OpenFindBearings.Infrastructure.Services
                     .Contains(def.TaskKey, StringComparer.Ordinal);
                 // 已达成任务的进度钉在目标值（窗口内指标只增不减，钉满显示最直观）
                 var current = done ? def.TargetValue
-                    : await MeasureAsync(def, merchantId, sinceUtc, memberIds, cancellationToken);
+                    : await MeasureAsync(def, merchantId, sinceUtc, cancellationToken);
                 result.Add(new MerchantTaskProgress(def.TaskKey, def.Name, def.Description,
                     def.TargetValue, Math.Min(current, def.TargetValue), def.Period, def.RewardType,
                     def.RewardAmount, done));
@@ -118,7 +108,6 @@ namespace OpenFindBearings.Infrastructure.Services
 
             foreach (var merchantId in merchantIds)
             {
-                List<Guid>? memberIds = null;
                 foreach (var def in defs)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
@@ -129,11 +118,7 @@ namespace OpenFindBearings.Infrastructure.Services
                     if (doneKeys.Contains(def.TaskKey, StringComparer.Ordinal))
                         continue;
 
-                    var value = await MeasureAsync(def, merchantId, sinceUtc,
-                        def.MetricKey == MerchantTaskDefinition.MetricCorrections
-                            ? (memberIds ??= (await _members.GetActiveByMerchantAsync(merchantId, cancellationToken))
-                                .Select(m => m.UserId).ToList())
-                            : memberIds, cancellationToken);
+                    var value = await MeasureAsync(def, merchantId, sinceUtc, cancellationToken);
                     if (value < def.TargetValue)
                         continue;
 
@@ -235,15 +220,12 @@ namespace OpenFindBearings.Infrastructure.Services
         }
 
         /// <summary>按任务指标键路由到对应仓储聚合查询；未知指标返回 0（宁不发奖不误发）</summary>
-        private async Task<int> MeasureAsync(MerchantTaskDefinition def, Guid merchantId, DateTime sinceUtc,
-            List<Guid>? memberIds, CancellationToken ct)
+        private async Task<int> MeasureAsync(MerchantTaskDefinition def, Guid merchantId, DateTime sinceUtc, CancellationToken ct)
         {
             return def.MetricKey switch
             {
-                // 成员纠错被采纳数：按在职成员集合统计本周期 correction_adopted 入账流水条数
-                MerchantTaskDefinition.MetricCorrections =>
-                    await _pointTxs.CountByUsersTypeSinceAsync(memberIds ?? new List<Guid>(),
-                        PointTransaction.TypeCorrectionAdopted, sinceUtc, ct),
+                // 成员纠错被采纳数：按任职区间回溯计数（离职者在职贡献不丢）
+                MerchantTaskDefinition.MetricCorrections => await CountCorrectionsAsync(merchantId, sinceUtc, ct),
                 // 金库入账总额：任意来源（trickle+结算+任务奖励）全部计入商家实力
                 MerchantTaskDefinition.MetricTreasury =>
                     await _treasuryTxs.SumCreditAnySinceAsync(merchantId, sinceUtc, ct),
@@ -252,6 +234,29 @@ namespace OpenFindBearings.Infrastructure.Services
                     await _bearings.CountCreatedSinceAsync(merchantId, sinceUtc, ct),
                 _ => 0
             };
+        }
+
+        /// <summary>
+        /// corrections 指标=历史成员（含离职）任职区间与任务窗口的交集内 correction_adopted 流水求和。
+        /// 已知残留盲区：Rejoin 重置 JoinedAt，同一人多段任职的早期段无法回溯——
+        /// 彻底修复需独立任职区间表，原型阶段规模下不做（注释留痕防遗忘）
+        /// </summary>
+        private async Task<int> CountCorrectionsAsync(Guid merchantId, DateTime sinceUtc, CancellationToken ct)
+        {
+            var history = await _members.GetHistoryByMerchantAsync(merchantId, ct);
+            var total = 0;
+            // 逐成员顺序查询（同一 DbContext 不并发）；成员数量级小，N+1 可接受
+            foreach (var m in history)
+            {
+                // 区间收紧到任务窗口：from=max(周期起点,加入时间)；RemovedAt 前早于窗口起点直接跳过；
+                // Suspended 不设 RemovedAt（保留关系只失权限）→ 视为在职至窗口末
+                var from = m.JoinedAt > sinceUtc ? m.JoinedAt : sinceUtc;
+                if (m.RemovedAt.HasValue && m.RemovedAt.Value < from)
+                    continue;
+                total += await _pointTxs.CountByUserTypeBetweenAsync(m.UserId,
+                    PointTransaction.TypeCorrectionAdopted, from, m.RemovedAt, ct);
+            }
+            return total;
         }
 
         /// <summary>当前业务周窗口：Key=周一 yyyyMMdd，UtcStart=周一零点业务日历换算的 UTC 时刻</summary>

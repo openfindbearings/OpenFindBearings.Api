@@ -55,16 +55,13 @@ namespace OpenFindBearings.Application.Queries.Merchants.GetMerchant
             // v2.6.0 商家主页：集体任务累计达成数（公开信任信号，所有访客可见）
             dto.CompletedTaskCount = await _taskRepository.CountCompletionsAsync(request.Id, cancellationToken);
 
-            // 成员标记与角色：仅登录用户查一次在职成员关系（非成员/未登录保持 false/null）
+            // 成员标记：仅登录用户查一次在职成员关系（非成员/未登录保持 false）；
+            // 角色数据管理页走 store currentMerchant（成员列表接口），详情 DTO 不冗余暴露（v2.6.0 双界面拆分）
             if (request.UserId.HasValue)
             {
                 var membership = await _memberRepository.GetActiveByUserAndMerchantAsync(
                     request.UserId.Value, request.Id, cancellationToken);
-                if (membership != null)
-                {
-                    dto.IsMerchantMember = true;
-                    dto.MemberRole = membership.Role;
-                }
+                dto.IsMerchantMember = membership != null;
             }
             return dto;
         }
