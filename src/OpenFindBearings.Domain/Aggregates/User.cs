@@ -95,6 +95,12 @@ namespace OpenFindBearings.Domain.Aggregates
         /// </summary>
         public string? Industry { get; private set; }
 
+        /// <summary>
+        /// 当前佩戴称号（v2.8.0 称号系统）：用户从已解锁的成就称号中选一个挂昵称旁；
+        /// null=未佩戴。仅存名称，来源合法性由成就系统校验
+        /// </summary>
+        public string? EquippedTitle { get; private set; }
+
         // ============ 行为统计 ============
 
         /// <summary>
@@ -344,6 +350,19 @@ namespace OpenFindBearings.Domain.Aggregates
                 Nickname = nickname;
                 UpdateTimestamp();
             }
+        }
+
+        /// <summary>
+        /// 佩戴/卸下称号（v2.8.0 称号系统）：空值=卸下；非空由调用方校验合法性
+        /// </summary>
+        /// <param name="title">要佩戴的称号名（null/空白=卸下）</param>
+        public void EquipTitle(string? title)
+        {
+            var trimmed = string.IsNullOrWhiteSpace(title) ? null : title.Trim();
+            if (EquippedTitle == trimmed)
+                return;
+            EquippedTitle = trimmed;
+            UpdateTimestamp();
         }
 
         /// <summary>

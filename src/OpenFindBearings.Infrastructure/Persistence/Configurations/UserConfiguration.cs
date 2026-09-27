@@ -72,6 +72,10 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             builder.Property(u => u.Industry)
                 .HasMaxLength(100);
 
+            // 改动说明（v2.8.0 称号系统）：佩戴称号名（可空，与成就 TitleReward 对应）
+            builder.Property(u => u.EquippedTitle)
+                .HasMaxLength(64);
+
             // ============ 行为统计 ============
             builder.Property(u => u.SearchCount)
                 .HasDefaultValue(0);

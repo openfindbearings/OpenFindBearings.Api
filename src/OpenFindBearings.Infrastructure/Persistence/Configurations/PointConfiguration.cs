@@ -88,6 +88,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             builder.Property(r => r.LadderJson).HasMaxLength(200);
             builder.Property(r => r.IsEnabled).IsRequired().HasDefaultValue(true);
             builder.Property(r => r.Description).HasMaxLength(200);
+            // 改动说明（v2.8.0 G1）：暴击概率列（双倍/传说），默认 0 不暴击
+            builder.Property(r => r.DoubleChance).IsRequired().HasDefaultValue(0);
+            builder.Property(r => r.LegendChance).IsRequired().HasDefaultValue(0);
 
             builder.HasIndex(r => r.GrantType)
                 .IsUnique()

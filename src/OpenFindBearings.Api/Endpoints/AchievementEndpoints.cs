@@ -55,6 +55,77 @@ namespace OpenFindBearings.Api.Endpoints
             .WithSummary("我的已解锁徽章")
             .WithDescription("个人资料页徽章排数据源");
 
+            /// <summary>
+            /// 称号列表与当前佩戴（v2.8.0 称号系统）：已解锁成就的称号名去重 + 当前佩戴。
+            /// 前端勋章页据此渲染"选择佩戴"入口
+            /// </summary>
+            group.MapGet("/achievements/titles", async (
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IAchievementService achievementService,
+                [FromServices] IUserRepository userRepository,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+                var userId = currentUser.UserId.Value;
+                var view = await achievementService.GetMyAsync(userId);
+                var titles = view.Items
+                    .Where(i => i.Unlocked && !string.IsNullOrWhiteSpace(i.TitleReward))
+                    .Select(i => i.TitleReward!.Trim())
+                    .Distinct(StringComparer.Ordinal)
+                    .OrderBy(t => t)
+                    .ToList();
+                var user = await userRepository.GetByIdAsync(userId);
+                return ApiResponseHelper.Ok(new
+                {
+                    titles,
+                    equippedTitle = user?.EquippedTitle
+                }, httpContext: httpContext);
+            })
+            .WithName("GetMyTitles")
+            .WithSummary("我的称号与佩戴")
+            .WithDescription("已解锁称号列表 + 当前佩戴称号（选择佩戴数据源）");
+
+            /// <summary>
+            /// 佩戴/卸下称号（v2.8.0 称号系统）：body=null 或空白=卸下；
+            /// 非空时校验该称号确为本人已解锁成就的称号（防止任意称号刷脸）
+            /// </summary>
+            group.MapPut("/achievements/title", async (
+                [FromBody] EquipTitleRequest request,
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IAchievementService achievementService,
+                [FromServices] IUserRepository userRepository,
+                [FromServices] OpenFindBearings.Application.Shared.Interfaces.IUnitOfWork unitOfWork,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+                var userId = currentUser.UserId.Value;
+                var title = string.IsNullOrWhiteSpace(request.Title) ? null : request.Title.Trim();
+
+                if (title != null)
+                {
+                    var view = await achievementService.GetMyAsync(userId);
+                    var owned = view.Items
+                        .Where(i => i.Unlocked && !string.IsNullOrWhiteSpace(i.TitleReward))
+                        .Select(i => i.TitleReward!.Trim())
+                        .Contains(title, StringComparer.Ordinal);
+                    if (!owned)
+                        return ApiResponseHelper.BadRequest("只能佩戴已解锁的称号", httpContext: httpContext);
+                }
+
+                var user = await userRepository.GetByIdAsync(userId);
+                if (user == null)
+                    return ApiResponseHelper.NotFound("用户不存在", httpContext);
+                user.EquipTitle(title);
+                await userRepository.UpdateAsync(user, httpContext.RequestAborted);
+                await unitOfWork.SaveChangesAsync(httpContext.RequestAborted);
+                return ApiResponseHelper.Ok(new { equippedTitle = user.EquippedTitle }, httpContext: httpContext);
+            })
+            .WithName("EquipTitle")
+            .WithSummary("佩戴/卸下称号")
+            .WithDescription("选择已解锁称号佩戴，空值卸下");
+
             // ============ 商户徽章排（公开，商户详情/卡片信任信号） ============
             app.MapGet("/api/merchants/{id:guid}/achievements", async (
                 Guid id,
@@ -113,7 +184,7 @@ namespace OpenFindBearings.Api.Endpoints
                 if (def == null)
                     return ApiResponseHelper.NotFound(httpContext: httpContext);
                 def.Update(req.Name, req.Description, req.ProgressTarget, req.MetaPoints,
-                    req.RewardPoints, req.TitleReward, req.Enabled, req.ImageKey);
+                    req.RewardPoints, req.TitleReward, req.Enabled, req.ImageKey, req.IsLimited, req.LimitedOrdinal);
                 repo.UpdateDefinition(def);
                 // 端点直连仓储不走 MediatR 管道，必须显式提交（与积分规则 PUT 同模式）
                 await unitOfWork.SaveChangesAsync(httpContext.RequestAborted);
@@ -178,5 +249,9 @@ namespace OpenFindBearings.Api.Endpoints
     /// <summary>Admin 编辑成就请求体</summary>
     public record UpdateAchievementRequest(
         string Name, string Description, int ProgressTarget, int MetaPoints,
-        int RewardPoints, string? TitleReward, bool Enabled, string? ImageKey = null);
+        int RewardPoints, string? TitleReward, bool Enabled, string? ImageKey = null,
+        bool IsLimited = false, int? LimitedOrdinal = null);
+
+    /// <summary>佩戴称号请求体（v2.8.0；Title 空白=卸下）</summary>
+    public record EquipTitleRequest(string? Title);
 }
