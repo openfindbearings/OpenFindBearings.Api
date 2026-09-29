@@ -26,10 +26,10 @@ namespace OpenFindBearings.Api.Extensions
             services.AddScoped<ICurrentUserService, CurrentUserService>();
             services.AddScoped<IPermissionService, PermissionService>();
             services.AddScoped<IApiCallLogRepository, ApiCallLogRepository>();
-            // Sync 库存导入（服务间调用，sync-client 凭据）
-            services.AddScoped<ISyncInventoryService, SyncInventoryService>();
-            // Sync staging 刷新唤醒（v2.17.0 关店/解除归属回公海后唤醒爬取覆盖通道）
-            services.AddScoped<ISyncStagingRefreshService, SyncStagingRefreshService>();
+            // 商户释放事件总线（v2.18.0 架构调整）：关店/解除归属唤醒通知由"API 直连 Sync HTTP"
+            // 改为 Redis Stream 事件发布；替换掉原 SyncInventoryService/SyncStagingRefreshService 两个出站服务。
+            // 单例：仅依赖可选的 IConnectionMultiplexer（Redis 未启用时降级为日志告警）
+            services.AddSingleton<IMerchantReleaseEventBus, MerchantReleaseEventBus>();
             // IStaffInvitationRepository 已在 Infrastructure.DependencyInjection 中注册
 
             // ============ IP 地区解析服务 ============
@@ -39,7 +39,7 @@ namespace OpenFindBearings.Api.Extensions
 
             // ============ 认证服务客户端 ============
             // PermissionService（IdentityService 在 Infrastructure 层注册）
-            services.AddScoped<IPermissionService, PermissionService>();
+            // 改动说明（v2.18.0）：删除此处重复的 IPermissionService 注册（L28 已注册，重复注册遮蔽意图且后者优先级生效属巧合）
 
             // 添加响应压缩
             services.AddResponseCompression(options =>
