@@ -810,14 +810,14 @@ namespace OpenFindBearings.Api.Endpoints
             .WithDescription("商品有型号但暂时缺货时置为补货中（买家侧仍展示带徽标），与上架/下架构成三态");
 
             /// <summary>
-            /// Excel 批量导入在售商品（仅商户管理员）
-            /// 解析能力复用 Sync /api/inventory/import，写库 DataSourceType=Manual（不被爬虫覆盖）
+            /// 库存导入判权端点（仅商户管理员）：返回当前上下文的权威 merchantId。
+            /// 改动说明（v2.18.0 架构调整）：原"API 收文件→中转 Sync"链路废弃（API 不再直连 Sync），
+            /// 文件流由 BFF 判权后直传 Sync /api/inventory/import；商家权限判断属 API 领域，留在本端点，
+            /// merchantId 取服务端成员上下文、不信任客户端入参，防越权导入他店
             /// </summary>
-            group.MapPost("/inventory/import", async (
-                IFormFile file,
+            group.MapGet("/inventory/import-context", async (
                 [FromServices] ICurrentUserService currentUser,
                 [FromServices] IPermissionService permissionService,
-                [FromServices] ISyncInventoryService syncInventoryService,
                 HttpContext httpContext) =>
             {
                 if (!currentUser.UserId.HasValue)
@@ -833,30 +833,11 @@ namespace OpenFindBearings.Api.Endpoints
                 if (!currentUser.CurrentMerchantId.HasValue)
                     return ApiResponseHelper.NotFound("未找到所属商家", httpContext);
 
-                if (file == null || file.Length == 0)
-                    return ApiResponseHelper.BadRequest("请选择要上传的 Excel 文件", httpContext: httpContext);
-
-                // 改动说明（v1.7.1）：同材料端点，无扩展名按 MIME 推断
-                var ext = FileUploadHelper.GetSafeExtension(file);
-                if (ext != ".xlsx" && ext != ".xls")
-                    return ApiResponseHelper.BadRequest("只支持 .xlsx 或 .xls 格式", httpContext: httpContext);
-
-                using var stream = file.OpenReadStream();
-                var result = await syncInventoryService.ImportInventoryAsync(
-                    currentUser.CurrentMerchantId.Value,
-                    stream,
-                    file.FileName,
-                    httpContext.RequestAborted);
-
-                if (!result.Success)
-                    return ApiResponseHelper.Problem("库存导入失败", result.Message, httpContext);
-
-                return Results.Content(result.Message, "application/json");
+                return ApiResponseHelper.Ok(new { merchantId = currentUser.CurrentMerchantId.Value }, httpContext: httpContext);
             })
-            .WithName("ImportMerchantInventory")
-            .WithSummary("Excel 批量导入在售商品")
-            .WithDescription("上传 Excel 批量导入在售商品（需商户管理员权限），导入数据标记为商户自管不被爬虫覆盖")
-            .DisableAntiforgery();
+            .WithName("MerchantInventoryImportContext")
+            .WithSummary("库存导入判权")
+            .WithDescription("Excel 批量导入的前置判权：校验当前用户为所属商家管理员并返回权威 merchantId，供 BFF 直传 Sync 使用");
         }
 
         /// <summary>

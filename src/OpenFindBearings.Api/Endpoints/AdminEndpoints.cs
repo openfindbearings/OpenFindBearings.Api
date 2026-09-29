@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using OpenFindBearings.Api.Extensions;
 using OpenFindBearings.Api.Helpers;
 using OpenFindBearings.Api.Middleware;
+using OpenFindBearings.Api.Services;
 using OpenFindBearings.Application.Commands.Admin.ApproveDocument;
 using OpenFindBearings.Application.Commands.Admin.RejectDocument;
 // 改动说明 G4：平台兜底指定商户成员（命令与实体引用）
@@ -388,19 +389,21 @@ namespace OpenFindBearings.Api.Endpoints
             /// <summary>
             /// 强制解除商户归属（v2.17.0）：管理员跑路/僵尸无主/违规商户的平台侧处置——
             /// 清场回公海（商品/证照/邀请/纠错全清、联系方式隐私止血），存在性交爬虫管线裁判；
-            /// self/提名新建商户无公海数据会被拒绝（应走删除）。成功后唤醒 Sync staging 刷新
+            /// self/提名新建商户无公海数据会被拒绝（应走删除）。
+            /// 改动说明（v2.18.0 架构调整）：成功后唤醒从"API 同步 HTTP 调 Sync"改为发布 Redis 释放事件，
+            /// Sync 消费者组拉取后自唤醒——API 不再直连 Sync，唤醒链路事件化且至少一次投递
             /// </summary>
             group.MapPost("/merchants/{id:guid}/detach", async (
                 Guid id,
                 [FromQuery] string? reason,
                 [FromServices] IMediator mediator,
-                [FromServices] ISyncStagingRefreshService syncRefresh,
+                [FromServices] IMerchantReleaseEventBus releaseBus,
                 HttpContext httpContext) =>
             {
                 var result = await mediator.Send(new DetachMerchantCommand(id, reason));
 
-                // best-effort 唤醒爬取刷新，失败不回滚（Sync 端点幂等可手动补调）
-                await syncRefresh.RefreshMerchantAsync(result.MerchantName, httpContext.RequestAborted);
+                // fire-and-forget 语义：发布失败仅告警不回滚（Sync 端点幂等可手动补调），与原 best-effort 同口径
+                await releaseBus.PublishMerchantReleasedAsync(result.MerchantName, "detach", httpContext.RequestAborted);
 
                 return ApiResponseHelper.Ok($"已解除商户「{result.MerchantName}」归属并退回公开信息池", httpContext);
             })
