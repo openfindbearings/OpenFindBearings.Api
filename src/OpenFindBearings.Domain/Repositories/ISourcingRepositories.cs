@@ -49,6 +49,9 @@ namespace OpenFindBearings.Domain.Repositories
         /// <summary>标记变更</summary>
         Task UpdateAsync(SourcingResponse response, CancellationToken cancellationToken = default);
 
+        /// <summary>移除应答（v1.5.0 撤销应答：仅待处理可撤，型号行 DB 级联删除，额度不退还）</summary>
+        Task RemoveAsync(SourcingResponse response, CancellationToken cancellationToken = default);
+
         /// <summary>某需求的全部应答（时间正序，feed 详情展示）</summary>
         Task<List<SourcingResponse>> GetByDemandAsync(Guid demandId, CancellationToken cancellationToken = default);
 
