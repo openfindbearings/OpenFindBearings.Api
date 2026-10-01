@@ -18,11 +18,12 @@ namespace OpenFindBearings.Domain.Repositories
         Task UpdateAsync(SourcingDemand demand, CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// feed 分页：状态过滤（null=进行中全部）+ 型号关键词（模糊）+ 未应答优先可选，时间倒序；
-        /// pinFirst=true 时有效置顶排前（v2.10.0 寻货置顶，仅公开大厅启用）
+        /// feed 分页：状态过滤（null=进行中全部）+ 型号关键词（模糊）+ 品牌/地区筛选（包含匹配，v1.4.0 大厅筛选），
+        /// newestFirst=发布时间降序（默认最新）/升序（最早）；pinFirst=true 时有效置顶排前（v2.10.0，仅公开大厅启用）
         /// </summary>
         Task<(List<SourcingDemand> Items, int Total)> GetListAsync(int? status, string? keyword, bool onlyOpen,
-            int page, int pageSize, bool pinFirst = false, Guid? mineOnlyUserId = null, CancellationToken cancellationToken = default);
+            int page, int pageSize, bool pinFirst = false, string? brand = null, string? region = null,
+            bool newestFirst = true, CancellationToken cancellationToken = default);
 
         /// <summary>我发布的（含全部状态，时间倒序）</summary>
         Task<List<SourcingDemand>> GetByPublisherAsync(Guid userId, CancellationToken cancellationToken = default);

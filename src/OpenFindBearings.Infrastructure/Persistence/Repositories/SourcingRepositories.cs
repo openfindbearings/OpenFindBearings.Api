@@ -36,14 +36,10 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 
         /// <inheritdoc/>
         public async Task<(List<SourcingDemand> Items, int Total)> GetListAsync(int? status, string? keyword, bool onlyOpen,
-            int page, int pageSize, bool pinFirst = false, Guid? mineOnlyUserId = null, CancellationToken cancellationToken = default)
+            int page, int pageSize, bool pinFirst = false, string? brand = null, string? region = null,
+            bool newestFirst = true, CancellationToken cancellationToken = default)
         {
             var query = _context.Set<SourcingDemand>().AsQueryable();
-
-            // 改动说明（我的寻货）：mineOnlyUserId 命中时按发布人过滤——
-            // 大厅与"我的寻货"共用本列表管线，仅此一层过滤差异，keyword/置顶排序/分页正交
-            if (mineOnlyUserId.HasValue)
-                query = query.Where(d => d.PublisherUserId == mineOnlyUserId.Value);
 
             if (status.HasValue)
                 query = query.Where(d => d.Status == status.Value);
@@ -55,15 +51,34 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                 var kw = keyword.Trim().ToLower();
                 query = query.Where(d => d.PartNumber.ToLower().Contains(kw));
             }
+            // 改动说明（v1.4.0 大厅筛选）：品牌/收货地区均为发布时自由文本，按包含匹配（ToLower 翻译约束同上）
+            if (!string.IsNullOrWhiteSpace(brand))
+            {
+                var b = brand.Trim().ToLower();
+                query = query.Where(d => d.Brand != null && d.Brand.ToLower().Contains(b));
+            }
+            if (!string.IsNullOrWhiteSpace(region))
+            {
+                var r = region.Trim().ToLower();
+                query = query.Where(d => d.Region != null && d.Region.ToLower().Contains(r));
+            }
 
             var total = await query.CountAsync(cancellationToken);
             // 改动说明（v2.10.0 寻货置顶）：公开大厅 pinFirst 时有效置顶排前——
-            // 排序键取"未过期的 PinnedUntil，否则最小时间"，过期旧值不插队
-            var items = await (pinFirst
-                ? query.OrderByDescending(d => d.PinnedUntil != null && d.PinnedUntil > DateTime.UtcNow
-                    ? d.PinnedUntil : DateTime.MinValue)
-                    .ThenByDescending(d => d.CreatedAt)
-                : query.OrderByDescending(d => d.CreatedAt))
+            // 排序键取"未过期的 PinnedUntil，否则最小时间"，过期旧值不插队；
+            // v1.4.0 新增 newestFirst：发布时间升降序切换（置顶仍恒排前，付费曝光不受排序影响）
+            var ordered = pinFirst
+                ? (newestFirst
+                    ? query.OrderByDescending(d => d.PinnedUntil != null && d.PinnedUntil > DateTime.UtcNow
+                        ? d.PinnedUntil : DateTime.MinValue)
+                        .ThenByDescending(d => d.CreatedAt)
+                    : query.OrderByDescending(d => d.PinnedUntil != null && d.PinnedUntil > DateTime.UtcNow
+                        ? d.PinnedUntil : DateTime.MinValue)
+                        .ThenBy(d => d.CreatedAt))
+                : (newestFirst
+                    ? query.OrderByDescending(d => d.CreatedAt)
+                    : query.OrderBy(d => d.CreatedAt));
+            var items = await ordered
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync(cancellationToken);
