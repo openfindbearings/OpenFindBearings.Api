@@ -61,6 +61,8 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
         // v1.35.0 寻货：需求与应答（零内联依赖聚合，只存外部 Id）
         public DbSet<SourcingDemand> SourcingDemands { get; set; }
         public DbSet<SourcingResponse> SourcingResponses { get; set; }
+        // v1.5.0 寻货多行标书：应答型号行（报价/库存/交期按行携带）
+        public DbSet<SourcingResponseItem> SourcingResponseItems { get; set; }
 
         // v2.1.0 成就子系统：成就定义目录 + 一表双轨解锁进度（个人/商户）
         public DbSet<AchievementDefinition> AchievementDefinitions { get; set; }

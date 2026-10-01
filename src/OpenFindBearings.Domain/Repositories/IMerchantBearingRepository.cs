@@ -30,6 +30,11 @@ namespace OpenFindBearings.Domain.Repositories
         Task<IEnumerable<MerchantBearing>> GetOnSaleByMerchantAsync(Guid merchantId, CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// 商家在售商品数量（v1.5.0 寻货比价视图"实力摘要"：发布人选定前的现货凭证）
+        /// </summary>
+        Task<int> CountOnSaleAsync(Guid merchantId, CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// 获取待审核的关联列表
         /// </summary>
         Task<IEnumerable<MerchantBearing>> GetPendingApprovalAsync(CancellationToken cancellationToken = default);
