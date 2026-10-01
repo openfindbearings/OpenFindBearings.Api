@@ -1,5 +1,4 @@
 using OpenFindBearings.Domain.Abstractions;
-using OpenFindBearings.Domain.Events;
 
 namespace OpenFindBearings.Domain.Aggregates
 {
@@ -117,17 +116,11 @@ namespace OpenFindBearings.Domain.Aggregates
 
         /// <summary>发布人选定某条应答关闭（记录选定项，触发双方联系方式解锁）</summary>
         /// <param name="responseId">被选定的应答 ID</param>
-        /// <param name="selectedMerchantId">被选商户 ID（随关闭事件下发，供通知/成就订阅使用）</param>
-        /// <param name="merchantName">被选商户名（事件文案）</param>
-        public void Select(Guid responseId, Guid selectedMerchantId, string? merchantName)
+        public void Select(Guid responseId)
         {
             Status = StatusClosed;
             SelectedResponseId = responseId;
             ClosedAt = DateTime.UtcNow;
-            // 改动说明（领域事件规范化）：关闭事件由聚合根携带（AddDomainEvent），
-            // 经 UnitOfWork 保存成功后统一发布，替代 handler 内直接 Publish——
-            // 避免事件处理器与主命令共用 context 时，其 SaveChanges 异常连坐回滚尚未提交的主变更
-            AddDomainEvent(new SourcingDemandClosedEvent(Id, PublisherUserId, responseId, selectedMerchantId, merchantName ?? "", PartNumber));
         }
 
         /// <summary>发布人主动取消</summary>
@@ -135,16 +128,13 @@ namespace OpenFindBearings.Domain.Aggregates
         {
             Status = StatusCancelled;
             ClosedAt = DateTime.UtcNow;
-            AddDomainEvent(new SourcingDemandCancelledEvent(Id, PublisherUserId, PartNumber));
         }
 
         /// <summary>平台下架（违规治理）</summary>
-        /// <param name="reason">下架原因（随事件透传给发布人）</param>
-        public void TakeDown(string? reason)
+        public void TakeDown()
         {
             Status = StatusTakenDown;
             ClosedAt = DateTime.UtcNow;
-            AddDomainEvent(new SourcingDemandTakenDownEvent(Id, PublisherUserId, PartNumber, reason));
         }
 
         /// <summary>应答数+1（新应答落库时同步维护冗余列）</summary>

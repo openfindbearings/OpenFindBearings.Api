@@ -1,5 +1,7 @@
 using MediatR;
+using OpenFindBearings.Application.Shared.Interfaces;
 using OpenFindBearings.Domain.Aggregates;
+using OpenFindBearings.Domain.Events;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Commands.Sourcing
@@ -18,13 +20,20 @@ namespace OpenFindBearings.Application.Commands.Sourcing
     public class TakeDownDemandCommandHandler : IRequestHandler<TakeDownDemandCommand>
     {
         private readonly ISourcingDemandRepository _demandRepository;
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly IMediator _mediator;
 
         /// <summary>
-        /// 构造：需求仓储
+        /// 构造：需求仓储 + 工作单元 + 事件派发
         /// </summary>
-        public TakeDownDemandCommandHandler(ISourcingDemandRepository demandRepository)
+        public TakeDownDemandCommandHandler(
+            ISourcingDemandRepository demandRepository,
+            IUnitOfWork unitOfWork,
+            IMediator mediator)
         {
             _demandRepository = demandRepository;
+            _unitOfWork = unitOfWork;
+            _mediator = mediator;
         }
 
         /// <inheritdoc/>
@@ -35,8 +44,12 @@ namespace OpenFindBearings.Application.Commands.Sourcing
             if (demand.Status is not (SourcingDemand.StatusPublished or SourcingDemand.StatusExpired))
                 throw new InvalidOperationException("仅进行中或已过期的寻货需要下架");
 
-            demand.TakeDown(request.Reason);
+            // 改动说明（同 Select/Cancel）：显式提交主变更后发布事件，时序与事件隔离同款
+            demand.TakeDown();
             await _demandRepository.UpdateAsync(demand, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _mediator.Publish(new SourcingDemandTakenDownEvent(
+                demand.Id, demand.PublisherUserId, demand.PartNumber, request.Reason), cancellationToken);
         }
     }
 }
