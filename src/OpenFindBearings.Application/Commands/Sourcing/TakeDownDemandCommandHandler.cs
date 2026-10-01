@@ -1,6 +1,5 @@
 using MediatR;
 using OpenFindBearings.Domain.Aggregates;
-using OpenFindBearings.Domain.Events;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Commands.Sourcing
@@ -19,15 +18,13 @@ namespace OpenFindBearings.Application.Commands.Sourcing
     public class TakeDownDemandCommandHandler : IRequestHandler<TakeDownDemandCommand>
     {
         private readonly ISourcingDemandRepository _demandRepository;
-        private readonly IMediator _mediator;
 
         /// <summary>
-        /// 构造：需求仓储 + 事件派发
+        /// 构造：需求仓储
         /// </summary>
-        public TakeDownDemandCommandHandler(ISourcingDemandRepository demandRepository, IMediator mediator)
+        public TakeDownDemandCommandHandler(ISourcingDemandRepository demandRepository)
         {
             _demandRepository = demandRepository;
-            _mediator = mediator;
         }
 
         /// <inheritdoc/>
@@ -38,10 +35,8 @@ namespace OpenFindBearings.Application.Commands.Sourcing
             if (demand.Status is not (SourcingDemand.StatusPublished or SourcingDemand.StatusExpired))
                 throw new InvalidOperationException("仅进行中或已过期的寻货需要下架");
 
-            demand.TakeDown();
+            demand.TakeDown(request.Reason);
             await _demandRepository.UpdateAsync(demand, cancellationToken);
-            await _mediator.Publish(new SourcingDemandTakenDownEvent(
-                demand.Id, demand.PublisherUserId, demand.PartNumber, request.Reason), cancellationToken);
         }
     }
 }

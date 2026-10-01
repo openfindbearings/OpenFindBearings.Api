@@ -1,7 +1,6 @@
 using MediatR;
 using OpenFindBearings.Domain.Aggregates;
 using OpenFindBearings.Domain.Entities;
-using OpenFindBearings.Domain.Events;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Commands.Sourcing
@@ -24,21 +23,18 @@ namespace OpenFindBearings.Application.Commands.Sourcing
         private readonly ISourcingDemandRepository _demandRepository;
         private readonly ISourcingResponseRepository _responseRepository;
         private readonly IMerchantRepository _merchantRepository;
-        private readonly IMediator _mediator;
 
         /// <summary>
-        /// 构造：寻货/商户仓储 + 事件派发
+        /// 构造：寻货/商户仓储
         /// </summary>
         public SelectResponseCommandHandler(
             ISourcingDemandRepository demandRepository,
             ISourcingResponseRepository responseRepository,
-            IMerchantRepository merchantRepository,
-            IMediator mediator)
+            IMerchantRepository merchantRepository)
         {
             _demandRepository = demandRepository;
             _responseRepository = responseRepository;
             _merchantRepository = merchantRepository;
-            _mediator = mediator;
         }
 
         /// <inheritdoc/>
@@ -69,13 +65,12 @@ namespace OpenFindBearings.Application.Commands.Sourcing
                 await _responseRepository.UpdateAsync(other, cancellationToken);
             }
 
-            demand.Select(selected.Id);
-            await _demandRepository.UpdateAsync(demand, cancellationToken);
-
+            // 选定关闭：经聚合根携带关闭事件，由 UnitOfWork 保存成功后统一发布。
+            // 改动说明（领域事件规范化）：移除 handler 内直接 Publish——事件处理器（成就积分/站内信）
+            // 与主命令共用 context，其 SaveChanges 异常会连坐回滚尚未提交的 demand/response（实测 DbUpdateConcurrencyException）
             var merchant = await _merchantRepository.GetByIdAsync(selected.MerchantId, cancellationToken);
-            await _mediator.Publish(new SourcingDemandClosedEvent(
-                demand.Id, demand.PublisherUserId, selected.Id, selected.MerchantId,
-                merchant?.Name ?? "商户", demand.PartNumber), cancellationToken);
+            demand.Select(selected.Id, selected.MerchantId, merchant?.Name);
+            await _demandRepository.UpdateAsync(demand, cancellationToken);
         }
     }
 
@@ -92,15 +87,13 @@ namespace OpenFindBearings.Application.Commands.Sourcing
     public class CancelDemandCommandHandler : IRequestHandler<CancelDemandCommand>
     {
         private readonly ISourcingDemandRepository _demandRepository;
-        private readonly IMediator _mediator;
 
         /// <summary>
-        /// 构造：需求仓储 + 事件派发
+        /// 构造：需求仓储
         /// </summary>
-        public CancelDemandCommandHandler(ISourcingDemandRepository demandRepository, IMediator mediator)
+        public CancelDemandCommandHandler(ISourcingDemandRepository demandRepository)
         {
             _demandRepository = demandRepository;
-            _mediator = mediator;
         }
 
         /// <inheritdoc/>
@@ -115,8 +108,6 @@ namespace OpenFindBearings.Application.Commands.Sourcing
 
             demand.Cancel();
             await _demandRepository.UpdateAsync(demand, cancellationToken);
-            await _mediator.Publish(new SourcingDemandCancelledEvent(
-                demand.Id, demand.PublisherUserId, demand.PartNumber), cancellationToken);
         }
     }
 }
