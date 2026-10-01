@@ -55,7 +55,11 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                     return (T)(object)boolValue;
                 }
 
-                return (T)Convert.ChangeType(config.Value, typeof(T));
+                // 改动说明（可空类型适配）：目标类型为 Nullable<T>（如 int?）时 Convert.ChangeType 无法把
+                // 字符串直接转成可空包装类型（InvalidCast string→Nullable`1，实测 Sourcing.FreePublishPerDay
+                // 恒回退默认值 3/20）。先取下层的值类型再转换，装箱结果强转 T 可正常赋给可空类型
+                var targetType = Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T);
+                return (T)Convert.ChangeType(config.Value, targetType);
             }
             catch (Exception ex)
             {
