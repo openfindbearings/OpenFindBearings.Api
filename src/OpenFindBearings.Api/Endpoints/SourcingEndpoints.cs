@@ -264,6 +264,28 @@ namespace OpenFindBearings.Api.Endpoints
             .WithDescription("商户对进行中寻货提交报价应答（一商户一条，可更新）");
 
             /// <summary>
+            /// 撤销应答（当前商户；仅待处理可撤；撤后需求回到未应答——招投标"开标前撤标"）
+            /// </summary>
+            group.MapDelete("/demands/{id:guid}/respond", async (
+                Guid id,
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] MediatR.IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue || !currentUser.CurrentMerchantId.HasValue)
+                    return ApiResponseHelper.Unauthorized("请先选择当前商户", httpContext: httpContext);
+
+                await mediator.Send(new CancelResponseCommand(
+                    currentUser.UserId.Value, currentUser.CurrentMerchantId.Value, id),
+                    httpContext.RequestAborted);
+                return ApiResponseHelper.Ok("应答已撤销", httpContext: httpContext);
+            })
+            .RequireAuthorization()
+            .WithName("CancelSourcingResponse")
+            .WithSummary("撤销应答")
+            .WithDescription("商户撤回本商户对该需求的待处理应答，需求回到未应答状态；当日额度不退还");
+
+            /// <summary>
             /// 选定应答关闭寻货（发布人；触发双方联系方式解锁与通知）
             /// </summary>
             group.MapPost("/demands/{id:guid}/select", async (

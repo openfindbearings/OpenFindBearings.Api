@@ -138,6 +138,13 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         }
 
         /// <inheritdoc/>
+        public Task RemoveAsync(SourcingResponse response, CancellationToken cancellationToken = default)
+        {
+            _context.Set<SourcingResponse>().Remove(response);
+            return Task.CompletedTask;
+        }
+
+        /// <inheritdoc/>
         public async Task<List<SourcingResponse>> GetByDemandAsync(Guid demandId, CancellationToken cancellationToken = default)
             => await _context.Set<SourcingResponse>()
                 .Where(r => r.DemandId == demandId)

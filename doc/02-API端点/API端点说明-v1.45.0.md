@@ -11,7 +11,7 @@
 
 | 版本 | 日期 | 变更说明 |
 |------|------|----------|
-| v1.45.0 | 2026-10-01 | 寻货应答升级**多行标书**（对齐《12-寻货功能设计 v1.5.0》《BFF v1.13.0》《Taro v1.7.30》）：新增 `SourcingResponseItems` 行表（迁移 `AddSourcingResponseItems`=建表 + 旧单型号应答按需求型号回填为一行 + 删主表 Price/Stock/LeadTime 列，顺序不可反）；`POST /api/sourcing/demands/{id}/respond` 请求体改 `items[]`（每行 partNumber 必填 + bearingId 可引在售 + price/stock/leadTime 可选，至少一行），重复应答=整份替换行；detail 发布人视图/Admin 详情/`GET /my/responses` 装配均透出 `items`；detail 发布人每条应答增透 **实力摘要** `companyName/onSaleCount/completedTaskCount`（发布人选定的结构化依据）；端点总数不变 |
+| v1.45.0 | 2026-10-01 | 寻货应答升级**多行标书**（对齐《12-寻货功能设计 v1.5.0》《BFF v1.13.0》《Taro v1.7.30》）：新增 `SourcingResponseItems` 行表（迁移 `AddSourcingResponseItems`=建表 + 旧单型号应答按需求型号回填为一行 + 删主表 Price/Stock/LeadTime 列，顺序不可反）；`POST /api/sourcing/demands/{id}/respond` 请求体改 `items[]`（每行 partNumber 必填 + bearingId 可引在售 + price/stock/leadTime 可选，至少一行），重复应答=整份替换行；detail 发布人视图/Admin 详情/`GET /my/responses` 装配均透出 `items`；detail 发布人每条应答增透 **实力摘要** `companyName/onSaleCount/completedTaskCount`（发布人选定的结构化依据）；**同版本追加**：新增 `DELETE /api/sourcing/demands/{id}/respond` 撤销应答（仅待处理可撤、行表级联删除、当日额度不退还）与仓储 `RemoveAsync`；端点 10 个 |
 | v1.44.0 | 2026-09-30 | 寻货 feed 筛选与信息架构收敛（对齐《12-寻货功能设计 v1.4.0》《BFF v1.12.0》《Taro v1.7.29》）：`GET /api/sourcing/demands` 删除 `mineOnly` 参数（"我的寻货"改走既有 `GET /my/demands` 独立端点，发现页回归纯大厅），新增 `brand`/`region`（包含匹配，与 keyword AND 正交）与 `sort`（asc\|desc 发布时间升降序，置顶恒排前不受排序影响）；仓储 `GetListAsync` 同步（删 mineOnlyUserId、增 brand/region/newestFirst）；端点总数不变 |
 | v1.43.0 | 2026-09-29 | **open-core 架构调整：API 对 Sync 零出站**（对齐《06 v2.20.0》《BFF v1.10.0》《Sync v17.6.0》《部署架构 v1.3.0》）：① 关店/解除归属唤醒 Sync staging 由"事务内同步 HTTP 调 Sync"改为**发布 Redis Stream 事件**（`merchant:release-events`，新 `MerchantReleaseEventBus`；Redis 未启用降级日志告警，Sync 消费者组至少一次拉取），闭店端点行为不变；② `POST /api/merchant/inventory/import`（API 中转 Sync）**下线**，改 `GET /api/merchant/inventory/import-context`（判权+返回权威 merchantId），文件流由 BFF 直传 Sync，端点总数不变；③ 删除 `SyncInventoryService`/`SyncStagingRefreshService` 与 appsettings `Sync` 配置节；④ 安全轮换：`Internal:ApiToken`（限流豁免令牌）真实值从 appsettings 移除改 REPLACE_ME，生产经 infra Secret 注入（旧值曾随公开库泄露已废弃，中间件空值=永不豁免 fail-closed）；⑤ Redis 基建接入（CacheSettings:EnableRedis + CacheSettings:RedisConnectionString 由 K8s Secret 注入） |
 | v1.40.0 | 2026-09-27 | M1-a/M1-b/M1-c 增量补录：成就 5 端点、商城目录/兑换/订单 5 端点、商家金库与挂礼 10 端点、礼品兑换/确认收货 2 端点、Admin 挂礼审核与托管订单 5 端点；端点总数 167→189。明细见文末"本版增量"章节 |
@@ -430,7 +430,7 @@ OpenFindBearings.Api（以下简称 API）共注册 **170** 个端点，按职�
 
 ---
 
-## 10. 寻货端点 `/api/sourcing`（9 个）
+## 10. 寻货端点 `/api/sourcing`（10 个）
 
 | 方法 | 路径 | 说明 | 鉴权 |
 |---|---|---|---|
@@ -438,6 +438,7 @@ OpenFindBearings.Api（以下简称 API）共注册 **170** 个端点，按职�
 | GET | /demands/{id:guid} | 详情（登录带商户时返回 myResponse；选定后返回解锁联系方式；v1.45.0 发布人视图每条应答透出 `items` 多行型号与 `companyName/onSaleCount/completedTaskCount` 实力摘要） | 匿名 |
 | POST | /demands | 发布寻货（免费 3 条/日，超限 NEED_POINTS 协议 + usePoints 重提交，硬上限 10） | 登录 |
 | POST | /demands/{id:guid}/respond | 商户应答（v1.45.0 多行标书：请求体 `items[]` 每行型号必填+可引在售商品，说明 remark 整份必填，至少一行；一商户一需求单条可更新=整份替换行；免费 20/日超限花积分，硬上限 50） | 登录+商户 |
+| DELETE | /demands/{id:guid}/respond | 撤销应答（同版本追加：招投标"开标前撤标"——仅待处理可撤，撤后需求回到未应答，行表 DB 级联删除；仅本人+在职成员，当日额度不退还） | 登录+商户 |
 | POST | /demands/{id:guid}/select | 选定应答（关闭需求、其余置未选中、双方解锁联系方式） | 登录+发布人 |
 | POST | /demands/{id:guid}/cancel | 取消寻货（软关闭，通知全体应答者） | 登录+发布人 |
 | GET | /my/demands | 我发布的寻货 | 登录 |
