@@ -36,9 +36,14 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 
         /// <inheritdoc/>
         public async Task<(List<SourcingDemand> Items, int Total)> GetListAsync(int? status, string? keyword, bool onlyOpen,
-            int page, int pageSize, bool pinFirst = false, CancellationToken cancellationToken = default)
+            int page, int pageSize, bool pinFirst = false, Guid? mineOnlyUserId = null, CancellationToken cancellationToken = default)
         {
             var query = _context.Set<SourcingDemand>().AsQueryable();
+
+            // 改动说明（我的寻货）：mineOnlyUserId 命中时按发布人过滤——
+            // 大厅与"我的寻货"共用本列表管线，仅此一层过滤差异，keyword/置顶排序/分页正交
+            if (mineOnlyUserId.HasValue)
+                query = query.Where(d => d.PublisherUserId == mineOnlyUserId.Value);
 
             if (status.HasValue)
                 query = query.Where(d => d.Status == status.Value);

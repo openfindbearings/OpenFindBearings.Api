@@ -31,20 +31,27 @@ namespace OpenFindBearings.Api.Endpoints
             group.MapGet("/demands", async (
                 [FromQuery] string? keyword,
                 [FromQuery] bool onlyOpen,
+                [FromQuery] bool mineOnly,
                 [FromQuery] int page,
                 [FromQuery] int pageSize,
                 [FromServices] ICurrentUserService currentUser,
                 [FromServices] ISourcingDemandRepository demandRepository,
                 HttpContext httpContext) =>
             {
+                var userId = currentUser.UserId;
+                // 改动说明（我的寻货）：mineOnly 仅登录者可请求（无身份时明确 401），
+                // 命中后按发布人过滤——大厅与"我的寻货"共用同一条列表管线
+                if (mineOnly && !userId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
                 // 公开列表先做惰性过期（一条 UPDATE 兜底僵尸单，读多写少成本可忽略）
                 await demandRepository.ExpireOverdueAsync();
                 var (items, total) = await demandRepository.GetListAsync(
                     onlyOpen ? SourcingDemand.StatusPublished : null, keyword, onlyOpen,
                     page <= 0 ? 1 : page, pageSize is > 0 and <= 50 ? pageSize : 20,
                     // 改动说明（v2.10.0）：公开大厅有效置顶排前
-                    pinFirst: true);
-                var userId = currentUser.UserId;
+                    pinFirst: true,
+                    mineOnlyUserId: mineOnly ? userId : null);
                 var nowUtc = DateTime.UtcNow;
                 return ApiResponseHelper.Ok(new
                 {
@@ -69,7 +76,7 @@ namespace OpenFindBearings.Api.Endpoints
             })
             .WithName("GetSourcingFeed")
             .WithSummary("寻货列表")
-            .WithDescription("进行中的寻货需求 feed（公开浏览，支持型号搜索）");
+            .WithDescription("寻货 feed（公开，型号搜索；mineOnly=true 时仅返回当前登录者发布的全部状态）");
 
             /// <summary>
             /// 寻货详情：按查看者身份分级返回应答数据与解锁的联系方式
