@@ -62,6 +62,13 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         }
 
         /// <summary>
+        /// 商家在售商品数量（v1.5.0 寻货比价"实力摘要"；IsOnSale 即上架在售，轻量 Count 不加载全量）
+        /// </summary>
+        public Task<int> CountOnSaleAsync(Guid merchantId, CancellationToken cancellationToken = default)
+            => _context.MerchantBearings.CountAsync(
+                mb => mb.MerchantId == merchantId && mb.IsOnSale, cancellationToken);
+
+        /// <summary>
         /// 获取待审核的关联列表
         /// </summary>
         public async Task<IEnumerable<MerchantBearing>> GetPendingApprovalAsync(CancellationToken cancellationToken = default)

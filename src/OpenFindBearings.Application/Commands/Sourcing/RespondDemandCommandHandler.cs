@@ -8,21 +8,32 @@ using OpenFindBearings.Domain.Repositories;
 namespace OpenFindBearings.Application.Commands.Sourcing
 {
     /// <summary>
+    /// 应答型号行输入（v1.5.0 多行标书）：一条应答含多行型号，每行可引用在售商品或自由手填。
+    /// 发布人需求明确时商家填一行（通常引用在售）；需求模糊时商家把自己认为相关的型号挨个列多行
+    /// </summary>
+    /// <param name="PartNumber">型号（必填，平台库外的自由文本也可）</param>
+    /// <param name="BearingId">引用的在售商品 ID（可空=自由文本型号行）</param>
+    /// <param name="Price">该行报价（可选）</param>
+    /// <param name="Stock">该行库存描述（可选）</param>
+    /// <param name="LeadTime">该行交期描述（可选）</param>
+    public record SourcingResponseItemInput(
+        string PartNumber, Guid? BearingId, decimal? Price, string? Stock, string? LeadTime);
+
+    /// <summary>
     /// 应答寻货需求命令（v1.35.0）：商户对进行中需求提交报价应答。
     /// 归属判定是商户（应答=商家行为），操作人 userId 仅审计；一商户一需求只一条应答，
-    /// 重复提交=更新既有应答（不占额度不重复通知）；额度模型与发布同构（免费 20/天→积分加量→硬上限）
+    /// 重复提交=更新既有应答（不占额度不重复通知）；额度模型与发布同构（免费 20/天→积分加量→硬上限）。
+    /// v1.5.0 多行标书：报价/库存/交期按行携带（Items），说明 Remark 整份必填
     /// </summary>
     /// <param name="UserId">操作人（商户成员）</param>
     /// <param name="MerchantId">应答商户</param>
     /// <param name="DemandId">寻货需求</param>
-    /// <param name="Price">报价单价（可选）</param>
-    /// <param name="Stock">库存描述（可选）</param>
-    /// <param name="LeadTime">交期描述（可选）</param>
+    /// <param name="Items">应答型号行（至少一行，每行型号必填）</param>
     /// <param name="Remark">应答说明（必填一句话）</param>
     /// <param name="UsePoints">免费额度用完后确认花积分</param>
     public record RespondDemandCommand(
-        Guid UserId, Guid MerchantId, Guid DemandId, decimal? Price, string? Stock,
-        string? LeadTime, string Remark, bool UsePoints) : IRequest;
+        Guid UserId, Guid MerchantId, Guid DemandId, List<SourcingResponseItemInput> Items,
+        string Remark, bool UsePoints) : IRequest;
 
     /// <summary>
     /// 应答寻货处理器
@@ -66,6 +77,11 @@ namespace OpenFindBearings.Application.Commands.Sourcing
         {
             if (string.IsNullOrWhiteSpace(request.Remark))
                 throw new InvalidOperationException("请填写应答说明");
+            // 改动说明（v1.5.0 多行标书）：应答至少一行型号，每行型号必填——空标书禁止提交
+            if (request.Items == null || request.Items.Count == 0)
+                throw new InvalidOperationException("请至少填写一个型号");
+            if (request.Items.Any(i => string.IsNullOrWhiteSpace(i.PartNumber)))
+                throw new InvalidOperationException("每个型号行都必须填写型号");
 
             var demand = await _demandRepository.GetByIdAsync(request.DemandId, cancellationToken)
                 ?? throw new InvalidOperationException("寻货需求不存在");
@@ -89,8 +105,12 @@ namespace OpenFindBearings.Application.Commands.Sourcing
                 request.DemandId, request.MerchantId, cancellationToken);
             if (existing != null)
             {
-                existing.UpdateContent(request.Price, request.Stock, request.LeadTime, request.Remark);
+                existing.UpdateContent(request.Remark);
                 await _responseRepository.UpdateAsync(existing, cancellationToken);
+                // 型号行整体替换：先清旧行再写新行（显式 Add，规避 EF 导航陷阱）
+                await _responseRepository.DeleteItemsAsync(existing.Id, cancellationToken);
+                await _responseRepository.AddItemsAsync(
+                    BuildItems(existing.Id, request.Items), cancellationToken);
                 return;
             }
 
@@ -120,8 +140,10 @@ namespace OpenFindBearings.Application.Commands.Sourcing
             }
 
             var response = SourcingResponse.Create(request.DemandId, request.MerchantId, request.UserId,
-                request.Price, request.Stock, request.LeadTime, request.Remark);
+                request.Remark);
             await _responseRepository.AddAsync(response, cancellationToken);
+            await _responseRepository.AddItemsAsync(
+                BuildItems(response.Id, request.Items), cancellationToken);
             demand.IncrementResponseCount();
             await _demandRepository.UpdateAsync(demand, cancellationToken);
 
@@ -136,6 +158,15 @@ namespace OpenFindBearings.Application.Commands.Sourcing
             // 改动说明（v2.7.0 G2 三件套）：应答成功（新增，非更新）是三项之一，
             // 触发补发判定——操作人（商户成员）当日已签到+纠错采纳时补齐 combo
             await _pointsService.TryGrantDailyComboAsync(request.UserId, cancellationToken);
+        }
+
+        /// <summary>
+        /// 构建应答型号行列表（v1.5.0 多行标书）：型号去空白，引用的在售商品 ID 透传
+        /// </summary>
+        private static List<SourcingResponseItem> BuildItems(Guid responseId, IEnumerable<SourcingResponseItemInput> inputs)
+        {
+            return inputs.Select(i => SourcingResponseItem.Create(
+                responseId, i.PartNumber, i.BearingId, i.Price, i.Stock, i.LeadTime)).ToList();
         }
     }
 }

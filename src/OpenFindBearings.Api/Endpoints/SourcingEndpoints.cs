@@ -90,6 +90,8 @@ namespace OpenFindBearings.Api.Endpoints
                 [FromServices] IMerchantRepository merchantRepository,
                 [FromServices] IMerchantMemberRepository memberRepository,
                 [FromServices] IUserRepository userRepository,
+                [FromServices] IMerchantBearingRepository merchantBearingRepository,
+                [FromServices] IMerchantTaskRepository taskRepository,
                 HttpContext httpContext) =>
             {
                 var demand = await demandRepository.GetByIdAsync(id, httpContext.RequestAborted);
@@ -124,15 +126,31 @@ namespace OpenFindBearings.Api.Endpoints
                             // 选定后解锁被选商户联系方式（电话优先，回退手机）
                             selectedMerchantContact = merchant.Contact?.Phone ?? merchant.Contact?.Mobile;
                         }
+                        var items = await responseRepository.GetItemsAsync(r.Id, httpContext.RequestAborted);
+                        // 改动说明（v1.5.0 证据力体系 P1）：逐条透出商家实力摘要——
+                        // 在售商品数（现货凭证）+ 集体任务累计达成（历史履约能力）+ 公司名，
+                        // 发布人选定前的判断依据从"自述文本"升级为"结构化证据"
+                        var onSaleCount = await merchantBearingRepository.CountOnSaleAsync(r.MerchantId, httpContext.RequestAborted);
+                        var completedTaskCount = await taskRepository.CountCompletionsAsync(r.MerchantId, httpContext.RequestAborted);
                         fullResponses.Add(new
                         {
                             id = r.Id,
                             merchantId = r.MerchantId,
                             merchantName = merchant?.Name,
                             isVerified = merchant?.IsVerified ?? false,
-                            price = r.Price,
-                            stock = r.Stock,
-                            leadTime = r.LeadTime,
+                            companyName = merchant?.CompanyName,
+                            onSaleCount,
+                            completedTaskCount,
+                            // v1.5.0 多行标书：应答型号行（发布人逐行挑选依据）
+                            items = items.Select(i => new
+                            {
+                                id = i.Id,
+                                partNumber = i.PartNumber,
+                                bearingId = i.BearingId,
+                                price = i.Price,
+                                stock = i.Stock,
+                                leadTime = i.LeadTime
+                            }),
                             remark = r.Remark,
                             status = r.Status,
                             createdAt = r.CreatedAt
@@ -147,6 +165,20 @@ namespace OpenFindBearings.Api.Endpoints
                     var publisher = await userRepository.GetByIdAsync(demand.PublisherUserId, httpContext.RequestAborted);
                     publisherContact = publisher?.Mobile;
                 }
+
+                // v1.5.0 多行标书：商户视角自己的应答也透出型号行（查看/修改应答时逐行回显）
+                var myResponseItems = myResponse == null
+                    ? null
+                    : (await responseRepository.GetItemsAsync(myResponse.Id, httpContext.RequestAborted))
+                        .Select(i => new
+                        {
+                            id = i.Id,
+                            partNumber = i.PartNumber,
+                            bearingId = i.BearingId,
+                            price = i.Price,
+                            stock = i.Stock,
+                            leadTime = i.LeadTime
+                        });
 
                 return ApiResponseHelper.Ok(new
                 {
@@ -170,9 +202,8 @@ namespace OpenFindBearings.Api.Endpoints
                     myResponse = myResponse == null ? null : new
                     {
                         id = myResponse.Id,
-                        price = myResponse.Price,
-                        stock = myResponse.Stock,
-                        leadTime = myResponse.LeadTime,
+                        // v1.5.0 多行标书：商户视角应答的型号行（含引用在售的 bearingId）
+                        items = myResponseItems,
                         remark = myResponse.Remark,
                         status = myResponse.Status,
                         createdAt = myResponse.CreatedAt
@@ -223,7 +254,7 @@ namespace OpenFindBearings.Api.Endpoints
 
                 await mediator.Send(new RespondDemandCommand(
                     currentUser.UserId.Value, currentUser.CurrentMerchantId.Value, id,
-                    request.Price, request.Stock, request.LeadTime, request.Remark, request.UsePoints),
+                    request.Items, request.Remark, request.UsePoints),
                     httpContext.RequestAborted);
                 return ApiResponseHelper.Ok("应答成功", httpContext: httpContext);
             })
@@ -326,15 +357,23 @@ namespace OpenFindBearings.Api.Endpoints
                 {
                     // 需求快照（应答列表最多 100 条，逐条取详情行可接受）
                     var demand = await demandRepository.GetByIdAsync(r.DemandId, httpContext.RequestAborted);
+                    // v1.5.0 多行标书：商家应答记录透出型号行
+                    var items = await responseRepository.GetItemsAsync(r.Id, httpContext.RequestAborted);
                     result.Add(new
                     {
                         id = r.Id,
                         demandId = r.DemandId,
                         partNumber = demand?.PartNumber,
                         demandStatus = demand?.Status,
-                        price = r.Price,
-                        stock = r.Stock,
-                        leadTime = r.LeadTime,
+                        items = items.Select(i => new
+                        {
+                            id = i.Id,
+                            partNumber = i.PartNumber,
+                            bearingId = i.BearingId,
+                            price = i.Price,
+                            stock = i.Stock,
+                            leadTime = i.LeadTime
+                        }),
                         remark = r.Remark,
                         status = r.Status,
                         createdAt = r.CreatedAt
@@ -576,15 +615,23 @@ namespace OpenFindBearings.Api.Endpoints
                 foreach (var r in responses)
                 {
                     var merchant = await merchantRepository.GetByIdAsync(r.MerchantId, httpContext.RequestAborted);
+                    // v1.5.0 多行标书：Admin 审核视图同样看型号行
+                    var items = await responseRepository.GetItemsAsync(r.Id, httpContext.RequestAborted);
                     list.Add(new
                     {
                         id = r.Id,
                         merchantId = r.MerchantId,
                         merchantName = merchant?.Name,
                         isVerified = merchant?.IsVerified ?? false,
-                        price = r.Price,
-                        stock = r.Stock,
-                        leadTime = r.LeadTime,
+                        items = items.Select(i => new
+                        {
+                            id = i.Id,
+                            partNumber = i.PartNumber,
+                            bearingId = i.BearingId,
+                            price = i.Price,
+                            stock = i.Stock,
+                            leadTime = i.LeadTime
+                        }),
                         remark = r.Remark,
                         status = r.Status,
                         createdAt = r.CreatedAt
@@ -645,13 +692,11 @@ namespace OpenFindBearings.Api.Endpoints
     public record PublishDemandRequest(string PartNumber, Guid? BearingId, string? Brand, string? Quantity,
         string? ExpectedDelivery, string? Region, string? Description, bool UsePoints);
 
-    /// <summary>应答寻货请求体</summary>
-    /// <param name="Price">报价单价（可选）</param>
-    /// <param name="Stock">库存描述（可选）</param>
-    /// <param name="LeadTime">交期描述（可选）</param>
+    /// <summary>应答寻货请求体（v1.5.0 多行标书：报价/库存/交期按行携带）</summary>
+    /// <param name="Items">应答型号行（至少一行，每行型号必填）</param>
     /// <param name="Remark">应答说明（必填）</param>
     /// <param name="UsePoints">免费额度用尽后确认花积分</param>
-    public record RespondDemandRequest(decimal? Price, string? Stock, string? LeadTime, string Remark, bool UsePoints);
+    public record RespondDemandRequest(List<SourcingResponseItemInput> Items, string Remark, bool UsePoints);
 
     /// <summary>选定应答请求体</summary>
     /// <param name="ResponseId">被选定的应答 ID</param>

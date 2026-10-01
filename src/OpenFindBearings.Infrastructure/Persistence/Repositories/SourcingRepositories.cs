@@ -173,5 +173,28 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
             => await _context.Set<SourcingResponse>()
                 .Where(r => r.DemandId == demandId && r.Status == SourcingResponse.StatusPending)
                 .ToListAsync(cancellationToken);
+
+        /// <inheritdoc/>
+        public async Task<List<SourcingResponseItem>> GetItemsAsync(Guid responseId, CancellationToken cancellationToken = default)
+            => await _context.Set<SourcingResponseItem>()
+                .Where(i => i.ResponseId == responseId)
+                .OrderBy(i => i.CreatedAt)
+                .ToListAsync(cancellationToken);
+
+        /// <inheritdoc/>
+        public async Task DeleteItemsAsync(Guid responseId, CancellationToken cancellationToken = default)
+        {
+            // 改动说明（v1.5.0 多行标书）：重复应答=整体替换行，先清旧行再写新行
+            var items = await _context.Set<SourcingResponseItem>()
+                .Where(i => i.ResponseId == responseId)
+                .ToListAsync(cancellationToken);
+            _context.Set<SourcingResponseItem>().RemoveRange(items);
+        }
+
+        /// <inheritdoc/>
+        public async Task AddItemsAsync(IEnumerable<SourcingResponseItem> items, CancellationToken cancellationToken = default)
+            // 改动说明（v1.5.0 多行标书）：显式 Add 行，不走聚合根导航集合，
+            // 规避 EF"导航发现新实体+更新根"的 Modified 误判陷阱
+            => await _context.Set<SourcingResponseItem>().AddRangeAsync(items, cancellationToken);
     }
 }

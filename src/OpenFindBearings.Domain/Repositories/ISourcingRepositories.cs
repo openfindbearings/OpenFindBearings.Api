@@ -70,5 +70,14 @@ namespace OpenFindBearings.Domain.Repositories
 
         /// <summary>需求下全部待处理应答（关闭时批量转 NotSelected / 通知全体应答者）</summary>
         Task<List<SourcingResponse>> GetPendingByDemandAsync(Guid demandId, CancellationToken cancellationToken = default);
+
+        /// <summary>应答的型号行（v1.5.0 多行标书，比价视图逐条拉取）</summary>
+        Task<List<SourcingResponseItem>> GetItemsAsync(Guid responseId, CancellationToken cancellationToken = default);
+
+        /// <summary>清空应答的型号行（v1.5.0 重复应答整体替换行）</summary>
+        Task DeleteItemsAsync(Guid responseId, CancellationToken cancellationToken = default);
+
+        /// <summary>新增应答型号行（v1.5.0 显式 Add，规避 EF 导航陷阱）</summary>
+        Task AddItemsAsync(IEnumerable<SourcingResponseItem> items, CancellationToken cancellationToken = default);
     }
 }
