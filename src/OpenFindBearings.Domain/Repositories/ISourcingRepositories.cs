@@ -22,7 +22,7 @@ namespace OpenFindBearings.Domain.Repositories
         /// pinFirst=true 时有效置顶排前（v2.10.0 寻货置顶，仅公开大厅启用）
         /// </summary>
         Task<(List<SourcingDemand> Items, int Total)> GetListAsync(int? status, string? keyword, bool onlyOpen,
-            int page, int pageSize, bool pinFirst = false, CancellationToken cancellationToken = default);
+            int page, int pageSize, bool pinFirst = false, Guid? mineOnlyUserId = null, CancellationToken cancellationToken = default);
 
         /// <summary>我发布的（含全部状态，时间倒序）</summary>
         Task<List<SourcingDemand>> GetByPublisherAsync(Guid userId, CancellationToken cancellationToken = default);
