@@ -293,6 +293,12 @@ namespace OpenFindBearings.Infrastructure.Services
             }
             else
             {
+                // 改动说明（xmin 并发令牌）：PointAccounts 映射 PG 系统列 xmin 为并发令牌。
+                // 同一请求链（如成就"一键多规则"连续发放）对同一账户多次 Grant 时，
+                // ChangeTracker 缓存的是上次 SaveChanges 提交前的旧 xmin，二次 UPDATE WHERE xmin
+                // 不命中报 DbUpdateConcurrencyException（实测 expected 1 / affected 0）。
+                // 写前 Reload 强制取最新令牌，保证每次入账都以当前 xmin 竞争，提交后内存值随之刷新
+                await _context.Entry(account).ReloadAsync(cancellationToken);
                 await _accountRepository.UpdateAsync(account, cancellationToken);
             }
 
