@@ -123,8 +123,8 @@ namespace OpenFindBearings.Api.Endpoints
                         var merchant = await merchantRepository.GetByIdAsync(r.MerchantId, httpContext.RequestAborted);
                         if (r.Status == SourcingResponse.StatusAdopted && merchant != null)
                         {
-                            // 选定后解锁被选商户联系方式（电话优先，回退手机）
-                            selectedMerchantContact = merchant.Contact?.Phone ?? merchant.Contact?.Mobile;
+                            // 选定后解锁被选商户联系方式（手机优先，回退座机——与商家主页 merchantDetail 展示口径一致）
+                            selectedMerchantContact = merchant.Contact?.Mobile ?? merchant.Contact?.Phone;
                         }
                         var items = await responseRepository.GetItemsAsync(r.Id, httpContext.RequestAborted);
                         // 改动说明（v1.5.0 证据力体系 P1）：逐条透出商家实力摘要——
