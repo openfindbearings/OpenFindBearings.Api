@@ -1,0 +1,140 @@
+# 媒体静态服务：图片/上传文件由 nginx 反代 MinIO 对象存储直出（S3 匿名只读），应用不逐字节代理。
+# 对外地址：https://<your-bff-domain>/media/{images,uploads}/**
+# 改动说明（v1.5.0 对象存储统一）：原"只读挂载 Sync/API 两处 hostPath 落盘"改为反代 MinIO——
+#   /media/images/**  -> http://openfindbearings-minio:9000/media/images/**   （Sync 爬虫轴承图/商户 logo）
+#   /media/uploads/** -> http://openfindbearings-minio:9000/media/uploads/**  （API 用户上传头像/Logo/证照）
+#   URL 形态与库内相对键完全不变，客户端（Taro/Admin）零改动；nginx 层保留 CORS/嗅探防护/长缓存头。
+# MinIO 部署与桶策略见本目录 minio.yml 与 OpenFindBearings.Api 仓库 doc/07 迁移文档。
+# 预置头像已打包进 Taro 客户端，不经本服务。
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: openfindbearings-media-nginx
+  namespace: openfindbearings
+data:
+  default.conf: |
+    server {
+      listen 80;
+      server_name _;
+
+      # 探活端点，供 readiness/liveness 使用
+      location = /healthz {
+        default_type text/plain;
+        return 200 'ok';
+      }
+
+      # 跨端可加载（H5 dev/小程序/RN 直连）+ 内容嗅探防护；文件名带 sha256 或 userId+UTC，内容不可变 -> 长缓存
+      add_header Access-Control-Allow-Origin "*" always;
+      add_header X-Content-Type-Options "nosniff" always;
+      add_header Cache-Control "public, max-age=31536000, immutable" always;
+
+      # 爬虫轴承图：反代 MinIO bucket 路径风格（media 桶 images/ 前缀）
+      location /media/images/ {
+        proxy_pass http://openfindbearings-minio:9000/media/images/;
+        proxy_set_header Host openfindbearings-minio;
+        proxy_buffering on;
+      }
+
+      # 用户上传：反代 MinIO bucket 路径风格（media 桶 uploads/ 前缀）
+      location /media/uploads/ {
+        proxy_pass http://openfindbearings-minio:9000/media/uploads/;
+        proxy_set_header Host openfindbearings-minio;
+        proxy_buffering on;
+      }
+
+      # 拒绝点文件（.git/.env 等），其余一律 404，不开目录浏览
+      location ~ /\. { deny all; }
+      location / { return 404; }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openfindbearings-media
+  namespace: openfindbearings
+spec:
+  # 改动说明（2026-09-29）：GHCR 跨境拉取慢，默认 600s 判死，调到 1200s 与 deploy 脚本 20m 超时对齐
+  progressDeadlineSeconds: 1200
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: openfindbearings-media
+  template:
+    metadata:
+      labels:
+        app: openfindbearings-media
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.27-alpine
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: nginx-conf
+          mountPath: /etc/nginx/conf.d/default.conf
+          subPath: default.conf
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 80
+          initialDelaySeconds: 3
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 20
+        resources:
+          limits:
+            memory: "64Mi"
+            cpu: "200m"
+          requests:
+            memory: "16Mi"
+            cpu: "10m"
+      volumes:
+      - name: nginx-conf
+        configMap:
+          name: openfindbearings-media-nginx
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: openfindbearings-media
+  namespace: openfindbearings
+spec:
+  selector:
+    app: openfindbearings-media
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  type: ClusterIP
+---
+# 与 BFF / APK 服务共用 <your-bff-domain>（ingress-nginx 合并同 host 多 Ingress 规则），仅新增 /media 路径；
+# TLS 引用 cert-manager 已签发的 secret，本资源不再带签发注解，避免对同一 host 重复签证书
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: openfindbearings-media-ingress
+  namespace: openfindbearings
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - <your-bff-domain>
+    secretName: <your-bff-domain>-tls
+  rules:
+  - host: <your-bff-domain>
+    http:
+      paths:
+      - path: /media
+        pathType: Prefix
+        backend:
+          service:
+            name: openfindbearings-media
+            port:
+              number: 80
