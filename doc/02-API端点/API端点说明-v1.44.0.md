@@ -12,7 +12,7 @@
 | 版本 | 日期 | 变更说明 |
 |------|------|----------|
 | v1.44.0 | 2026-09-30 | 寻货 feed 筛选与信息架构收敛（对齐《12-寻货功能设计 v1.4.0》《BFF v1.12.0》《Taro v1.7.29》）：`GET /api/sourcing/demands` 删除 `mineOnly` 参数（"我的寻货"改走既有 `GET /my/demands` 独立端点，发现页回归纯大厅），新增 `brand`/`region`（包含匹配，与 keyword AND 正交）与 `sort`（asc\|desc 发布时间升降序，置顶恒排前不受排序影响）；仓储 `GetListAsync` 同步（删 mineOnlyUserId、增 brand/region/newestFirst）；端点总数不变 |
-| v1.43.0 | 2026-09-29 | **open-core 架构调整：API 对 Sync 零出站**（对齐《06 v2.20.0》《BFF v1.10.0》《Sync v17.6.0》《部署架构 v1.3.0》）：① 关店/解除归属唤醒 Sync staging 由"事务内同步 HTTP 调 Sync"改为**发布 Redis Stream 事件**（`merchant:release-events`，新 `MerchantReleaseEventBus`；Redis 未启用降级日志告警，Sync 消费者组至少一次拉取），闭店端点行为不变；② `POST /api/merchant/inventory/import`（API 中转 Sync）**下线**，改 `GET /api/merchant/inventory/import-context`（判权+返回权威 merchantId），文件流由 BFF 直传 Sync，端点总数不变；③ 删除 `SyncInventoryService`/`SyncStagingRefreshService` 与 appsettings `Sync` 配置节；④ 安全轮换：`Internal:ApiToken`（限流豁免令牌）真实值从 appsettings 移除改 REPLACE_ME，生产经 infra Secret 注入（旧值曾随公开库泄露已废弃，中间件空值=永不豁免 fail-closed）；⑤ Redis 基建接入（CacheSettings:EnableRedis + CacheSettings:RedisConnectionString 由 K8s Secret 注入） |
+| v1.43.0 | 2026-09-29 | **架构调整：API 对 Sync 零出站**（对齐《06 v2.20.0》《BFF v1.10.0》《Sync v17.6.0》《部署架构 v1.3.0》）：① 关店/解除归属唤醒 Sync staging 由"事务内同步 HTTP 调 Sync"改为**发布 Redis Stream 事件**（`merchant:release-events`，新 `MerchantReleaseEventBus`；Redis 未启用降级日志告警，Sync 消费者组至少一次拉取），闭店端点行为不变；② `POST /api/merchant/inventory/import`（API 中转 Sync）**下线**，改 `GET /api/merchant/inventory/import-context`（判权+返回权威 merchantId），文件流由 BFF 直传 Sync，端点总数不变；③ 删除 `SyncInventoryService`/`SyncStagingRefreshService` 与 appsettings `Sync` 配置节；④ 安全轮换：`Internal:ApiToken`（限流豁免令牌）真实值从 appsettings 移除改 REPLACE_ME，生产经 infra Secret 注入（旧值曾随公开库泄露已废弃，中间件空值=永不豁免 fail-closed）；⑤ Redis 基建接入（CacheSettings:EnableRedis + CacheSettings:RedisConnectionString 由 K8s Secret 注入） |
 | v1.40.0 | 2026-09-27 | M1-a/M1-b/M1-c 增量补录：成就 5 端点、商城目录/兑换/订单 5 端点、商家金库与挂礼 10 端点、礼品兑换/确认收货 2 端点、Admin 挂礼审核与托管订单 5 端点；端点总数 167→189。明细见文末"本版增量"章节 |
 | v1.38.0 | 2026-09-26 | 角色显示名分离：Role 实体/RoleDto 新增 DisplayName（可空，Keycloak 式标识/显示分离）；CreateRole 的 Name 限英文标识（^[A-Za-z][A-Za-z0-9_]*$）、中文名走 DisplayName；迁移 AddRoleDisplayName（官方工具生成含 Designer）为内置四角色赋中文名（管理员/操作员/审计员/App用户）；GET /api/admin/users/platform-roles 批量端点（sub→roles[] 字典，Admin 用户列表角色列合并防 N+1）；修复 GetRoleDetailQuery 基类强转派生类 InvalidCastException 隐性 500；POST /api/admin/users/provision 预置业务用户（按 sub find-or-create + 批量挂角色，解后台新建账号未登录过不能分配角色的 404 死结）；端点总数 166→167 |
 | v1.37.0 | 2026-09-26 | 备案拆分与客服电话接线：MobileConfigDto 新增 BeiAnApp/BeiAnMini 字段，GetMobileConfigQueryHandler 读 Mobile.BeiAnApp/Mobile.BeiAnMini 两键；SeedData 补两键（EnsureConfigKeys 幂等补全，无需迁移）并明确 Site.BeiAn=网站备案语义 |
@@ -416,7 +416,7 @@ OpenFindBearings.Api（以下简称 API）共注册 **170** 个端点，按职�
 
 ## 9. 同步端点 `/api/sync`（6 个）
 
-组授权：`RequireAuthorization("SyncClient")`。用于 FindBearings.Sync 项目的 L 阶段数据加载。
+组授权：`RequireAuthorization("SyncClient")`。用于 Sync 项目的 L 阶段数据加载。
 
 | 方法 | 路由 | 说明 | WithName |
 |------|------|------|----------|

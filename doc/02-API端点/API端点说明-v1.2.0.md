@@ -271,7 +271,7 @@ OpenFindBearings.Api 对外暴露的 API 端点按功能分为 6 组：
 
 ## 7. 同步端点 `/api/sync`（6 个）
 
-组授权：`RequireAuthorization("SyncClient")`。用于 FindBearings.Sync 项目的 L 阶段数据加载。
+组授权：`RequireAuthorization("SyncClient")`。用于 Sync 项目的 L 阶段数据加载。
 
 | 方法 | 路由 | 说明 | WithName |
 |------|------|------|----------|

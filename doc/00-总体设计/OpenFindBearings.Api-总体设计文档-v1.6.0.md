@@ -12,7 +12,7 @@
 
 ### 1. 项目定位
 
-OpenFindBearings.Api 是轴承查找平台的**业务主系统**，提供所有面向用户和后台管理的 API。采用 DDD 四层架构 + CQRS 模式。作为 Medallion Architecture 的 Gold 层，接收 FindBearings.Sync L 阶段清洗后的业务数据，对外提供统一查询和操作接口。
+OpenFindBearings.Api 是轴承查找平台的**业务主系统**，提供所有面向用户和后台管理的 API。采用 DDD 四层架构 + CQRS 模式。作为 Medallion Architecture 的 Gold 层，接收 Sync L 阶段清洗后的业务数据，对外提供统一查询和操作接口。
 
 ### 2. 技术栈
 
