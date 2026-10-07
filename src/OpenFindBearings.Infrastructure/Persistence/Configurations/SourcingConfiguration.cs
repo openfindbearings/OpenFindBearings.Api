@@ -25,6 +25,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             builder.HasKey(d => d.Id);
 
             builder.Property(d => d.PublisherUserId).IsRequired();
+            // 改动说明（v2.12.0 商户名义发布）：发布商户可空两列 + 商户维度索引（商家工作台查本店需求预留）
+            builder.Property(d => d.PublisherMerchantId);
+            builder.Property(d => d.PublisherMerchantName).HasMaxLength(100);
             builder.Property(d => d.PartNumber).IsRequired().HasMaxLength(100);
             builder.Property(d => d.Brand).HasMaxLength(50);
             builder.Property(d => d.Quantity).HasMaxLength(30);
@@ -43,6 +46,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             // 我的寻货（我发布的）
             builder.HasIndex(d => d.PublisherUserId)
                 .HasDatabaseName("IX_SourcingDemands_PublisherUserId");
+            // 商户名义发布的单按商户查（v2.12.0）
+            builder.HasIndex(d => d.PublisherMerchantId)
+                .HasDatabaseName("IX_SourcingDemands_PublisherMerchantId");
             // 型号搜索（自由文本模糊匹配前缀加速）
             builder.HasIndex(d => d.PartNumber)
                 .HasDatabaseName("IX_SourcingDemands_PartNumber");

@@ -20,9 +20,11 @@ namespace OpenFindBearings.Application.Commands.Sourcing
     /// <param name="Region">地区</param>
     /// <param name="Description">补充说明</param>
     /// <param name="UsePoints">免费额度用完后确认花积分</param>
+    /// <param name="MerchantId">v2.12.0 商户名义发布：发布商户（须为在职成员）；null=个人名义</param>
     public record PublishDemandCommand(
         Guid UserId, string PartNumber, Guid? BearingId, string? Brand, string? Quantity,
-        string? ExpectedDelivery, string? Region, string? Description, bool UsePoints) : IRequest<Guid>;
+        string? ExpectedDelivery, string? Region, string? Description, bool UsePoints,
+        Guid? MerchantId = null) : IRequest<Guid>;
 
     /// <summary>
     /// 发布寻货处理器
@@ -37,9 +39,13 @@ namespace OpenFindBearings.Application.Commands.Sourcing
         private readonly IMerchantGradeService _merchantGrades;
         // v2.6.0 新手旅程：发布计数喂成就引擎
         private readonly IAchievementService _achievements;
+        // v2.12.0 商户名义发布：成员校验 + 商户名快照
+        private readonly IMerchantMemberRepository _memberRepository;
+        private readonly IMerchantRepository _merchantRepository;
 
         /// <summary>
         /// 构造：需求仓储 + 配置/规则仓储 + 积分服务（加量扣分）+ 商家等级（额度 buff）+ 成就引擎（发布计数）
+        /// + 成员/商户仓储（v2.12.0 商户名义发布校验）
         /// </summary>
         public PublishDemandCommandHandler(
             ISourcingDemandRepository demandRepository,
@@ -47,7 +53,9 @@ namespace OpenFindBearings.Application.Commands.Sourcing
             IPointGrantRuleRepository ruleRepository,
             IPointsService pointsService,
             IMerchantGradeService grades,
-            IAchievementService achievements)
+            IAchievementService achievements,
+            IMerchantMemberRepository memberRepository,
+            IMerchantRepository merchantRepository)
         {
             _demandRepository = demandRepository;
             _configRepository = configRepository;
@@ -55,6 +63,8 @@ namespace OpenFindBearings.Application.Commands.Sourcing
             _pointsService = pointsService;
             _merchantGrades = grades;
             _achievements = achievements;
+            _memberRepository = memberRepository;
+            _merchantRepository = merchantRepository;
         }
 
         /// <inheritdoc/>
@@ -64,6 +74,17 @@ namespace OpenFindBearings.Application.Commands.Sourcing
                 throw new InvalidOperationException("请填写寻货型号");
             if (request.PartNumber.Trim().Length > 100)
                 throw new InvalidOperationException("型号过长（限 100 字）");
+
+            // v2.12.0 商户名义发布：先验身份再动额度/积分（身份非法不得消耗额度）
+            Merchant? publishMerchant = null;
+            if (request.MerchantId.HasValue)
+            {
+                var member = await _memberRepository.GetActiveByUserAndMerchantAsync(
+                    request.UserId, request.MerchantId.Value, cancellationToken)
+                    ?? throw new InvalidOperationException("您不是该商户的在职成员，无法以其名义发布");
+                publishMerchant = await _merchantRepository.GetByIdAsync(request.MerchantId.Value, cancellationToken)
+                    ?? throw new InvalidOperationException("商户不存在");
+            }
 
             // 额度评估：今日已发数（含取消单，防发了删删了发绕额度）
             var today = await _demandRepository.CountPublishedTodayAsync(request.UserId, cancellationToken);
@@ -93,7 +114,8 @@ namespace OpenFindBearings.Application.Commands.Sourcing
             }
 
             var demand = SourcingDemand.Create(request.UserId, request.PartNumber, request.BearingId,
-                request.Brand, request.Quantity, request.ExpectedDelivery, request.Region, request.Description);
+                request.Brand, request.Quantity, request.ExpectedDelivery, request.Region, request.Description,
+                publishMerchant?.Id, publishMerchant?.Name);
             await _demandRepository.AddAsync(demand, cancellationToken);
             // 改动说明（v2.6.0 新手旅程）：发布成功喂 sourcing_publish_total 计数（"旗开得胜"勋章）；
             // 成就失败绝不反噬发布主流程（需求行仍由 UnitOfWork 管道提交），吞异常继续
