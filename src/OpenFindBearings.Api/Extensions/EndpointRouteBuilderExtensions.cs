@@ -48,10 +48,7 @@ namespace OpenFindBearings.Api.Extensions
         app.MapGameEndpoints();
 
             // 系统配置接口（内部服务拉取）
-            app.MapConfigEndpoints();
 
-            // 同步接口（限 sync_client）
-            app.MapSyncEndpoints();
         }
 
         public static void MapAllMapHealthChecks(this IEndpointRouteBuilder app)

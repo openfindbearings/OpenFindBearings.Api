@@ -809,35 +809,6 @@ namespace OpenFindBearings.Api.Endpoints
             .WithSummary("置为补货中")
             .WithDescription("商品有型号但暂时缺货时置为补货中（买家侧仍展示带徽标），与上架/下架构成三态");
 
-            /// <summary>
-            /// 库存导入判权端点（仅商户管理员）：返回当前上下文的权威 merchantId。
-            /// 改动说明（v2.18.0 架构调整）：原"API 收文件→中转 Sync"链路废弃（API 不再直连 Sync），
-            /// 文件流由 BFF 判权后直传 Sync /api/inventory/import；商家权限判断属 API 领域，留在本端点，
-            /// merchantId 取服务端成员上下文、不信任客户端入参，防越权导入他店
-            /// </summary>
-            group.MapGet("/inventory/import-context", async (
-                [FromServices] ICurrentUserService currentUser,
-                [FromServices] IPermissionService permissionService,
-                HttpContext httpContext) =>
-            {
-                if (!currentUser.UserId.HasValue)
-                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
-
-                // 仅商户管理员可批量导入（员工走单条 CRUD）
-                var isAdmin = await permissionService.IsMerchantAdmin();
-                if (!isAdmin)
-                {
-                    return ApiResponseHelper.Forbidden("仅商户管理员可批量导入在售商品", httpContext);
-                }
-
-                if (!currentUser.CurrentMerchantId.HasValue)
-                    return ApiResponseHelper.NotFound("未找到所属商家", httpContext);
-
-                return ApiResponseHelper.Ok(new { merchantId = currentUser.CurrentMerchantId.Value }, httpContext: httpContext);
-            })
-            .WithName("MerchantInventoryImportContext")
-            .WithSummary("库存导入判权")
-            .WithDescription("Excel 批量导入的前置判权：校验当前用户为所属商家管理员并返回权威 merchantId，供 BFF 直传 Sync 使用");
         }
 
         /// <summary>
