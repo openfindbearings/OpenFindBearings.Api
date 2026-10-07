@@ -92,7 +92,10 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                 // 改动说明（v2.12.0 商户名义发布）：排除商户名义单（PublisherMerchantId 非空）——
                 // 个人"我的寻货"只看个人名义，商户单归商户工作台，双体系不混排
                 .Where(d => d.PublisherUserId == userId && d.PublisherMerchantId == null && !d.IsDeleted)
-                .OrderByDescending(d => d.CreatedAt)
+                // 改动说明（v2.12.0 列表体验）：进行中单恒排前、其余按时间倒序——
+                // 终态单不再沉没可用操作，与大厅"进行中即广场"口径一致
+                .OrderBy(d => d.Status == SourcingDemand.StatusPublished ? 0 : 1)
+                .ThenByDescending(d => d.CreatedAt)
                 .Take(100)
                 .ToListAsync(cancellationToken);
 
@@ -100,7 +103,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         public async Task<List<SourcingDemand>> GetByPublisherMerchantAsync(Guid merchantId, CancellationToken cancellationToken = default)
             => await _context.Set<SourcingDemand>()
                 .Where(d => d.PublisherMerchantId == merchantId && !d.IsDeleted)
-                .OrderByDescending(d => d.CreatedAt)
+                // 改动说明（v2.12.0）：商户"寻货发布"列表同样进行中恒排前（与个人口径一致）
+                .OrderBy(d => d.Status == SourcingDemand.StatusPublished ? 0 : 1)
+                .ThenByDescending(d => d.CreatedAt)
                 .Take(100)
                 .ToListAsync(cancellationToken);
 
@@ -171,7 +176,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         public async Task<List<SourcingResponse>> GetByMerchantAsync(Guid merchantId, CancellationToken cancellationToken = default)
             => await _context.Set<SourcingResponse>()
                 .Where(r => r.MerchantId == merchantId)
-                .OrderByDescending(r => r.CreatedAt)
+                // 改动说明（v2.12.0）：待处理应答恒排前（还活着的商机优先），已选定/未选中按时间倒序
+                .OrderBy(r => r.Status == SourcingResponse.StatusPending ? 0 : 1)
+                .ThenByDescending(r => r.CreatedAt)
                 .Take(100)
                 .ToListAsync(cancellationToken);
 
