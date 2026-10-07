@@ -25,8 +25,12 @@ namespace OpenFindBearings.Domain.Repositories
             int page, int pageSize, bool pinFirst = false, string? brand = null, string? region = null,
             bool newestFirst = true, CancellationToken cancellationToken = default);
 
-        /// <summary>我发布的（含全部状态，时间倒序）</summary>
+        /// <summary>我发布的（含全部状态，时间倒序）。改动说明（v2.12.0 商户名义发布）：
+        /// 仅个人名义单——商户名义的归商户工作台（GetByPublisherMerchantAsync），双体系不混排</summary>
         Task<List<SourcingDemand>> GetByPublisherAsync(Guid userId, CancellationToken cancellationToken = default);
+
+        /// <summary>商户名义发布的单（v2.12.0 商户工作台"寻货管理-我发布的"，含全部状态，时间倒序）</summary>
+        Task<List<SourcingDemand>> GetByPublisherMerchantAsync(Guid merchantId, CancellationToken cancellationToken = default);
 
         /// <summary>今日已发布数（免费额度判定；含取消单，防"发了删删了发"绕额度）</summary>
         Task<int> CountPublishedTodayAsync(Guid userId, CancellationToken cancellationToken = default);

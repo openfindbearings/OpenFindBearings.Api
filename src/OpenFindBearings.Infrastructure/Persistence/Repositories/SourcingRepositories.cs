@@ -88,7 +88,17 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         /// <inheritdoc/>
         public async Task<List<SourcingDemand>> GetByPublisherAsync(Guid userId, CancellationToken cancellationToken = default)
             => await _context.Set<SourcingDemand>()
-                .Where(d => d.PublisherUserId == userId)
+                // 改动说明（v2.12.0 商户名义发布）：排除商户名义单（PublisherMerchantId 非空）——
+                // 个人"我的寻货"只看个人名义，商户单归商户工作台，双体系不混排
+                .Where(d => d.PublisherUserId == userId && d.PublisherMerchantId == null)
+                .OrderByDescending(d => d.CreatedAt)
+                .Take(100)
+                .ToListAsync(cancellationToken);
+
+        /// <inheritdoc/>
+        public async Task<List<SourcingDemand>> GetByPublisherMerchantAsync(Guid merchantId, CancellationToken cancellationToken = default)
+            => await _context.Set<SourcingDemand>()
+                .Where(d => d.PublisherMerchantId == merchantId)
                 .OrderByDescending(d => d.CreatedAt)
                 .Take(100)
                 .ToListAsync(cancellationToken);
