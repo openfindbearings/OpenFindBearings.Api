@@ -174,6 +174,22 @@ namespace OpenFindBearings.Domain.Aggregates
         public bool IsPinned(DateTime nowUtc) => PinnedUntil.HasValue && PinnedUntil.Value > nowUtc;
 
         /// <summary>
+        /// 软删除标记（v2.12.0 列表删除）：仅发布方列表隐藏，应答方视图与数据保留。
+        /// 改动说明：删除是"清单整理"不是"业务撤销"——进行中单必须先取消（通知应答者），
+        /// 终态单才可删；守卫在 Delete() 内，服务端防绕过
+        /// </summary>
+        public bool IsDeleted { get; private set; }
+
+        /// <summary>软删除（限终态单；进行中拒删——防跳过取消通知流程）</summary>
+        /// <exception cref="InvalidOperationException">进行中单不可删</exception>
+        public void Delete()
+        {
+            if (Status == StatusPublished)
+                throw new InvalidOperationException("进行中的寻货请先取消，再删除记录");
+            IsDeleted = true;
+        }
+
+        /// <summary>
         /// 空值安全截断（超长直接截断，防脏数据入库；null 原样返回）
         /// </summary>
         private static string? Truncate(string? value, int max)

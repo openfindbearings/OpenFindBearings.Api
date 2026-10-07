@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using OpenFindBearings.Application.Commands.UserData;
 using Microsoft.AspNetCore.Mvc;
 using OpenFindBearings.Api.Helpers;
 using OpenFindBearings.Api.Services;
@@ -572,6 +573,68 @@ namespace OpenFindBearings.Api.Endpoints
             .WithSummary("删除单条商家浏览历史");
 
             /// <summary>
+            /// 批量取消收藏（v2.12.0 列表多选）：按轴承 ID 集删除当前用户收藏行，返回成功数
+            /// </summary>
+            group.MapPost("/favorites/bearings/batch-remove", async (
+                BatchIdsRequest request,
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                var count = await mediator.Send(new BatchRemoveFavoritesCommand { BearingIds = request.Ids, UserId = currentUser.UserId.Value }, httpContext.RequestAborted);
+                return ApiResponseHelper.Ok(new { affected = count }, httpContext: httpContext);
+            })
+            .RequireAuthorization()
+            .WithName("BatchRemoveFavoriteBearings")
+            .WithSummary("批量取消收藏");
+
+            /// <summary>
+            /// 批量取消关注（v2.12.0 列表多选）：按商家 ID 集删除当前用户关注行，返回成功数
+            /// </summary>
+            group.MapPost("/follows/merchants/batch-remove", async (
+                BatchIdsRequest request,
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                var count = await mediator.Send(new BatchRemoveFollowsCommand { MerchantIds = request.Ids, UserId = currentUser.UserId.Value }, httpContext.RequestAborted);
+                return ApiResponseHelper.Ok(new { affected = count }, httpContext: httpContext);
+            })
+            .RequireAuthorization()
+            .WithName("BatchRemoveFollowedMerchants")
+            .WithSummary("批量取消关注");
+
+            /// <summary>
+            /// 批量删除浏览历史（v2.12.0 列表多选）：bearingIds/merchantIds 两组各删两张表（归属以 userId+目标Id 收敛）
+            /// </summary>
+            group.MapPost("/history/batch-delete", async (
+                BatchHistoryDeleteRequest request,
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                var count = await mediator.Send(new BatchDeleteHistoryCommand
+                {
+                    BearingIds = request.BearingIds ?? new List<Guid>(),
+                    MerchantIds = request.MerchantIds ?? new List<Guid>(),
+                    UserId = currentUser.UserId.Value
+                }, httpContext.RequestAborted);
+                return ApiResponseHelper.Ok(new { affected = count }, httpContext: httpContext);
+            })
+            .RequireAuthorization()
+            .WithName("BatchDeleteHistory")
+            .WithSummary("批量删除浏览历史");
+
+            /// <summary>
             /// 清空浏览历史
             /// </summary>
             group.MapDelete("/history/clear", async (
@@ -754,4 +817,8 @@ namespace OpenFindBearings.Api.Endpoints
             #endregion
         }
     }
+
+
+    /// <summary>批量删除历史请求（轴承/商家两组目标 ID，v2.12.0 列表多选）</summary>
+    public record BatchHistoryDeleteRequest(List<Guid>? BearingIds, List<Guid>? MerchantIds);
 }
