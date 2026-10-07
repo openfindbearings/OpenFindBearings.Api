@@ -70,6 +70,10 @@ namespace OpenFindBearings.Api.Endpoints
                         // 改动说明（v2.10.0 寻货置顶）：置顶标记下发，大厅角标与"我的"页置顶按钮态消费
                         isPinned = d.PinnedUntil.HasValue && d.PinnedUntil.Value > nowUtc,
                         pinnedUntil = d.PinnedUntil,
+                        // 改动说明（v2.12.0 商户名义发布）：发布方身份徽章
+                        publisherMerchantId = d.PublisherMerchantId,
+                        publisherMerchantName = d.PublisherMerchantName,
+                        publisherType = d.IsMerchantPublished ? "merchant" : "individual",
                         isMine = userId.HasValue && d.PublisherUserId == userId.Value
                     }),
                     total
@@ -158,12 +162,22 @@ namespace OpenFindBearings.Api.Endpoints
                     }
                 }
 
-                // 被选商户视图：解锁发布人手机号（仅被选中的那条应答的商户）
+                // 被选商户视图：解锁发布方联系方式。改动说明（v2.12.0 商户名义发布）：
+                //   商户单给商户公开电话（手机优先回退座机，与 selectedMerchantContact 口径对称，
+                //   不暴露经办人个人手机）；个人单维持发布人注册手机
                 string? publisherContact = null;
                 if (myResponse?.Status == SourcingResponse.StatusAdopted && userId.HasValue)
                 {
-                    var publisher = await userRepository.GetByIdAsync(demand.PublisherUserId, httpContext.RequestAborted);
-                    publisherContact = publisher?.Mobile;
+                    if (demand.IsMerchantPublished)
+                    {
+                        var pubMerchant = await merchantRepository.GetByIdAsync(demand.PublisherMerchantId!.Value, httpContext.RequestAborted);
+                        publisherContact = pubMerchant?.Contact?.Mobile ?? pubMerchant?.Contact?.Phone;
+                    }
+                    else
+                    {
+                        var publisher = await userRepository.GetByIdAsync(demand.PublisherUserId, httpContext.RequestAborted);
+                        publisherContact = publisher?.Mobile;
+                    }
                 }
 
                 // v1.5.0 多行标书：商户视角自己的应答也透出型号行（查看/修改应答时逐行回显）
@@ -197,6 +211,10 @@ namespace OpenFindBearings.Api.Endpoints
                     expiryAt = demand.ExpiryAt,
                     closedAt = demand.ClosedAt,
                     isPublisher,
+                    // 改动说明（v2.12.0 商户名义发布）：发布方身份透出（前端徽章/跳转用）
+                    publisherMerchantId = demand.PublisherMerchantId,
+                    publisherMerchantName = demand.PublisherMerchantName,
+                    publisherType = demand.IsMerchantPublished ? "merchant" : "individual",
                     // 发布人才见全量应答；其他人（含商户）只见自己的，其余仅计数（防报价泄露）
                     responses = fullResponses,
                     myResponse = myResponse == null ? null : new
@@ -231,7 +249,7 @@ namespace OpenFindBearings.Api.Endpoints
                 var demandId = await mediator.Send(new PublishDemandCommand(
                     currentUser.UserId.Value, request.PartNumber, request.BearingId, request.Brand,
                     request.Quantity, request.ExpectedDelivery, request.Region, request.Description,
-                    request.UsePoints), httpContext.RequestAborted);
+                    request.UsePoints, request.MerchantId), httpContext.RequestAborted);
                 return ApiResponseHelper.Ok(new { id = demandId }, httpContext: httpContext);
             })
             .RequireAuthorization()
@@ -353,7 +371,11 @@ namespace OpenFindBearings.Api.Endpoints
                     expiryAt = d.ExpiryAt,
                     // 改动说明（v2.10.0 寻货置顶）："我的"页置顶按钮态数据源
                     isPinned = d.PinnedUntil.HasValue && d.PinnedUntil.Value > nowPinned,
-                    pinnedUntil = d.PinnedUntil
+                    pinnedUntil = d.PinnedUntil,
+                    // 改动说明（v2.12.0 商户名义发布）："我的寻货"卡片显示发布身份
+                    publisherMerchantId = d.PublisherMerchantId,
+                    publisherMerchantName = d.PublisherMerchantName,
+                    publisherType = d.IsMerchantPublished ? "merchant" : "individual"
                 }), httpContext: httpContext);
             })
             .RequireAuthorization()
@@ -712,7 +734,7 @@ namespace OpenFindBearings.Api.Endpoints
     /// <param name="Description">补充说明</param>
     /// <param name="UsePoints">免费额度用尽后确认花积分</param>
     public record PublishDemandRequest(string PartNumber, Guid? BearingId, string? Brand, string? Quantity,
-        string? ExpectedDelivery, string? Region, string? Description, bool UsePoints);
+        string? ExpectedDelivery, string? Region, string? Description, bool UsePoints, Guid? MerchantId = null);
 
     /// <summary>应答寻货请求体（v1.5.0 多行标书：报价/库存/交期按行携带）</summary>
     /// <param name="Items">应答型号行（至少一行，每行型号必填）</param>

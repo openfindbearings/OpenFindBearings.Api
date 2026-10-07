@@ -23,8 +23,17 @@ namespace OpenFindBearings.Domain.Aggregates
         /// <summary>有效期天数（发布后自动过期）</summary>
         public const int ValidDays = 14;
 
-        /// <summary>发布人用户 ID（个人账户，非商户）</summary>
+        /// <summary>发布人用户 ID（经办人个人账号，管理权限归他）</summary>
         public Guid PublisherUserId { get; private set; }
+
+        /// <summary>
+        /// 发布商户 ID（可空）。改动说明（v2.12.0 商户名义发布）：发布人若是该商户在职成员，
+        /// 可选以商户名义发布（默认）；null=个人名义。对外联系方式与徽章展示走商户口径
+        /// </summary>
+        public Guid? PublisherMerchantId { get; private set; }
+
+        /// <summary>发布商户名称快照（列表/详情展示免 join；商户改名不回刷，保留发布时点事实）</summary>
+        public string? PublisherMerchantName { get; private set; }
 
         /// <summary>关联平台轴承 ID（型号搜索选中时有值；长尾型号自由文本时为 null）</summary>
         public Guid? BearingId { get; private set; }
@@ -74,7 +83,7 @@ namespace OpenFindBearings.Domain.Aggregates
         /// <summary>
         /// 工厂：创建寻货需求（进行中，有效期 14 天）
         /// </summary>
-        /// <param name="publisherUserId">发布人</param>
+        /// <param name="publisherUserId">发布人（经办人）</param>
         /// <param name="partNumber">型号文本</param>
         /// <param name="bearingId">关联平台轴承（可空）</param>
         /// <param name="brand">期望品牌</param>
@@ -82,12 +91,17 @@ namespace OpenFindBearings.Domain.Aggregates
         /// <param name="expectedDelivery">交期描述</param>
         /// <param name="region">地区</param>
         /// <param name="description">补充说明</param>
+        /// <param name="publisherMerchantId">发布商户（v2.12.0 商户名义发布，null=个人名义）</param>
+        /// <param name="publisherMerchantName">商户名称快照（商户名义时必填）</param>
         public static SourcingDemand Create(Guid publisherUserId, string partNumber, Guid? bearingId,
-            string? brand, string? quantity, string? expectedDelivery, string? region, string? description)
+            string? brand, string? quantity, string? expectedDelivery, string? region, string? description,
+            Guid? publisherMerchantId = null, string? publisherMerchantName = null)
         {
             return new SourcingDemand
             {
                 PublisherUserId = publisherUserId,
+                PublisherMerchantId = publisherMerchantId,
+                PublisherMerchantName = publisherMerchantId.HasValue ? Truncate(publisherMerchantName, 100) : null,
                 PartNumber = partNumber.Trim(),
                 BearingId = bearingId,
                 Brand = Truncate(brand, 50),
@@ -99,6 +113,9 @@ namespace OpenFindBearings.Domain.Aggregates
                 ExpiryAt = DateTime.UtcNow.AddDays(ValidDays),
             };
         }
+
+        /// <summary>是否商户名义发布（对外联系方式取商户公开电话的判定依据）</summary>
+        public bool IsMerchantPublished => PublisherMerchantId.HasValue;
 
         /// <summary>是否进行中（可被应答/可被取消）</summary>
         public bool IsOpen => Status == StatusPublished && DateTime.UtcNow < ExpiryAt;
