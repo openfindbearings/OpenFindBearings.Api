@@ -39,7 +39,8 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
             int page, int pageSize, bool pinFirst = false, string? brand = null, string? region = null,
             bool newestFirst = true, CancellationToken cancellationToken = default)
         {
-            var query = _context.Set<SourcingDemand>().AsQueryable();
+            // 改动说明（v2.12.0 列表删除）：feed/Admin 列表排除软删单（软删仅发布方视角隐藏，数据保留）
+            var query = _context.Set<SourcingDemand>().Where(d => !d.IsDeleted).AsQueryable();
 
             if (status.HasValue)
                 query = query.Where(d => d.Status == status.Value);
@@ -90,7 +91,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
             => await _context.Set<SourcingDemand>()
                 // 改动说明（v2.12.0 商户名义发布）：排除商户名义单（PublisherMerchantId 非空）——
                 // 个人"我的寻货"只看个人名义，商户单归商户工作台，双体系不混排
-                .Where(d => d.PublisherUserId == userId && d.PublisherMerchantId == null)
+                .Where(d => d.PublisherUserId == userId && d.PublisherMerchantId == null && !d.IsDeleted)
                 .OrderByDescending(d => d.CreatedAt)
                 .Take(100)
                 .ToListAsync(cancellationToken);
@@ -98,7 +99,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         /// <inheritdoc/>
         public async Task<List<SourcingDemand>> GetByPublisherMerchantAsync(Guid merchantId, CancellationToken cancellationToken = default)
             => await _context.Set<SourcingDemand>()
-                .Where(d => d.PublisherMerchantId == merchantId)
+                .Where(d => d.PublisherMerchantId == merchantId && !d.IsDeleted)
                 .OrderByDescending(d => d.CreatedAt)
                 .Take(100)
                 .ToListAsync(cancellationToken);

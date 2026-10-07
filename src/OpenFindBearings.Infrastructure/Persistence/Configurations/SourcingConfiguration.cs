@@ -39,6 +39,8 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             builder.Property(d => d.ResponseCount).IsRequired().HasDefaultValue(0);
             // 改动说明（v2.10.0 寻货置顶）：置顶到期时刻（UTC 可空），feed 置顶排前依据
             builder.Property(d => d.PinnedUntil);
+            // 改动说明（v2.12.0 列表删除）：软删标记（仅发布方列表隐藏，数据与应答方视图保留）
+            builder.Property(d => d.IsDeleted).IsRequired().HasDefaultValue(false);
 
             // feed：进行中列表按时间倒序是最高频查询
             builder.HasIndex(d => new { d.Status, d.CreatedAt })

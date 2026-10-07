@@ -436,6 +436,27 @@ namespace OpenFindBearings.Api.Endpoints
             .WithSummary("商户名义发布的寻货列表");
 
             /// <summary>
+            /// 批量删除寻货需求（v2.12.0 列表删除）：经办人软删自己的终态单（左滑单删=ids 传一个）；
+            /// 进行中拒删计入 skipped（须先取消走通知流程）；数据与应答方视图保留
+            /// </summary>
+            group.MapPost("/demands/batch-delete", async (
+                BatchDeleteDemandRequest request,
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] MediatR.IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                var (deleted, skipped) = await mediator.Send(new BatchDeleteDemandsCommand(currentUser.UserId.Value, request.Ids), httpContext.RequestAborted);
+                return ApiResponseHelper.Ok(new { deleted, skipped }, httpContext: httpContext);
+            })
+            .RequireAuthorization()
+            .WithName("BatchDeleteSourcingDemands")
+            .WithSummary("批量删除寻货")
+            .WithDescription("软删终态单（仅经办人本人），进行中拒删计 skipped");
+
+            /// <summary>
             /// 当前商户的应答记录（商家维度，含需求快照与状态）
             /// </summary>
             group.MapGet("/my/responses", async (
@@ -802,4 +823,7 @@ namespace OpenFindBearings.Api.Endpoints
     /// <summary>下架请求体</summary>
     /// <param name="Reason">下架原因（透传发布人）</param>
     public record TakeDownRequest(string? Reason);
+
+    /// <summary>批量删除寻货请求（v2.12.0 列表删除；左滑单删=ids 传一个）</summary>
+    public record BatchDeleteDemandRequest(List<Guid> Ids);
 }

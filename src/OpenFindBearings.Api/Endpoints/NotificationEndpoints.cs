@@ -1,4 +1,5 @@
 using MediatR;
+using OpenFindBearings.Application.Commands.Notifications.BatchOperations;
 using Microsoft.AspNetCore.Mvc;
 using OpenFindBearings.Api.Helpers;
 using OpenFindBearings.Api.Services;
@@ -88,6 +89,42 @@ namespace OpenFindBearings.Api.Endpoints
             .WithDescription("仅能标记本人收件箱内的通知，否则 404");
 
             /// <summary>
+            /// 批量标记通知已读（v2.12.0 列表多选）：收件人本人通知批量置已读，返回成功数
+            /// </summary>
+            group.MapPost("/batch-read", async (
+                BatchIdsRequest request,
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                var count = await mediator.Send(new BatchMarkReadCommand { Ids = request.Ids, UserId = currentUser.UserId.Value }, httpContext.RequestAborted);
+                return ApiResponseHelper.Ok(new { affected = count }, httpContext: httpContext);
+            })
+            .WithName("BatchMarkNotificationsRead")
+            .WithSummary("批量标记已读");
+
+            /// <summary>
+            /// 批量删除通知（v2.12.0 列表多选）：收件人本人通知批量删除，返回成功数
+            /// </summary>
+            group.MapPost("/batch-delete", async (
+                BatchIdsRequest request,
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                var count = await mediator.Send(new BatchDeleteNotificationsCommand { Ids = request.Ids, UserId = currentUser.UserId.Value }, httpContext.RequestAborted);
+                return ApiResponseHelper.Ok(new { affected = count }, httpContext: httpContext);
+            })
+            .WithName("BatchDeleteNotifications")
+            .WithSummary("批量删除通知");
+
+            /// <summary>
             /// 全部标记已读
             /// </summary>
             group.MapPost("/read-all", async (
@@ -145,4 +182,8 @@ namespace OpenFindBearings.Api.Endpoints
             .WithDescription("批量删除当前用户所有已读消息，未读不受影响，返回删除条数");
         }
     }
+
+
+    /// <summary>批量 ID 请求（通知/收藏/关注/历史批量操作共用，v2.12.0 列表多选）</summary>
+    public record BatchIdsRequest(List<Guid> Ids);
 }
