@@ -383,6 +383,59 @@ namespace OpenFindBearings.Api.Endpoints
             .WithSummary("我发布的寻货");
 
             /// <summary>
+            /// 商户名义发布的寻货列表（v2.12.0 商户工作台"寻货管理-我发布的"）：
+            /// 按当前商户（X-Merchant-Id）查 PublisherMerchantId=该商户 的全状态单，
+            /// 在职成员均可见（含经办人标记，管理操作仍限经办人本人——前端按 isMine 出按钮）
+            /// </summary>
+            group.MapGet("/merchant/demands", async (
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMerchantMemberRepository memberRepository,
+                [FromServices] ISourcingDemandRepository demandRepository,
+                [FromServices] IUserRepository userRepository,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue || !currentUser.CurrentMerchantId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                // 在职成员校验（与应答同款口径，员工可看本店需求单）
+                var member = await memberRepository.GetActiveByUserAndMerchantAsync(
+                    currentUser.UserId.Value, currentUser.CurrentMerchantId.Value, httpContext.RequestAborted);
+                if (member is null)
+                    return ApiResponseHelper.Forbidden("非该商户在职成员", httpContext);
+
+                await demandRepository.ExpireOverdueAsync();
+                var items = await demandRepository.GetByPublisherMerchantAsync(
+                    currentUser.CurrentMerchantId.Value, httpContext.RequestAborted);
+                var nowPinned = DateTime.UtcNow;
+                var list = new List<object>();
+                foreach (var d in items)
+                {
+                    // 经办人昵称（列表最多 100 条，逐条取用户行可接受——与 my/responses 需求快照同款）
+                    var publisher = await userRepository.GetByIdAsync(d.PublisherUserId, httpContext.RequestAborted);
+                    list.Add(new
+                    {
+                        id = d.Id,
+                        partNumber = d.PartNumber,
+                        brand = d.Brand,
+                        quantity = d.Quantity,
+                        status = d.Status,
+                        responseCount = d.ResponseCount,
+                        createdAt = d.CreatedAt,
+                        expiryAt = d.ExpiryAt,
+                        isPinned = d.PinnedUntil.HasValue && d.PinnedUntil.Value > nowPinned,
+                        pinnedUntil = d.PinnedUntil,
+                        // 经办人信息：管理按钮仅本人可见，其他成员提示"由发布人操作"
+                        publisherName = publisher?.Nickname ?? "已注销用户",
+                        isMine = d.PublisherUserId == currentUser.UserId.Value
+                    });
+                }
+                return ApiResponseHelper.Ok(list, httpContext: httpContext);
+            })
+            .RequireAuthorization()
+            .WithName("GetMerchantSourcingDemands")
+            .WithSummary("商户名义发布的寻货列表");
+
+            /// <summary>
             /// 当前商户的应答记录（商家维度，含需求快照与状态）
             /// </summary>
             group.MapGet("/my/responses", async (
