@@ -26,10 +26,6 @@ namespace OpenFindBearings.Api.Extensions
             services.AddScoped<ICurrentUserService, CurrentUserService>();
             services.AddScoped<IPermissionService, PermissionService>();
             services.AddScoped<IApiCallLogRepository, ApiCallLogRepository>();
-            // 商户释放事件总线（v2.18.0 架构调整）：关店/解除归属唤醒通知由"API 直连 Sync HTTP"
-            // 改为 Redis Stream 事件发布；替换掉原 SyncInventoryService/SyncStagingRefreshService 两个出站服务。
-            // 单例：仅依赖可选的 IConnectionMultiplexer（Redis 未启用时降级为日志告警）
-            services.AddSingleton<IMerchantReleaseEventBus, MerchantReleaseEventBus>();
             // IStaffInvitationRepository 已在 Infrastructure.DependencyInjection 中注册
 
             // ============ IP 地区解析服务 ============
@@ -154,10 +150,6 @@ namespace OpenFindBearings.Api.Extensions
                 // 商家策略
                 options.AddPolicy("Merchant", policy =>
                     policy.RequireAuthenticatedUser());
-
-                // 同步客户端策略 — 验证 JWT scope 声明包含 api:sync
-                options.AddPolicy("SyncClient", policy =>
-                    policy.RequireClaim("scope", "api:sync"));
 
                 // 登录用户策略 — 仅验证认证状态，不检查 scope
                 options.AddPolicy("Authenticated", policy =>

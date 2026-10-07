@@ -113,13 +113,11 @@ namespace OpenFindBearings.Api.Endpoints
             /// <summary>
             /// 商户自助关店（v2.17.0）：任一在职管理员发起。self/提名新建商户直接删除；
             /// claim/提名已有商户解除归属回公海（商品/证照/邀请/纠错全清，联系方式隐私止血）。
-            /// 改动说明（v2.18.0 架构调整）：唤醒 Sync staging 刷新改为发布 Redis 释放事件（API 不再直连 Sync）
             /// </summary>
             group.MapPost("/{merchantId:guid}/close", async (
                 Guid merchantId,
                 [FromServices] ICurrentUserService currentUser,
                 [FromServices] IMediator mediator,
-                [FromServices] IMerchantReleaseEventBus releaseBus,
                 HttpContext httpContext) =>
             {
                 if (!currentUser.UserId.HasValue)
@@ -127,11 +125,6 @@ namespace OpenFindBearings.Api.Endpoints
 
                 var result = await mediator.Send(new CloseMerchantCommand(merchantId, currentUser.UserId.Value));
 
-                // release 分支才需唤醒爬取刷新（删除分支无 staging 行）；发布失败仅告警不回滚关店，可手动补调
-                if (result.IsReleased)
-                {
-                    await releaseBus.PublishMerchantReleasedAsync(result.MerchantName, "close", httpContext.RequestAborted);
-                }
 
                 return ApiResponseHelper.Ok(
                     result.IsReleased ? "店铺已关闭，商户退回公开信息池" : "店铺已关闭，商户资料已删除",

@@ -87,7 +87,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
             // 创建权限
             // 改动说明（v1.39.0 权限目录重排）：三段式"资源.动作"目录，与存量库迁移
             // RebalancePermissionCatalog 双轨一致。拆分：品牌/类型/映射/任务/积分独立键；
-            // sync.review 更名 review.sync；认证管理拆 view/ban/manage/assign 四级（封禁可下放
+            // 认证管理拆 view/ban/manage/assign 四级（封禁可下放
             // 操作员、角色分配 Admin 专属防提权）；删除 app 侧僵尸键 correction.submit/favorite.*
             // （app 权限模型=登录态+业务资格，不走 RBAC）
             var permissions = new List<Permission>
@@ -109,16 +109,11 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
                 new("merchant.manage", "编辑商家"),
                 new("merchant.verify", "认证审核商家"),
                 new("merchant.detach", "解除商家归属"),
-                new("merchant.import", "商家库存导入"),
                 new("data.restore", "恢复已删数据"),
                 new("data.harddelete", "彻底删除数据"),
-                new("mapping.view", "查看映射维护"),
-                new("mapping.manage", "管理映射关系"),
-                new("review.sync", "同步数据审核"),
                 new("correction.review", "审核纠错"),
                 new("sourcing.view", "查看寻货"),
                 new("sourcing.manage", "治理寻货"),
-                new("sync.run", "触发爬虫任务"),
                 new("user.view", "查看用户"),
                 new("user.ban", "封禁与解禁用户"),
                 new("user.manage", "管理用户账号"),
@@ -168,15 +163,15 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
 
             // Operator（v1.39.0 重定义）= 仪表盘 + 数据管理 view/create/edit（无删除/恢复/解除归属）
             // + 审核组全量 + 映射查看 + 用户封禁（客服常规处置）；
-            // 刻意不含：delete/restore/harddelete/detach/mapping.manage/sync.run/user.assign/role.manage
+            // 刻意不含：delete/restore/harddelete/detach/user.assign/role.manage
             string[] operatorPerms = [
                 "dashboard.view",
                 "bearing.view", "bearing.create", "bearing.edit",
                 "brand.view", "brand.create", "brand.edit",
                 "type.view", "type.create", "type.edit",
-                "merchant.view", "merchant.manage", "merchant.verify", "merchant.import",
-                "mapping.view",
-                "review.sync", "correction.review", "sourcing.view", "sourcing.manage",
+                "merchant.view", "merchant.manage", "merchant.verify",
+                
+                "correction.review", "sourcing.view", "sourcing.manage",
                 "user.view", "user.ban",
             ];
             foreach (var name in operatorPerms)
@@ -187,7 +182,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
             // Auditor = 只读监察：全部 view 键 + 审计日志（无任何写权限点）
             string[] auditorPerms = [
                 "dashboard.view", "bearing.view", "brand.view", "type.view", "merchant.view",
-                "mapping.view", "review.sync", "correction.review", "sourcing.view",
+                 "correction.review", "sourcing.view",
                 "user.view", "permission.view", "system.view", "audit.view",
             ];
             foreach (var name in auditorPerms)
