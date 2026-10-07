@@ -151,7 +151,7 @@
 
 ### 7. 同步端点 (`/api/sync`) — SyncEndpoints.cs
 
-需要 SyncClient 策略（`scope=api:sync` JWT claim），由 FindBearings.Sync 项目的 LoadService 调用。
+需要 SyncClient 策略（`scope=api:sync` JWT claim），由 Sync 项目的 LoadService 调用。
 
 详见 [同步接口设计文档](../03-TongBuJiZhi/同步接口设计-v1.0.0.md)。
 

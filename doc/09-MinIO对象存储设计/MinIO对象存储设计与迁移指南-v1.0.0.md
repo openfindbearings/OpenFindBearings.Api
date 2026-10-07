@@ -3,7 +3,7 @@
 - 版本：v1.0.0
 - 日期：2026-09-20
 - 状态：已实施（待集群部署）
-- 适用：OpenFindBearings.Api / FindBearings.Sync / 媒体服务 的图片与文件存储统一改造
+- 适用：OpenFindBearings.Api / Sync / 媒体服务 的图片与文件存储统一改造
 
 ---
 

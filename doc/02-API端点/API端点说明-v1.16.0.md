@@ -342,7 +342,7 @@ OpenFindBearings.Api（以下简称 API）共注册 **131** 个端点，按职�
 
 ## 8. 同步端点 `/api/sync`（6 个）
 
-组授权：`RequireAuthorization("SyncClient")`。用于 FindBearings.Sync 项目的 L 阶段数据加载。
+组授权：`RequireAuthorization("SyncClient")`。用于 Sync 项目的 L 阶段数据加载。
 
 | 方法 | 路由 | 说明 | WithName |
 |------|------|------|----------|
