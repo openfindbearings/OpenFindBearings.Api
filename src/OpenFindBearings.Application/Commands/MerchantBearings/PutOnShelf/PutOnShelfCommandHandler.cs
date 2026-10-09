@@ -71,7 +71,7 @@ namespace OpenFindBearings.Application.Commands.MerchantBearings.PutOnShelf
                      PointTransaction.TypeMerchantFirstProduct,
             $"credit:{merchant.UnifiedSocialCreditCode.Trim().ToUpperInvariant()}:product",
             $"商户「{merchant.Name}」首件商品上架",
-                     cancellationToken);
+                     cancellationToken: cancellationToken);
             }
 
             _logger.LogInformation("产品上架成功: MerchantBearingId={MerchantBearingId}", merchantBearing.Id);

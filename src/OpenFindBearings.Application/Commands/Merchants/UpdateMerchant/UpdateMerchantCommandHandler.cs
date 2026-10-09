@@ -132,7 +132,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.UpdateMerchant
                     PointTransaction.TypeMerchantProfileComplete,
                     $"credit:{merchant.UnifiedSocialCreditCode.Trim().ToUpperInvariant()}:profile",
                     $"完善商户「{merchant.Name}」资料",
-                    cancellationToken);
+                    cancellationToken: cancellationToken);
             }
 
             _logger.LogInformation("商家更新成功: {MerchantId}", merchant.Id);

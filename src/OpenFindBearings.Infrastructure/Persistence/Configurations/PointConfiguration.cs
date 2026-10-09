@@ -116,7 +116,8 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
         }
 
         /// <summary>
-        /// 等级阈值表配置（v2.7.0 G7）：Level 唯一递增，MinTotalEarned 落档线
+        /// 等级阈值表配置（v2.7.0 G7）：Level 唯一递增，MinTotalEarned 落档线；
+        /// 改动说明（v2.12.0 等级玩法）：加 LevelUpBonus 升档礼列（0=不发），默认 0 兼容存量档
         /// </summary>
         public void Configure(EntityTypeBuilder<PointLevel> builder)
         {
@@ -127,6 +128,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             builder.Property(l => l.MinTotalEarned).IsRequired();
             builder.Property(l => l.Name).IsRequired().HasMaxLength(32);
             builder.Property(l => l.Enabled).IsRequired().HasDefaultValue(true);
+            builder.Property(l => l.LevelUpBonus).IsRequired().HasDefaultValue(0);
         }
     }
 }

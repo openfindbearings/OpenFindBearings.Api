@@ -47,5 +47,13 @@ namespace OpenFindBearings.Application.Services
         /// </summary>
         Task RewardTreasuryAsync(Guid merchantId, int amount, string bizId, string? remark,
             CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 商家等级升档礼入账（v2.12.0 等级玩法）：升到 Lv2/3/4 一次性入金库商家金。
+        /// bizId=gradeup:{merchantId}:{rank} 幂等——每商户每档终身一次，复升同档不重发（防上下架刷金库）；
+        /// 独立提交、吞失败（升档礼是附属账本，绝不反噬等级重算与业务主流程）
+        /// </summary>
+        Task GrantGradeUpBonusAsync(Guid merchantId, int amount, string bizId, string? remark,
+            CancellationToken cancellationToken = default);
     }
 }

@@ -18,8 +18,9 @@ namespace OpenFindBearings.Domain.Entities
     /// <summary>
     /// 成就定义（v2.1.0 成就子系统，WoW 成就墙模型）：一行=一个可点亮成就。
     /// MetricKey 是它追踪的计数器/仪表键（事件驱动累加或设值），ProgressTarget 是点亮阈值。
-    /// MetaPoints=成就点（只加不花的炫耀 meta 分，读时按已解锁求和，不入库累加）；
-    /// RewardPoints=解锁时一次性发放的可花积分甜头（小额，走 PointsService 幂等）
+    /// MetaPoints=成就点（只加不花的炫耀 meta 分，读时按已解锁求和，不入库累加）。
+    /// 改动说明（v2.12.0 等级玩法）：成就纯荣誉化——删除 RewardPoints 发币字段，
+    /// 解锁只点亮徽章与授予荣誉分/称号，可花货币激励统一收拢到段位升档礼一条线（防双轨农场）
     /// </summary>
     public class AchievementDefinition : BaseEntity
     {
@@ -57,9 +58,6 @@ namespace OpenFindBearings.Domain.Entities
         /// <summary>成就点（meta 炫耀分，只加不花）</summary>
         public int MetaPoints { get; private set; }
 
-        /// <summary>解锁一次性可花积分甜头（0=不发）</summary>
-        public int RewardPoints { get; private set; }
-
         /// <summary>解锁授予的称号（可空；挂昵称旁）</summary>
         public string? TitleReward { get; private set; }
 
@@ -92,7 +90,7 @@ namespace OpenFindBearings.Domain.Entities
         /// </summary>
         public AchievementDefinition(string key, string name, string description, string icon,
             AchievementScope scope, string category, string metricKey, int progressTarget,
-            int metaPoints, int rewardPoints = 0, string? titleReward = null,
+            int metaPoints, string? titleReward = null,
             bool rare = false, bool hidden = false, bool isLimited = false, int? limitedOrdinal = null)
         {
             Key = key;
@@ -104,7 +102,6 @@ namespace OpenFindBearings.Domain.Entities
             MetricKey = metricKey;
             ProgressTarget = progressTarget;
             MetaPoints = metaPoints;
-            RewardPoints = rewardPoints;
             TitleReward = titleReward;
             Rare = rare;
             Hidden = hidden;
@@ -113,16 +110,15 @@ namespace OpenFindBearings.Domain.Entities
             LimitedOrdinal = isLimited ? (limitedOrdinal ?? 0) : null;
         }
 
-        /// <summary>Admin 编辑（分值/阈值/启停/文案/勋章图键）</summary>
+        /// <summary>Admin 编辑（阈值/启停/文案/勋章图键；v2.12.0 起不含发币字段——成就纯荣誉化）</summary>
         public void Update(string name, string description, int progressTarget, int metaPoints,
-            int rewardPoints, string? titleReward, bool enabled, string? imageKey = null,
+            string? titleReward, bool enabled, string? imageKey = null,
             bool isLimited = false, int? limitedOrdinal = null)
         {
             Name = name;
             Description = description;
             ProgressTarget = progressTarget;
             MetaPoints = metaPoints;
-            RewardPoints = rewardPoints;
             TitleReward = titleReward;
             Enabled = enabled;
             // 改动说明（v2.8.0 G11）：限量字段随编辑写回（限量必须带窗口序号）

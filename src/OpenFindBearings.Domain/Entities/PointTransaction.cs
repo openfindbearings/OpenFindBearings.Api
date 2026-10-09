@@ -28,8 +28,9 @@ namespace OpenFindBearings.Domain.Entities
         public const string TypeMerchantProfileComplete = "merchant_profile_complete";
         /// <summary>赚分动作类型：商户首件商品上架（一次性，bizId 绑信用代码）</summary>
         public const string TypeMerchantFirstProduct = "merchant_first_product";
-        // 改动说明（v2.1.0 成就子系统）：成就解锁一次性可花积分甜头（小额，bizId=ach:{key}:{owner} 幂等）
-        public const string TypeAchievementUnlock = "achievement_unlock";
+        // 改动说明（v2.12.0 等级玩法）：成就纯荣誉化删除 achievement_unlock 发币常量；
+        // 新增段位升档礼（一次性，claimKey=levelup:{userId}:{lv} 每用户每档终身一次，分值按 PointLevel.LevelUpBonus 覆盖）
+        public const string TypeLevelUpBonus = "level_up_bonus";
         // 改动说明（v2.6.0 M3 商家集体任务）：集体任务达标后全体在职成员各得一笔（bizId 含任务/商家/周期/用户四段幂等，分值由任务定义 amountOverride 覆盖）
         public const string TypeMerchantTask = "merchant_task";
 

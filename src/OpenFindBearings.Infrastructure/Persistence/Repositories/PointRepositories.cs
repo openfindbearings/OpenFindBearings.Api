@@ -24,6 +24,19 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                 .FirstOrDefaultAsync(p => p.UserId == userId, cancellationToken);
         }
 
+        /// <summary>
+        /// 批量取账户（v2.12.0 等级玩法铭牌曝光：寻货应答列表一次补齐经办人段位，防 N+1）
+        /// </summary>
+        public async Task<List<PointAccount>> GetByUserIdsAsync(IEnumerable<Guid> userIds, CancellationToken cancellationToken = default)
+        {
+            var ids = userIds.Distinct().ToList();
+            if (ids.Count == 0)
+                return new List<PointAccount>();
+            return await _context.Set<PointAccount>()
+                .Where(p => ids.Contains(p.UserId))
+                .ToListAsync(cancellationToken);
+        }
+
         public async Task AddAsync(PointAccount account, CancellationToken cancellationToken = default)
         {
             await _context.Set<PointAccount>().AddAsync(account, cancellationToken);

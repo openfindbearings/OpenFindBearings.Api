@@ -161,7 +161,6 @@ namespace OpenFindBearings.Api.Endpoints
                     metricKey = d.MetricKey,
                     progressTarget = d.ProgressTarget,
                     metaPoints = d.MetaPoints,
-                    rewardPoints = d.RewardPoints,
                     titleReward = d.TitleReward,
                     rare = d.Rare,
                     hidden = d.Hidden,
@@ -183,8 +182,9 @@ namespace OpenFindBearings.Api.Endpoints
                 var def = await repo.GetDefinitionByIdAsync(id);
                 if (def == null)
                     return ApiResponseHelper.NotFound(httpContext: httpContext);
+                // 改动说明（v2.12.0 等级玩法）：成就纯荣誉化，编辑不再含发币字段 RewardPoints
                 def.Update(req.Name, req.Description, req.ProgressTarget, req.MetaPoints,
-                    req.RewardPoints, req.TitleReward, req.Enabled, req.ImageKey, req.IsLimited, req.LimitedOrdinal);
+                    req.TitleReward, req.Enabled, req.ImageKey, req.IsLimited, req.LimitedOrdinal);
                 repo.UpdateDefinition(def);
                 // 端点直连仓储不走 MediatR 管道，必须显式提交（与积分规则 PUT 同模式）
                 await unitOfWork.SaveChangesAsync(httpContext.RequestAborted);
@@ -246,10 +246,10 @@ namespace OpenFindBearings.Api.Endpoints
         }
     }
 
-    /// <summary>Admin 编辑成就请求体</summary>
+    /// <summary>Admin 编辑成就请求体（v2.12.0 等级玩法：成就纯荣誉化，删除 RewardPoints 发币字段）</summary>
     public record UpdateAchievementRequest(
         string Name, string Description, int ProgressTarget, int MetaPoints,
-        int RewardPoints, string? TitleReward, bool Enabled, string? ImageKey = null,
+        string? TitleReward, bool Enabled, string? ImageKey = null,
         bool IsLimited = false, int? LimitedOrdinal = null);
 
     /// <summary>佩戴称号请求体（v2.8.0；Title 空白=卸下）</summary>

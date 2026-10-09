@@ -96,6 +96,9 @@ namespace OpenFindBearings.Api.Endpoints
                 [FromServices] IUserRepository userRepository,
                 [FromServices] IMerchantBearingRepository merchantBearingRepository,
                 [FromServices] IMerchantTaskRepository taskRepository,
+                // 改动说明（v2.12.0 等级玩法）：应答铭牌——批量落档经办人段位（防 N+1）
+                [FromServices] OpenFindBearings.Domain.Repositories.IPointAccountRepository pointAccountRepository,
+                [FromServices] OpenFindBearings.Domain.Repositories.IPointLevelRepository pointLevelRepository,
                 HttpContext httpContext) =>
             {
                 var demand = await demandRepository.GetByIdAsync(id, httpContext.RequestAborted);
@@ -121,6 +124,18 @@ namespace OpenFindBearings.Api.Endpoints
                 string? selectedMerchantContact = null;
                 if (isPublisher)
                 {
+                    // 改动说明（v2.12.0 等级玩法铭牌曝光）：批量落档应答经办人的段位（一次查询防 N+1），
+                    // 发布人选定前可参考"经办人段位"这一真人信任信号
+                    var levelMap = new Dictionary<Guid, (int Level, string Name)>();
+                    var levelsAll = await pointLevelRepository.GetEnabledAsync(httpContext.RequestAborted);
+                    var levelAccounts = await pointAccountRepository.GetByUserIdsAsync(
+                        responses.Select(x => x.RespondedUserId), httpContext.RequestAborted);
+                    foreach (var acc in levelAccounts)
+                    {
+                        var hit = levelsAll.LastOrDefault(l => l.MinTotalEarned <= acc.TotalEarned);
+                        if (hit != null)
+                            levelMap[acc.UserId] = (hit.Level, hit.Name);
+                    }
                     fullResponses = new List<object>();
                     foreach (var r in responses)
                     {
@@ -136,6 +151,7 @@ namespace OpenFindBearings.Api.Endpoints
                         // 发布人选定前的判断依据从"自述文本"升级为"结构化证据"
                         var onSaleCount = await merchantBearingRepository.CountOnSaleAsync(r.MerchantId, httpContext.RequestAborted);
                         var completedTaskCount = await taskRepository.CountCompletionsAsync(r.MerchantId, httpContext.RequestAborted);
+                        levelMap.TryGetValue(r.RespondedUserId, out var responderLevel);
                         fullResponses.Add(new
                         {
                             id = r.Id,
@@ -145,6 +161,10 @@ namespace OpenFindBearings.Api.Endpoints
                             companyName = merchant?.CompanyName,
                             onSaleCount,
                             completedTaskCount,
+                            // 改动说明（v2.12.0 等级玩法铭牌曝光）：经办人段位（无账户=Lv1 青铜，
+                            // 铭牌仍展示——低段位也是真实信号）
+                            responderLevel = responderLevel.Level > 0 ? responderLevel.Level : 1,
+                            responderLevelName = responderLevel.Name ?? "倔强青铜",
                             // v1.5.0 多行标书：应答型号行（发布人逐行挑选依据）
                             items = items.Select(i => new
                             {

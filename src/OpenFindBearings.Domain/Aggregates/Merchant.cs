@@ -87,6 +87,12 @@ namespace OpenFindBearings.Domain.Aggregates
         public MerchantGrade Grade { get; private set; }
 
         /// <summary>
+        /// 保级缓冲截止时刻（v2.12.0 等级玩法）：重算发现应降档时先挂此钟（now+宽限天数），
+        /// 期内维持原等级与成员 buff；到期后仍不达标才实际降档。升档或无需降级时清空
+        /// </summary>
+        public DateTime? GradeGraceUntil { get; private set; }
+
+        /// <summary>
         /// 商家状态
         /// </summary>
         public MerchantStatus Status { get; private set; }
@@ -397,6 +403,8 @@ namespace OpenFindBearings.Domain.Aggregates
             // 改动说明（v2.5.0 商家经济）：等级数值非单调（Premium=2 语义却是 Lv3），
             // 不能再按"<"比较定级——认证一律落 Lv2，Lv3/4 由重算服务在供给/金库事件时上修
             Grade = MerchantGrade.Verified;
+            // 改动说明（v2.12.0 等级玩法）：认证事件直接落级，历史保级钟作废
+            GradeGraceUntil = null;
 
             UpdateTimestamp();
 
@@ -414,8 +422,10 @@ namespace OpenFindBearings.Domain.Aggregates
             IsVerified = false;
             VerifiedAt = null;
             // 改动说明（v2.5.0 商家经济）：认证是 Lv2+ 的硬前提，撤销认证等级即回落实
-            // （回 Standard，后续供给事件会按规则重新上修）
+            // （回 Standard，后续供给事件会按规则重新上修）。撤销认证属平台执法动作，
+            // 不走 v2.12.0 保级缓冲——直接落级并作废保级钟
             Grade = MerchantGrade.Standard;
+            GradeGraceUntil = null;
             UpdateTimestamp();
 
             AddDomainEvent(new MerchantUnverifiedEvent(Id, Name));
@@ -431,9 +441,23 @@ namespace OpenFindBearings.Domain.Aggregates
 
             var oldGrade = Grade;
             Grade = newGrade;
+            // 改动说明（v2.12.0 等级玩法）：等级一经落档，保级钟随之作废
+            // （升档不需要缓冲；到期降档写回新等级后也应保持空钟等下一轮）
+            GradeGraceUntil = null;
             UpdateTimestamp();
 
             AddDomainEvent(new MerchantGradeChangedEvent(Id, oldGrade, newGrade));
+        }
+
+        /// <summary>
+        /// 挂起/清除保级缓冲（v2.12.0 等级玩法）：传时刻=重算发现不达标先挂钟保级，
+        /// 商户端展示倒计时与回升指引；传 null=恢复达标或已落级后清钟
+        /// </summary>
+        /// <param name="graceUntilUtc">保级截止时刻（UTC；null=清除）</param>
+        public void SetGradeGraceUntil(DateTime? graceUntilUtc)
+        {
+            GradeGraceUntil = graceUntilUtc;
+            UpdateTimestamp();
         }
 
         /// <summary>

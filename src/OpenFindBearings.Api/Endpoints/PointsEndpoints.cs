@@ -40,19 +40,26 @@ namespace OpenFindBearings.Api.Endpoints
                 var todayCheckedIn = await transactionRepository.ExistsBizIdAsync(
                     $"checkin:{userId:N}:{BusinessClock.DateKey}");
 
-                // 改动说明（v2.7.0 G7）：按累计获得积分落档（纯展示，无特权）；无账户=等级 1
+                // 改动说明（v2.7.0 G7）：按累计获得积分落档；无账户=等级 1
+                // 改动说明（v2.12.0 等级玩法）：档位即段位（青铜~王者），增发下一档三字段
+                // nextLevelMin/nextLevelName/nextLevelBonus——积分页进度条与"距升 X 还差 Y 币"文案数据源
                 var levels = await levelRepository.GetEnabledAsync();
-                var level = levels.LastOrDefault(l => l.MinTotalEarned <= (account?.TotalEarned ?? 0));
+                var totalEarned = account?.TotalEarned ?? 0;
+                var level = levels.LastOrDefault(l => l.MinTotalEarned <= totalEarned);
+                var nextLevel = levels.FirstOrDefault(l => l.MinTotalEarned > totalEarned);
 
                 return ApiResponseHelper.Ok(new
                 {
                     balance = account?.Balance ?? 0,
-                    totalEarned = account?.TotalEarned ?? 0,
+                    totalEarned,
                     totalSpent = account?.TotalSpent ?? 0,
                     todayCheckedIn,
                     consecutiveDays = account?.ConsecutiveCheckinDays ?? 0,
                     level = level?.Level ?? 1,
-                    levelName = level?.Name ?? "初出茅庐",
+                    levelName = level?.Name ?? "倔强青铜",
+                    nextLevelMin = nextLevel?.MinTotalEarned,
+                    nextLevelName = nextLevel?.Name,
+                    nextLevelBonus = nextLevel?.LevelUpBonus,
                     // v1.36.1：下发业务日界偏移——前端日期条/对勾按此换算，防管理员改配置后前端硬编码 +8 漂移
                     tzOffsetHours = (int)BusinessClock.Offset.TotalHours
                 }, httpContext: httpContext);
@@ -103,7 +110,12 @@ namespace OpenFindBearings.Api.Endpoints
                     alreadyCheckedIn = result.AlreadyCheckedIn,
                     // v2.8.0 G1：暴击倍数（1=无暴击 / 2=双倍 / 5=传说），前端播动画
                     critMultiplier = result.CritMultiplier,
-                    unlockedAchievements = unlocked
+                    unlockedAchievements = unlocked,
+                    // 改动说明（v2.12.0 等级玩法）：签到后最终段位 + 是否跨档（含升档礼推档），
+                    // leveledUp=true 前端播"恭喜升级"toast；已签重复请求为 null 不播
+                    level = result.Level,
+                    levelName = result.LevelName,
+                    leveledUp = result.LeveledUp
                 }, httpContext: httpContext);
             })
             .WithName("DailyCheckin")
@@ -174,9 +186,12 @@ namespace OpenFindBearings.Api.Endpoints
                 // 从任务清单过滤（Admin 规则页保留可调价）；否则任务中心出现"自动发放"的伪任务
                 // 改动说明（v2.6.0 M3）：merchant_task 是集体任务 Job 结算的被动发放（个人无对应动作），
                 // 同口径过滤——它的展示面是商家集体任务卡
+                // 改动说明（v2.12.0 等级玩法）：level_up_bonus 升档礼随跨档自动到账（个人无主动动作），
+                // 展示面是段位进度条与流水，同口径过滤
                 var pricingOnlyTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
                 {
-                    "sourcing_publish_bonus", "sourcing_respond_bonus", PointTransaction.TypeMerchantTask
+                    "sourcing_publish_bonus", "sourcing_respond_bonus", PointTransaction.TypeMerchantTask,
+                    PointTransaction.TypeLevelUpBonus
                 };
 
                 var tasks = rules.Where(r => r.IsEnabled && !pricingOnlyTypes.Contains(r.GrantType)).Select(r =>
@@ -213,6 +228,7 @@ namespace OpenFindBearings.Api.Endpoints
                 [FromServices] IMerchantGradeService grades,
                 [FromServices] IMerchantRepository merchantRepository,
                 [FromServices] IMerchantMemberRepository memberRepository,
+                [FromServices] ISystemConfigRepository configs,
                 HttpContext httpContext,
                 [FromQuery] Guid? merchantId = null) =>
             {
@@ -222,6 +238,7 @@ namespace OpenFindBearings.Api.Endpoints
                 int grade;
                 Guid? viewId;
                 string? viewName;
+                DateTime? graceUntil = null;
                 if (merchantId.HasValue)
                 {
                     var membership = await memberRepository.GetActiveByUserAndMerchantAsync(
@@ -234,6 +251,8 @@ namespace OpenFindBearings.Api.Endpoints
                     grade = (int)merchant.Grade;
                     viewId = merchant.Id;
                     viewName = merchant.Name;
+                    // 改动说明（v2.12.0 等级玩法）：本店视角透出保级截止钟（Taro 掉级倒计时卡）
+                    graceUntil = merchant.GradeGraceUntil;
                 }
                 else
                 {
@@ -253,6 +272,22 @@ namespace OpenFindBearings.Api.Endpoints
                     _ => "已达最高等级"
                 };
 
+                // 改动说明（v2.12.0 等级玩法）：透出下一档升档礼金额（终身一次，商家金），
+                // 与等级重算服务同源配置；已达最高档为 null
+                async Task<int> BonusAsync(string key, int fallback)
+                {
+                    var v = await configs.GetValueAsync<int?>(key, null);
+                    return v.HasValue && v.Value >= 0 ? v.Value : fallback;
+                }
+
+                int? gradeUpBonus = rank switch
+                {
+                    < 1 => null,
+                    1 => await BonusAsync("Business.MerchantGradeBonusLv2", 50),
+                    2 => await BonusAsync("Business.MerchantGradeBonusLv3", 150),
+                    3 => await BonusAsync("Business.MerchantGradeBonusLv4", 300),
+                    _ => null
+                };
                 return ApiResponseHelper.Ok(new
                 {
                     merchantId = viewId,
@@ -260,7 +295,9 @@ namespace OpenFindBearings.Api.Endpoints
                     grade,
                     rank,
                     labels = OpenFindBearings.Application.Services.MerchantBuffs.BuffLabels(grade),
-                    nextHint
+                    nextHint,
+                    gradeUpBonus,
+                    graceUntil
                 }, httpContext: httpContext);
             })
             .WithName("GetMerchantBuff")
@@ -452,6 +489,63 @@ namespace OpenFindBearings.Api.Endpoints
             .WithDescription("调整分值/每日上限/阶梯/启停，实时生效")
             .RequirePermission("points.manage");
 
+            /// <summary>
+            /// 段位档位表列表（v2.12.0 等级玩法，Admin "等级段位"tab 数据源）：全部档位含停用项
+            /// </summary>
+            adminGroup.MapGet("/levels", async (
+                [FromServices] IPointLevelRepository levelRepository,
+                HttpContext httpContext,
+                CancellationToken cancellationToken) =>
+            {
+                var levels = await levelRepository.GetAllAsync(cancellationToken);
+                return ApiResponseHelper.Ok(levels.Select(l => new
+                {
+                    id = l.Id,
+                    level = l.Level,
+                    minTotalEarned = l.MinTotalEarned,
+                    name = l.Name,
+                    levelUpBonus = l.LevelUpBonus,
+                    enabled = l.Enabled
+                }).ToList(), httpContext: httpContext);
+            })
+            .WithName("GetPointLevels")
+            .WithSummary("段位档位列表")
+            .WithDescription("全部段位档位（阈值/名称/升档礼/启停）")
+            .RequirePermission("points.manage");
+
+            /// <summary>
+            /// 编辑段位档位（阈值/名称/升档礼/启停，改完实时生效；Level 号不可改——落档与幂等键锚定它）
+            /// </summary>
+            adminGroup.MapPut("/levels/{id:guid}", async (
+                Guid id,
+                [FromBody] UpdatePointLevelRequest request,
+                [FromServices] IPointLevelRepository levelRepository,
+                [FromServices] OpenFindBearings.Application.Shared.Interfaces.IUnitOfWork unitOfWork,
+                HttpContext httpContext,
+                CancellationToken cancellationToken) =>
+            {
+                var levels = await levelRepository.GetAllAsync(cancellationToken);
+                var level = levels.FirstOrDefault(l => l.Id == id);
+                if (level == null)
+                    return ApiResponseHelper.NotFound("档位不存在", httpContext);
+                if (request.MinTotalEarned < 0 || request.LevelUpBonus < 0)
+                    return ApiResponseHelper.BadRequest("阈值与升档礼不能为负", httpContext: httpContext);
+                if (string.IsNullOrWhiteSpace(request.Name))
+                    return ApiResponseHelper.BadRequest("段位名必填", httpContext: httpContext);
+                if (request.Name.Trim().Length > 32)
+                    return ApiResponseHelper.BadRequest("段位名不超过 32 字符", httpContext: httpContext);
+
+                level.Update(request.MinTotalEarned, request.Name.Trim(), request.Enabled, request.LevelUpBonus);
+                await levelRepository.UpdateAsync(level, cancellationToken);
+                // 端点直调仓储不经 MediatR 管道，需显式提交（与规则 PUT 同款）
+                await unitOfWork.SaveChangesAsync(cancellationToken);
+                return ApiResponseHelper.Ok("档位已更新", httpContext);
+            })
+            .WithName("UpdatePointLevel")
+            .WithSummary("更新段位档位")
+            .WithDescription("调整阈值/段位名/升档礼/启停，实时生效")
+            .RequirePermission("points.manage");
+
             // ============ Admin 端（v2.6.0 商家集体任务定义） ============
 
             /// <summary>
@@ -586,6 +680,15 @@ namespace OpenFindBearings.Api.Endpoints
     /// <param name="LadderJson">连续阶梯 JSON 数组</param>
     /// <param name="IsEnabled">启用开关</param>
     public record UpdatePointRuleRequest(int? Amount, int? DailyLimit, string? LadderJson, bool? IsEnabled);
+
+    /// <summary>
+    /// 段位档位更新请求（v2.12.0 等级玩法；Level 号不在字段内——落档与升档礼幂等键锚定它不可改）
+    /// </summary>
+    /// <param name="MinTotalEarned">进入该档最低累计获得轴承币</param>
+    /// <param name="Name">段位名</param>
+    /// <param name="LevelUpBonus">升档礼轴承币（0=不发）</param>
+    /// <param name="Enabled">启用开关</param>
+    public record UpdatePointLevelRequest(int MinTotalEarned, string Name, int LevelUpBonus, bool Enabled);
 
     internal static class PointTaskHelper
     {

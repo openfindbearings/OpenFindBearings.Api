@@ -160,6 +160,44 @@ namespace OpenFindBearings.Infrastructure.Services
         }
 
         /// <inheritdoc/>
+        public async Task GrantGradeUpBonusAsync(Guid merchantId, int amount, string bizId, string? remark,
+            CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                if (amount <= 0)
+                    return;
+                if (await _transactions.ExistsBizIdAsync(bizId, cancellationToken))
+                    return; // 幂等：每商户每档终身一次，复升同档不重发
+
+                // 懒开户（与结算/任务奖励同款显式仓储路径），入账+流水独立提交
+                var account = await _accounts.GetByMerchantIdAsync(merchantId, cancellationToken);
+                if (account == null)
+                {
+                    account = new MerchantPointAccount(merchantId);
+                    await _accounts.AddAsync(account, cancellationToken);
+                }
+                else
+                {
+                    await _accounts.UpdateAsync(account, cancellationToken);
+                }
+                account.Credit(amount);
+                await _transactions.AddAsync(new MerchantPointTransaction(
+                    merchantId, MerchantPointTransaction.DirectionCredit, MerchantPointTransaction.TypeGradeUpBonus,
+                    amount, account.Balance, bizId, remark), cancellationToken);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                _logger.LogInformation("商家升档礼入账: Merchant={MerchantId}, Amount={Amount}, BizId={BizId}",
+                    merchantId, amount, bizId);
+            }
+            catch (Exception ex)
+            {
+                // 吞失败不反噬等级重算与业务主流程（同 trickle 纪律）
+                _logger.LogWarning(ex, "商家升档礼入账失败: Merchant={MerchantId}, BizId={BizId}", merchantId, bizId);
+            }
+        }
+
+        /// <inheritdoc/>
         public async Task BurnOnReleaseAsync(Guid merchantId, string bizId, CancellationToken cancellationToken = default)
         {
             var account = await _accounts.GetByMerchantIdAsync(merchantId, cancellationToken);
