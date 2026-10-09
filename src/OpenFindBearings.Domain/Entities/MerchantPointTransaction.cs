@@ -26,6 +26,12 @@ namespace OpenFindBearings.Domain.Entities
         /// <summary>集体任务达成奖励（v2.6.0 M3）</summary>
         public const string TypeMerchantTaskReward = "merchant_task_reward";
 
+        /// <summary>
+        /// 商家等级升档礼（v2.12.0 等级玩法）：升到 Lv2/3/4 一次性入金库（商家金），
+        /// bizId=gradeup:{merchantId}:{rank} 每商户每档终身一次——复升同档不重发（防上下架刷金库）
+        /// </summary>
+        public const string TypeGradeUpBonus = "grade_up_bonus";
+
         /// <summary>所属商户 ID</summary>
         public Guid MerchantId { get; private set; }
 

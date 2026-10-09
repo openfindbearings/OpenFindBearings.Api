@@ -37,9 +37,12 @@ namespace OpenFindBearings.Infrastructure.Services
         private readonly IMerchantGradeService _merchantGrades;
         // 改动说明（v2.7.0 G2 三件套）：判定用户今日应答次数（寻货应答完成信号源）
         private readonly ISourcingResponseRepository _sourcingResponses;
+        // 改动说明（v2.12.0 等级玩法）：段位档位表——每次入账后按累计获得积分跨档，
+        // 补发终身一次的升档礼（幂等键 levelup:{userId}:{lv}）
+        private readonly IPointLevelRepository _levelRepository;
 
         /// <summary>
-        /// 构造：账户/流水/规则/台账仓储 + 工作单元（独立提交用）+ 上下文（失败清理用）+ 金库服务（trickle 挂钩）+ 等级服务（buff）+ 应答仓储（三件套判定）
+        /// 构造：账户/流水/规则/台账/档位仓储 + 工作单元（独立提交用）+ 上下文（失败清理用）+ 金库服务（trickle 挂钩）+ 等级服务（buff）+ 应答仓储（三件套判定）
         /// </summary>
         public PointsService(
             ILogger<PointsService> logger,
@@ -51,7 +54,8 @@ namespace OpenFindBearings.Infrastructure.Services
             ApplicationDbContext context,
             IMerchantPointsService merchantPoints,
             IMerchantGradeService grades,
-            ISourcingResponseRepository sourcingResponses)
+            ISourcingResponseRepository sourcingResponses,
+            IPointLevelRepository levelRepository)
         {
             _logger = logger;
             _accountRepository = accountRepository;
@@ -63,6 +67,7 @@ namespace OpenFindBearings.Infrastructure.Services
             _merchantPoints = merchantPoints;
             _merchantGrades = grades;
             _sourcingResponses = sourcingResponses;
+            _levelRepository = levelRepository;
         }
 
         /// <inheritdoc/>
@@ -114,7 +119,7 @@ namespace OpenFindBearings.Infrastructure.Services
 
         /// <inheritdoc/>
         public async Task<int> GrantOneTimeAsync(Guid userId, string grantType, string claimKey,
-            string? remark = null, CancellationToken cancellationToken = default)
+            string? remark = null, int? amountOverride = null, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -123,7 +128,7 @@ namespace OpenFindBearings.Infrastructure.Services
                 var claimed = await _claimRepository.TryClaimAsync(claimKey, grantType, userId, cancellationToken);
                 if (!claimed)
                     return 0; // 该号/照历史已领过：注销重注册/删店重入驻循环免疫
-                return await GrantAsync(userId, grantType, claimKey, remark, null, cancellationToken);
+                return await GrantAsync(userId, grantType, claimKey, remark, amountOverride, cancellationToken);
             }
             catch (Exception ex)
             {
@@ -209,6 +214,9 @@ namespace OpenFindBearings.Infrastructure.Services
             var account = await _accountRepository.GetByUserIdAsync(userId, cancellationToken);
             var accountWasNew = account == null;
             account ??= new PointAccount(userId);
+            // 改动说明（v2.12.0 等级玩法）：签到旁路 GrantCore 直连账本，跨档礼需在保存后手动结算；
+            // 先留存入账前累计以便回传 leveledUp（签到响应带升级信号供前端 toast）
+            var totalEarnedBefore = account.TotalEarned;
 
             // 阶梯：按连续天数取档（[2,3,4,5,5] 第 6 天起恒取末档 5）；无阶梯配置回退基础分值
             var streak = account.MarkCheckedIn(today);
@@ -272,7 +280,15 @@ namespace OpenFindBearings.Infrastructure.Services
                 throw;
             }
 
-            return new CheckinResult(amount, streak, false, critMultiplier);
+            // 改动说明（v2.12.0 等级玩法）：签到旁路不走 GrantCoreAsync 后置钩子，此处补结算升档礼；
+            // 结算后按最终累计落档回传 level/leveledUp（升级礼入账可能再推高档，一并反映）
+            await TryGrantLevelUpBonusesAsync(userId, account.TotalEarned, cancellationToken);
+            var levels = await _levelRepository.GetEnabledAsync(cancellationToken);
+            var levelBefore = ResolveLevel(levels, totalEarnedBefore);
+            var levelAfter = ResolveLevel(levels, account.TotalEarned);
+            var leveledUp = (levelAfter?.Level ?? 1) > (levelBefore?.Level ?? 1);
+            return new CheckinResult(amount, streak, false, critMultiplier,
+                levelAfter?.Level ?? 1, levelAfter?.Name ?? "倔强青铜", leveledUp);
         }
 
         /// <summary>
@@ -320,7 +336,45 @@ namespace OpenFindBearings.Infrastructure.Services
             // 白名单（审核/交易类）在金库服务内部校验，登录/签到/注册等被动项自动跳过；
             // 同上下文提交但金库自行吞失败，绝不反噬个人赚分
             await _merchantPoints.TrickleForEarningAsync(userId, grantType, amount, bizId, cancellationToken);
+
+            // 改动说明（v2.12.0 等级玩法）：入账成功后结算段位跨档——凡已达档且未领过的
+            // 升档礼一次性补发（跳档合并到账）；吞失败不反噬本次赚分主流程
+            await TryGrantLevelUpBonusesAsync(userId, account.TotalEarned, cancellationToken);
         }
+
+        /// <summary>
+        /// 段位升档礼结算（v2.12.0 等级玩法）：按累计获得积分取全部已达档（Lv2 起、Bonus>0），
+        /// 未领过的档逐个走一次性发放——bizId/台账键 levelup:{userId}:{lv} 双保险，每用户每档终身一次。
+        /// 升档礼入账本身又触发本方法（经 GrantCoreAsync 后置钩子），已领档被幂等拦截、
+        /// 新跨档顺路补发，档位有限故必然收敛；吞一切异常，绝不影响赚分主链路
+        /// </summary>
+        private async Task TryGrantLevelUpBonusesAsync(Guid userId, int totalEarned, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var levels = await _levelRepository.GetEnabledAsync(cancellationToken);
+                foreach (var level in levels
+                    .Where(l => l.Level >= 2 && l.LevelUpBonus > 0 && l.MinTotalEarned <= totalEarned)
+                    .OrderBy(l => l.Level))
+                {
+                    var claimKey = $"levelup:{userId:N}:{level.Level}";
+                    if (await _transactionRepository.ExistsBizIdAsync(claimKey, cancellationToken))
+                        continue; // 该档升档礼终身已领：跳过（正常态由流水唯一键兜底，此处省一次写冲突）
+                    await GrantOneTimeAsync(userId, PointTransaction.TypeLevelUpBonus, claimKey,
+                        $"段位升档礼：{level.Name}", level.LevelUpBonus, cancellationToken);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "段位升档礼结算失败（不反噬赚分）: User={UserId}", userId);
+            }
+        }
+
+        /// <summary>
+        /// 按累计获得积分落档（v2.12.0）：取最后一个阈值达到的启用档；空表兜底 Lv1 初档语义由调用方处理
+        /// </summary>
+        private static PointLevel? ResolveLevel(List<PointLevel> levels, int totalEarned)
+            => levels.LastOrDefault(l => l.MinTotalEarned <= totalEarned);
 
         /// <summary>
         /// SaveChanges 失败后清理挂账实体：流水行一律 Detached；新建账户 Detached（DB 无行），

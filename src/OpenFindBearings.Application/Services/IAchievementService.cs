@@ -15,7 +15,7 @@ namespace OpenFindBearings.Application.Services
 
     /// <summary>
     /// 成就服务接口（v2.1.0 成就子系统）：事件驱动累加/设值解锁 + 墙/我的/商户查询。
-    /// 成就点（meta）只加不花、读时求和；解锁可发小额可花积分甜头（走 PointsService 幂等）
+    /// 成就点（meta）只加不花、读时求和；v2.12.0 等级玩法起成就纯荣誉——解锁不发任何货币（货币激励归段位升档礼）
     /// </summary>
     public interface IAchievementService
     {

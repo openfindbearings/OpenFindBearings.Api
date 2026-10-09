@@ -18,7 +18,7 @@ namespace OpenFindBearings.Application.Services
         /// <param name="bizId">幂等键（如 daily_login:{userId}:{yyyyMMdd}），重复直接跳过</param>
         /// <param name="remark">明细备注（可空）</param>
         /// <param name="amountOverride">指定分值（可空=用规则表 Amount）。仅平台内部定义的分值
-        /// 场景使用（如成就解锁甜头按成就定义发），仍受规则存在/启用与日上限守卫</param>
+        /// 场景使用（如段位升档礼按档位表发），仍受规则存在/启用与日上限守卫</param>
         /// <returns>实际发放分值（0=被幂等/上限/停用拦截）</returns>
         Task<int> GrantAsync(Guid userId, string grantType, string? bizId = null,
             string? remark = null, int? amountOverride = null, CancellationToken cancellationToken = default);
@@ -33,9 +33,11 @@ namespace OpenFindBearings.Application.Services
         /// <param name="grantType">一次性动作类型</param>
         /// <param name="claimKey">台账幂等键（如 phone:138xxx:register、credit:91XXX:approved）</param>
         /// <param name="remark">明细备注（可空）</param>
+        /// <param name="amountOverride">指定分值（v2.12.0 等级玩法：升档礼按档位表 PointLevel.LevelUpBonus
+        /// 覆盖，可空=用规则表 Amount）</param>
         /// <returns>实际发放分值（0=台账已存在或规则停用/异常）</returns>
         Task<int> GrantOneTimeAsync(Guid userId, string grantType, string claimKey,
-            string? remark = null, CancellationToken cancellationToken = default);
+            string? remark = null, int? amountOverride = null, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// 扣减积分（余额不足抛业务异常；扣分场景：商城兑换/寻货消耗，本期入口就位场景留白）
@@ -85,5 +87,9 @@ namespace OpenFindBearings.Application.Services
     /// <param name="ConsecutiveDays">本次签到后的连续天数</param>
     /// <param name="AlreadyCheckedIn">今日是否已签（true 时 Amount=0）</param>
     /// <param name="CritMultiplier">暴击倍数（v2.8.0 G1：1=无暴击 / 2=双倍 / 5=传说，前端播动画用）</param>
-    public record CheckinResult(int Amount, int ConsecutiveDays, bool AlreadyCheckedIn, int CritMultiplier = 1);
+    /// <param name="Level">签到并结算升档礼后的最终段位号（v2.12.0 等级玩法；未签/停用为 null）</param>
+    /// <param name="LevelName">最终段位名（倔强青铜~最强王者）</param>
+    /// <param name="LeveledUp">本次是否跨入新段位（true 前端播升级 toast）</param>
+    public record CheckinResult(int Amount, int ConsecutiveDays, bool AlreadyCheckedIn, int CritMultiplier = 1,
+        int? Level = null, string? LevelName = null, bool LeveledUp = false);
 }

@@ -10,6 +10,9 @@ namespace OpenFindBearings.Domain.Repositories
         /// <summary>按用户 ID 取账户</summary>
         Task<PointAccount?> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
 
+        /// <summary>批量取账户（v2.12.0 等级玩法铭牌曝光：一次查询落多位用户的段位，防 N+1）</summary>
+        Task<List<PointAccount>> GetByUserIdsAsync(IEnumerable<Guid> userIds, CancellationToken cancellationToken = default);
+
         /// <summary>新增账户</summary>
         Task AddAsync(PointAccount account, CancellationToken cancellationToken = default);
 

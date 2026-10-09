@@ -10,7 +10,10 @@ namespace OpenFindBearings.Infrastructure.Services
     /// <summary>
     /// 商家等级服务实现（v2.5.0 商家经济）：等级重算规则 + 成员最佳商家解析。
     /// 阈值走 SystemConfig（Business.Merchant* 键，Admin 可调实时生效）；
-    /// 重算吞失败（等级是附属计算值），解析路径纯读不写
+    /// 重算吞失败（等级是附属计算值），解析路径纯读不写。
+    /// 改动说明（v2.12.0 等级玩法）：升档发一次性商家金升档礼（每商户每档终身一次，
+    /// 复升不重发防上下架刷金库）；降档先进保级缓冲（Business.MerchantGradeGraceDays 天，
+    /// 0=立即降），期内恢复达标自动清钟——buff 影响成员收益，降档要有挽回窗口
     /// </summary>
     public class MerchantGradeService : IMerchantGradeService
     {
@@ -20,6 +23,8 @@ namespace OpenFindBearings.Infrastructure.Services
         private readonly IMerchantPointAccountRepository _treasury;
         private readonly ISystemConfigRepository _configs;
         private readonly IUnitOfWork _unitOfWork;
+        // 改动说明（v2.12.0 等级玩法）：升档礼入账走金库服务（吞失败纪律在金库侧）
+        private readonly IMerchantPointsService _merchantPoints;
         private readonly ILogger<MerchantGradeService> _logger;
 
         public MerchantGradeService(
@@ -29,6 +34,7 @@ namespace OpenFindBearings.Infrastructure.Services
             IMerchantPointAccountRepository treasury,
             ISystemConfigRepository configs,
             IUnitOfWork unitOfWork,
+            IMerchantPointsService merchantPoints,
             ILogger<MerchantGradeService> logger)
         {
             _merchants = merchants;
@@ -37,6 +43,7 @@ namespace OpenFindBearings.Infrastructure.Services
             _treasury = treasury;
             _configs = configs;
             _unitOfWork = unitOfWork;
+            _merchantPoints = merchantPoints;
             _logger = logger;
         }
 
@@ -63,9 +70,58 @@ namespace OpenFindBearings.Infrastructure.Services
                 var onSaleCount = (await _bearings.GetOnSaleByMerchantAsync(merchantId, cancellationToken)).Count();
 
                 var target = ComputeGrade(merchant.IsVerified, onSaleCount, treasuryEarned, lv3Min, lv4Min, lv4Treasury);
-                if (target == merchant.Grade || target == MerchantGrade.Unknown)
+                if (target == MerchantGrade.Unknown)
+                    return;
+
+                var oldRank = MerchantBuffs.Rank((int)merchant.Grade);
+                var newRank = MerchantBuffs.Rank((int)target);
+
+                if (newRank == oldRank)
+                {
+                    // 保级期内恢复达标：计算档=持有档，撤掉挂起的降档钟（下次再掉档重新起钟）
+                    if (merchant.GradeGraceUntil != null)
+                    {
+                        merchant.SetGradeGraceUntil(null);
+                        await _merchants.UpdateAsync(merchant, cancellationToken);
+                        await _unitOfWork.SaveChangesAsync(cancellationToken);
+                    }
                     return; // 无变化不落库不刷时间戳
-                merchant.UpdateGrade(target);
+                }
+
+                if (newRank > oldRank)
+                {
+                    // 升档：即时生效（UpdateGrade 顺带清保级钟），跨过的每一档各发终身一次升档礼
+                    merchant.UpdateGrade(target);
+                    await _merchants.UpdateAsync(merchant, cancellationToken);
+                    await _unitOfWork.SaveChangesAsync(cancellationToken);
+                    for (var rank = oldRank + 1; rank <= newRank; rank++)
+                    {
+                        var bonus = await GetGradeUpBonusAsync(rank, cancellationToken);
+                        if (bonus > 0)
+                            await _merchantPoints.GrantGradeUpBonusAsync(merchantId, bonus,
+                                $"gradeup:{merchantId:N}:{rank}", $"商家等级升档礼：Lv{rank}", cancellationToken);
+                    }
+                    return;
+                }
+
+                // 降档：先过保级缓冲闸（v2.12.0）——挂钟期内维持原档与成员 buff
+                var graceDays = await GetConfigAsync("Business.MerchantGradeGraceDays", 15, cancellationToken);
+                if (graceDays <= 0)
+                {
+                    merchant.UpdateGrade(target); // 0=关闭缓冲，立即落档
+                }
+                else if (merchant.GradeGraceUntil == null)
+                {
+                    merchant.SetGradeGraceUntil(DateTime.UtcNow.AddDays(graceDays)); // 首次发现不达标：挂钟保级
+                }
+                else if (DateTime.UtcNow >= merchant.GradeGraceUntil)
+                {
+                    merchant.UpdateGrade(target); // 保级到期仍不达标：降档落实
+                }
+                else
+                {
+                    return; // 保级期内：维持原档不动库
+                }
                 await _merchants.UpdateAsync(merchant, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
             }
@@ -74,6 +130,18 @@ namespace OpenFindBearings.Infrastructure.Services
                 _logger.LogWarning(ex, "商家等级重算失败: Merchant={MerchantId}", merchantId);
             }
         }
+
+        /// <summary>
+        /// 商家等级升档礼金额（v2.12.0 等级玩法）：按等级序数读 Business.MerchantGradeBonusLv2/3/4
+        /// 配置（Admin 可调），缺失/非法回退默认 50/150/300；Lv1 无档礼返回 0
+        /// </summary>
+        private async Task<int> GetGradeUpBonusAsync(int rank, CancellationToken ct) => rank switch
+        {
+            2 => await GetConfigAsync("Business.MerchantGradeBonusLv2", 50, ct),
+            3 => await GetConfigAsync("Business.MerchantGradeBonusLv3", 150, ct),
+            4 => await GetConfigAsync("Business.MerchantGradeBonusLv4", 300, ct),
+            _ => 0
+        };
 
         /// <inheritdoc/>
         public async Task<MemberMerchantInfo?> GetBestForUserAsync(Guid userId, CancellationToken cancellationToken = default)

@@ -51,6 +51,11 @@ namespace OpenFindBearings.Application.Commands.MerchantBearings.TakeOffShelf
             merchantBearing.TakeOffShelf();
             await _merchantBearingRepository.UpdateAsync(merchantBearing, cancellationToken);
 
+            // 改动说明（v2.12.0 等级玩法排查时发现）：注入 _merchantGrades 却从未调用——
+            // 下架后等级一直不重算，拖到下次上架/结算才纠正，保级钟也因此永不挂起。
+            // 补上与上架处理器对称的重算调用
+            await _merchantGrades.RecomputeAsync(merchantBearing.MerchantId, cancellationToken);
+
             _logger.LogInformation("产品下架成功: MerchantBearingId={MerchantBearingId}", merchantBearing.Id);
         }
     }

@@ -62,7 +62,7 @@ namespace OpenFindBearings.Application.EventHandlers
                 PointTransaction.TypeMerchantApproved,
                 claimKey,
                 $"商户「{notification.MerchantName}」入驻通过",
-                cancellationToken);
+                cancellationToken: cancellationToken);
 
             _logger.LogInformation("入驻通过积分: MerchantId={MerchantId}, User={UserId}, Granted={Granted}",
                 notification.MerchantId, applicant.UserId, granted);

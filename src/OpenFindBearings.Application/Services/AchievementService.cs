@@ -5,20 +5,19 @@ using OpenFindBearings.Domain.Repositories;
 namespace OpenFindBearings.Application.Services
 {
     /// <summary>
-    /// 成就服务实现（v2.1.0 成就子系统）：事件驱动累加/设值→跨阈值点亮→发解锁甜头。
-    /// 成就点（meta）不入库累加，读时按已解锁定义的 MetaPoints 求和（永不通胀、不可花）；
-    /// 可花甜头走 PointsService（bizId=ach:{key}:{owner} 幂等，重复解锁不重发）
+    /// 成就服务实现（v2.1.0 成就子系统）：事件驱动累加/设值→跨阈值点亮。
+    /// 成就点（meta）不入库累加，读时按已解锁定义的 MetaPoints 求和（永不通胀、不可花）。
+    /// 改动说明（v2.12.0 等级玩法）：成就纯荣誉化——解锁不再发放可花积分甜头，
+    /// 货币激励统一收拢到段位升档礼一条线（主流平台成就=荣誉不产币，防"成就刷币推等级"循环农场）
     /// </summary>
     public class AchievementService : IAchievementService
     {
         private readonly IAchievementRepository _repo;
-        private readonly IPointsService _pointsService;
         private readonly ILogger<AchievementService> _logger;
 
-        public AchievementService(IAchievementRepository repo, IPointsService pointsService, ILogger<AchievementService> logger)
+        public AchievementService(IAchievementRepository repo, ILogger<AchievementService> logger)
         {
             _repo = repo;
-            _pointsService = pointsService;
             _logger = logger;
         }
 
@@ -61,20 +60,13 @@ namespace OpenFindBearings.Application.Services
                 _repo.UpdateUnlock(unlock);
                 unlockedKeys.Add(def.Key);
                 _logger.LogInformation("限量成就点亮: Scope={Scope}, Owner={OwnerId}, Key={Key}, Ordinal={Ordinal}", scope, ownerId, def.Key, ordinal);
-
-                // 个人轨解锁甜头：小额可花积分（限量徽章不常用，但保留统一规则）
-                if (def.RewardPoints > 0)
-                {
-                    await _pointsService.GrantAsync(ownerId, PointTransaction.TypeAchievementUnlock,
-                        $"ach:{def.Key}:{ownerId:N}", $"成就解锁：{def.Name}", def.RewardPoints, cancellationToken);
-                }
             }
             return unlockedKeys;
         }
 
         /// <summary>
-        /// 对匹配 metricKey 的启用成就逐个累加/设值；跨阈值者点亮并发解锁甜头（仅个人轨发可花积分，
-        /// 商户轨 M1-a 仅记 meta，金库结算留 M1-c）。返回新点亮键供调用方 toast
+        /// 对匹配 metricKey 的启用成就逐个累加/设值；跨阈值者点亮（v2.12.0 起纯荣誉——只记点亮与
+        /// meta 成就点，不发任何货币）。返回新点亮键供调用方 toast
         /// </summary>
         private async Task<IReadOnlyList<string>> ApplyAsync(AchievementScope scope, Guid ownerId, string metricKey,
             Func<AchievementUnlock, bool> mutate, CancellationToken cancellationToken)
@@ -101,13 +93,6 @@ namespace OpenFindBearings.Application.Services
                 {
                     unlockedKeys.Add(def.Key);
                     _logger.LogInformation("成就点亮: Scope={Scope}, Owner={OwnerId}, Key={Key}", scope, ownerId, def.Key);
-
-                    // 个人轨解锁甜头：小额可花积分，幂等键防重发；商户轨不发（金库 M1-c）
-                    if (scope == AchievementScope.Personal && def.RewardPoints > 0)
-                    {
-                        await _pointsService.GrantAsync(ownerId, PointTransaction.TypeAchievementUnlock,
-                            $"ach:{def.Key}:{ownerId:N}", $"成就解锁：{def.Name}", def.RewardPoints, cancellationToken);
-                    }
                 }
             }
 
