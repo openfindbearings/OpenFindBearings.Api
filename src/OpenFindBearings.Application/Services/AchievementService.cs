@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using OpenFindBearings.Application.Shared.Interfaces;
 using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Repositories;
 
@@ -8,16 +9,23 @@ namespace OpenFindBearings.Application.Services
     /// 成就服务实现（v2.1.0 成就子系统）：事件驱动累加/设值→跨阈值点亮。
     /// 成就点（meta）不入库累加，读时按已解锁定义的 MetaPoints 求和（永不通胀、不可花）。
     /// 改动说明（v2.12.0 等级玩法）：成就纯荣誉化——解锁不再发放可花积分甜头，
-    /// 货币激励统一收拢到段位升档礼一条线（主流平台成就=荣誉不产币，防"成就刷币推等级"循环农场）
+    /// 货币激励统一收拢到段位升档礼一条线（主流平台成就=荣誉不产币，防"成就刷币推等级"循环农场）。
+    /// 改动说明（v2.13.1 提交缺失修复）：本服务此前只跟踪不保存——签到端点/注册中间件在
+    /// 积分提交之后才调成就、MediatR handler 在 UnitOfWorkBehavior 提交之后才被 Publish，
+    /// 导致成就进度自 v2.1.0 起几乎从未落库（真机现象：累计签到 30+ 仍显示 0/30）。
+    /// 修复=服务自持 IUnitOfWork 并在每次变更后 SaveChanges，所有调用方一次修好；
+    /// 调用方旁路 try/catch 语义不变（提交失败同样吞掉不反噬主流程）
     /// </summary>
     public class AchievementService : IAchievementService
     {
         private readonly IAchievementRepository _repo;
+        private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<AchievementService> _logger;
 
-        public AchievementService(IAchievementRepository repo, ILogger<AchievementService> logger)
+        public AchievementService(IAchievementRepository repo, IUnitOfWork unitOfWork, ILogger<AchievementService> logger)
         {
             _repo = repo;
+            _unitOfWork = unitOfWork;
             _logger = logger;
         }
 
@@ -61,6 +69,10 @@ namespace OpenFindBearings.Application.Services
                 unlockedKeys.Add(def.Key);
                 _logger.LogInformation("限量成就点亮: Scope={Scope}, Owner={OwnerId}, Key={Key}, Ordinal={Ordinal}", scope, ownerId, def.Key, ordinal);
             }
+
+            // 改动说明（v2.13.1）：服务自提交，落库限量徽章点亮（调用方为注册中间件，
+            // 该链路无后续提交点，此前变更随 DbContext 释放丢失）
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
             return unlockedKeys;
         }
 
@@ -96,6 +108,10 @@ namespace OpenFindBearings.Application.Services
                 }
             }
 
+            // 改动说明（v2.13.1）：服务自提交——签到端点/注册与登录中间件在积分提交之后才调成就、
+            // MediatR handler 在 UnitOfWorkBehavior 提交之后才被 Publish，这些路径的成就变更此前
+            // 无人保存（自 v2.1.0 起进度几乎从未落库）。此处统一提交，调用方无需各自 SaveChanges
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
             return unlockedKeys;
         }
 
