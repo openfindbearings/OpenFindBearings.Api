@@ -7,7 +7,7 @@ namespace OpenFindBearings.Application.Services
     /// </summary>
     public static class MerchantBuffs
     {
-        /// <summary>等级数值 → 等级序数（Standard=1 入驻 / Verified=2 认证 / Premium=3 活跃供给 / Gold=4 金牌）。
+        /// <summary>等级数值 → 等级序数（Standard=1 入驻 / Verified=2 认证 / Premium=3 口碑 / Gold=4 金牌）。
         /// 枚举数值非单调（历史映射），一切比较必须走本函数</summary>
         public static int Rank(int grade) => grade switch
         {
