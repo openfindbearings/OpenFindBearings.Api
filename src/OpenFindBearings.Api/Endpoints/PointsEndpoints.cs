@@ -69,6 +69,55 @@ namespace OpenFindBearings.Api.Endpoints
             .WithDescription("余额、累计、今日签到状态与连续签到天数");
 
             /// <summary>
+            /// 段位阶梯表（v2.13.0 段位详情页）：全部启用档位 + 本人累计落档与已领升档礼标记。
+            /// 已领口径=流水 bizId levelup:{userId}:{lv} 存在（与发放侧同键判定，天然终身一次一致）
+            /// </summary>
+            group.MapGet("/levels", async (
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IPointLevelRepository levelRepository,
+                [FromServices] IPointAccountRepository accountRepository,
+                [FromServices] IPointTransactionRepository transactionRepository,
+                HttpContext httpContext,
+                CancellationToken cancellationToken) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                var userId = currentUser.UserId.Value;
+                var levels = await levelRepository.GetEnabledAsync(cancellationToken);
+                var account = await accountRepository.GetByUserIdAsync(userId, cancellationToken);
+                var totalEarned = account?.TotalEarned ?? 0;
+                var current = levels.LastOrDefault(l => l.MinTotalEarned <= totalEarned);
+
+                // 逐档查已领（≤10 次唯一索引点查，档位表规模有界）
+                var claimed = new List<int>();
+                foreach (var l in levels.Where(l => l.Level >= 2 && l.LevelUpBonus > 0))
+                {
+                    if (await transactionRepository.ExistsBizIdAsync($"levelup:{userId:N}:{l.Level}", cancellationToken))
+                        claimed.Add(l.Level);
+                }
+
+                return ApiResponseHelper.Ok(new
+                {
+                    totalEarned,
+                    currentLevel = current?.Level ?? 1,
+                    currentLevelName = current?.Name ?? "倔强青铜",
+                    levels = levels.Select(l => new
+                    {
+                        level = l.Level,
+                        name = l.Name,
+                        minTotalEarned = l.MinTotalEarned,
+                        levelUpBonus = l.LevelUpBonus,
+                        reached = l.MinTotalEarned <= totalEarned,
+                        bonusClaimed = claimed.Contains(l.Level)
+                    })
+                }, httpContext: httpContext);
+            })
+            .WithName("GetMyPointLevels")
+            .WithSummary("段位阶梯表")
+            .WithDescription("段位详情页数据源：全档位+本人落档与升档礼已领标记");
+
+            /// <summary>
             /// 每日签到：阶梯分值实时计算，同日重复返回已签状态（幂等）
             /// </summary>
             group.MapPost("/checkin", async (
@@ -303,6 +352,79 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("GetMerchantBuff")
             .WithSummary("商家福利卡")
             .WithDescription("成员被动加成数据源：等级/福利清单/升级提示（散人为空；merchantId=本店视角需在职成员）");
+
+            /// <summary>
+            /// 商家等级详情（v2.13.0 等级玩法：商家等级页数据源）：当前等级+双指标达标进度
+            /// （在售数/金库累计 vs 下一档阈值）+四档阶梯条件与升档礼+已领档+保级钟。
+            /// 校验请求者为该商家在职成员（与福利卡本店视角同口径，防窥探他店经营数据）
+            /// </summary>
+            group.MapGet("/merchant-grade", async (
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMerchantMemberRepository memberRepository,
+                [FromServices] IMerchantRepository merchantRepository,
+                [FromServices] IMerchantBearingRepository bearingRepository,
+                [FromServices] IMerchantPointAccountRepository treasuryRepository,
+                [FromServices] IMerchantPointTransactionRepository treasuryTxRepository,
+                [FromServices] ISystemConfigRepository configs,
+                [FromQuery] Guid merchantId,
+                HttpContext httpContext,
+                CancellationToken cancellationToken) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                var membership = await memberRepository.GetActiveByUserAndMerchantAsync(
+                    currentUser.UserId.Value, merchantId, cancellationToken);
+                if (membership == null)
+                    return ApiResponseHelper.Forbidden("仅该商家在职成员可查看其等级详情", httpContext);
+                var merchant = await merchantRepository.GetByIdAsync(merchantId, cancellationToken);
+                if (merchant == null)
+                    return ApiResponseHelper.NotFound("商家不存在", httpContext);
+
+                // 规则输入与 MerchantGradeService 同源：实时在售明细数（非 ProductCount 冗余列）+ 金库累计
+                var onSaleCount = (await bearingRepository.GetOnSaleByMerchantAsync(merchantId, cancellationToken)).Count();
+                var treasuryAccount = await treasuryRepository.GetByMerchantIdAsync(merchantId, cancellationToken);
+                var treasuryEarned = treasuryAccount?.TotalEarned ?? 0;
+                var lv3Min = await ReadIntConfigAsync(configs, "Business.MerchantPremiumOnSaleMin", 5);
+                var lv4Min = await ReadIntConfigAsync(configs, "Business.MerchantGoldOnSaleMin", 10);
+                var lv4TreasuryMin = await ReadIntConfigAsync(configs, "Business.MerchantGoldTreasuryMin", 500);
+                var bonusLv2 = await ReadIntConfigAsync(configs, "Business.MerchantGradeBonusLv2", 50);
+                var bonusLv3 = await ReadIntConfigAsync(configs, "Business.MerchantGradeBonusLv3", 150);
+                var bonusLv4 = await ReadIntConfigAsync(configs, "Business.MerchantGradeBonusLv4", 300);
+
+                // 已领升档礼档：流水 bizId gradeup:{merchantId}:{rank} 存在（终身一次，复升不重发）
+                var claimedRanks = new List<int>();
+                foreach (var rank in new[] { 2, 3, 4 })
+                {
+                    if (await treasuryTxRepository.ExistsBizIdAsync($"gradeup:{merchantId:N}:{rank}", cancellationToken))
+                        claimedRanks.Add(rank);
+                }
+
+                var rank2 = OpenFindBearings.Application.Services.MerchantBuffs.Rank((int)merchant.Grade);
+                return ApiResponseHelper.Ok(new
+                {
+                    merchantId = merchant.Id,
+                    merchantName = merchant.Name,
+                    grade = (int)merchant.Grade,
+                    rank = rank2,
+                    gradeDisplay = merchant.GetGradeDisplayName(),
+                    isVerified = merchant.IsVerified,
+                    onSaleCount,
+                    treasuryEarned,
+                    lv3OnSaleMin = lv3Min,
+                    lv4OnSaleMin = lv4Min,
+                    lv4TreasuryMin = lv4TreasuryMin,
+                    bonusLv2,
+                    bonusLv3,
+                    bonusLv4,
+                    claimedRanks,
+                    graceUntil = merchant.GradeGraceUntil,
+                    labels = OpenFindBearings.Application.Services.MerchantBuffs.BuffLabels((int)merchant.Grade)
+                }, httpContext: httpContext);
+            })
+            .WithName("GetMerchantGrade")
+            .WithSummary("商家等级详情")
+            .WithDescription("商家等级页数据源：双指标进度/四档阶梯/升档礼已领/保级钟（在职成员可见）");
 
             /// <summary>
             /// 商家集体任务板（v2.6.0 M3）：启用任务 + 本周期进度 + 完成态。
@@ -637,6 +759,16 @@ namespace OpenFindBearings.Api.Endpoints
             .WithSummary("更新商家集体任务")
             .WithDescription("调整目标/周期/奖励/启停，实时生效")
             .RequirePermission("points.manage");
+        }
+
+        /// <summary>
+        /// 读 Business.* 整型配置（缺失/非法/负数回退默认）——与 MerchantGradeService/MerchantPointsService
+        /// 同口径；v2.13.0 商家等级详情端点透出阈值与升档礼金额用
+        /// </summary>
+        private static async Task<int> ReadIntConfigAsync(ISystemConfigRepository configs, string key, int fallback)
+        {
+            var parsed = await configs.GetValueAsync<int?>(key, null);
+            return parsed.HasValue && parsed.Value >= 0 ? parsed.Value : fallback;
         }
 
         /// <summary>
