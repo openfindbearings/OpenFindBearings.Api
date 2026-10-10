@@ -166,7 +166,7 @@ namespace OpenFindBearings.Api.Endpoints
                     return ApiResponseHelper.Forbidden("仅商户管理员可查看金库", httpContext);
 
                 var account = await treasury.GetAccountAsync(merchantId.Value);
-                // v2.5.0 商家经济：金库页头部展示商家等级（入驻/认证/活跃供给/金牌）
+                // v2.5.0 商家经济：金库页头部展示商家等级（入驻/认证/口碑/金牌，v2.13.0 Lv3 改名口碑）
                 var merchant = await merchants.GetByIdAsync(merchantId.Value);
                 return ApiResponseHelper.Ok(new
                 {

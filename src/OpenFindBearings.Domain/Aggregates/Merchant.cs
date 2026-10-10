@@ -698,7 +698,8 @@ namespace OpenFindBearings.Domain.Aggregates
         {
             var parts = new List<string> { Name };
             if (IsVerified) parts.Add("[已认证]");
-            parts.Add($"{GetGradeDisplayName()}商家");
+            // 改动说明（v2.13.0）：展示名已自带"商家"后缀，原拼接产生"入驻商家商家"，去掉多余后缀
+            parts.Add(GetGradeDisplayName());
             parts.Add($"{ProductCount}个产品");
             return string.Join(" | ", parts);
         }
@@ -726,9 +727,10 @@ namespace OpenFindBearings.Domain.Aggregates
         public string GetGradeDisplayName() => Grade switch
         {
             // v2.5.0 商家经济：等级=商家等级（buff 唯一输入），文案与 Lv1-4 定案一致
+            // v2.13.0 改名：Lv3 "活跃供给"→"口碑"（四档统一"XX商家"格式，展示名自带"商家"后缀）
             MerchantGrade.Standard => "入驻商家",
             MerchantGrade.Verified => "认证商家",
-            MerchantGrade.Premium => "活跃供给",
+            MerchantGrade.Premium => "口碑商家",
             MerchantGrade.Gold => "金牌商家",
             _ => "未定级"
         };
