@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using OpenFindBearings.Domain.Aggregates;
 using OpenFindBearings.Domain.Entities;
+using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
 using OpenFindBearings.Domain.Services;
 using OpenFindBearings.Infrastructure.Persistence.Data;
@@ -42,10 +43,10 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
             // 改动说明（v2.12.0 列表删除）：feed/Admin 列表排除软删单（软删仅发布方视角隐藏，数据保留）
             var query = _context.Set<SourcingDemand>().Where(d => !d.IsDeleted).AsQueryable();
 
-            if (status.HasValue)
-                query = query.Where(d => d.Status == status.Value);
+if (status.HasValue)
+                query = query.Where(d => d.Status == (SourcingDemandStatus)status.Value);
             if (onlyOpen)
-                query = query.Where(d => d.Status == SourcingDemand.StatusPublished && d.ExpiryAt > DateTime.UtcNow);
+                query = query.Where(d => d.Status == SourcingDemandStatus.Published && d.ExpiryAt > DateTime.UtcNow);
             if (!string.IsNullOrWhiteSpace(keyword))
             {
                 // Npgsql 可翻译要求 ToLower（ToLowerInvariant 运行时不可译，既有约束）
@@ -94,7 +95,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                 .Where(d => d.PublisherUserId == userId && d.PublisherMerchantId == null && !d.IsDeleted)
                 // 改动说明（v2.12.0 列表体验）：进行中单恒排前、其余按时间倒序——
                 // 终态单不再沉没可用操作，与大厅"进行中即广场"口径一致
-                .OrderBy(d => d.Status == SourcingDemand.StatusPublished ? 0 : 1)
+                .OrderBy(d => d.Status == SourcingDemandStatus.Published ? 0 : 1)
                 .ThenByDescending(d => d.CreatedAt)
                 .Take(100)
                 .ToListAsync(cancellationToken);
@@ -104,7 +105,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
             => await _context.Set<SourcingDemand>()
                 .Where(d => d.PublisherMerchantId == merchantId && !d.IsDeleted)
                 // 改动说明（v2.12.0）：商户"寻货发布"列表同样进行中恒排前（与个人口径一致）
-                .OrderBy(d => d.Status == SourcingDemand.StatusPublished ? 0 : 1)
+                .OrderBy(d => d.Status == SourcingDemandStatus.Published ? 0 : 1)
                 .ThenByDescending(d => d.CreatedAt)
                 .Take(100)
                 .ToListAsync(cancellationToken);
@@ -119,9 +120,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         {
             // 惰性过期统一收口：进行中且已过 ExpiryAt → Expired（feed 顶部与详情读时各调一次，成本一条 UPDATE）
             return await _context.Set<SourcingDemand>()
-                .Where(d => d.Status == SourcingDemand.StatusPublished && d.ExpiryAt <= DateTime.UtcNow)
+.Where(d => d.Status == SourcingDemandStatus.Published && d.ExpiryAt <= DateTime.UtcNow)
                 .ExecuteUpdateAsync(s => s
-                    .SetProperty(d => d.Status, SourcingDemand.StatusExpired)
+                    .SetProperty(d => d.Status, SourcingDemandStatus.Expired)
                     .SetProperty(d => d.ClosedAt, DateTime.UtcNow), cancellationToken);
         }
     }
@@ -177,7 +178,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
             => await _context.Set<SourcingResponse>()
                 .Where(r => r.MerchantId == merchantId)
                 // 改动说明（v2.12.0）：待处理应答恒排前（还活着的商机优先），已选定/未选中按时间倒序
-                .OrderBy(r => r.Status == SourcingResponse.StatusPending ? 0 : 1)
+                .OrderBy(r => r.Status == SourcingResponseStatus.Pending ? 0 : 1)
                 .ThenByDescending(r => r.CreatedAt)
                 .Take(100)
                 .ToListAsync(cancellationToken);
@@ -196,7 +197,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         /// <inheritdoc/>
         public async Task<List<SourcingResponse>> GetPendingByDemandAsync(Guid demandId, CancellationToken cancellationToken = default)
             => await _context.Set<SourcingResponse>()
-                .Where(r => r.DemandId == demandId && r.Status == SourcingResponse.StatusPending)
+                .Where(r => r.DemandId == demandId && r.Status == SourcingResponseStatus.Pending)
                 .ToListAsync(cancellationToken);
 
         /// <inheritdoc/>

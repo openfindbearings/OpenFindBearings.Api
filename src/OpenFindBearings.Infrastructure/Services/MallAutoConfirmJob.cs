@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.Services;
+using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Infrastructure.Services
@@ -69,7 +70,7 @@ namespace OpenFindBearings.Infrastructure.Services
                 try
                 {
                     var (fresh, item) = await orders.GetWithItemAsync(order.Id, ct);
-                    if (fresh == null || fresh.ShipStatus != 2 || item?.OwnerMerchantId == null)
+                    if (fresh == null || fresh.ShipStatus != MallOrderShipStatus.Shipped || item?.OwnerMerchantId == null)
                         continue; // 期间已被处理
 
                     fresh.MarkReceived(auto: true);

@@ -76,9 +76,9 @@ namespace OpenFindBearings.Domain.Repositories
         Task<int> GetPendingApprovalCountAsync(CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// 分页查询商家的轴承关联（数据库级过滤与分页）
+        /// 分页查询商家的轴承关联（数据库级过滤与分页；reviewStatus 精确过滤审核位，v2.15.0）
         /// </summary>
-        Task<PagedResult<MerchantBearing>> GetMerchantBearingsPagedAsync(Guid merchantId, bool? onlyOnSale, bool? pendingOnly, DataSourceType? dataSource, int page, int pageSize, CancellationToken cancellationToken = default);
+        Task<PagedResult<MerchantBearing>> GetMerchantBearingsPagedAsync(Guid merchantId, bool? onlyOnSale, bool? pendingOnly, ListingReviewStatus? reviewStatus, DataSourceType? dataSource, int page, int pageSize, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// 删除商户全部商品关联（v2.16.0 认领/提名接管：互联网来源在售数据不随接管继承）

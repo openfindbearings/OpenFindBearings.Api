@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.DTOs;
 using OpenFindBearings.Application.Extensions;
+using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Queries.MerchantBearings.GetMerchantBearingsByBearing
@@ -31,8 +32,9 @@ namespace OpenFindBearings.Application.Queries.MerchantBearings.GetMerchantBeari
 
             var merchantBearings = await _merchantBearingRepository.GetByBearingAsync(request.BearingId, cancellationToken);
 
-            // 只返回在售的商品
-            merchantBearings = merchantBearings.Where(mb => mb.IsOnSale);
+            // v2.15.0 状态统一：只返回审核通过在售/补货中的商品
+            merchantBearings = merchantBearings.Where(mb => mb.ReviewStatus == ListingReviewStatus.Approved
+                && (mb.SaleState == SaleState.OnSale || mb.SaleState == SaleState.Restocking));
 
             var totalCount = merchantBearings.Count();
             var items = merchantBearings

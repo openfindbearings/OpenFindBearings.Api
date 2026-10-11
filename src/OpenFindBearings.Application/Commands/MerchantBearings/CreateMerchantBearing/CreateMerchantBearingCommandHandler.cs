@@ -92,8 +92,8 @@ namespace OpenFindBearings.Application.Commands.MerchantBearings.CreateMerchantB
             // 商户自管数据标记为 Manual
             merchantBearing.SetDataSourceType(DataSourceType.Manual);
 
-            // 新创建的关联需要提交审核
-            merchantBearing.SubmitForApproval();
+            // v2.15.0 状态统一：商家新建商品落"仓库中"（仅商家后台可见），上架时才提交审核
+            merchantBearing.MoveToWarehouse();
 
             await _merchantBearingRepository.AddAsync(merchantBearing, cancellationToken);
 

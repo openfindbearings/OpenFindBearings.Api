@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.DTOs;
 using OpenFindBearings.Application.Extensions;
+using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Queries.Bearings.GetBearingQuery
@@ -42,8 +43,10 @@ namespace OpenFindBearings.Application.Queries.Bearings.GetBearingQuery
 
             // 获取在售商家列表
             var merchantBearings = await _merchantBearingRepository.GetByBearingAsync(bearing.Id, cancellationToken);
+            // v2.15.0 状态统一：在售商家 = 审核通过 + 出售中/补货中
             var onSaleMerchants = merchantBearings
-                .Where(mb => mb.IsOnSale)
+                .Where(mb => mb.ReviewStatus == ListingReviewStatus.Approved
+                    && (mb.SaleState == SaleState.OnSale || mb.SaleState == SaleState.Restocking))
                 .Select(mb => new MerchantBearingDto
                 {
                     Id = mb.Id,
@@ -58,13 +61,14 @@ namespace OpenFindBearings.Application.Queries.Bearings.GetBearingQuery
                     StockDescription = mb.StockDescription,
                     MinOrderDescription = mb.MinOrderDescription,
                     Remarks = mb.Remarks,
-                    IsOnSale = mb.IsOnSale,
-                    IsFeatured = mb.IsFeatured,
+                    SaleState = mb.SaleState,
+                    ReviewStatus = mb.ReviewStatus,
                     ViewCount = mb.ViewCount,
                     CreatedAt = mb.CreatedAt,
                     UpdatedAt = mb.UpdatedAt
                 })
-                .OrderByDescending(mb => mb.IsFeatured)
+                // 出售中优先，再按价格（原 IsFeatured 排序已废弃）
+                .OrderByDescending(mb => mb.SaleState == SaleState.OnSale)
                 .ThenBy(mb => mb.NumericPrice)
                 .ToList();
 

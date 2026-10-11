@@ -1250,24 +1250,6 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
-                    b.Property<bool>("IsFeatured")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false);
-
-                    b.Property<bool>("IsOnSale")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(true);
-
-                    b.Property<bool>("IsPendingApproval")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false);
-
-                    b.Property<bool>("IsRestocking")
-                        .HasColumnType("boolean");
-
                     b.Property<Guid>("MerchantId")
                         .HasColumnType("uuid");
 
@@ -1295,6 +1277,12 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     b.Property<string>("RestockEta")
                         .HasColumnType("text");
 
+                    b.Property<int>("ReviewStatus")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("SaleState")
+                        .HasColumnType("integer");
+
                     b.Property<string>("StockDescription")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
@@ -1311,11 +1299,11 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
 
                     b.HasIndex("BearingId");
 
-                    b.HasIndex("IsOnSale");
-
-                    b.HasIndex("IsPendingApproval");
-
                     b.HasIndex("MerchantId");
+
+                    b.HasIndex("ReviewStatus");
+
+                    b.HasIndex("SaleState");
 
                     b.HasIndex("MerchantId", "BearingId")
                         .IsUnique();

@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.DTOs;
 using OpenFindBearings.Domain.Entities;
+using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
 using OpenFindBearings.Domain.Specifications;
 
@@ -259,9 +260,19 @@ namespace OpenFindBearings.Application.Queries.Admin.GetAuditLogs
                 bearingName = bearing?.PartNumber ?? merchantBearing.BearingId.ToString();
             }
 
-            string status = merchantBearing.IsOnSale ? "在售" : "已下架";
-            if (merchantBearing.IsPendingApproval)
-                status = "待审核";
+            // v2.15.0 状态统一：由审核/销售两枚举派生文案
+            string status = merchantBearing.ReviewStatus switch
+            {
+                ListingReviewStatus.Pending => "待审核",
+                ListingReviewStatus.Rejected => "已驳回",
+                ListingReviewStatus.None => "仓库中",
+                _ => merchantBearing.SaleState switch
+                {
+                    SaleState.OnSale => "在售",
+                    SaleState.Restocking => "补货中",
+                    _ => "已下架"
+                }
+            };
 
             return $"商家产品 - {merchantName} 销售 {bearingName} [{status}]";
         }

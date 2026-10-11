@@ -625,7 +625,8 @@ namespace OpenFindBearings.Api.Endpoints
                 [FromQuery] int page = 1,
                 [FromQuery] int pageSize = 20,
                 [FromQuery] bool? onlyOnSale = null,
-                [FromQuery] bool? pendingOnly = null) =>
+                [FromQuery] bool? pendingOnly = null,
+                [FromQuery] ListingReviewStatus? reviewStatus = null) =>
             {
                 if (!currentUser.UserId.HasValue)
                     return ApiResponseHelper.Unauthorized(httpContext: httpContext);
@@ -640,6 +641,7 @@ namespace OpenFindBearings.Api.Endpoints
                     MerchantId = merchant.Id,
                     OnlyOnSale = onlyOnSale,
                     PendingOnly = pendingOnly,
+                    ReviewStatus = reviewStatus,
                     Page = page,
                     PageSize = pageSize,
                     IsAuthenticated = true
@@ -682,7 +684,8 @@ namespace OpenFindBearings.Api.Endpoints
                 };
 
                 var id = await mediator.Send(createCommand);
-                return ApiResponseHelper.Ok(new { id, message = "添加成功，等待审核" }, httpContext: httpContext);
+                // v2.15.0 状态统一：新建落"仓库中"，上架时才提交审核
+                return ApiResponseHelper.Ok(new { id, message = "添加成功，已放入仓库中" }, httpContext: httpContext);
             })
             .WithName("CreateMerchantBearing")
             .WithSummary("添加轴承到店铺")
@@ -704,7 +707,8 @@ namespace OpenFindBearings.Api.Endpoints
                 var updateCommand = command with { Id = id, UserId = currentUser.UserId.Value };
                 await mediator.Send(updateCommand);
 
-                return ApiResponseHelper.Ok("更新成功，等待审核", httpContext);
+                // v2.15.0 状态统一：编辑已通过商品会重审（变审核中），其余保持原态
+                return ApiResponseHelper.Ok("更新成功", httpContext);
             })
             .WithName("UpdateMerchantBearing")
             .WithSummary("更新店铺轴承")

@@ -33,6 +33,9 @@ using OpenFindBearings.Application.Commands.Merchants.DetachMerchant;
 using OpenFindBearings.Api.Services;
 using OpenFindBearings.Application.Commands.Merchants.RejectMerchant;
 using OpenFindBearings.Application.Commands.Merchants.VerifyMerchant;
+using OpenFindBearings.Application.Commands.Admin.ApproveMerchantBearing;
+using OpenFindBearings.Application.Commands.Admin.RejectMerchantBearing;
+using OpenFindBearings.Application.Queries.Admin.GetPendingMerchantBearings;
 using OpenFindBearings.Application.Commands.Merchants.RestoreMerchant;
 using OpenFindBearings.Application.Commands.Roles.AssignPermissionsToRole;
 using OpenFindBearings.Application.Commands.Roles.AssignRoleToUser;
@@ -138,6 +141,76 @@ namespace OpenFindBearings.Api.Endpoints
             .WithSummary("获取审计日志")
             .WithDescription("查看操作日志")
             .RequirePermission("audit.view");
+
+            // ============ 4.1b 商品审核（v2.15.0：商家上架商品的人工审核出口） ============
+
+            /// <summary>
+            /// 待审核商家商品列表
+            /// </summary>
+            group.MapGet("/merchant-bearings/pending", async (
+                [FromServices] IMediator mediator,
+                HttpContext httpContext,
+                [FromQuery] int page = 1,
+                [FromQuery] int pageSize = 20) =>
+            {
+                var query = new GetPendingMerchantBearingsQuery { Page = page, PageSize = pageSize };
+                var result = await mediator.Send(query);
+                return ApiResponseHelper.Paged(
+                    result.Items.ToList(),
+                    result.TotalCount,
+                    result.Page,
+                    result.PageSize,
+                    httpContext
+                );
+            })
+            .WithName("GetPendingMerchantBearings")
+            .WithSummary("待审核商家商品")
+            .WithDescription("获取待平台审核的商家上架商品")
+            .RequirePermission("merchant.verify");
+
+            /// <summary>
+            /// 审核通过商家商品（通过即在售，公域可见）
+            /// </summary>
+            group.MapPost("/merchant-bearings/{id:guid}/approve", async (
+                Guid id,
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                await mediator.Send(new ApproveMerchantBearingCommand
+                {
+                    MerchantBearingId = id,
+                    ReviewedBy = currentUser.UserId ?? Guid.Empty
+                });
+                return ApiResponseHelper.Ok("审核通过", httpContext);
+            })
+            .WithName("ApproveMerchantBearing")
+            .WithSummary("审核通过商家商品")
+            .WithDescription("通过商家商品审核（通过即转在售并对公域可见）")
+            .RequirePermission("merchant.verify");
+
+            /// <summary>
+            /// 驳回商家商品（附理由，商家可见并可修改重提）
+            /// </summary>
+            group.MapPost("/merchant-bearings/{id:guid}/reject", async (
+                Guid id,
+                MerchantBearingRejectRequest body,
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                await mediator.Send(new RejectMerchantBearingCommand
+                {
+                    MerchantBearingId = id,
+                    ReviewedBy = currentUser.UserId ?? Guid.Empty,
+                    Reason = body.Reason ?? string.Empty
+                });
+                return ApiResponseHelper.Ok("已驳回", httpContext);
+            })
+            .WithName("RejectMerchantBearing")
+            .WithSummary("驳回商家商品")
+            .WithDescription("驳回商家商品审核（附理由）")
+            .RequirePermission("merchant.verify");
 
             // ============ 4.2 轴承管理 ============
 
@@ -1426,4 +1499,9 @@ namespace OpenFindBearings.Api.Endpoints
     /// 平台指定商户成员请求体（G4 兜底通道）
     /// </summary>
     public record AddPlatformMemberRequest(Guid UserId, string? Role);
+
+    /// <summary>
+    /// 商家商品驳回请求体（v2.15.0 商品审核）
+    /// </summary>
+    public record MerchantBearingRejectRequest(string? Reason);
 }

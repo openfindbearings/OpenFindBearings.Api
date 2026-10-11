@@ -159,7 +159,7 @@ namespace OpenFindBearings.Infrastructure.Services
                 member = await _members.GetActiveByUserAndMerchantAsync(userId, bearing.MerchantId, cancellationToken);
                 if (member == null)
                     return new RedeemResult(false, "只能置顶自己商户的商品", null, 0, null);
-                if (!bearing.IsOnSale)
+                if (bearing.SaleState != SaleState.OnSale)
                     return new RedeemResult(false, "仅在售商品可置顶", null, 0, null);
             }
 
@@ -359,9 +359,9 @@ namespace OpenFindBearings.Infrastructure.Services
             var (order, item) = await _orders.GetWithItemAsync(orderId, cancellationToken);
             if (order == null || order.UserId != userId)
                 return (false, "订单不存在", 0);
-            if (order.ShipStatus == 3)
+            if (order.ShipStatus == MallOrderShipStatus.Received)
                 return (false, "已确认过收货", 0);
-            if (order.ShipStatus != 2 || item == null || !item.IsMerchantGift)
+            if (order.ShipStatus != MallOrderShipStatus.Shipped || item == null || !item.IsMerchantGift)
                 return (false, "订单当前不可确认收货", 0);
 
             order.MarkReceived(auto: false);
@@ -401,7 +401,7 @@ namespace OpenFindBearings.Infrastructure.Services
             var member = await _members.GetActiveByUserAndMerchantAsync(operatorUserId, item.OwnerMerchantId.Value, cancellationToken);
             if (member == null)
                 return (false, "无权处理该订单");
-            if (order.ShipStatus != 1)
+            if (order.ShipStatus != MallOrderShipStatus.ToShip)
                 return (false, "订单当前不可发货");
 
             order.MarkShipped(tracking.Trim());
@@ -421,9 +421,9 @@ namespace OpenFindBearings.Infrastructure.Services
             var (order, item) = await _orders.GetWithItemAsync(orderId, cancellationToken);
             if (order == null)
                 return (false, "订单不存在");
-            if (order.ShipStatus == 3)
+            if (order.ShipStatus == MallOrderShipStatus.Received)
                 return (false, "已收货结算的订单不可原路退分，请走金库侧人工处理");
-            if (order.ShipStatus is not (1 or 2) && order.Status != Domain.Enums.MallOrderStatus.Fulfilled)
+            if (order.ShipStatus is not (MallOrderShipStatus.ToShip or MallOrderShipStatus.Shipped) && order.Status != Domain.Enums.MallOrderStatus.Fulfilled)
                 return (false, "仅托管中的实物单可争议退款");
             if (order.Status == Domain.Enums.MallOrderStatus.Refunded)
                 return (false, "订单已退款");
@@ -449,7 +449,7 @@ namespace OpenFindBearings.Infrastructure.Services
             var (orders, total) = await _orders.GetByUserPagedAsync(userId, page, pageSize, cancellationToken);
             var items = orders.Select(o => new MallOrderItem(
                 o.Id, o.ItemKey, o.ItemName, o.PointsSpent, (int)o.Status, o.Remark, o.CreatedAt, o.FulfilledAt,
-                o.ShipStatus, o.ShipTracking, o.ShippedAt, o.ReceivedAt,
+                (int)o.ShipStatus, o.ShipTracking, o.ShippedAt, o.ReceivedAt,
                 o.ReceiverName, MaskPhone(o.ReceiverPhone), o.ReceiverAddress)).ToList();
             return (items, total);
         }

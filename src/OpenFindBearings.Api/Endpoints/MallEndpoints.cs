@@ -3,6 +3,7 @@ using OpenFindBearings.Api.Extensions;
 using OpenFindBearings.Api.Helpers;
 using OpenFindBearings.Api.Services;
 using OpenFindBearings.Application.Services;
+using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Api.Endpoints
@@ -271,7 +272,7 @@ namespace OpenFindBearings.Api.Endpoints
                 var item = await repo.GetByIdAsync(id);
                 if (item == null || !item.IsMerchantGift)
                     return ApiResponseHelper.NotFound("礼品不存在", httpContext);
-                if (item.AuditState != 1)
+                if (item.AuditState != MallItemAuditState.Pending)
                     return ApiResponseHelper.BadRequest("该礼品不在待审状态", httpContext: httpContext);
 
                 var ceiling = await configs.GetValueAsync<int?>("Business.GiftPriceCeiling", null) ?? 3000;
@@ -298,7 +299,7 @@ namespace OpenFindBearings.Api.Endpoints
                 var item = await repo.GetByIdAsync(id);
                 if (item == null || !item.IsMerchantGift)
                     return ApiResponseHelper.NotFound("礼品不存在", httpContext);
-                if (item.AuditState != 1)
+                if (item.AuditState != MallItemAuditState.Pending)
                     return ApiResponseHelper.BadRequest("该礼品不在待审状态", httpContext: httpContext);
 
                 item.RejectGiftAudit(string.IsNullOrWhiteSpace(req.Reason) ? "不符合平台挂礼要求" : req.Reason.Trim());

@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.DTOs;
 using OpenFindBearings.Application.Extensions;
+using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Queries.MerchantBearings.GetMerchantsByBearing;
@@ -36,17 +37,17 @@ public class GetMerchantsByBearingQueryHandler : IRequestHandler<GetMerchantsByB
         // 改动说明（v2.3.0 商城置顶卡）：置顶判定统一用本次查询的同一 now，避免同页不同商家口径漂移
         var now = DateTime.UtcNow;
 
-        // 改动说明（v1.36.0 三态）：在售筛选口径从"仅 IsOnSale"扩为"在售+补货中"——
-        // 补货中商家仍出现在列表（带徽标），仅已下架商家被排除；
-        // 徽标按商家聚合：该商家对本轴承只要有一条在售关联就不算补货中
+        // v2.15.0 状态统一：在售口径 = 审核通过且在售/补货中（仅已下架与未审商品的商家被排除）
         var merchants = relations
-            .Where(mb => !request.OnlyOnSale.HasValue || !request.OnlyOnSale.Value || mb.IsOnSale || mb.IsRestocking)
+            .Where(mb => !request.OnlyOnSale.HasValue || !request.OnlyOnSale.Value
+                || (mb.ReviewStatus == ListingReviewStatus.Approved
+                    && (mb.SaleState == SaleState.OnSale || mb.SaleState == SaleState.Restocking)))
             .Where(mb => mb.Merchant != null)
             .GroupBy(mb => mb.Merchant!.Id)
             .Select(g =>
             {
                 // 同一商家多条关联取最优条目（在售优先），价格用该条目自己的报价
-                var best = g.OrderByDescending(mb => mb.IsOnSale).First();
+                var best = g.OrderByDescending(mb => mb.SaleState == SaleState.OnSale).First();
                 // 改动说明（v2.3.0 商城置顶卡）：商家级置顶态取该商家所有关联里最晚的未过期置顶——
                 // 置顶是"买曝光"，只要有一条在置顶期，该商家就排前面并带角标
                 var pinnedUntil = g.Where(mb => mb.PinnedUntil.HasValue && mb.PinnedUntil.Value > now)
@@ -58,8 +59,7 @@ public class GetMerchantsByBearingQueryHandler : IRequestHandler<GetMerchantsByB
                     MerchantId = g.Key,
                     MerchantName = best.Merchant!.Name,
                     Price = best.PriceDescription,
-                    IsOnSale = best.IsOnSale,
-                    IsRestocking = best.IsRestocking,
+                    SaleState = best.SaleState,
                     RestockEta = best.RestockEta,
                     IsPinned = pinnedUntil > DateTime.MinValue,
                     PinnedUntil = pinnedUntil > DateTime.MinValue ? pinnedUntil : null
@@ -99,11 +99,8 @@ public class BearingMerchantDto
     /// <summary>该商家对此轴承的报价描述（可空）</summary>
     public string? Price { get; set; }
 
-    /// <summary>是否在售</summary>
-    public bool IsOnSale { get; set; }
-
-    /// <summary>是否补货中（有该型号但当前无货，仍展示带徽标）</summary>
-    public bool IsRestocking { get; set; }
+    /// <summary>销售状态（v2.15.0）：0=已下架 1=出售中 2=补货中（前端据此渲染在售/补货徽标）</summary>
+    public SaleState SaleState { get; set; }
 
     /// <summary>补货预计到货时间（自由文本，可空）</summary>
     public string? RestockEta { get; set; }

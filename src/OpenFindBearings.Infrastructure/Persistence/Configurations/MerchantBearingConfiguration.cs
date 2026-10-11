@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using OpenFindBearings.Domain.Entities;
+using OpenFindBearings.Domain.Enums;
 
 namespace OpenFindBearings.Infrastructure.Persistence.Configurations
 {
@@ -27,14 +28,13 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             builder.Property(mp => mp.ViewCount)
                 .HasDefaultValue(0);
 
-            builder.Property(mp => mp.IsFeatured)
-                .HasDefaultValue(false);
+            // v2.15.0 状态统一：SaleState + ReviewStatus 取代 IsOnSale/IsRestocking/IsPendingApproval/IsFeatured
+            // 不设 DB 默认值：CLR 默认(None/OffShelf) 是合法业务态（仓库中），设默认会导致实体写入被默认值覆盖
+            builder.Property(mp => mp.SaleState)
+                .HasConversion<int>();
 
-            builder.Property(mp => mp.IsOnSale)
-                .HasDefaultValue(true);
-
-            builder.Property(mp => mp.IsPendingApproval)
-                .HasDefaultValue(false);
+            builder.Property(mp => mp.ReviewStatus)
+                .HasConversion<int>();
 
             builder.Property(mp => mp.ApprovalComment)
                 .HasMaxLength(500);
@@ -56,8 +56,8 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             // 索引
             builder.HasIndex(mp => mp.MerchantId);
             builder.HasIndex(mp => mp.BearingId);
-            builder.HasIndex(mp => mp.IsOnSale);
-            builder.HasIndex(mp => mp.IsPendingApproval);
+            builder.HasIndex(mp => mp.SaleState);
+            builder.HasIndex(mp => mp.ReviewStatus);
             builder.HasIndex(mp => new { mp.MerchantId, mp.BearingId }).IsUnique();
 
             // 添加全局过滤器，只显示活跃轴承的商家关联

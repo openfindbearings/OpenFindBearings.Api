@@ -606,7 +606,8 @@ namespace OpenFindBearings.Domain.Aggregates
         /// </summary>
         private void UpdateProductCount()
         {
-            ProductCount = _merchantBearings.Count(mb => mb.IsOnSale);
+            // v2.15.0 状态统一：在售数 = 审核通过且出售中
+            ProductCount = _merchantBearings.Count(mb => mb.ReviewStatus == ListingReviewStatus.Approved && mb.SaleState == SaleState.OnSale);
         }
 
         // ============ 关注管理 ============
