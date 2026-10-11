@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
+using OpenFindBearings.Domain.Specifications;
 using OpenFindBearings.Infrastructure.Persistence.Data;
 
 namespace OpenFindBearings.Infrastructure.Persistence.Repositories
@@ -182,12 +183,102 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                 .ExecuteDeleteAsync(cancellationToken);
         }
 
-        /// <inheritdoc/>
+/// <inheritdoc/>
         public async Task<int> CountCreatedSinceAsync(Guid merchantId, DateTime sinceUtc, CancellationToken cancellationToken = default)
         {
             // v2.6.0 集体任务 products 指标：窗口内新上架的产品关联（含待审核，鼓励供给动作本身）
             return await _context.Set<MerchantBearing>()
                 .CountAsync(mb => mb.MerchantId == merchantId && mb.IsActive && mb.CreatedAt >= sinceUtc, cancellationToken);
+        }
+
+        /// <summary>
+        /// 商城货源流分页搜索（v2.14.0 商城导购）：以在售关联为行，DB 级过滤/排序/分页。
+        /// 不指定商家/轴承即"全站在售货源"；关键词匹配型号/旧代号/描述/类型名/品牌名。
+        /// </summary>
+        public async Task<PagedResult<MerchantBearing>> SearchMallFeedAsync(
+            MallFeedSearchParams p, CancellationToken cancellationToken = default)
+        {
+            // 分页护栏：与 BearingRepository.SearchAsync 同口径
+            if (p.Page < 1) p.Page = 1;
+            if (p.PageSize < 1) p.PageSize = 20;
+            if (p.PageSize > 100) p.PageSize = 100;
+
+            var query = _context.MerchantBearings
+                .Include(mb => mb.Merchant)
+                .Include(mb => mb.Bearing)
+                    .ThenInclude(b => b.Brand)
+                .Include(mb => mb.Bearing)
+                    .ThenInclude(b => b.BearingTypeNavigation)
+                .AsNoTracking()
+                .Where(mb => mb.IsActive);
+
+            // 在售过滤（商城货源流默认 true）
+            if (p.IsOnSale.HasValue)
+                query = query.Where(mb => mb.IsOnSale == p.IsOnSale.Value);
+
+            // 关键词：型号/旧代号/描述/类型名/品牌名
+            if (!string.IsNullOrWhiteSpace(p.Keyword))
+            {
+                var kw = p.Keyword.Trim();
+                query = query.Where(mb =>
+                    mb.Bearing!.PartNumber.Contains(kw) ||
+                    (mb.Bearing.OldNumber != null && mb.Bearing.OldNumber.Contains(kw)) ||
+                    (mb.Bearing.Description != null && mb.Bearing.Description.Contains(kw)) ||
+                    mb.Bearing.BearingType.Contains(kw) ||
+                    (mb.Bearing.Brand != null && mb.Bearing.Brand.Name.Contains(kw)));
+            }
+
+            // 品牌 / 类型 / 类别
+            if (p.BrandId.HasValue)
+                query = query.Where(mb => mb.Bearing!.BrandId == p.BrandId.Value);
+            if (p.BearingTypeId.HasValue)
+                query = query.Where(mb => mb.Bearing!.BearingTypeId == p.BearingTypeId.Value);
+            if (p.Category.HasValue)
+                query = query.Where(mb => mb.Bearing!.Category == p.Category.Value);
+
+            // 尺寸范围（内径/外径/宽度）
+            if (p.MinInnerDiameter.HasValue)
+                query = query.Where(mb => mb.Bearing!.Dimensions.InnerDiameter >= p.MinInnerDiameter.Value);
+            if (p.MaxInnerDiameter.HasValue)
+                query = query.Where(mb => mb.Bearing!.Dimensions.InnerDiameter <= p.MaxInnerDiameter.Value);
+            if (p.MinOuterDiameter.HasValue)
+                query = query.Where(mb => mb.Bearing!.Dimensions.OuterDiameter >= p.MinOuterDiameter.Value);
+            if (p.MaxOuterDiameter.HasValue)
+                query = query.Where(mb => mb.Bearing!.Dimensions.OuterDiameter <= p.MaxOuterDiameter.Value);
+            if (p.MinWidth.HasValue)
+                query = query.Where(mb => mb.Bearing!.Dimensions.Width >= p.MinWidth.Value);
+            if (p.MaxWidth.HasValue)
+                query = query.Where(mb => mb.Bearing!.Dimensions.Width <= p.MaxWidth.Value);
+
+            var totalCount = await query.CountAsync(cancellationToken);
+
+            // 排序：价格/浏览/创建时间（缺省创建时间倒序，与商家列表口径一致）
+            query = p.SortBy?.ToLower() switch
+            {
+                "price" => p.SortOrder?.ToLower() == "asc"
+                    ? query.OrderBy(mb => mb.NumericPrice)
+                    : query.OrderByDescending(mb => mb.NumericPrice),
+                "viewcount" => p.SortOrder?.ToLower() == "asc"
+                    ? query.OrderBy(mb => mb.ViewCount)
+                    : query.OrderByDescending(mb => mb.ViewCount),
+                "created" => p.SortOrder?.ToLower() == "asc"
+                    ? query.OrderBy(mb => mb.CreatedAt)
+                    : query.OrderByDescending(mb => mb.CreatedAt),
+                _ => query.OrderByDescending(mb => mb.CreatedAt)
+            };
+
+            var items = await query
+                .Skip((p.Page - 1) * p.PageSize)
+                .Take(p.PageSize)
+                .ToListAsync(cancellationToken);
+
+            return new PagedResult<MerchantBearing>
+            {
+                Items = items,
+                TotalCount = totalCount,
+                Page = p.Page,
+                PageSize = p.PageSize
+            };
         }
     }
 }

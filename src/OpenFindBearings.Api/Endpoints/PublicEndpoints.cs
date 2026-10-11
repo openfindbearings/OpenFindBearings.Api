@@ -10,6 +10,7 @@ using OpenFindBearings.Application.Queries.Bearings.SearchBearings;
 using OpenFindBearings.Application.Queries.BearingTypes.GetAllBearingTypes;
 using OpenFindBearings.Application.Queries.Brands.GetAllBrands;
 using OpenFindBearings.Application.Queries.Follows.CheckMerchantFollow;
+using OpenFindBearings.Application.Queries.MerchantBearings.GetMallFeed;
 using OpenFindBearings.Application.Queries.MerchantBearings.GetMerchantBearingsByMerchant;
 using OpenFindBearings.Application.Queries.MerchantBearings.GetMerchantsByBearing;
 using OpenFindBearings.Application.Queries.Merchants.GetMerchant;
@@ -104,6 +105,30 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("GetHotBearings")
             .WithSummary("获取热门轴承")
             .WithDescription("按浏览次数获取热门轴承列表");
+
+            /// <summary>
+            /// 商城货源流（v2.14.0 商城导购）
+            /// 全站在售货源分页，供商城 Tab 商品瀑布流；匿名可访问，图片/型号/品牌/商家公开
+            /// </summary>
+            group.MapGet("/mall/feed", async (
+                [AsParameters] GetMallFeedQuery query,
+                IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                // 登录态服务端判定（覆盖查询串，防客户端伪造 IsAuthenticated 拿敏感字段）
+                query.IsAuthenticated = httpContext.GetUserId().HasValue;
+                var result = await mediator.Send(query);
+                return ApiResponseHelper.Paged(
+                    result.Items.ToList(),
+                    result.TotalCount,
+                    result.Page,
+                    result.PageSize,
+                    httpContext
+                );
+            })
+            .WithName("GetMallFeed")
+            .WithSummary("商城货源流")
+            .WithDescription("全站在售货源分页，支持关键词/品牌/类型/尺寸/类别过滤与排序");
 
             /// <summary>
             /// 轴承详情

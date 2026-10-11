@@ -39,6 +39,9 @@ namespace OpenFindBearings.Application.Extensions
                 Dimensions = mb.Bearing != null
                         ? $"{mb.Bearing.Dimensions.InnerDiameter}×{mb.Bearing.Dimensions.OuterDiameter}×{mb.Bearing.Dimensions.Width}"
                         : null,
+                // 改动说明（v2.14.0 商城导购）：商品卡需主图，从关联轴承带出（匿名也可见，图为公开信息）
+                Image3DUrl = mb.Bearing?.Image3DUrl,
+                Image2DUrl = mb.Bearing?.Image2DUrl,
                 PriceDescription = mb.PriceDescription,
                 PriceVisibility = mb.PriceVisibility,
                 NumericPrice = mb.NumericPrice,
@@ -82,6 +85,9 @@ namespace OpenFindBearings.Application.Extensions
                 Dimensions = mb.Bearing != null
                         ? $"{mb.Bearing.Dimensions.InnerDiameter}×{mb.Bearing.Dimensions.OuterDiameter}×{mb.Bearing.Dimensions.Width}"
                         : null,
+                // 改动说明（v2.14.0 商城导购）：商品卡需主图，从关联轴承带出
+                Image3DUrl = mb.Bearing?.Image3DUrl,
+                Image2DUrl = mb.Bearing?.Image2DUrl,
                 PriceDescription = mb.PriceDescription,
                 PriceVisibility = mb.PriceVisibility,
                 NumericPrice = mb.NumericPrice,
