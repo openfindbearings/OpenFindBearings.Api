@@ -1,5 +1,6 @@
 using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Enums;
+using OpenFindBearings.Domain.Specifications;
 
 namespace OpenFindBearings.Domain.Repositories
 {
@@ -86,5 +87,10 @@ namespace OpenFindBearings.Domain.Repositories
 
         /// <summary>v2.6.0 集体任务 products 指标：本周期内新创建的产品关联数</summary>
         Task<int> CountCreatedSinceAsync(Guid merchantId, DateTime sinceUtc, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 商城货源流分页搜索（v2.14.0 商城导购）：全站在售货源，DB 级过滤/排序/分页
+        /// </summary>
+        Task<PagedResult<MerchantBearing>> SearchMallFeedAsync(MallFeedSearchParams searchParams, CancellationToken cancellationToken = default);
     }
 }

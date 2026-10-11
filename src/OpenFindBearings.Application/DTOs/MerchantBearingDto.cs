@@ -94,6 +94,18 @@ namespace OpenFindBearings.Application.DTOs
         /// </summary>
         public string? Dimensions { get; set; }
 
+        // ============ 图片（v2.14.0 商城导购：商品卡需图，从关联轴承带出） ============
+
+        /// <summary>
+        /// 3D 效果图地址（取关联轴承的图，商品卡主图）
+        /// </summary>
+        public string? Image3DUrl { get; set; }
+
+        /// <summary>
+        /// 2D 效果图地址（取关联轴承的图，3D 缺失时的回退）
+        /// </summary>
+        public string? Image2DUrl { get; set; }
+
         // ============ 价格相关 ============
 
         /// <summary>
