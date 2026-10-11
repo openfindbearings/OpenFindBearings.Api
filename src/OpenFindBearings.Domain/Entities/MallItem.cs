@@ -71,10 +71,10 @@ namespace OpenFindBearings.Domain.Entities
         public const int TargetKindDemand = 2;
 
         /// <summary>
-        /// 礼品审核态（v2.4.0）：0=平台商品不适用（免审），1=待审，2=已通过，3=已驳回。
-        /// 商家礼品必须过"审核定档"——上架与否、积分价格都由平台审核时敲定，杜绝定向转移
+        /// 礼品审核态（v2.4.0；v2.15.0 改枚举）：平台商品不适用（免审），商家礼品必须过"审核定档"——
+        /// 上架与否、积分价格都由平台审核时敲定，杜绝定向转移
         /// </summary>
-        public int AuditState { get; private set; }
+        public MallItemAuditState AuditState { get; private set; }
 
         /// <summary>审核备注（驳回原因/定档说明，商户可见）</summary>
         public string? AuditRemark { get; private set; }
@@ -83,7 +83,7 @@ namespace OpenFindBearings.Domain.Entities
         public bool IsMerchantGift => OwnerMerchantId.HasValue && Category == MallItemCategory.Gift;
 
         /// <summary>商家礼品是否可售（审核通过 + 上架 + 有效）</summary>
-        public bool IsGiftSellable => !IsMerchantGift || (AuditState == 2 && Enabled && IsActive);
+        public bool IsGiftSellable => !IsMerchantGift || (AuditState == MallItemAuditState.Approved && Enabled && IsActive);
 
         /// <summary>EF 无参构造</summary>
         protected MallItem() { }
@@ -131,7 +131,7 @@ namespace OpenFindBearings.Domain.Entities
                 Stock = stock,
                 SortOrder = 100,
                 OwnerMerchantId = ownerMerchantId,
-                AuditState = 1,
+                AuditState = MallItemAuditState.Pending,
                 Enabled = false, // 待审即下架，通过后放行
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
@@ -144,7 +144,7 @@ namespace OpenFindBearings.Domain.Entities
         public void PassGiftAudit(int pointPrice, string? remark)
         {
             PointPrice = pointPrice;
-            AuditState = 2;
+            AuditState = MallItemAuditState.Approved;
             AuditRemark = remark;
             Enabled = true;
             UpdatedAt = DateTime.UtcNow;
@@ -153,7 +153,7 @@ namespace OpenFindBearings.Domain.Entities
         /// <summary>审核驳回（原因商户可见，可修改后重新申请）</summary>
         public void RejectGiftAudit(string reason)
         {
-            AuditState = 3;
+            AuditState = MallItemAuditState.Rejected;
             AuditRemark = reason;
             Enabled = false;
             UpdatedAt = DateTime.UtcNow;

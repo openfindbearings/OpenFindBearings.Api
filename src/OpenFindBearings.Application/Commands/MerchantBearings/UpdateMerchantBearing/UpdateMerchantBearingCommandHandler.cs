@@ -1,5 +1,6 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
+using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Commands.MerchantBearings.UpdateMerchantBearing
@@ -61,8 +62,9 @@ namespace OpenFindBearings.Application.Commands.MerchantBearings.UpdateMerchantB
                 request.MinOrderDescription,
                 request.Remarks);
 
-            // 如果有变化，需要重新提交审核
-            if (hasChanges)
+            // v2.15.0 状态统一：仅"已通过"的商品改动重要字段才重审（重新变审核中、公域暂隐）；
+            //   仓库中/已驳回保持原态（本就未公开，无需重审）
+            if (hasChanges && merchantBearing.ReviewStatus == ListingReviewStatus.Approved)
             {
                 merchantBearing.SubmitForApproval();
             }

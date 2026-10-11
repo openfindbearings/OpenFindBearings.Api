@@ -48,11 +48,11 @@ namespace OpenFindBearings.Application.Extensions
                 StockDescription = mb.StockDescription,
                 MinOrderDescription = mb.MinOrderDescription,
                 Remarks = mb.Remarks,
-                IsOnSale = mb.IsOnSale,
-                IsRestocking = mb.IsRestocking,
+                // v2.15.0 状态统一：SaleState + ReviewStatus
+                SaleState = mb.SaleState,
                 RestockEta = mb.RestockEta,
-                IsFeatured = mb.IsFeatured,
-                IsPendingApproval = mb.IsPendingApproval,
+                ReviewStatus = mb.ReviewStatus,
+                ApprovalComment = mb.ApprovalComment,
                 ViewCount = mb.ViewCount,
                 CreatedAt = mb.CreatedAt,
                 UpdatedAt = mb.UpdatedAt               
@@ -94,11 +94,11 @@ namespace OpenFindBearings.Application.Extensions
                 StockDescription = mb.StockDescription,
                 MinOrderDescription = mb.MinOrderDescription,
                 Remarks = mb.Remarks,
-                IsOnSale = mb.IsOnSale,
-                IsRestocking = mb.IsRestocking,
+                // v2.15.0 状态统一：SaleState + ReviewStatus
+                SaleState = mb.SaleState,
                 RestockEta = mb.RestockEta,
-                IsFeatured = mb.IsFeatured,
-                IsPendingApproval = mb.IsPendingApproval,
+                ReviewStatus = mb.ReviewStatus,
+                ApprovalComment = mb.ApprovalComment,
                 ViewCount = mb.ViewCount,
                 CreatedAt = mb.CreatedAt,
                 UpdatedAt = mb.UpdatedAt                

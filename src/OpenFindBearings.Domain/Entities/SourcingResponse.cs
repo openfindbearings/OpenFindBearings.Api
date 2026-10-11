@@ -1,4 +1,5 @@
 using OpenFindBearings.Domain.Abstractions;
+using OpenFindBearings.Domain.Enums;
 
 namespace OpenFindBearings.Domain.Entities
 {
@@ -11,12 +12,6 @@ namespace OpenFindBearings.Domain.Entities
     /// </summary>
     public class SourcingResponse : BaseEntity
     {
-        /// <summary>状态：待发布人处理</summary>
-        public const int StatusPending = 1;
-        /// <summary>状态：被选定（发布人确认合作，解锁双方联系方式）</summary>
-        public const int StatusAdopted = 2;
-        /// <summary>状态：未选中（需求关闭时其余应答流转至此）</summary>
-        public const int StatusNotSelected = 3;
 
         /// <summary>所属寻货需求</summary>
         public Guid DemandId { get; private set; }
@@ -30,8 +25,8 @@ namespace OpenFindBearings.Domain.Entities
         /// <summary>应答说明（必填一句话：货源来源/成色/可否验货等）</summary>
         public string Remark { get; private set; } = string.Empty;
 
-        /// <summary>状态（Status* 常量）</summary>
-        public int Status { get; private set; } = StatusPending;
+        /// <summary>状态（SourcingResponseStatus 枚举，v2.15.0）</summary>
+        public SourcingResponseStatus Status { get; private set; } = SourcingResponseStatus.Pending;
 
         /// <summary>应答型号行（v1.5.0 多行标书：发布人挑选的依据，每行可引用在售商品）</summary>
         public List<SourcingResponseItem> Items { get; private set; } = new();
@@ -53,22 +48,22 @@ namespace OpenFindBearings.Domain.Entities
                 DemandId = demandId,
                 MerchantId = merchantId,
                 RespondedUserId = userId,
-                Remark = remark.Trim(),
-                Status = StatusPending,
+Remark = remark.Trim(),
+                Status = SourcingResponseStatus.Pending,
             };
         }
 
         /// <summary>被发布人选定</summary>
-        public void Adopt() => Status = StatusAdopted;
+        public void Adopt() => Status = SourcingResponseStatus.Adopted;
 
         /// <summary>需求关闭但未被选定</summary>
-        public void MarkNotSelected() => Status = StatusNotSelected;
+        public void MarkNotSelected() => Status = SourcingResponseStatus.NotSelected;
 
         /// <summary>更新应答说明（同需求重复应答=覆盖更新，仅待处理态可改；型号行由调用方整体替换）</summary>
         /// <param name="remark">应答说明</param>
         public void UpdateContent(string remark)
         {
-            if (Status != StatusPending)
+            if (Status != SourcingResponseStatus.Pending)
                 throw new InvalidOperationException("仅待处理的应答可以更新");
             Remark = remark.Trim();
         }

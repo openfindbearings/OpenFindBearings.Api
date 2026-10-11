@@ -2,6 +2,7 @@ using MediatR;
 using OpenFindBearings.Application.Shared.Interfaces;
 using OpenFindBearings.Domain.Aggregates;
 using OpenFindBearings.Domain.Entities;
+using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Events;
 using OpenFindBearings.Domain.Repositories;
 
@@ -53,14 +54,14 @@ namespace OpenFindBearings.Application.Commands.Sourcing
             if (demand.PublisherUserId != request.UserId)
                 throw new UnauthorizedAccessException("只有发布人可以选定应答");
             demand.TryExpire();
-            if (demand.Status != SourcingDemand.StatusPublished)
+            if (demand.Status != SourcingDemandStatus.Published)
                 throw new InvalidOperationException("该寻货已结束，无法选定");
 
             var selected = await _responseRepository.GetByIdAsync(request.ResponseId, cancellationToken)
                 ?? throw new InvalidOperationException("应答不存在");
             if (selected.DemandId != demand.Id)
                 throw new InvalidOperationException("应答与需求不匹配");
-            if (selected.Status != SourcingResponse.StatusPending)
+            if (selected.Status != SourcingResponseStatus.Pending)
                 throw new InvalidOperationException("该应答已处理");
 
             // 选定：目标 Adopted，其余待处理批量 NotSelected（同一需求只成一家）
@@ -125,7 +126,7 @@ namespace OpenFindBearings.Application.Commands.Sourcing
                 ?? throw new InvalidOperationException("寻货需求不存在");
             if (demand.PublisherUserId != request.UserId)
                 throw new UnauthorizedAccessException("只有发布人可以取消");
-            if (demand.Status != SourcingDemand.StatusPublished)
+            if (demand.Status != SourcingDemandStatus.Published)
                 throw new InvalidOperationException("仅进行中的寻货可以取消");
 
             // 改动说明（同 Select）：显式提交主变更后发布事件，时序与事件隔离同款

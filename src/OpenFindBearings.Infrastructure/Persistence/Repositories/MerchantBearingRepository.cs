@@ -58,26 +58,30 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                     .ThenInclude(b => b.Brand)
                 .Include(mb => mb.Bearing)
                     .ThenInclude(b => b.BearingTypeNavigation)
-                .Where(mb => mb.MerchantId == merchantId && mb.IsOnSale)
+                .Where(mb => mb.MerchantId == merchantId
+                    && mb.ReviewStatus == ListingReviewStatus.Approved
+                    && mb.SaleState == SaleState.OnSale)
                 .ToListAsync(cancellationToken);
         }
 
         /// <summary>
-        /// 商家在售商品数量（v1.5.0 寻货比价"实力摘要"；IsOnSale 即上架在售，轻量 Count 不加载全量）
+        /// 商家在售商品数量（v1.5.0 寻货比价"实力摘要"；v2.15.0 口径=审核通过且在售，轻量 Count 不加载全量）
         /// </summary>
         public Task<int> CountOnSaleAsync(Guid merchantId, CancellationToken cancellationToken = default)
             => _context.MerchantBearings.CountAsync(
-                mb => mb.MerchantId == merchantId && mb.IsOnSale, cancellationToken);
+                mb => mb.MerchantId == merchantId
+                    && mb.ReviewStatus == ListingReviewStatus.Approved
+                    && mb.SaleState == SaleState.OnSale, cancellationToken);
 
         /// <summary>
-        /// 获取待审核的关联列表
+        /// 获取待审核的关联列表（v2.15.0：审核中）
         /// </summary>
         public async Task<IEnumerable<MerchantBearing>> GetPendingApprovalAsync(CancellationToken cancellationToken = default)
         {
             return await _context.MerchantBearings
                 .Include(mb => mb.Merchant)
                 .Include(mb => mb.Bearing)
-                .Where(mb => mb.IsPendingApproval)
+                .Where(mb => mb.ReviewStatus == ListingReviewStatus.Pending)
                 .ToListAsync(cancellationToken);
         }
 
@@ -133,7 +137,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         }
 
         public async Task<PagedResult<MerchantBearing>> GetMerchantBearingsPagedAsync(
-            Guid merchantId, bool? onlyOnSale, bool? pendingOnly, DataSourceType? dataSource,
+            Guid merchantId, bool? onlyOnSale, bool? pendingOnly, ListingReviewStatus? reviewStatus, DataSourceType? dataSource,
             int page, int pageSize, CancellationToken cancellationToken = default)
         {
             var query = _context.MerchantBearings
@@ -143,11 +147,17 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                     .ThenInclude(b => b.BearingTypeNavigation)
                 .Where(mb => mb.MerchantId == merchantId);
 
+            // v2.15.0 状态统一：在售=审核通过且在售/补货中（公域可见口径）；待审=审核中
             if (onlyOnSale == true)
-                query = query.Where(mb => mb.IsOnSale);
+                query = query.Where(mb => mb.ReviewStatus == ListingReviewStatus.Approved
+                    && (mb.SaleState == SaleState.OnSale || mb.SaleState == SaleState.Restocking));
 
             if (pendingOnly == true)
-                query = query.Where(mb => mb.IsPendingApproval);
+                query = query.Where(mb => mb.ReviewStatus == ListingReviewStatus.Pending);
+
+            // v2.15.0 状态统一：审核位精确过滤（仓库中/审核中/已通过/已驳回）
+            if (reviewStatus.HasValue)
+                query = query.Where(mb => mb.ReviewStatus == reviewStatus.Value);
 
             if (dataSource.HasValue)
                 query = query.Where(mb => mb.DataSourceType == dataSource.Value);
@@ -172,7 +182,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         public async Task<int> GetPendingApprovalCountAsync(CancellationToken cancellationToken = default)
         {
             return await _context.MerchantBearings
-                .CountAsync(mb => mb.IsPendingApproval, cancellationToken);
+                .CountAsync(mb => mb.ReviewStatus == ListingReviewStatus.Pending, cancellationToken);
         }
 
         /// <summary>删除商户全部商品关联（ExecuteDelete 单 SQL，接管重置用）</summary>
@@ -210,11 +220,12 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                 .Include(mb => mb.Bearing)
                     .ThenInclude(b => b.BearingTypeNavigation)
                 .AsNoTracking()
-                .Where(mb => mb.IsActive);
+                // v2.15.0 状态统一：商城货源流仅出"审核通过"的商品（未审/驳回不进公域）
+                .Where(mb => mb.IsActive && mb.ReviewStatus == ListingReviewStatus.Approved);
 
-            // 在售过滤（商城货源流默认 true）
-            if (p.IsOnSale.HasValue)
-                query = query.Where(mb => mb.IsOnSale == p.IsOnSale.Value);
+            // 在售过滤（商城货源流默认 true：仅出售中）
+            if (p.IsOnSale == true)
+                query = query.Where(mb => mb.SaleState == SaleState.OnSale);
 
             // 关键词：型号/旧代号/描述/类型名/品牌名
             if (!string.IsNullOrWhiteSpace(p.Keyword))

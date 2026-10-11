@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.DTOs;
 using OpenFindBearings.Application.Extensions;
+using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Queries.Merchants.GetMerchantProducts
@@ -28,7 +29,9 @@ namespace OpenFindBearings.Application.Queries.Merchants.GetMerchantProducts
 
             if (request.OnlyOnSale)
             {
-                products = products.Where(p => p.IsOnSale);
+                // v2.15.0 状态统一：在售=审核通过 + 出售中/补货中
+                products = products.Where(p => p.ReviewStatus == ListingReviewStatus.Approved
+                    && (p.SaleState == SaleState.OnSale || p.SaleState == SaleState.Restocking));
             }
 
             var totalCount = products.Count();

@@ -6,6 +6,7 @@ using OpenFindBearings.Application.Commands.Sourcing;
 using OpenFindBearings.Application.Services;
 using OpenFindBearings.Domain.Aggregates;
 using OpenFindBearings.Domain.Entities;
+using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
 using OpenFindBearings.Domain.Services;
 
@@ -47,7 +48,7 @@ namespace OpenFindBearings.Api.Endpoints
                 // 公开列表先做惰性过期（一条 UPDATE 兜底僵尸单，读多写少成本可忽略）
                 await demandRepository.ExpireOverdueAsync();
                 var (items, total) = await demandRepository.GetListAsync(
-                    onlyOpen ? SourcingDemand.StatusPublished : null, keyword, onlyOpen,
+                    onlyOpen ? (int)SourcingDemandStatus.Published : (int?)null, keyword, onlyOpen,
                     page <= 0 ? 1 : page, pageSize is > 0 and <= 50 ? pageSize : 20,
                     // 改动说明（v2.10.0）：公开大厅有效置顶排前
                     pinFirst: true,
@@ -140,7 +141,7 @@ namespace OpenFindBearings.Api.Endpoints
                     foreach (var r in responses)
                     {
                         var merchant = await merchantRepository.GetByIdAsync(r.MerchantId, httpContext.RequestAborted);
-                        if (r.Status == SourcingResponse.StatusAdopted && merchant != null)
+                        if (r.Status == SourcingResponseStatus.Adopted && merchant != null)
                         {
                             // 选定后解锁被选商户联系方式（手机优先，回退座机——与商家主页 merchantDetail 展示口径一致）
                             selectedMerchantContact = merchant.Contact?.Mobile ?? merchant.Contact?.Phone;
@@ -186,7 +187,7 @@ namespace OpenFindBearings.Api.Endpoints
                 //   商户单给商户公开电话（手机优先回退座机，与 selectedMerchantContact 口径对称，
                 //   不暴露经办人个人手机）；个人单维持发布人注册手机
                 string? publisherContact = null;
-                if (myResponse?.Status == SourcingResponse.StatusAdopted && userId.HasValue)
+                if (myResponse?.Status == SourcingResponseStatus.Adopted && userId.HasValue)
                 {
                     if (demand.IsMerchantPublished)
                     {
@@ -615,16 +616,16 @@ namespace OpenFindBearings.Api.Endpoints
                 var relations = await merchantBearingRepository.GetByBearingAsync(bid.Value, httpContext.RequestAborted);
                 var mine = relations.Where(mb => mb.MerchantId == currentUser.CurrentMerchantId.Value).ToList();
                 // 在售条目优先，其次补货中条目（应答预填取最接近"现在能供"的状态）
-                var offering = mine.FirstOrDefault(mb => mb.IsOnSale)
-                    ?? mine.FirstOrDefault(mb => mb.IsRestocking);
+                var offering = mine.FirstOrDefault(mb => mb.SaleState == SaleState.OnSale)
+                    ?? mine.FirstOrDefault(mb => mb.SaleState == SaleState.Restocking);
                 if (offering == null)
                     return ApiResponseHelper.Ok(new { found = false }, httpContext: httpContext);
 
                 return ApiResponseHelper.Ok(new
                 {
                     found = true,
-                    isOnSale = offering.IsOnSale,
-                    isRestocking = offering.IsRestocking,
+                    isOnSale = offering.SaleState == SaleState.OnSale,
+                    isRestocking = offering.SaleState == SaleState.Restocking,
                     price = offering.NumericPrice ?? (decimal?)null,
                     priceDescription = offering.PriceDescription,
                     stock = offering.StockDescription,
@@ -664,7 +665,7 @@ namespace OpenFindBearings.Api.Endpoints
 
                 // 进行中未应答寻货（近 200 条内存聚合，冷启动量级足够；上量后改 SQL 聚合）
                 var (items, _) = await demandRepository.GetListAsync(
-                    status: SourcingDemand.StatusPublished, keyword: null, onlyOpen: true,
+                    status: (int)SourcingDemandStatus.Published, keyword: null, onlyOpen: true,
                     page: 1, pageSize: 200, cancellationToken: httpContext.RequestAborted);
                 var opportunities = items
                     .Where(d => d.ResponseCount == 0)

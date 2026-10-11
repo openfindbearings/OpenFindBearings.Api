@@ -1,5 +1,6 @@
 using MediatR;
 using OpenFindBearings.Domain.Entities;
+using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Commands.Sourcing
@@ -45,7 +46,7 @@ namespace OpenFindBearings.Application.Commands.Sourcing
                 ?? throw new InvalidOperationException("该需求没有你的应答，无法撤销");
 
             // 仅待处理可撤：被选定/已结束的应答不可撤回（语义矛盾）
-            if (existing.Status != SourcingResponse.StatusPending)
+            if (existing.Status != SourcingResponseStatus.Pending)
                 throw new InvalidOperationException("该应答已被处理，无法撤销");
 
             // 删除应答（型号行 DB 级联删除，UnitOfWork 提交）

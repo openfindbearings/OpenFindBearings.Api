@@ -39,8 +39,8 @@ namespace OpenFindBearings.Domain.Entities
 
         // ===== v2.4.0 商家实物礼品：收货与结算链（虚拟权益全部为空，互不干扰） =====
 
-        /// <summary>发货状态：0=虚拟权益不适用，1=待发货，2=已发货，3=已收货（已结算），4=已退款</summary>
-        public int ShipStatus { get; private set; }
+        /// <summary>发货状态（v2.4.0；v2.15.0 改枚举）：虚拟权益 NotApplicable，实物礼品走 ToShip→Shipped→Received/Refunded</summary>
+        public MallOrderShipStatus ShipStatus { get; private set; }
 
         /// <summary>收货人姓名（实物兑换必填）</summary>
         public string? ReceiverName { get; private set; }
@@ -80,7 +80,7 @@ namespace OpenFindBearings.Domain.Entities
                 PointsSpent = pointsSpent,
                 TargetRef = targetRef,
                 Status = MallOrderStatus.Pending,
-                ShipStatus = isGift ? 1 : 0,
+                ShipStatus = isGift ? MallOrderShipStatus.ToShip : MallOrderShipStatus.NotApplicable,
                 ReceiverName = receiverName,
                 ReceiverPhone = receiverPhone,
                 ReceiverAddress = receiverAddress,
@@ -101,9 +101,9 @@ namespace OpenFindBearings.Domain.Entities
         /// <summary>商家发货（仅待发货态可转）：记录物流单号，起算 7 天自动确认</summary>
         public void MarkShipped(string tracking)
         {
-            if (ShipStatus != 1)
+            if (ShipStatus != MallOrderShipStatus.ToShip)
                 throw new InvalidOperationException("订单当前不可发货");
-            ShipStatus = 2;
+            ShipStatus = MallOrderShipStatus.Shipped;
             ShipTracking = tracking;
             ShippedAt = DateTime.UtcNow;
             UpdatedAt = DateTime.UtcNow;
@@ -112,9 +112,9 @@ namespace OpenFindBearings.Domain.Entities
         /// <summary>确认收货（手动或 7 天自动）：结算前置态，随后由金库服务落结算流水</summary>
         public void MarkReceived(bool auto)
         {
-            if (ShipStatus != 2)
+            if (ShipStatus != MallOrderShipStatus.Shipped)
                 throw new InvalidOperationException("订单当前不可确认收货");
-            ShipStatus = 3;
+            ShipStatus = MallOrderShipStatus.Received;
             ReceivedAt = DateTime.UtcNow;
             if (auto) Remark = "发货满 7 天自动确认收货";
             UpdatedAt = DateTime.UtcNow;
@@ -133,7 +133,7 @@ namespace OpenFindBearings.Domain.Entities
         {
             Status = MallOrderStatus.Refunded;
             Remark = reason;
-            if (ShipStatus is 1 or 2) ShipStatus = 4;
+            if (ShipStatus is MallOrderShipStatus.ToShip or MallOrderShipStatus.Shipped) ShipStatus = MallOrderShipStatus.Refunded;
             UpdatedAt = DateTime.UtcNow;
         }
     }

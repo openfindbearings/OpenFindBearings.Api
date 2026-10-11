@@ -146,14 +146,9 @@ namespace OpenFindBearings.Application.DTOs
         public string? Remarks { get; set; }
 
         /// <summary>
-        /// 是否在售
+        /// 销售状态（v2.15.0 状态统一）：0=已下架 1=出售中 2=补货中
         /// </summary>
-        public bool IsOnSale { get; set; }
-
-        /// <summary>
-        /// 是否补货中（v1.36.0 三态：在售=IsOnSale；补货中=!IsOnSale 且 IsRestocking；其余=已下架）
-        /// </summary>
-        public bool IsRestocking { get; set; }
+        public SaleState SaleState { get; set; }
 
         /// <summary>
         /// 补货预计到货时间（自由文本，仅补货中有意义）
@@ -161,14 +156,14 @@ namespace OpenFindBearings.Application.DTOs
         public string? RestockEta { get; set; }
 
         /// <summary>
-        /// 是否推荐/置顶
+        /// 审核状态（v2.15.0 状态统一）：0=仓库中 1=审核中 2=已通过 3=已驳回
         /// </summary>
-        public bool IsFeatured { get; set; }
+        public ListingReviewStatus ReviewStatus { get; set; }
 
         /// <summary>
-        /// 是否待审核
+        /// 审核意见/驳回理由（v2.15.0：已驳回时下发，商家可见）
         /// </summary>
-        public bool IsPendingApproval { get; set; }
+        public string? ApprovalComment { get; set; }
 
         /// <summary>
         /// 浏览次数

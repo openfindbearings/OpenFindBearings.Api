@@ -40,11 +40,6 @@ namespace OpenFindBearings.Application.Queries.MerchantBearings.GetMerchantBeari
         public int PendingCount { get; set; }
 
         /// <summary>
-        /// 推荐数量
-        /// </summary>
-        public int FeaturedCount { get; set; }
-
-        /// <summary>
         /// 商家数量（按商家统计时）
         /// </summary>
         public int MerchantCount { get; set; }

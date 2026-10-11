@@ -1,6 +1,7 @@
 using MediatR;
 using OpenFindBearings.Application.Shared.Interfaces;
 using OpenFindBearings.Domain.Aggregates;
+using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Events;
 using OpenFindBearings.Domain.Repositories;
 
@@ -41,7 +42,7 @@ namespace OpenFindBearings.Application.Commands.Sourcing
         {
             var demand = await _demandRepository.GetByIdAsync(request.DemandId, cancellationToken)
                 ?? throw new InvalidOperationException("寻货需求不存在");
-            if (demand.Status is not (SourcingDemand.StatusPublished or SourcingDemand.StatusExpired))
+            if (demand.Status is not (SourcingDemandStatus.Published or SourcingDemandStatus.Expired))
                 throw new InvalidOperationException("仅进行中或已过期的寻货需要下架");
 
             // 改动说明（同 Select/Cancel）：显式提交主变更后发布事件，时序与事件隔离同款

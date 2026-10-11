@@ -1,6 +1,7 @@
 using MediatR;
 using OpenFindBearings.Application.Services;
 using OpenFindBearings.Domain.Entities;
+using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Events;
 using OpenFindBearings.Domain.Repositories;
 
@@ -60,7 +61,7 @@ namespace OpenFindBearings.Application.EventHandlers
                 notification.DemandId, cancellationToken);
 
             var responses = await _responseRepository.GetByDemandAsync(notification.DemandId, cancellationToken);
-            foreach (var lost in responses.Where(r => r.Status == SourcingResponse.StatusNotSelected))
+            foreach (var lost in responses.Where(r => r.Status == SourcingResponseStatus.NotSelected))
             {
                 await NotifyMerchantAdminsAsync(lost.MerchantId,
                     Notification.TypeSourcing,

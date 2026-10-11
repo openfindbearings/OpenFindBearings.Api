@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using OpenFindBearings.Domain.Entities;
+using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
 using OpenFindBearings.Infrastructure.Persistence.Data;
 
@@ -59,7 +60,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         public Task<List<MallItem>> GetPendingGiftsAsync(CancellationToken cancellationToken = default)
         {
             return _context.Set<MallItem>()
-                .Where(i => i.OwnerMerchantId != null && i.AuditState == 1 && i.IsActive)
+                .Where(i => i.OwnerMerchantId != null && i.AuditState == MallItemAuditState.Pending && i.IsActive)
                 .OrderBy(i => i.CreatedAt)
                 .ToListAsync(cancellationToken);
         }
@@ -154,7 +155,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                 .Join(_context.Set<MallItem>().Where(i => i.OwnerMerchantId == merchantId),
                     o => o.ItemId, i => i.Id, (o, i) => o);
             if (shipStatus.HasValue)
-                query = query.Where(o => o.ShipStatus == shipStatus.Value);
+                query = query.Where(o => o.ShipStatus == (MallOrderShipStatus)shipStatus.Value);
             var total = await query.CountAsync(cancellationToken);
             var items = await query
                 .OrderByDescending(o => o.CreatedAt)
@@ -170,9 +171,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         {
             // 有效礼品单=非退款态（ShipStatus!=4）且电话或地址任一命中；两个计数取较大值防拆分规避
             var byPhone = await _context.Set<MallOrder>()
-                .CountAsync(o => o.IsActive && o.ShipStatus != 4 && o.CreatedAt >= sinceUtc && o.ReceiverPhone == phone, cancellationToken);
+                .CountAsync(o => o.IsActive && o.ShipStatus != MallOrderShipStatus.Refunded && o.CreatedAt >= sinceUtc && o.ReceiverPhone == phone, cancellationToken);
             var byAddress = await _context.Set<MallOrder>()
-                .CountAsync(o => o.IsActive && o.ShipStatus != 4 && o.CreatedAt >= sinceUtc && o.ReceiverAddress == address, cancellationToken);
+                .CountAsync(o => o.IsActive && o.ShipStatus != MallOrderShipStatus.Refunded && o.CreatedAt >= sinceUtc && o.ReceiverAddress == address, cancellationToken);
             return Math.Max(byPhone, byAddress);
         }
 
@@ -181,7 +182,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
             CancellationToken cancellationToken = default)
         {
             return _context.Set<MallOrder>()
-                .Where(o => o.IsActive && o.ShipStatus == 2 && o.ShippedAt != null && o.ShippedAt <= shippedBeforeUtc)
+                .Where(o => o.IsActive && o.ShipStatus == MallOrderShipStatus.Shipped && o.ShippedAt != null && o.ShippedAt <= shippedBeforeUtc)
                 .OrderBy(o => o.ShippedAt)
                 .Take(limit)
                 .ToListAsync(cancellationToken);
@@ -200,7 +201,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         {
             // 托管中=待发货(1)/已发货(2)的实物单，未结算，Admin 争议退款队列
             return _context.Set<MallOrder>()
-                .Where(o => o.IsActive && (o.ShipStatus == 1 || o.ShipStatus == 2))
+                .Where(o => o.IsActive && (o.ShipStatus == MallOrderShipStatus.ToShip || o.ShipStatus == MallOrderShipStatus.Shipped))
                 .OrderByDescending(o => o.CreatedAt)
                 .Take(limit)
                 .ToListAsync(cancellationToken);

@@ -73,24 +73,10 @@ namespace OpenFindBearings.Domain.Entities
         public int ViewCount { get; private set; }
 
         /// <summary>
-        /// 是否推荐/置顶
-        /// 用于商家自定义推荐产品
+        /// 销售状态（v2.15.0 状态统一）：已下架/出售中/补货中，替代原 IsOnSale + IsRestocking 两个互斥 bool。
+        /// 默认出售中（保护 Sync/存量数据：爬虫与历史关联保持公域可见）
         /// </summary>
-        public bool IsFeatured { get; private set; }
-
-        /// <summary>
-        /// 是否在售（商家控制）
-        /// true: 在售（默认）
-        /// false: 已下架
-        /// </summary>
-        public bool IsOnSale { get; private set; } = true;
-
-        /// <summary>
-        /// 是否补货中（v1.36.0 三态销售状态）：
-        /// 三态口径——在售=IsOnSale；补货中=!IsOnSale 且 IsRestocking（有该型号但暂时无货，
-        /// 买家侧商家列表仍展示带"补货中"徽标，不计入在售）；已下架=其余（不展示）
-        /// </summary>
-        public bool IsRestocking { get; private set; }
+        public SaleState SaleState { get; private set; } = Enums.SaleState.OnSale;
 
         /// <summary>
         /// 补货预计到货时间（自由文本，如"一周内""10月到货"；仅补货中有意义）
@@ -118,11 +104,10 @@ namespace OpenFindBearings.Domain.Entities
         }
 
         /// <summary>
-        /// 是否需要审核（用于商家创建/编辑产品）
-        /// true: 待审核
-        /// false: 已审核通过
+        /// 审核状态（v2.15.0 状态统一）：仓库中/审核中/已通过/已驳回，替代原 IsPendingApproval bool。
+        /// 默认已通过（保护 Sync/存量数据）；商家新建走 MoveToWarehouse 落仓库中
         /// </summary>
-        public bool IsPendingApproval { get; private set; }
+        public ListingReviewStatus ReviewStatus { get; private set; } = ListingReviewStatus.Approved;
 
         /// <summary>
         /// 审核意见（如果被拒绝）
@@ -163,8 +148,9 @@ namespace OpenFindBearings.Domain.Entities
             PriceDescription = priceDescription;
             StockDescription = stockDescription;
 
-            IsOnSale = true;
-            IsPendingApproval = false;
+            // v2.15.0 状态统一：默认出售中 + 已通过（保护 Sync/存量数据；商家新建走 MoveToWarehouse 落仓库中）
+            SaleState = Enums.SaleState.OnSale;
+            ReviewStatus = ListingReviewStatus.Approved;
         }
 
         /// <summary>
@@ -174,11 +160,10 @@ namespace OpenFindBearings.Domain.Entities
         /// <exception cref="InvalidOperationException">产品已下架时抛出</exception>
         public void TakeOffShelf()
         {
-            if (!IsOnSale)
+            if (SaleState == Enums.SaleState.OffShelf)
                 throw new InvalidOperationException("产品已下架");
 
-            IsOnSale = false;
-            IsRestocking = false;
+            SaleState = Enums.SaleState.OffShelf;
             RestockEta = null;
             UpdateTimestamp();
 
@@ -193,11 +178,10 @@ namespace OpenFindBearings.Domain.Entities
         /// <exception cref="InvalidOperationException">产品已在售时抛出</exception>
         public void PutOnShelf()
         {
-            if (IsOnSale)
+            if (SaleState == Enums.SaleState.OnSale)
                 throw new InvalidOperationException("产品已在售");
 
-            IsOnSale = true;
-            IsRestocking = false;
+            SaleState = Enums.SaleState.OnSale;
             RestockEta = null;
             UpdateTimestamp();
 
@@ -212,18 +196,28 @@ namespace OpenFindBearings.Domain.Entities
         /// <param name="restockEta">预计到货时间（自由文本，可空）</param>
         public void MarkAsRestocking(string? restockEta)
         {
-            IsOnSale = false;
-            IsRestocking = true;
+            SaleState = Enums.SaleState.Restocking;
             RestockEta = string.IsNullOrWhiteSpace(restockEta) ? null : restockEta.Trim();
             UpdateTimestamp();
         }
 
         /// <summary>
-        /// 提交审核（商家创建或编辑后）
+        /// 落入仓库中（v2.15.0 状态统一）：商家新建商品的初始态——审核位 None、销售态已下架，仅商家后台可见
+        /// </summary>
+        public void MoveToWarehouse()
+        {
+            ReviewStatus = ListingReviewStatus.None;
+            SaleState = Enums.SaleState.OffShelf;
+            ApprovalComment = null;
+            UpdateTimestamp();
+        }
+
+        /// <summary>
+        /// 提交审核（商家上架或编辑重要字段后）
         /// </summary>
         public void SubmitForApproval()
         {
-            IsPendingApproval = true;
+            ReviewStatus = ListingReviewStatus.Pending;
             ApprovalComment = null;
             UpdateTimestamp();
 
@@ -231,19 +225,20 @@ namespace OpenFindBearings.Domain.Entities
         }
 
         /// <summary>
-        /// 审核通过（管理员调用）
+        /// 审核通过（管理员调用）：审核位 Approved + 销售态出售中（通过即上架）
         /// </summary>
         public void Approve()
         {
-            IsPendingApproval = false;
-            IsOnSale = true;
+            ReviewStatus = ListingReviewStatus.Approved;
+            SaleState = Enums.SaleState.OnSale;
+            ApprovalComment = null;
             UpdateTimestamp();
 
             AddDomainEvent(new BearingApprovedEvent(Id, MerchantId, BearingId));
         }
 
         /// <summary>
-        /// 审核拒绝（管理员调用）
+        /// 审核拒绝（管理员调用）：审核位 Rejected + 销售态已下架（公域隐藏），保留理由供商家修改重提
         /// </summary>
         /// <param name="comment">拒绝理由</param>
         /// <exception cref="ArgumentException">拒绝理由为空时抛出</exception>
@@ -252,7 +247,8 @@ namespace OpenFindBearings.Domain.Entities
             if (string.IsNullOrWhiteSpace(comment))
                 throw new ArgumentException("拒绝理由不能为空", nameof(comment));
 
-            IsPendingApproval = false;
+            ReviewStatus = ListingReviewStatus.Rejected;
+            SaleState = Enums.SaleState.OffShelf;
             ApprovalComment = comment;
             UpdateTimestamp();
 
@@ -323,16 +319,6 @@ namespace OpenFindBearings.Domain.Entities
         }
 
         /// <summary>
-        /// 设置是否推荐
-        /// </summary>
-        /// <param name="featured">是否推荐</param>
-        public void SetFeatured(bool featured)
-        {
-            IsFeatured = featured;
-            UpdateTimestamp();
-        }
-
-        /// <summary>
         /// 设置数据来源类型
         /// </summary>
         public void SetDataSourceType(DataSourceType type)
@@ -340,6 +326,14 @@ namespace OpenFindBearings.Domain.Entities
             DataSourceType = type;
             UpdateTimestamp();
         }
+
+        /// <summary>
+        /// 公域可见判定（v2.15.0 状态统一）：审核通过 + 未删除 + 销售态为出售中/补货中。
+        /// 商城 feed、轴承商家列表、店铺页三面公域查询统一用此口径
+        /// </summary>
+        public bool IsPubliclyVisible =>
+            IsActive && ReviewStatus == ListingReviewStatus.Approved &&
+            (SaleState == Enums.SaleState.OnSale || SaleState == Enums.SaleState.Restocking);
 
         /// <summary>
         /// 判断是否有效库存（有现货）

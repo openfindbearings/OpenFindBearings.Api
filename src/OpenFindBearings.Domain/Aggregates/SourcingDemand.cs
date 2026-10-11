@@ -1,4 +1,5 @@
 using OpenFindBearings.Domain.Abstractions;
+using OpenFindBearings.Domain.Enums;
 
 namespace OpenFindBearings.Domain.Aggregates
 {
@@ -9,17 +10,6 @@ namespace OpenFindBearings.Domain.Aggregates
     /// </summary>
     public class SourcingDemand : BaseEntity
     {
-        /// <summary>状态：进行中（可被应答）</summary>
-        public const int StatusPublished = 1;
-        /// <summary>状态：已选定关闭（发布人确认了某条应答，双方解锁联系方式）</summary>
-        public const int StatusClosed = 2;
-        /// <summary>状态：已过期（发布后 14 天无人确认，读时惰性判定）</summary>
-        public const int StatusExpired = 3;
-        /// <summary>状态：发布人主动取消</summary>
-        public const int StatusCancelled = 4;
-        /// <summary>状态：平台下架（违规内容，Admin 治理）</summary>
-        public const int StatusTakenDown = 5;
-
         /// <summary>有效期天数（发布后自动过期）</summary>
         public const int ValidDays = 14;
 
@@ -56,8 +46,8 @@ namespace OpenFindBearings.Domain.Aggregates
         /// <summary>补充说明（可选）</summary>
         public string? Description { get; private set; }
 
-        /// <summary>状态（Status* 常量）</summary>
-        public int Status { get; private set; } = StatusPublished;
+        /// <summary>状态（SourcingDemandStatus 枚举，v2.15.0）</summary>
+        public SourcingDemandStatus Status { get; private set; } = SourcingDemandStatus.Published;
 
         /// <summary>过期时刻（CreatedAt + ValidDays，读时惰性判定过期）</summary>
         public DateTime ExpiryAt { get; private set; }
@@ -109,7 +99,7 @@ namespace OpenFindBearings.Domain.Aggregates
                 ExpectedDelivery = Truncate(expectedDelivery, 30),
                 Region = Truncate(region, 30),
                 Description = Truncate(description, 500),
-                Status = StatusPublished,
+                Status = SourcingDemandStatus.Published,
                 ExpiryAt = DateTime.UtcNow.AddDays(ValidDays),
             };
         }
@@ -118,15 +108,15 @@ namespace OpenFindBearings.Domain.Aggregates
         public bool IsMerchantPublished => PublisherMerchantId.HasValue;
 
         /// <summary>是否进行中（可被应答/可被取消）</summary>
-        public bool IsOpen => Status == StatusPublished && DateTime.UtcNow < ExpiryAt;
+        public bool IsOpen => Status == SourcingDemandStatus.Published && DateTime.UtcNow < ExpiryAt;
 
         /// <summary>惰性过期判定：进行中但已过有效期则转过期态（读路径触发，无需定时任务）</summary>
         /// <returns>本次是否发生了状态流转</returns>
         public bool TryExpire()
         {
-            if (Status != StatusPublished || DateTime.UtcNow < ExpiryAt)
+            if (Status != SourcingDemandStatus.Published || DateTime.UtcNow < ExpiryAt)
                 return false;
-            Status = StatusExpired;
+            Status = SourcingDemandStatus.Expired;
             ClosedAt = DateTime.UtcNow;
             return true;
         }
@@ -135,7 +125,7 @@ namespace OpenFindBearings.Domain.Aggregates
         /// <param name="responseId">被选定的应答 ID</param>
         public void Select(Guid responseId)
         {
-            Status = StatusClosed;
+            Status = SourcingDemandStatus.Closed;
             SelectedResponseId = responseId;
             ClosedAt = DateTime.UtcNow;
         }
@@ -143,14 +133,14 @@ namespace OpenFindBearings.Domain.Aggregates
         /// <summary>发布人主动取消</summary>
         public void Cancel()
         {
-            Status = StatusCancelled;
+            Status = SourcingDemandStatus.Cancelled;
             ClosedAt = DateTime.UtcNow;
         }
 
         /// <summary>平台下架（违规治理）</summary>
         public void TakeDown()
         {
-            Status = StatusTakenDown;
+            Status = SourcingDemandStatus.TakenDown;
             ClosedAt = DateTime.UtcNow;
         }
 
@@ -184,7 +174,7 @@ namespace OpenFindBearings.Domain.Aggregates
         /// <exception cref="InvalidOperationException">进行中单不可删</exception>
         public void Delete()
         {
-            if (Status == StatusPublished)
+            if (Status == SourcingDemandStatus.Published)
                 throw new InvalidOperationException("进行中的寻货请先取消，再删除记录");
             IsDeleted = true;
         }

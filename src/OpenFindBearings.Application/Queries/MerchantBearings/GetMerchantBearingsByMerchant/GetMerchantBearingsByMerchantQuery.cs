@@ -26,6 +26,9 @@ namespace OpenFindBearings.Application.Queries.MerchantBearings.GetMerchantBeari
         /// </summary>
         public bool? PendingOnly { get; init; }
 
+        /// <summary>审核状态精确过滤（v2.15.0）：仓库中/审核中/已通过/已驳回；null=全部</summary>
+        public ListingReviewStatus? ReviewStatus { get; init; }
+
         /// <summary>
         /// 来源类型过滤
         /// </summary>

@@ -2,6 +2,7 @@ using MediatR;
 using OpenFindBearings.Application.Services;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Domain.Entities;
+using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Commands.MerchantBearings.PutOnShelf
@@ -56,7 +57,15 @@ namespace OpenFindBearings.Application.Commands.MerchantBearings.PutOnShelf
                 throw new UnauthorizedAccessException("无权修改其他商家的轴承信息");
             }
 
-            merchantBearing.PutOnShelf();
+            // v2.15.0 状态统一：上架按钮语义——未通过审核则提交审核（进入审核中）；已通过则直接上架
+            if (merchantBearing.ReviewStatus != ListingReviewStatus.Approved)
+            {
+                merchantBearing.SubmitForApproval();
+            }
+            else
+            {
+                merchantBearing.PutOnShelf();
+            }
             await _merchantBearingRepository.UpdateAsync(merchantBearing, cancellationToken);
 
             // 改动说明（v1.34.0 积分防刷设计）：首件上架一次性奖励——bizId 绑信用代码，

@@ -1,5 +1,6 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
+using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Repositories;
 
@@ -49,9 +50,9 @@ namespace OpenFindBearings.Application.Queries.MerchantBearings.GetMerchantBeari
             return new MerchantBearingStatsDto
             {
                 TotalCount = list.Count,
-                OnSaleCount = list.Count(mb => mb.IsOnSale),
-                PendingCount = list.Count(mb => mb.IsPendingApproval),
-                FeaturedCount = list.Count(mb => mb.IsFeatured),
+                // v2.15.0 状态统一：出售中/补货中 + 审核中（原 FeaturedCount 僵尸统计已删）
+                OnSaleCount = list.Count(mb => mb.SaleState == SaleState.OnSale),
+                PendingCount = list.Count(mb => mb.ReviewStatus == ListingReviewStatus.Pending),
                 MerchantCount = request.MerchantId.HasValue ? 1 : list.Select(mb => mb.MerchantId).Distinct().Count(),
                 BearingCount = request.BearingId.HasValue ? 1 : list.Select(mb => mb.BearingId).Distinct().Count()
             };
