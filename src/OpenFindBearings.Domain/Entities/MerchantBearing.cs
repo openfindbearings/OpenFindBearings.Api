@@ -336,6 +336,17 @@ namespace OpenFindBearings.Domain.Entities
             (SaleState == Enums.SaleState.OnSale || SaleState == Enums.SaleState.Restocking);
 
         /// <summary>
+        /// 商家删除守卫（v2.15.0 商家删除）：公域可见态（出售中/补货中）不可直接删除，须先下架；
+        /// 其余态（仓库中/审核中/已驳回/已下架）均可直接删除（物理删除，无软删残留）
+        /// </summary>
+        /// <exception cref="InvalidOperationException">当前在售/补货中时抛出</exception>
+        public void EnsureRemovable()
+        {
+            if (SaleState == Enums.SaleState.OnSale || SaleState == Enums.SaleState.Restocking)
+                throw new InvalidOperationException("出售中/补货中的商品请先下架再删除");
+        }
+
+        /// <summary>
         /// 判断是否有效库存（有现货）
         /// </summary>
         public bool HasStock() =>

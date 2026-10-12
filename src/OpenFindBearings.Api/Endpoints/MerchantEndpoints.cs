@@ -5,6 +5,7 @@ using OpenFindBearings.Api.Helpers;
 using OpenFindBearings.Api.Services;
 using OpenFindBearings.Application.Commands.MerchantBearings.Commands;
 using OpenFindBearings.Application.Commands.MerchantBearings.PutOnShelf;
+using OpenFindBearings.Application.Commands.MerchantBearings.RemoveMerchantBearing;
 using OpenFindBearings.Application.Commands.MerchantBearings.Restock;
 using OpenFindBearings.Application.Commands.MerchantBearings.SetPriceVisibility;
 using OpenFindBearings.Application.Commands.MerchantBearings.TakeOffShelf;
@@ -812,6 +813,31 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("RestockMerchantBearing")
             .WithSummary("置为补货中")
             .WithDescription("商品有型号但暂时缺货时置为补货中（买家侧仍展示带徽标），与上架/下架构成三态");
+
+            /// <summary>
+            /// 删除轴承商品（v2.15.0 商家删除）：出售中/补货中禁删（先下架）；仓库中且从未置顶硬删；其余软删
+            /// </summary>
+            group.MapDelete("/bearings/{id:guid}", async (
+                Guid id,
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                var command = new RemoveMerchantBearingCommand
+                {
+                    MerchantBearingId = id,
+                    UserId = currentUser.UserId.Value
+                };
+                await mediator.Send(command);
+
+                return ApiResponseHelper.Ok("删除成功", httpContext);
+            })
+            .WithName("RemoveMerchantBearing")
+            .WithSummary("删除轴承商品")
+            .WithDescription("删除自家商品；出售中/补货中需先下架，其余按状态硬删或软删");
 
         }
 
