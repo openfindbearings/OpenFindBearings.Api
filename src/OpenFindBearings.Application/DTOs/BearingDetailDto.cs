@@ -38,6 +38,6 @@
         public List<MerchantBearingDto> Merchants { get; set; } = [];
 
         // 替代品列表
-        public List<BearingDto> Interchanges { get; set; } = [];
+        public List<BearingInterchangeDto> Interchanges { get; set; } = [];
     }
 }

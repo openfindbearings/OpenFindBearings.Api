@@ -6,6 +6,9 @@ using OpenFindBearings.Api.Services;
 using OpenFindBearings.Application.Commands.MerchantBearings.Commands;
 using OpenFindBearings.Application.Commands.MerchantBearings.PutOnShelf;
 using OpenFindBearings.Application.Commands.MerchantBearings.RemoveMerchantBearing;
+// 替代品治理（v2.16.0）：商家报候选
+using OpenFindBearings.Application.Commands.Interchanges.SubmitInterchange;
+using OpenFindBearings.Application.Queries.MerchantInterchanges.GetMyInterchanges;
 using OpenFindBearings.Application.Commands.MerchantBearings.Restock;
 using OpenFindBearings.Application.Commands.MerchantBearings.SetPriceVisibility;
 using OpenFindBearings.Application.Commands.MerchantBearings.TakeOffShelf;
@@ -838,6 +841,51 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("RemoveMerchantBearing")
             .WithSummary("删除轴承商品")
             .WithDescription("删除自家商品；出售中/补货中需先下架，其余状态物理删除");
+
+            // ============ 替代候选（v2.16.0）：商家报候选，平台审核生效 ============
+
+            /// <summary>提交替代候选（商家）：置待审核，待平台审核后生效</summary>
+            group.MapPost("/interchanges", async (
+                CreateInterchangeRequest body,
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.CurrentMerchantId.HasValue)
+                    return ApiResponseHelper.NotFound("未找到所属商家", httpContext);
+
+                var id = await mediator.Send(new SubmitInterchangeCommand
+                {
+                    SourceBearingId = body.SourceBearingId,
+                    TargetBearingId = body.TargetBearingId,
+                    InterchangeType = body.InterchangeType,
+                    Confidence = body.Confidence ?? 80,
+                    Source = body.Source,
+                    Remarks = body.Remarks,
+                    IsBidirectional = body.IsBidirectional ?? true,
+                    MerchantId = currentUser.CurrentMerchantId.Value
+                });
+                return ApiResponseHelper.Ok(new { id }, "已提交，待平台审核", httpContext);
+            })
+            .WithName("SubmitInterchange")
+            .WithSummary("提交替代候选")
+            .WithDescription("商家提交替代候选，待平台审核后生效");
+
+            /// <summary>我的替代提交（商家）：含各审核状态与驳回理由</summary>
+            group.MapGet("/interchanges", async (
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.CurrentMerchantId.HasValue)
+                    return ApiResponseHelper.NotFound("未找到所属商家", httpContext);
+
+                var result = await mediator.Send(new GetMyInterchangesQuery { MerchantId = currentUser.CurrentMerchantId.Value });
+                return ApiResponseHelper.Ok(result, httpContext: httpContext);
+            })
+            .WithName("GetMyInterchanges")
+            .WithSummary("我的替代提交")
+            .WithDescription("商家查看本人提交的替代候选及审核状态");
 
         }
 

@@ -96,6 +96,19 @@ namespace OpenFindBearings.Domain.ValueObjects
         }
 
         /// <summary>
+        /// 创建用户/商家提交的数据源（v2.16.0 替代品治理：商家报候选）
+        /// </summary>
+        public static DataSource FromUserSubmitted(string? importedBy = null)
+        {
+            return new DataSource
+            {
+                SourceType = DataSourceType.UserSubmitted,
+                ImportedBy = importedBy,
+                ImportedAt = DateTime.UtcNow
+            };
+        }
+
+        /// <summary>
         /// 是否为爬虫数据（可以被覆盖）
         /// </summary>
         public bool IsCrawler => SourceType == DataSourceType.Crawler;

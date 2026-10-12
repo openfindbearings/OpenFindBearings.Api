@@ -860,9 +860,21 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                         .HasColumnType("boolean")
                         .HasDefaultValue(true);
 
+                    b.Property<Guid?>("ProposedByMerchantId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Remarks")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
+
+                    b.Property<string>("ReviewComment")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("ReviewStatus")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
 
                     b.Property<string>("Source")
                         .HasMaxLength(100)
@@ -878,6 +890,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ReviewStatus")
+                        .HasDatabaseName("IX_BearingInterchanges_ReviewStatus");
 
                     b.HasIndex("SourceBearingId")
                         .HasDatabaseName("IX_BearingInterchanges_SourceBearingId");
