@@ -815,7 +815,7 @@ namespace OpenFindBearings.Api.Endpoints
             .WithDescription("商品有型号但暂时缺货时置为补货中（买家侧仍展示带徽标），与上架/下架构成三态");
 
             /// <summary>
-            /// 删除轴承商品（v2.15.0 商家删除）：出售中/补货中禁删（先下架）；仓库中且从未置顶硬删；其余软删
+            /// 删除轴承商品（v2.15.0 商家删除）：出售中/补货中禁删（须先下架）；其余状态物理删除
             /// </summary>
             group.MapDelete("/bearings/{id:guid}", async (
                 Guid id,
@@ -837,7 +837,7 @@ namespace OpenFindBearings.Api.Endpoints
             })
             .WithName("RemoveMerchantBearing")
             .WithSummary("删除轴承商品")
-            .WithDescription("删除自家商品；出售中/补货中需先下架，其余按状态硬删或软删");
+            .WithDescription("删除自家商品；出售中/补货中需先下架，其余状态物理删除");
 
         }
 
