@@ -72,11 +72,10 @@ namespace OpenFindBearings.Application.Queries.Bearings.GetBearingQuery
                 .ThenBy(mb => mb.NumericPrice)
                 .ToList();
 
-            // 获取替代品列表
-            var interchanges = await _interchangeRepository.GetBySourceBearingAsync(bearing.Id, cancellationToken);
-            var interchangeBearings = interchanges
-                .Where(i => i.TargetBearing != null && i.TargetBearing.IsActive)
-                .Select(i => i.TargetBearing!.ToDto())
+            // 获取替代品列表（v2.16.0：仅已生效，源∪双向反向；含三级类型）
+            var interchanges = await _interchangeRepository.GetApprovedForBearingAsync(bearing.Id, cancellationToken);
+            var interchangeItems = interchanges
+                .Select(i => i.ToInterchangeDto(bearing.Id))
                 .ToList();
 
             return new BearingDetailDto
@@ -103,7 +102,7 @@ namespace OpenFindBearings.Application.Queries.Bearings.GetBearingQuery
                 LimitingSpeedOil = bearing.Performance?.LimitingSpeedOil,
                 ViewCount = bearing.ViewCount,
                 Merchants = onSaleMerchants,
-                Interchanges = interchangeBearings,
+                Interchanges = interchangeItems,
                 OriginCountry = bearing.OriginCountry,
                 Category = bearing.Category.ToString(),
                 IsStandard = bearing.IsStandard,

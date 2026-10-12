@@ -1,5 +1,6 @@
 ﻿using OpenFindBearings.Domain.Abstractions;
 using OpenFindBearings.Domain.Aggregates;
+using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.ValueObjects;
 
 namespace OpenFindBearings.Domain.Entities
@@ -74,6 +75,22 @@ namespace OpenFindBearings.Domain.Entities
         /// 人工维护/审核过的替代品来源标记为非爬虫，爬虫批量同步不再覆盖
         /// </summary>
         public DataSource? DataSource { get; private set; }
+
+        /// <summary>
+        /// 审核状态（v2.16.0 替代品治理）：平台自建/审核通过=已生效；商家提交=待审核；驳回=已驳回。
+        /// 仅"已生效"对公域可见
+        /// </summary>
+        public InterchangeReviewStatus ReviewStatus { get; private set; } = InterchangeReviewStatus.Approved;
+
+        /// <summary>
+        /// 驳回理由（v2.16.0）：仅 Rejected 时有值，提交方可改后重提
+        /// </summary>
+        public string? ReviewComment { get; private set; }
+
+        /// <summary>
+        /// 提出该候选替代的商户ID（v2.16.0）：商家提交时记录，供追溯与责任/黑名单；平台自建为 null
+        /// </summary>
+        public Guid? ProposedByMerchantId { get; private set; }
 
         /// <summary>
         /// 无参构造函数，仅供EF Core使用
@@ -155,6 +172,58 @@ namespace OpenFindBearings.Domain.Entities
         }
 
         /// <summary>
+        /// 更新替代明细（平台编辑：类型/可信度/来源/备注/双向）
+        /// </summary>
+        public void UpdateDetails(string? interchangeType, int confidence, string? source, string? remarks, bool isBidirectional)
+        {
+            if (confidence < 0 || confidence > 100)
+                throw new ArgumentException("可信度必须在0-100之间", nameof(confidence));
+
+            InterchangeType = interchangeType;
+            Confidence = confidence;
+            Source = source;
+            Remarks = remarks;
+            IsBidirectional = isBidirectional;
+            UpdateTimestamp();
+        }
+
+        /// <summary>平台自建/审核通过标记（v2.16.0）：置为已生效并清空驳回理由</summary>
+        public void MarkApproved()
+        {
+            ReviewStatus = InterchangeReviewStatus.Approved;
+            ReviewComment = null;
+            UpdateTimestamp();
+        }
+
+        /// <summary>商家提交候选（v2.16.0）：置待审核并记录提出商户</summary>
+        public void SubmitByMerchant(Guid merchantId)
+        {
+            if (merchantId == Guid.Empty)
+                throw new ArgumentException("商户ID不能为空", nameof(merchantId));
+
+            ReviewStatus = InterchangeReviewStatus.Pending;
+            ProposedByMerchantId = merchantId;
+            ReviewComment = null;
+            UpdateTimestamp();
+        }
+
+        /// <summary>平台审核通过（v2.16.0）：生效并清空驳回理由</summary>
+        public void Approve()
+        {
+            ReviewStatus = InterchangeReviewStatus.Approved;
+            ReviewComment = null;
+            UpdateTimestamp();
+        }
+
+        /// <summary>平台驳回（v2.16.0）：记录理由，提交方可改后重提</summary>
+        public void Reject(string reason)
+        {
+            ReviewStatus = InterchangeReviewStatus.Rejected;
+            ReviewComment = reason;
+            UpdateTimestamp();
+        }
+
+        /// <summary>
         /// 判断是否为完全替代
         /// </summary>
         public bool IsExact() => InterchangeType == "exact";
@@ -163,6 +232,17 @@ namespace OpenFindBearings.Domain.Entities
         /// 判断是否为有条件替代
         /// </summary>
         public bool IsConditional() => InterchangeType == "conditional";
+
+        /// <summary>
+        /// 判断是否为功能替代（v2.16.0：列为"仅供参考"，不进自动推荐）
+        /// </summary>
+        public bool IsFunctional() => InterchangeType == "functional";
+
+        /// <summary>公域可见（v2.16.0）：未删除且已生效</summary>
+        public bool IsPubliclyVisible => IsActive && ReviewStatus == InterchangeReviewStatus.Approved;
+
+        /// <summary>是否可进自动推荐（v2.16.0）：公域可见且非"仅供参考"档</summary>
+        public bool IsAutoRecommendable => IsPubliclyVisible && !IsFunctional();
 
         /// <summary>
         /// 获取可信度等级描述
@@ -180,15 +260,16 @@ namespace OpenFindBearings.Domain.Entities
         }
 
         /// <summary>
-        /// 获取替代类型的中文描述
+        /// 获取替代类型的中文描述（v2.16.0 三级治理口径）
+        /// exact=标准等效替代；conditional=条件替代（需评估）；functional=仅供参考（不构成推荐）
         /// </summary>
         public string GetInterchangeTypeDescription()
         {
             return InterchangeType switch
             {
-                "exact" => "完全替代（尺寸性能完全相同）",
-                "conditional" => "有条件替代（需确认安装空间）",
-                "functional" => "功能替代（相同功能但尺寸不同）",
+                "exact" => "标准等效替代（同尺寸/精度/结构，可直接替换）",
+                "conditional" => "条件替代（精度/密封/游隙等差异，需技术确认）",
+                "functional" => "仅供参考（类似用途，不构成平台推荐，请人工咨询）",
                 _ => InterchangeType ?? "未知"
             };
         }
