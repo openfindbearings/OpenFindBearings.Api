@@ -54,19 +54,26 @@ public class GetMerchantsByBearingQueryHandler : IRequestHandler<GetMerchantsByB
                     .Select(mb => mb.PinnedUntil!.Value)
                     .DefaultIfEmpty(DateTime.MinValue)
                     .Max();
-                return new BearingMerchantDto
+                return new
                 {
-                    MerchantId = g.Key,
-                    MerchantName = best.Merchant!.Name,
-                    Price = best.PriceDescription,
-                    SaleState = best.SaleState,
-                    RestockEta = best.RestockEta,
-                    IsPinned = pinnedUntil > DateTime.MinValue,
-                    PinnedUntil = pinnedUntil > DateTime.MinValue ? pinnedUntil : null
+                    Dto = new BearingMerchantDto
+                    {
+                        MerchantId = g.Key,
+                        MerchantName = best.Merchant!.Name,
+                        Price = best.PriceDescription,
+                        SaleState = best.SaleState,
+                        RestockEta = best.RestockEta,
+                        IsPinned = pinnedUntil > DateTime.MinValue,
+                        PinnedUntil = pinnedUntil > DateTime.MinValue ? pinnedUntil : null
+                    },
+                    // 改动说明（v2.15.0 搜索权重批次）：携带商家等级序数用于排序（与商家搜索同口径）
+                    GradeRank = best.Merchant!.Grade.Rank()
                 };
             })
-            // 置顶商家优先，其余保持原有相对顺序（稳定排序）
-            .OrderByDescending(m => m.IsPinned)
+            // 置顶商家优先；其次按商家等级序数（等级高者靠前）；LINQ OrderBy 为稳定排序，其余保持原有相对顺序
+            .OrderByDescending(x => x.Dto.IsPinned)
+            .ThenByDescending(x => x.GradeRank)
+            .Select(x => x.Dto)
             .ToList();
         var total = merchants.Count;
         var paged = merchants

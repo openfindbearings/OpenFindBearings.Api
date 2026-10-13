@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using OpenFindBearings.Domain.Aggregates;
 using OpenFindBearings.Domain.Enums;
@@ -71,18 +72,25 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 
             var totalCount = await query.CountAsync(cancellationToken);
 
-            // 改动说明：所有排序分支都以"已认证/入驻优先"为主排序（OrderByDescending(IsVerified)），
-            // 用户选的 名称/在售数 仅作次排序，保证入驻商家始终排在前面。
+            // 改动说明（v2.15.0 搜索权重批次）：主排序由"已认证优先（IsVerified）"升级为"商家等级序数优先"——
+            // 等级序数（Standard→Verified→Premium→Gold）已内含认证态并叠加在售供给/金库质量，认证商家自然靠前；
+            // 因枚举数值与推进路径不一致，SQL 侧按序数映射（三元 → CASE）排序，与 Domain.MerchantGradeExtensions.Rank 同口径。
+            Expression<Func<Merchant, int>> gradeRank = m =>
+                m.Grade == MerchantGrade.Gold ? 4 :
+                m.Grade == MerchantGrade.Premium ? 3 :
+                m.Grade == MerchantGrade.Verified ? 2 :
+                m.Grade == MerchantGrade.Standard ? 1 : 0;
+
             var desc = searchParams.SortOrder?.ToLower() == "desc";
             var ordered = (searchParams.SortBy?.ToLower()) switch
             {
                 "name" => desc
-                    ? query.OrderByDescending(m => m.IsVerified).ThenByDescending(m => m.Name)
-                    : query.OrderByDescending(m => m.IsVerified).ThenBy(m => m.Name),
+                    ? query.OrderByDescending(gradeRank).ThenByDescending(m => m.Name)
+                    : query.OrderByDescending(gradeRank).ThenBy(m => m.Name),
                 "productcount" => desc
-                    ? query.OrderByDescending(m => m.IsVerified).ThenBy(m => m.ProductCount)
-                    : query.OrderByDescending(m => m.IsVerified).ThenByDescending(m => m.ProductCount),
-                _ => query.OrderByDescending(m => m.IsVerified).ThenBy(m => m.Name)
+                    ? query.OrderByDescending(gradeRank).ThenBy(m => m.ProductCount)
+                    : query.OrderByDescending(gradeRank).ThenByDescending(m => m.ProductCount),
+                _ => query.OrderByDescending(gradeRank).ThenBy(m => m.Name)
             };
 
             var items = await ordered
