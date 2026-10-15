@@ -30,8 +30,19 @@ namespace OpenFindBearings.Domain.Entities
         public const string TypeMerchantClosed = "merchant_closed";
         /// <summary>寻货通知类型（v1.35.0）：收到新应答/被选定/需求关闭/已下架，前端图标映射同口径</summary>
         public const string TypeSourcing = "sourcing";
+        // 改动说明（v2.13.2 常量收敛）：礼品订单四类通知原以裸字符串写在 MallService/MallAutoConfirmJob
+        /// <summary>礼品已发货通知（发给买家）</summary>
+        public const string TypeGiftShipped = "gift_shipped";
+        /// <summary>礼品订单退款通知（发给买家）</summary>
+        public const string TypeGiftRefunded = "gift_refunded";
+        /// <summary>新礼品订单通知（发给商家管理员）</summary>
+        public const string TypeGiftOrder = "gift_order";
+        /// <summary>礼品订单自动确认结算通知（发给商家管理员）</summary>
+        public const string TypeGiftSettlement = "gift_settlement";
         /// <summary>纠错业务对象类型（bizType，跳转定位纠错详情）</summary>
         public const string BizCorrection = "correction";
+        /// <summary>商城订单业务对象类型（bizType，跳转定位订单）</summary>
+        public const string BizMallOrder = "mall_order";
 
         /// <summary>业务类型：商户（前端据此跳转商户页）</summary>
         public const string BizMerchant = "merchant";

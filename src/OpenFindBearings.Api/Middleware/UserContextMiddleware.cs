@@ -194,7 +194,7 @@ namespace OpenFindBearings.Api.Middleware
                         try
                         {
                             await achievements.IncrementAsync(Domain.Entities.AchievementScope.Personal,
-                                resolvedUserId.Value, "register_total", 1);
+                                resolvedUserId.Value, Domain.Entities.AchievementMetricKeys.RegisterTotal, 1);
                         }
                         catch { /* 成就旁路，吞 */ }
 

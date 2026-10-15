@@ -245,36 +245,10 @@ namespace OpenFindBearings.Domain.Entities
         }
 
         /// <summary>
-        /// 获取字段的显示名称
+        /// 获取字段的显示名称。
+        /// 改动说明（v2.13.2 标签收敛）：原 PascalCase switch 与库中 camelCase 字段名不匹配，
+        /// 且与 CorrectionExtensions/可纠错字段清单三处不一致；改为委托唯一口径 CorrectionFieldLabels
         /// </summary>
-        public string GetFieldDisplayName()
-        {
-            if (TargetType == "Bearing")
-            {
-                return FieldName switch
-                {
-                    "PartNumber" => "型号",
-                    "Name" => "名称",
-                    "Description" => "描述",
-                    "InnerDiameter" => "内径",
-                    "OuterDiameter" => "外径",
-                    "Width" => "宽度",
-                    _ => FieldName
-                };
-            }
-            else if (TargetType == "Merchant")
-            {
-                return FieldName switch
-                {
-                    "Name" => "商家名称",
-                    "CompanyName" => "公司全称",
-                    "Phone" => "电话",
-                    "Email" => "邮箱",
-                    "Address" => "地址",
-                    _ => FieldName
-                };
-            }
-            return FieldName;
-        }
+        public string GetFieldDisplayName() => CorrectionFieldLabels.Label(TargetType, FieldName);
     }
 }

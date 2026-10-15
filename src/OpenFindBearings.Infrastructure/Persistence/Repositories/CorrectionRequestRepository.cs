@@ -3,6 +3,7 @@ using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
 using OpenFindBearings.Infrastructure.Persistence.Data;
+using OpenFindBearings.Infrastructure.Persistence.Extensions;
 
 namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 {
@@ -70,7 +71,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 
         public async Task UpdateAsync(CorrectionRequest correction, CancellationToken cancellationToken = default)
         {
-            _context.CorrectionRequests.Update(correction);
+            _context.MarkModified(correction);
         }
 
         public async Task<List<CorrectionRequest>> GetAllAsync(CancellationToken cancellationToken = default)

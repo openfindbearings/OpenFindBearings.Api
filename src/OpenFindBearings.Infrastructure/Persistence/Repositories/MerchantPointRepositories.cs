@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Repositories;
 using OpenFindBearings.Infrastructure.Persistence.Data;
+using OpenFindBearings.Infrastructure.Persistence.Extensions;
 
 namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 {
@@ -32,7 +33,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         /// <inheritdoc/>
         public Task UpdateAsync(MerchantPointAccount account, CancellationToken cancellationToken = default)
         {
-            _context.Set<MerchantPointAccount>().Update(account);
+            _context.MarkModified(account);
             return Task.CompletedTask;
         }
 

@@ -25,9 +25,6 @@ namespace OpenFindBearings.Domain.Repositories
         /// <summary>新建进度行</summary>
         Task AddUnlockAsync(AchievementUnlock unlock, CancellationToken cancellationToken = default);
 
-        /// <summary>标记进度行修改</summary>
-        void UpdateUnlock(AchievementUnlock unlock);
-
         /// <summary>标记定义修改（Admin）</summary>
         void UpdateDefinition(AchievementDefinition definition);
     }

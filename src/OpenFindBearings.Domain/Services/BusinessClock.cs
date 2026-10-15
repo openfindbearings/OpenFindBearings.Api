@@ -43,6 +43,27 @@ public static class BusinessClock
     /// <summary>当前业务偏移——供"任意业务日历时刻 → UTC"换算（如周/月统计起点减偏移）</summary>
     public static TimeSpan Offset => _businessOffset;
 
+    /// <summary>
+    /// 业务周起点（本周一 00:00）对应的 UTC 时刻——周统计范围查询专用。
+    /// 改动说明（v2.13.2 周起点 bug 修复）：原多处自算 <c>AddDays(-(int)DayOfWeek + (int)Monday)</c>，
+    /// 周日（DayOfWeek.Sunday=0）会得到"明天的周一"（未来日）致周统计归零；改用 (dow+6)%7 收敛唯一实现
+    /// </summary>
+    public static DateTime BusinessWeekStartUtc
+    {
+        get
+        {
+            var daysSinceMonday = ((int)Today.DayOfWeek + 6) % 7;
+            return DateTime.SpecifyKind(Today.AddDays(-daysSinceMonday) - _businessOffset, DateTimeKind.Utc);
+        }
+    }
+
+    /// <summary>
+    /// 业务月起点（本月 1 日 00:00）对应的 UTC 时刻——月统计/月榜范围查询专用。
+    /// 改动说明（v2.13.2 收敛）：原四处各自 new DateTime(y,m,1) 再减偏移，统一到此
+    /// </summary>
+    public static DateTime BusinessMonthStartUtc =>
+        DateTime.SpecifyKind(new DateTime(Today.Year, Today.Month, 1) - _businessOffset, DateTimeKind.Utc);
+
     /// <summary>bizId 日期键（yyyyMMdd，业务日历），如 checkin:{userId}:20260925</summary>
     public static string DateKey => Now.ToString("yyyyMMdd");
 }

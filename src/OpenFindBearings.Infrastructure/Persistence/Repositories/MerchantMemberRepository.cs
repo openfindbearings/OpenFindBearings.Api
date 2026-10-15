@@ -3,6 +3,7 @@ using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
 using OpenFindBearings.Infrastructure.Persistence.Data;
+using OpenFindBearings.Infrastructure.Persistence.Extensions;
 
 namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 {
@@ -115,7 +116,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 
         public async Task UpdateAsync(MerchantMember member, CancellationToken cancellationToken = default)
         {
-            _context.Set<MerchantMember>().Update(member);
+            _context.MarkModified(member);
         }
 
         public async Task RemoveAsync(MerchantMember member, CancellationToken cancellationToken = default)

@@ -12,6 +12,9 @@ namespace OpenFindBearings.Domain.Entities
     /// </summary>
     public class PointLevel : BaseEntity
     {
+        /// <summary>起步档（Lv1）默认段位名（v2.13.2 收敛：原"倔强青铜"字面散落四处兜底）</summary>
+        public const string DefaultName = "倔强青铜";
+
         /// <summary>等级（1 起连续递增）</summary>
         public int Level { get; private set; }
 

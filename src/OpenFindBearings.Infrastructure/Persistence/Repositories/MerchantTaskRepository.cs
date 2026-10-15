@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Repositories;
 using OpenFindBearings.Infrastructure.Persistence.Data;
+using OpenFindBearings.Infrastructure.Persistence.Extensions;
 
 namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 {
@@ -49,7 +50,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         /// <inheritdoc/>
         public Task UpdateDefinitionAsync(MerchantTaskDefinition definition, CancellationToken cancellationToken = default)
         {
-            _context.Set<MerchantTaskDefinition>().Update(definition);
+            _context.MarkModified(definition);
             return Task.CompletedTask;
         }
 

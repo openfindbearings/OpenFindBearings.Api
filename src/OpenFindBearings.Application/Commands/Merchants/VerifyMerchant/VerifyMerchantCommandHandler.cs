@@ -60,7 +60,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.VerifyMerchant
             // 改动说明（v2.1.0 成就子系统）：认证通过设商户轨"认证商家"仪表成就（旁路，失败不反噬）
             try
             {
-                await _achievements.SetGaugeAsync(Domain.Entities.AchievementScope.Merchant, merchant.Id, "merchant_verified", 1, cancellationToken);
+                await _achievements.SetGaugeAsync(Domain.Entities.AchievementScope.Merchant, merchant.Id, Domain.Entities.AchievementMetricKeys.MerchantVerified, 1, cancellationToken);
             }
             catch { /* 成就为旁路增强 */ }
 

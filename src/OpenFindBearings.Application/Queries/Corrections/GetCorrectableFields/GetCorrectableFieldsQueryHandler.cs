@@ -1,4 +1,5 @@
 using MediatR;
+using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Queries.Corrections.GetCorrectableFields
@@ -38,24 +39,26 @@ namespace OpenFindBearings.Application.Queries.Corrections.GetCorrectableFields
             if (bearing == null) return [];
 
             static string? S(object? v) => v?.ToString();
-            return
+            // 改动说明（v2.13.2 标签收敛）：字段 id 与值的清单在此维护，显示名统一取自 CorrectionFieldLabels
+            (string Id, string? Value)[] raw =
             [
-                new("oldNumber", "型号（老型号）", bearing.OldNumber),
-                new("description", "描述", bearing.Description),
-                new("weight", "重量", S(bearing.Weight)),
-                new("innerDiameter", "内径", S(bearing.Dimensions.InnerDiameter)),
-                new("outerDiameter", "外径", S(bearing.Dimensions.OuterDiameter)),
-                new("width", "宽度", S(bearing.Dimensions.Width)),
-                new("precisionGrade", "精度等级", bearing.PrecisionGrade),
-                new("material", "材质", bearing.Material),
-                new("sealType", "密封形式", bearing.SealType),
-                new("cageType", "保持架类型", bearing.CageType),
-                new("dynamicLoad", "动载荷", S(bearing.Performance?.DynamicLoad)),
-                new("staticLoad", "静载荷", S(bearing.Performance?.StaticLoad)),
-                new("limitingSpeed", "极限转速", S(bearing.Performance?.LimitingSpeed)),
-                new("limitingSpeedGrease", "极限转速（脂润滑）", S(bearing.Performance?.LimitingSpeedGrease)),
-                new("limitingSpeedOil", "极限转速（油润滑）", S(bearing.Performance?.LimitingSpeedOil))
+                ("oldNumber", bearing.OldNumber),
+                ("description", bearing.Description),
+                ("weight", S(bearing.Weight)),
+                ("innerDiameter", S(bearing.Dimensions.InnerDiameter)),
+                ("outerDiameter", S(bearing.Dimensions.OuterDiameter)),
+                ("width", S(bearing.Dimensions.Width)),
+                ("precisionGrade", bearing.PrecisionGrade),
+                ("material", bearing.Material),
+                ("sealType", bearing.SealType),
+                ("cageType", bearing.CageType),
+                ("dynamicLoad", S(bearing.Performance?.DynamicLoad)),
+                ("staticLoad", S(bearing.Performance?.StaticLoad)),
+                ("limitingSpeed", S(bearing.Performance?.LimitingSpeed)),
+                ("limitingSpeedGrease", S(bearing.Performance?.LimitingSpeedGrease)),
+                ("limitingSpeedOil", S(bearing.Performance?.LimitingSpeedOil))
             ];
+            return raw.Select(f => new CorrectionFieldOptionDto(f.Id, CorrectionFieldLabels.Label("Bearing", f.Id), f.Value)).ToList();
         }
 
         /// <summary>商家可纠错字段（与审批 Apply switch 的 9 个 case 一致）</summary>
@@ -64,18 +67,20 @@ namespace OpenFindBearings.Application.Queries.Corrections.GetCorrectableFields
             var merchant = await _merchantRepository.GetByIdAsync(merchantId, ct);
             if (merchant == null) return [];
 
-            return
+            // 改动说明（v2.13.2 标签收敛）：显示名统一取自 CorrectionFieldLabels
+            (string Id, string? Value)[] raw =
             [
-                new("name", "商家名称", merchant.Name),
-                new("companyName", "公司全称", merchant.CompanyName),
-                new("description", "简介", merchant.Description),
-                new("businessScope", "经营范围", merchant.BusinessScope),
-                new("contactPerson", "联系人", merchant.Contact?.ContactPerson),
-                new("phone", "电话", merchant.Contact?.Phone),
-                new("mobile", "手机", merchant.Contact?.Mobile),
-                new("email", "邮箱", merchant.Contact?.Email),
-                new("address", "地址", merchant.Contact?.Address)
+                ("name", merchant.Name),
+                ("companyName", merchant.CompanyName),
+                ("description", merchant.Description),
+                ("businessScope", merchant.BusinessScope),
+                ("contactPerson", merchant.Contact?.ContactPerson),
+                ("phone", merchant.Contact?.Phone),
+                ("mobile", merchant.Contact?.Mobile),
+                ("email", merchant.Contact?.Email),
+                ("address", merchant.Contact?.Address)
             ];
+            return raw.Select(f => new CorrectionFieldOptionDto(f.Id, CorrectionFieldLabels.Label("Merchant", f.Id), f.Value)).ToList();
         }
     }
 }

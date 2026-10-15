@@ -29,7 +29,9 @@ namespace OpenFindBearings.Application.Extensions
                 //   徽标走兜底分支看似正常、"审核通过/拒绝"按钮条件永不成立（按钮不显示的根因）。
                 //   补齐 Status 并新增 ApplicationMode/SubmittedAt/RejectReason 三字段供审批页使用
                 Status = merchant.Status.ToString(),
-                ApplicationMode = merchant.ApplicationMode.ToString(),
+                // 改动说明（v2.13.2 大小写统一）：原 ToString() 出 PascalCase（"Self"），
+                //   与 GetApplicationDetailQueryHandler 的 ToLowerInvariant()（"self"）分歧；Taro 按小写判等，统一为小写
+                ApplicationMode = merchant.ApplicationMode.ToString().ToLowerInvariant(),
             // v1.31.0：Admin 解除归属按钮可用性判定（None+Manual=提名已有 vs None+Crawler=公海）
             DataSource = merchant.DataSource?.ToString(),
                 SubmittedAt = merchant.CreatedAt,
@@ -66,7 +68,9 @@ namespace OpenFindBearings.Application.Extensions
                 LogoUrl = merchant.LogoUrl,
                 Website = merchant.Website,
                 // 改动说明：详情同样补审批三字段（与 ToPublicDto 对齐，抽屉直查详情时不依赖列表）
-                ApplicationMode = merchant.ApplicationMode.ToString(),
+                // 改动说明（v2.13.2 大小写统一）：原 ToString() 出 PascalCase（"Self"），
+                //   与 GetApplicationDetailQueryHandler 的 ToLowerInvariant()（"self"）分歧；Taro 按小写判等，统一为小写
+                ApplicationMode = merchant.ApplicationMode.ToString().ToLowerInvariant(),
             // v1.31.0：Admin 解除归属按钮可用性判定（None+Manual=提名已有 vs None+Crawler=公海）
             DataSource = merchant.DataSource?.ToString(),
                 SubmittedAt = merchant.CreatedAt,
@@ -102,7 +106,9 @@ namespace OpenFindBearings.Application.Extensions
                 LogoUrl = merchant.LogoUrl,
                 Website = merchant.Website,
                 // 改动说明：同上一重载，补审批三字段
-                ApplicationMode = merchant.ApplicationMode.ToString(),
+                // 改动说明（v2.13.2 大小写统一）：原 ToString() 出 PascalCase（"Self"），
+                //   与 GetApplicationDetailQueryHandler 的 ToLowerInvariant()（"self"）分歧；Taro 按小写判等，统一为小写
+                ApplicationMode = merchant.ApplicationMode.ToString().ToLowerInvariant(),
             // v1.31.0：Admin 解除归属按钮可用性判定（None+Manual=提名已有 vs None+Crawler=公海）
             DataSource = merchant.DataSource?.ToString(),
                 SubmittedAt = merchant.CreatedAt,

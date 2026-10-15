@@ -15,6 +15,9 @@ namespace OpenFindBearings.Application.Services
     /// 导致成就进度自 v2.1.0 起几乎从未落库（真机现象：累计签到 30+ 仍显示 0/30）。
     /// 修复=服务自持 IUnitOfWork 并在每次变更后 SaveChanges，所有调用方一次修好；
     /// 调用方旁路 try/catch 语义不变（提交失败同样吞掉不反噬主流程）
+    /// 改动说明（v2.13.2 根因补修）：v2.13.1 只补了自提交，真正的写失败根因是 UpdateUnlock 对刚
+    /// Add 的实体调 Update（EF 将 Added 降级为 Modified → 首次 INSERT 变 UPDATE 不存在行 → 抛并发异常
+    /// 被吞）。本次一并移除 UpdateUnlock 与补齐阈值判定，成就进度方能真正落库
     /// </summary>
     public class AchievementService : IAchievementService
     {
@@ -29,16 +32,16 @@ namespace OpenFindBearings.Application.Services
             _logger = logger;
         }
 
-        /// <summary>计数累加并判定解锁</summary>
+        /// <summary>计数累加并判定解锁（阈值随定义下发，v2.13.2）</summary>
         public Task<IReadOnlyList<string>> IncrementAsync(AchievementScope scope, Guid ownerId, string metricKey, int delta, CancellationToken cancellationToken = default)
         {
-            return ApplyAsync(scope, ownerId, metricKey, u => u.AddProgress(delta), cancellationToken);
+            return ApplyAsync(scope, ownerId, metricKey, (u, target) => u.AddProgress(delta, target), cancellationToken);
         }
 
-        /// <summary>仪表设值并判定解锁</summary>
+        /// <summary>仪表设值并判定解锁（阈值随定义下发，v2.13.2）</summary>
         public Task<IReadOnlyList<string>> SetGaugeAsync(AchievementScope scope, Guid ownerId, string metricKey, int value, CancellationToken cancellationToken = default)
         {
-            return ApplyAsync(scope, ownerId, metricKey, u => u.SetGauge(value), cancellationToken);
+            return ApplyAsync(scope, ownerId, metricKey, (u, target) => u.SetGauge(value, target), cancellationToken);
         }
 
         /// <summary>
@@ -64,8 +67,9 @@ namespace OpenFindBearings.Application.Services
                     unlock = new AchievementUnlock(scope, ownerId, def.Key);
                     await _repo.AddUnlockAsync(unlock, cancellationToken);
                 }
-                unlock.AddProgress(1);
-                _repo.UpdateUnlock(unlock);
+                // 改动说明（v2.13.2 阈值修复）：限量门槛由注册序号在外部判定，直通点亮（不走阈值）；
+                // 并删除 UpdateUnlock——对刚 Add 的实体再 Update 会被 EF 降级为 Modified 致 INSERT→UPDATE 失败
+                unlock.Unlock();
                 unlockedKeys.Add(def.Key);
                 _logger.LogInformation("限量成就点亮: Scope={Scope}, Owner={OwnerId}, Key={Key}, Ordinal={Ordinal}", scope, ownerId, def.Key, ordinal);
             }
@@ -78,10 +82,12 @@ namespace OpenFindBearings.Application.Services
 
         /// <summary>
         /// 对匹配 metricKey 的启用成就逐个累加/设值；跨阈值者点亮（v2.12.0 起纯荣誉——只记点亮与
-        /// meta 成就点，不发任何货币）。返回新点亮键供调用方 toast
+        /// meta 成就点，不发任何货币）。返回新点亮键供调用方 toast。
+        /// 改动说明（v2.13.2）：阈值改由定义 ProgressTarget 下发（原先实体忽略阈值秒解锁）；
+        /// 并移除 UpdateUnlock（Add 后再 Update 会破坏 INSERT），变更统一靠变更跟踪 + 自提交落库
         /// </summary>
         private async Task<IReadOnlyList<string>> ApplyAsync(AchievementScope scope, Guid ownerId, string metricKey,
-            Func<AchievementUnlock, bool> mutate, CancellationToken cancellationToken)
+            Func<AchievementUnlock, int, bool> mutate, CancellationToken cancellationToken)
         {
             var defs = await _repo.GetEnabledAsync(scope, cancellationToken);
             var matched = defs.Where(d => d.MetricKey == metricKey).ToList();
@@ -98,8 +104,11 @@ namespace OpenFindBearings.Application.Services
                     await _repo.AddUnlockAsync(unlock, cancellationToken);
                 }
 
-                var unlockedNow = mutate(unlock);
-                _repo.UpdateUnlock(unlock);
+                // 改动说明（v2.13.2 阈值修复）：阈值随定义 ProgressTarget 传入；删除 UpdateUnlock——
+                // 新实体已由 AddAsync 跟踪为 Added，再调 Update 会被 EF 降级为 Modified，首次 INSERT 变成
+                // UPDATE 不存在行 → DbUpdateConcurrencyException（正是"签到 30+ 仍 0/30"的根因，
+                // v2.13.1 的自提交修复未覆盖此点）；已加载实体靠变更跟踪即可保存，无需 Update
+                var unlockedNow = mutate(unlock, def.ProgressTarget);
 
                 if (unlockedNow)
                 {

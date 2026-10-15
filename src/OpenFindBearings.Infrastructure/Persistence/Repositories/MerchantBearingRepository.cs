@@ -4,6 +4,7 @@ using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
 using OpenFindBearings.Domain.Specifications;
 using OpenFindBearings.Infrastructure.Persistence.Data;
+using OpenFindBearings.Infrastructure.Persistence.Extensions;
 
 namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 {
@@ -122,7 +123,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 
         public async Task UpdateAsync(MerchantBearing merchantBearing, CancellationToken cancellationToken = default)
         {
-            _context.MerchantBearings.Update(merchantBearing);
+            _context.MarkModified(merchantBearing);
             
         }
 

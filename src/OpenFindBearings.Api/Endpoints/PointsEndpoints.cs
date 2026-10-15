@@ -56,7 +56,7 @@ namespace OpenFindBearings.Api.Endpoints
                     todayCheckedIn,
                     consecutiveDays = account?.ConsecutiveCheckinDays ?? 0,
                     level = level?.Level ?? 1,
-                    levelName = level?.Name ?? "倔强青铜",
+                    levelName = level?.Name ?? PointLevel.DefaultName,
                     nextLevelMin = nextLevel?.MinTotalEarned,
                     nextLevelName = nextLevel?.Name,
                     nextLevelBonus = nextLevel?.LevelUpBonus,
@@ -101,7 +101,7 @@ namespace OpenFindBearings.Api.Endpoints
                 {
                     totalEarned,
                     currentLevel = current?.Level ?? 1,
-                    currentLevelName = current?.Name ?? "倔强青铜",
+                    currentLevelName = current?.Name ?? PointLevel.DefaultName,
                     levels = levels.Select(l => new
                     {
                         level = l.Level,
@@ -140,10 +140,10 @@ namespace OpenFindBearings.Api.Endpoints
                     {
                         unlocked.AddRange(await achievementService.SetGaugeAsync(
                             Domain.Entities.AchievementScope.Personal, currentUser.UserId.Value,
-                            "checkin_streak", result.ConsecutiveDays));
+                            AchievementMetricKeys.CheckinStreak, result.ConsecutiveDays));
                         unlocked.AddRange(await achievementService.IncrementAsync(
                             Domain.Entities.AchievementScope.Personal, currentUser.UserId.Value,
-                            "checkin_total", 1));
+                            AchievementMetricKeys.CheckinTotal, 1));
                     }
                     catch { /* 成就为旁路增强，吞掉不反噬签到 */ }
 
@@ -329,12 +329,13 @@ namespace OpenFindBearings.Api.Endpoints
                     return v.HasValue && v.Value >= 0 ? v.Value : fallback;
                 }
 
+                // 改动说明（v2.13.2 配置收口）：键/默认值走 MerchantGradeSettings，与等级重算服务同源
                 int? gradeUpBonus = rank switch
                 {
                     < 1 => null,
-                    1 => await BonusAsync("Business.MerchantGradeBonusLv2", 50),
-                    2 => await BonusAsync("Business.MerchantGradeBonusLv3", 150),
-                    3 => await BonusAsync("Business.MerchantGradeBonusLv4", 300),
+                    1 => await BonusAsync(MerchantGradeSettings.BonusLv2Key, MerchantGradeSettings.BonusLv2Default),
+                    2 => await BonusAsync(MerchantGradeSettings.BonusLv3Key, MerchantGradeSettings.BonusLv3Default),
+                    3 => await BonusAsync(MerchantGradeSettings.BonusLv4Key, MerchantGradeSettings.BonusLv4Default),
                     _ => null
                 };
                 return ApiResponseHelper.Ok(new
@@ -385,12 +386,13 @@ namespace OpenFindBearings.Api.Endpoints
                 var onSaleCount = (await bearingRepository.GetOnSaleByMerchantAsync(merchantId, cancellationToken)).Count();
                 var treasuryAccount = await treasuryRepository.GetByMerchantIdAsync(merchantId, cancellationToken);
                 var treasuryEarned = treasuryAccount?.TotalEarned ?? 0;
-                var lv3Min = await ReadIntConfigAsync(configs, "Business.MerchantPremiumOnSaleMin", 5);
-                var lv4Min = await ReadIntConfigAsync(configs, "Business.MerchantGoldOnSaleMin", 10);
-                var lv4TreasuryMin = await ReadIntConfigAsync(configs, "Business.MerchantGoldTreasuryMin", 500);
-                var bonusLv2 = await ReadIntConfigAsync(configs, "Business.MerchantGradeBonusLv2", 50);
-                var bonusLv3 = await ReadIntConfigAsync(configs, "Business.MerchantGradeBonusLv3", 150);
-                var bonusLv4 = await ReadIntConfigAsync(configs, "Business.MerchantGradeBonusLv4", 300);
+                // 改动说明（v2.13.2 配置收口）：键/默认值走 MerchantGradeSettings，与 MerchantGradeService 同源
+                var lv3Min = await ReadIntConfigAsync(configs, MerchantGradeSettings.PremiumOnSaleMinKey, MerchantGradeSettings.PremiumOnSaleMinDefault);
+                var lv4Min = await ReadIntConfigAsync(configs, MerchantGradeSettings.GoldOnSaleMinKey, MerchantGradeSettings.GoldOnSaleMinDefault);
+                var lv4TreasuryMin = await ReadIntConfigAsync(configs, MerchantGradeSettings.GoldTreasuryMinKey, MerchantGradeSettings.GoldTreasuryMinDefault);
+                var bonusLv2 = await ReadIntConfigAsync(configs, MerchantGradeSettings.BonusLv2Key, MerchantGradeSettings.BonusLv2Default);
+                var bonusLv3 = await ReadIntConfigAsync(configs, MerchantGradeSettings.BonusLv3Key, MerchantGradeSettings.BonusLv3Default);
+                var bonusLv4 = await ReadIntConfigAsync(configs, MerchantGradeSettings.BonusLv4Key, MerchantGradeSettings.BonusLv4Default);
 
                 // 已领升档礼档：流水 bizId gradeup:{merchantId}:{rank} 存在（终身一次，复升不重发）
                 var claimedRanks = new List<int>();

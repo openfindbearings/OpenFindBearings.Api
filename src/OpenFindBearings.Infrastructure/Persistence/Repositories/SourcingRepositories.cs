@@ -5,6 +5,7 @@ using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
 using OpenFindBearings.Domain.Services;
 using OpenFindBearings.Infrastructure.Persistence.Data;
+using OpenFindBearings.Infrastructure.Persistence.Extensions;
 
 namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 {
@@ -31,7 +32,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         /// <inheritdoc/>
         public Task UpdateAsync(SourcingDemand demand, CancellationToken cancellationToken = default)
         {
-            _context.Set<SourcingDemand>().Update(demand);
+            _context.MarkModified(demand);
             return Task.CompletedTask;
         }
 
@@ -150,7 +151,7 @@ if (status.HasValue)
         /// <inheritdoc/>
         public Task UpdateAsync(SourcingResponse response, CancellationToken cancellationToken = default)
         {
-            _context.Set<SourcingResponse>().Update(response);
+            _context.MarkModified(response);
             return Task.CompletedTask;
         }
 

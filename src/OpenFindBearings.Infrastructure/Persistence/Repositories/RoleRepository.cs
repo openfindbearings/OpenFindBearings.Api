@@ -2,6 +2,7 @@
 using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Repositories;
 using OpenFindBearings.Infrastructure.Persistence.Data;
+using OpenFindBearings.Infrastructure.Persistence.Extensions;
 
 namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 {
@@ -61,7 +62,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 
         public async Task UpdateAsync(Role role, CancellationToken cancellationToken = default)
         {
-            _context.Roles.Update(role);
+            _context.MarkModified(role);
             
         }
 

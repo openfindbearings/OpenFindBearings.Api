@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Repositories;
 using OpenFindBearings.Infrastructure.Persistence.Data;
+using OpenFindBearings.Infrastructure.Persistence.Extensions;
 
 namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 {
@@ -55,14 +56,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
             await _context.Set<AchievementUnlock>().AddAsync(unlock, cancellationToken);
         }
 
-        public void UpdateUnlock(AchievementUnlock unlock)
-        {
-            _context.Set<AchievementUnlock>().Update(unlock);
-        }
-
         public void UpdateDefinition(AchievementDefinition definition)
         {
-            _context.Set<AchievementDefinition>().Update(definition);
+            _context.MarkModified(definition);
         }
     }
 }

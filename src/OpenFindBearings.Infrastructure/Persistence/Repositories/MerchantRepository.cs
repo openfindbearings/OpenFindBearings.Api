@@ -5,6 +5,7 @@ using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
 using OpenFindBearings.Domain.Specifications;
 using OpenFindBearings.Infrastructure.Persistence.Data;
+using OpenFindBearings.Infrastructure.Persistence.Extensions;
 using MerchantStatus = OpenFindBearings.Domain.Enums.MerchantStatus;
 
 namespace OpenFindBearings.Infrastructure.Persistence.Repositories
@@ -219,7 +220,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 
         public async Task UpdateAsync(Merchant merchant, CancellationToken cancellationToken = default)
         {
-            _context.Merchants.Update(merchant);
+            _context.MarkModified(merchant);
         }
 
         public async Task<Merchant?> GetByIdIgnoringFilterAsync(Guid id, CancellationToken cancellationToken = default)
