@@ -36,20 +36,8 @@ namespace OpenFindBearings.Application.DTOs
         /// </summary>
         public string? ContactPerson { get; set; }
 
-        /// <summary>
-        /// 固定电话
-        /// </summary>
-        public string? Phone { get; set; }
-
-        /// <summary>
-        /// 手机号码
-        /// </summary>
-        public string? Mobile { get; set; }
-
-        /// <summary>
-        /// 电子邮箱
-        /// </summary>
-        public string? Email { get; set; }
+        // 改动说明（v1.6.0 电话单轨）：移除 Phone/Mobile/Email——联系方式只在寻货撮合达成后互给，
+        //   公共查询面一律不下发（原靠 isAuthenticated 屏蔽，现整体移除，杜绝绕过）
 
         /// <summary>
         /// 地址

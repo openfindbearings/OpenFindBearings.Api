@@ -87,6 +87,10 @@ namespace OpenFindBearings.Application.Commands.Sourcing
             await _mediator.Publish(new SourcingDemandClosedEvent(
                 demand.Id, demand.PublisherUserId, selected.Id, selected.MerchantId,
                 merchant?.Name ?? "商户", demand.PartNumber), cancellationToken);
+            // 改动说明（v1.6.0 开闭源边界）：撮合达成（互给电话）——发布预留事件供闭源交易域接续；
+            //   开源侧无订阅者，仅作衔接锚点
+            await _mediator.Publish(new MatchCompletedEvent(
+                demand.Id, demand.PublisherUserId, selected.MerchantId, demand.PartNumber), cancellationToken);
         }
     }
 

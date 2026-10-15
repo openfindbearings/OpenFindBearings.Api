@@ -37,12 +37,16 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         }
 
         /// <inheritdoc/>
-        public async Task<(List<SourcingDemand> Items, int Total)> GetListAsync(int? status, string? keyword, bool onlyOpen,
+public async Task<(List<SourcingDemand> Items, int Total)> GetListAsync(int? status, string? keyword, bool onlyOpen,
             int page, int pageSize, bool pinFirst = false, string? brand = null, string? region = null,
-            bool newestFirst = true, CancellationToken cancellationToken = default)
+            bool newestFirst = true, bool broadcastOnly = false, CancellationToken cancellationToken = default)
         {
             // 改动说明（v2.12.0 列表删除）：feed/Admin 列表排除软删单（软删仅发布方视角隐藏，数据保留）
             var query = _context.Set<SourcingDemand>().Where(d => !d.IsDeleted).AsQueryable();
+
+            // 改动说明（v1.6.0 定向询价）：公开大厅/反向导购仅取广播单，定向单只在目标商户与发布人可见
+            if (broadcastOnly)
+                query = query.Where(d => d.TargetMerchantId == null);
 
 if (status.HasValue)
                 query = query.Where(d => d.Status == (SourcingDemandStatus)status.Value);
@@ -107,7 +111,17 @@ if (status.HasValue)
                 .Where(d => d.PublisherMerchantId == merchantId && !d.IsDeleted)
                 // 改动说明（v2.12.0）：商户"寻货发布"列表同样进行中恒排前（与个人口径一致）
                 .OrderBy(d => d.Status == SourcingDemandStatus.Published ? 0 : 1)
-                .ThenByDescending(d => d.CreatedAt)
+.ThenByDescending(d => d.CreatedAt)
+                .Take(100)
+                .ToListAsync(cancellationToken);
+
+        /// <inheritdoc/>
+        public async Task<List<SourcingDemand>> GetOpenTargetedForMerchantAsync(Guid merchantId, CancellationToken cancellationToken = default)
+            => await _context.Set<SourcingDemand>()
+                // 改动说明（v1.6.0 定向询价）：定向给本商户的进行中需求（未软删、未过期）
+                .Where(d => d.TargetMerchantId == merchantId && !d.IsDeleted
+                    && d.Status == SourcingDemandStatus.Published && d.ExpiryAt > DateTime.UtcNow)
+                .OrderByDescending(d => d.CreatedAt)
                 .Take(100)
                 .ToListAsync(cancellationToken);
 

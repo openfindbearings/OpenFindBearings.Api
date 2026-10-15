@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.Services;
 using OpenFindBearings.Application.Shared.Interfaces;
 using OpenFindBearings.Domain.Entities;
@@ -7,24 +8,34 @@ using OpenFindBearings.Domain.Repositories;
 namespace OpenFindBearings.Infrastructure.Services
 {
     /// <summary>
-    /// 通知服务实现：站内信落库（Notifications 表）；管理员外部通知通道仍为日志占位
-    /// 改动说明：此前 SendToUserAsync 仅记日志（TODO 占位），现升级为真实站内信写库；
-    ///   事件订阅发生在 UnitOfWorkBehavior 提交之后，仓储 Add 只标记不提交，
-    ///   故本服务在 Add 后显式 SaveChangesAsync 独立落库（通知写失败不回滚已成功的业务命令）
+    /// 通知服务实现：站内信落库（Notifications 表）+ 外部通道扇出（短信/微信/邮件，预留）。
+    /// 改动说明（v1.6.0 多方式提醒）：在站内信之外新增 AddExternalAsync——按用户偏好把同一内容
+    ///   扇出到启用的外部通道；未配置网关的通道（Sms/WeChat/Email:Enabled 未开）只记日志不外发，
+    ///   使"接上网关即生效"而无需改调用方。事件订阅发生在 UnitOfWorkBehavior 提交之后，
+    ///   故本服务在 Add 后显式 SaveChangesAsync 独立落库（通知写失败不回滚已成功的业务命令）。
     /// </summary>
     public class NotificationService : INotificationService
     {
         private readonly ILogger<NotificationService> _logger;
         private readonly INotificationRepository _notificationRepository;
+        private readonly IUserPreferenceRepository _preferenceRepository;
+        private readonly IUserRepository _userRepository;
+        private readonly IConfiguration _configuration;
         private readonly IUnitOfWork _unitOfWork;
 
         public NotificationService(
             ILogger<NotificationService> logger,
             INotificationRepository notificationRepository,
+            IUserPreferenceRepository preferenceRepository,
+            IUserRepository userRepository,
+            IConfiguration configuration,
             IUnitOfWork unitOfWork)
         {
             _logger = logger;
             _notificationRepository = notificationRepository;
+            _preferenceRepository = preferenceRepository;
+            _userRepository = userRepository;
+            _configuration = configuration;
             _unitOfWork = unitOfWork;
         }
 
@@ -61,5 +72,56 @@ namespace OpenFindBearings.Infrastructure.Services
                 _logger.LogWarning(ex, "站内信写入失败: UserId={UserId}, Type={Type}", userId, type);
             }
         }
+
+        /// <summary>
+        /// 多渠道外发（v1.6.0）：按用户偏好把同一内容扇出到启用的外部通道；未配置网关的通道只记日志。
+        /// 全程 best-effort，任何通道失败都不影响业务链路（与站内信同口径）。
+        /// </summary>
+        public async Task AddExternalAsync(Guid userId, string title, string body, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var pref = await _preferenceRepository.GetByUserIdAsync(userId, cancellationToken);
+                // 无偏好行=默认口径（与 UserPreference 默认值一致：短信关、微信/邮件开）
+                var smsEnabled = pref?.SmsNotificationEnabled ?? false;
+                var weChatEnabled = pref?.WeChatNotificationEnabled ?? true;
+                var emailEnabled = pref?.EmailNotificationEnabled ?? true;
+
+                if (!smsEnabled && !weChatEnabled && !emailEnabled)
+                    return;
+
+                var user = await _userRepository.GetByIdAsync(userId, cancellationToken);
+
+                // 网关就绪开关（默认全关=仅落日志，接上网关后打开 config 即生效）
+                if (smsEnabled && IsChannelReady("Sms"))
+                {
+                    _logger.LogInformation("[外发-短信] UserId={UserId}, Phone={Phone}, Title={Title}",
+                        userId, user?.Mobile, title);
+                }
+                if (weChatEnabled && IsChannelReady("WeChat"))
+                {
+                    _logger.LogInformation("[外发-微信] UserId={UserId}, Title={Title}", userId, title);
+                }
+                if (emailEnabled && IsChannelReady("Email"))
+                {
+                    _logger.LogInformation("[外发-邮件] UserId={UserId}, Body={Body}", userId, body);
+                }
+
+                // 改动说明（v1.6.0 预留）：通道网关未就绪时只记一条汇总日志，便于观测"待接网关"的多方式提醒量
+                if (!IsChannelReady("Sms") && !IsChannelReady("WeChat") && !IsChannelReady("Email"))
+                {
+                    _logger.LogInformation("[外发-预留] 网关未就绪，多方式提醒暂仅站内信: UserId={UserId}, Title={Title}",
+                        userId, title);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "外部通道外发失败: UserId={UserId}", userId);
+            }
+        }
+
+        /// <summary>通道网关是否就绪（配置键 {channel}:Enabled，默认 false=未接网关）</summary>
+        private bool IsChannelReady(string channel)
+            => _configuration.GetValue<bool?>($"{channel}:Enabled") ?? false;
     }
 }

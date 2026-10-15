@@ -26,7 +26,6 @@ using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Application.Commands.Merchants.SuspendMerchantMember;
 using OpenFindBearings.Application.Queries.MerchantBearings.GetMerchantBearingsByMerchant;
 using OpenFindBearings.Application.Queries.Merchants.GetMerchant;
-using OpenFindBearings.Application.Queries.Merchants.GetMerchantByUserId;
 using OpenFindBearings.Application.Queries.Merchants.GetMerchantStaff;
 
 namespace OpenFindBearings.Api.Endpoints
@@ -901,7 +900,13 @@ namespace OpenFindBearings.Api.Endpoints
             if (!merchantId.HasValue)
                 return null;
 
-            var merchant = await mediator.Send(new GetMerchantQuery { Id = merchantId.Value, IsAuthenticated = true });
+            var merchant = await mediator.Send(new GetMerchantQuery
+            {
+                Id = merchantId.Value,
+                IsAuthenticated = true,
+                // 改动说明（v1.6.0 电话单轨）：传 UserId 供详情判定成员身份、随详情下发自家联系方式
+                UserId = currentUser.UserId
+            });
             return merchant;
         }
     }

@@ -29,7 +29,9 @@ namespace OpenFindBearings.Application.Extensions
                 ViewCount = bearing.ViewCount,
                 FavoriteCount = bearing.FavoriteCount,
                 Image3DUrl = bearing.Image3DUrl,
-                Image2DUrl = bearing.Image2DUrl
+                Image2DUrl = bearing.Image2DUrl,
+                // 改动说明（v1.6.0 数据可信联动）：下发参数来源，前端据此标注"仅供参考"
+                DataSource = bearing.DataSource?.SourceType.ToString()
             };
         }
     }

@@ -39,14 +39,10 @@ namespace OpenFindBearings.Application.DTOs
         public string? MerchantCity { get; set; }
 
         /// <summary>
-        /// 商家电话（仅登录用户可见）
+        /// 轴承参数的来源（v1.6.0 数据可信联动）：Internet/OcrExtract/SeedData=仅供参考，其余=可信。
+        /// 用于商品卡"参数来源：互联网 · 仅供参考"灰标；来源指轴承参数而非商家
         /// </summary>
-        public string? MerchantPhone { get; set; }
-
-        /// <summary>
-        /// 商家地址（仅登录用户可见）
-        /// </summary>
-        public string? MerchantAddress { get; set; }
+        public string? BearingDataSource { get; set; }
 
         /// <summary>
         /// 轴承ID

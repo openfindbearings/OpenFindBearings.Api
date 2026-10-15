@@ -17,7 +17,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.12")
+                .HasAnnotation("ProductVersion", "10.0.13")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -422,6 +422,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
+                    b.Property<Guid?>("TargetMerchantId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -435,6 +438,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
 
                     b.HasIndex("PublisherUserId")
                         .HasDatabaseName("IX_SourcingDemands_PublisherUserId");
+
+                    b.HasIndex("TargetMerchantId")
+                        .HasDatabaseName("IX_SourcingDemands_TargetMerchantId");
 
                     b.HasIndex("Status", "CreatedAt")
                         .HasDatabaseName("IX_SourcingDemands_Status_CreatedAt");

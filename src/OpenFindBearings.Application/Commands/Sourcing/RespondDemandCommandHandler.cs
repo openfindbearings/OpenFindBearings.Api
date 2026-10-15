@@ -153,7 +153,9 @@ namespace OpenFindBearings.Application.Commands.Sourcing
             // 改动说明：直发时序问题——PointsService 独立提交先落，本命令的应答行要等管道 SaveChanges；
             //   订阅者只发站内信（不读应答表），无时序依赖，安全
             await _mediator.Publish(new SourcingRespondedEvent(
-                demand.Id, demand.PublisherUserId, merchant.Id, merchant.Name, demand.PartNumber), cancellationToken);
+                demand.Id, demand.PublisherUserId, merchant.Id, merchant.Name, demand.PartNumber,
+                // 改动说明（v1.6.0）：商户名义发布时透出发布商户，订阅者据此通知该商户全部在职成员
+                demand.PublisherMerchantId), cancellationToken);
 
             // 改动说明（v2.7.0 G2 三件套）：应答成功（新增，非更新）是三项之一，
             // 触发补发判定——操作人（商户成员）当日已签到+纠错采纳时补齐 combo

@@ -44,6 +44,13 @@ namespace OpenFindBearings.Domain.Entities
         /// <summary>商城订单业务对象类型（bizType，跳转定位订单）</summary>
         public const string BizMallOrder = "mall_order";
 
+        /// <summary>
+        /// 寻货需求业务对象类型（bizType，跳转定位寻货详情）。
+        /// 改动说明（v1.6.0 深链修复）：原寻货通知以字面量 "SourcingDemand" 传 bizType，
+        ///   前端未登记该值导致"点去处理无跳转"；收敛为正式常量，前端据此路由寻货详情
+        /// </summary>
+        public const string BizSourcingDemand = "sourcing_demand";
+
         /// <summary>业务类型：商户（前端据此跳转商户页）</summary>
         public const string BizMerchant = "merchant";
         /// <summary>业务类型：提名邀请（前端据此跳转入驻向导邀请相位）</summary>

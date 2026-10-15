@@ -48,9 +48,9 @@ namespace OpenFindBearings.Application.Queries.Merchants.GetMerchant
             // 获取商家在售产品列表
             var merchantBearings = await _merchantBearingRepository.GetOnSaleByMerchantAsync(request.Id, cancellationToken);
 
-            var products = merchantBearings.Select(mb => mb.ToDto(request.IsAuthenticated)).ToList();
+            var products = merchantBearings.Select(mb => mb.ToDto()).ToList();
 
-            var dto = merchant.ToDetailDto(products, request.IsAuthenticated);
+            var dto = merchant.ToDetailDto(products);
 
             // v2.6.0 商家主页：集体任务累计达成数（公开信任信号，所有访客可见）
             dto.CompletedTaskCount = await _taskRepository.CountCompletionsAsync(request.Id, cancellationToken);
@@ -62,6 +62,19 @@ namespace OpenFindBearings.Application.Queries.Merchants.GetMerchant
                 var membership = await _memberRepository.GetActiveByUserAndMerchantAsync(
                     request.UserId.Value, request.Id, cancellationToken);
                 dto.IsMerchantMember = membership != null;
+                // 改动说明（v1.6.0 电话单轨）：本商户在职成员查看自家商户时随详情下发联系方式
+                //   （信息维护页预填用）；其他任何查看者恒为 null——号码只在寻货撮合达成后互给
+                if (membership != null)
+                {
+                    dto.Contact = new MerchantContactDto
+                    {
+                        ContactPerson = merchant.Contact?.ContactPerson,
+                        Phone = merchant.Contact?.Phone,
+                        Mobile = merchant.Contact?.Mobile,
+                        Email = merchant.Contact?.Email,
+                        Address = merchant.Contact?.Address
+                    };
+                }
             }
             return dto;
         }

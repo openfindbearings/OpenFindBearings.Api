@@ -50,6 +50,12 @@
         /// v2.6.0 商家主页：集体任务累计达成次数（勋章园卡"通关史"，所有访客可见）
         /// </summary>
         public int CompletedTaskCount { get; set; }
+
+        /// <summary>
+        /// 商家联系方式（v1.6.0 电话单轨）：仅本商户在职成员查看自家商户时下发（信息维护用）；
+        /// 其他任何查看者恒为 null——号码只在寻货撮合达成后互给
+        /// </summary>
+        public MerchantContactDto? Contact { get; set; }
     }
 
     /// <summary>

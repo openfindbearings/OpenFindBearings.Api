@@ -33,7 +33,7 @@ namespace OpenFindBearings.Application.Queries.MerchantBearings.GetMerchantBeari
                 return null;
             }
 
-            return merchantBearing.ToDto(request.IsAuthenticated);
+            return merchantBearing.ToDto();
         }
     }
 }
