@@ -51,13 +51,11 @@ namespace OpenFindBearings.Application.Queries.Admin.GetDashboardStats
             // 改动说明（v1.36.1 日界收口）：今日/本周/本月统计从 UTC 零点改为 BusinessClock 业务日界，
             // 与积分/额度口径统一（全仓时间审计后 Api 侧最后一处自算"今天"）；
             // 日历运算（周起点/月起点）在业务日历上做，减偏移折回 UTC 后与 timestamptz 列比较
-            var bizToday = BusinessClock.Today;
             var todayStart = BusinessClock.TodayUtc;
-            var weekStart = bizToday.AddDays(-(int)bizToday.DayOfWeek + (int)DayOfWeek.Monday) - BusinessClock.Offset;
-            // 改动说明（rc.32 崩溃修复）：new DateTime(y,m,d) 的 Kind=Unspecified，减 TimeSpan 也不改变 Kind，
-            // 直接进 Npgsql timestamptz 参数即抛 ArgumentException（dashboard 全 N/A 的根因）；
-            // 必须 SpecifyKind 显式标 UTC。weekStart 无此雷——bizToday 源自 UtcNow，AddDays/减法保留 Kind=Utc
-            var monthStart = DateTime.SpecifyKind(new DateTime(bizToday.Year, bizToday.Month, 1), DateTimeKind.Utc) - BusinessClock.Offset;
+            // 改动说明（v2.13.2 周起点 bug 修复）：原内联 AddDays 公式周日越界（得到未来周一），
+            //   周/月起点统一收口到 BusinessClock（含 SpecifyKind 防 Npgsql timestamptz 崩溃）
+            var weekStart = BusinessClock.BusinessWeekStartUtc;
+            var monthStart = BusinessClock.BusinessMonthStartUtc;
 
             var bearingTotal = await _bearingRepository.GetTotalCountAsync(new BearingSearchParams(), cancellationToken);
             var bearingToday = await _bearingRepository.GetCountSinceAsync(todayStart, cancellationToken);

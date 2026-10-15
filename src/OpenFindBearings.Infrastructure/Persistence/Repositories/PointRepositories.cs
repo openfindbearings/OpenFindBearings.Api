@@ -3,6 +3,7 @@ using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Repositories;
 using OpenFindBearings.Domain.Services;
 using OpenFindBearings.Infrastructure.Persistence.Data;
+using OpenFindBearings.Infrastructure.Persistence.Extensions;
 
 namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 {
@@ -44,7 +45,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 
         public Task UpdateAsync(PointAccount account, CancellationToken cancellationToken = default)
         {
-            _context.Set<PointAccount>().Update(account);
+            _context.MarkModified(account);
             return Task.CompletedTask;
         }
 
@@ -187,7 +188,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 
         public Task UpdateAsync(PointGrantRule rule, CancellationToken cancellationToken = default)
         {
-            _context.Set<PointGrantRule>().Update(rule);
+            _context.MarkModified(rule);
             return Task.CompletedTask;
         }
     }
@@ -252,7 +253,7 @@ return affected == 1;
 
         public Task UpdateAsync(PointLevel level, CancellationToken cancellationToken = default)
         {
-            _context.Set<PointLevel>().Update(level);
+            _context.MarkModified(level);
             return Task.CompletedTask;
         }
     }

@@ -2,6 +2,7 @@
 using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Repositories;
 using OpenFindBearings.Infrastructure.Persistence.Data;
+using OpenFindBearings.Infrastructure.Persistence.Extensions;
 
 namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 {
@@ -40,7 +41,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         /// </summary>
         public async Task UpdateAsync(UserPreference preference, CancellationToken cancellationToken = default)
         {
-            _context.UserPreferences.Update(preference);
+            _context.MarkModified(preference);
             
         }
     }

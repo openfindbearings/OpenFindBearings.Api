@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Repositories;
 using OpenFindBearings.Infrastructure.Persistence.Data;
+using OpenFindBearings.Infrastructure.Persistence.Extensions;
 
 namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 {
@@ -24,7 +25,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 
         public Task UpdateAsync(Notification notification, CancellationToken cancellationToken = default)
         {
-            _context.Set<Notification>().Update(notification);
+            _context.MarkModified(notification);
             return Task.CompletedTask;
         }
 

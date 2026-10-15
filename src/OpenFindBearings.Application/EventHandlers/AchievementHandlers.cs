@@ -30,7 +30,7 @@ namespace OpenFindBearings.Application.EventHandlers
             try
             {
                 await _achievements.IncrementAsync(AchievementScope.Personal, notification.SubmittedBy,
-                    "correction_adopted", 1, cancellationToken);
+                    AchievementMetricKeys.CorrectionAdopted, 1, cancellationToken);
             }
             catch (Exception ex)
             {
@@ -63,13 +63,13 @@ namespace OpenFindBearings.Application.EventHandlers
             try
             {
                 await _achievements.IncrementAsync(AchievementScope.Merchant, notification.SelectedMerchantId,
-                    "merchant_selected", 1, cancellationToken);
+                    AchievementMetricKeys.MerchantSelected, 1, cancellationToken);
 
                 var response = await _responses.GetByIdAsync(notification.SelectedResponseId, cancellationToken);
                 if (response != null)
                 {
                     await _achievements.IncrementAsync(AchievementScope.Personal, response.RespondedUserId,
-                        "sourcing_selected", 1, cancellationToken);
+                        AchievementMetricKeys.SourcingSelected, 1, cancellationToken);
                 }
             }
             catch (Exception ex)
@@ -104,7 +104,7 @@ namespace OpenFindBearings.Application.EventHandlers
             {
                 var onSale = await _bearings.GetOnSaleByMerchantAsync(notification.MerchantId, cancellationToken);
                 await _achievements.SetGaugeAsync(AchievementScope.Merchant, notification.MerchantId,
-                    "listing_count", onSale.Count(), cancellationToken);
+                    AchievementMetricKeys.ListingCount, onSale.Count(), cancellationToken);
             }
             catch (Exception ex)
             {

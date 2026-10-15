@@ -3,6 +3,7 @@ using OpenFindBearings.Domain.Aggregates;
 using OpenFindBearings.Domain.Repositories;
 using OpenFindBearings.Domain.Specifications;
 using OpenFindBearings.Infrastructure.Persistence.Data;
+using OpenFindBearings.Infrastructure.Persistence.Extensions;
 
 namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 {
@@ -233,7 +234,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 
         public async Task UpdateAsync(Bearing bearing, CancellationToken cancellationToken = default)
         {
-            _context.Bearings.Update(bearing);
+            _context.MarkModified(bearing);
         }
 
         public async Task<bool> ExistsByPartNumberAsync(string partNumber, CancellationToken cancellationToken = default)

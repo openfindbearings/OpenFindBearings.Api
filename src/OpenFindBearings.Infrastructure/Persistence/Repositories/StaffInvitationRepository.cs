@@ -3,6 +3,7 @@ using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
 using OpenFindBearings.Infrastructure.Persistence.Data;
+using OpenFindBearings.Infrastructure.Persistence.Extensions;
 
 namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 {
@@ -147,7 +148,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         /// </summary>
         public async Task UpdateAsync(StaffInvitation invitation, CancellationToken cancellationToken = default)
         {
-            _context.StaffInvitations.Update(invitation);
+            _context.MarkModified(invitation);
             
         }
 

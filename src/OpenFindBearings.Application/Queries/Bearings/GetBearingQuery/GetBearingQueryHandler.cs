@@ -47,26 +47,9 @@ namespace OpenFindBearings.Application.Queries.Bearings.GetBearingQuery
             var onSaleMerchants = merchantBearings
                 .Where(mb => mb.ReviewStatus == ListingReviewStatus.Approved
                     && (mb.SaleState == SaleState.OnSale || mb.SaleState == SaleState.Restocking))
-                .Select(mb => new MerchantBearingDto
-                {
-                    Id = mb.Id,
-                    MerchantId = mb.MerchantId,
-                    MerchantName = mb.Merchant?.Name ?? string.Empty,
-                    MerchantGrade = mb.Merchant?.Grade.ToString() ?? string.Empty,
-                    MerchantIsVerified = mb.Merchant?.IsVerified ?? false,
-                    BearingId = mb.BearingId,
-                    PriceDescription = mb.PriceDescription,
-                    PriceVisibility = mb.PriceVisibility,
-                    NumericPrice = mb.NumericPrice,
-                    StockDescription = mb.StockDescription,
-                    MinOrderDescription = mb.MinOrderDescription,
-                    Remarks = mb.Remarks,
-                    SaleState = mb.SaleState,
-                    ReviewStatus = mb.ReviewStatus,
-                    ViewCount = mb.ViewCount,
-                    CreatedAt = mb.CreatedAt,
-                    UpdatedAt = mb.UpdatedAt
-                })
+                // 改动说明（v2.13.2 映射收敛）：原内联 new MerchantBearingDto 只填子集，漏 RestockEta/Dimensions/
+                //   BearingPartNumber/BrandName/图片等，与唯一映射 BearingExtensions.ToPublicDto 分歧；改走统一扩展
+                .Select(mb => mb.ToPublicDto())
                 // 出售中优先，再按价格（原 IsFeatured 排序已废弃）
                 .OrderByDescending(mb => mb.SaleState == SaleState.OnSale)
                 .ThenBy(mb => mb.NumericPrice)
@@ -90,6 +73,9 @@ namespace OpenFindBearings.Application.Queries.Bearings.GetBearingQuery
                 BrandId = bearing.BrandId,
                 BrandName = bearing.Brand?.Name ?? string.Empty,
                 BearingTypeId = bearing.BearingTypeId,
+                // 改动说明（v2.13.2 映射对齐）：详情此前只填 BearingTypeName，BearingType 落空串，
+                //   与列表映射（BearingExtensions.ToDto 两者同填）不一致，前端详情页类型显示为空
+                BearingType = bearing.BearingType,
                 BearingTypeName = bearing.BearingType,
                 PrecisionGrade = bearing.PrecisionGrade,
                 Material = bearing.Material,

@@ -272,13 +272,8 @@ namespace OpenFindBearings.Infrastructure.Services
                 amount, account.Balance, bizId, remark), ct);
         }
 
-        /// <summary>业务月首（UTC）：BusinessClock 口径的自然月 1 日 0 点换算回 UTC 存储值</summary>
-        private static DateTime BusinessMonthStartUtc()
-        {
-            var bNow = BusinessClock.Now;
-            var bMonthStart = new DateTime(bNow.Year, bNow.Month, 1, 0, 0, 0, DateTimeKind.Unspecified);
-            return DateTime.SpecifyKind(bMonthStart - BusinessClock.Offset, DateTimeKind.Utc);
-        }
+        /// <summary>业务月首（UTC）：委托 BusinessClock.BusinessMonthStartUtc（v2.13.2 收敛，原四处各写一份）</summary>
+        private static DateTime BusinessMonthStartUtc() => BusinessClock.BusinessMonthStartUtc;
 
         /// <summary>读 Business.* 整型配置（解析失败/缺失回退默认，负数视为无效）</summary>
         private async Task<int> GetConfigAsync(string key, int fallback, CancellationToken ct)

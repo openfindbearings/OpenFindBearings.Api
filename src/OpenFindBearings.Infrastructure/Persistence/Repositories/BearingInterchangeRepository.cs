@@ -3,6 +3,7 @@ using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
 using OpenFindBearings.Infrastructure.Persistence.Data;
+using OpenFindBearings.Infrastructure.Persistence.Extensions;
 
 namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 {
@@ -65,7 +66,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 
         public async Task UpdateAsync(BearingInterchange interchange, CancellationToken cancellationToken = default)
         {
-            _context.BearingInterchanges.Update(interchange);
+            _context.MarkModified(interchange);
         }
 
         public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)

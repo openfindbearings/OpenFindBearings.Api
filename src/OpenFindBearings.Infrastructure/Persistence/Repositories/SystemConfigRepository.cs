@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Repositories;
 using OpenFindBearings.Infrastructure.Persistence.Data;
+using OpenFindBearings.Infrastructure.Persistence.Extensions;
 
 namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 {
@@ -106,7 +107,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 
         public async Task UpdateAsync(SystemConfig config, CancellationToken cancellationToken = default)
         {
-            _context.SystemConfigs.Update(config);
+            _context.MarkModified(config);
             
         }
     }

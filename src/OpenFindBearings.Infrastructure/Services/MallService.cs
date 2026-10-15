@@ -408,9 +408,9 @@ namespace OpenFindBearings.Infrastructure.Services
             await _orders.UpdateAsync(order, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            await _notifications.AddInAppAsync(order.UserId, "gift_shipped", "礼品已发货",
+            await _notifications.AddInAppAsync(order.UserId, Notification.TypeGiftShipped, "礼品已发货",
                 $"「{order.ItemName}」已发货，物流单号 {tracking.Trim()}。确认收货后积分将结算给商家；发货 7 天后自动确认。",
-                "mall_order", order.Id, cancellationToken);
+                Notification.BizMallOrder, order.Id, cancellationToken);
             return (true, null);
         }
 
@@ -436,9 +436,9 @@ namespace OpenFindBearings.Infrastructure.Services
             await _points.RefundAsync(order.UserId, order.PointsSpent, $"mall_refund:{order.Id:N}",
                 $"礼品订单争议退款：{order.ItemName}", cancellationToken: cancellationToken);
 
-            await _notifications.AddInAppAsync(order.UserId, "gift_refunded", "礼品订单已退款",
+            await _notifications.AddInAppAsync(order.UserId, Notification.TypeGiftRefunded, "礼品订单已退款",
                 $"「{order.ItemName}」订单已由平台处理退款 {order.PointsSpent} 积分。{reason}",
-                "mall_order", order.Id, cancellationToken);
+                Notification.BizMallOrder, order.Id, cancellationToken);
             return (true, null);
         }
 
@@ -465,17 +465,12 @@ namespace OpenFindBearings.Infrastructure.Services
             var admins = await _members.GetActiveByMerchantAsync(merchantId, cancellationToken);
             foreach (var admin in admins.Where(m => m.IsAdmin))
             {
-                await _notifications.AddInAppAsync(admin.UserId, "gift_order", title, body, "mall_order", bizId, cancellationToken);
+                await _notifications.AddInAppAsync(admin.UserId, Notification.TypeGiftOrder, title, body, Notification.BizMallOrder, bizId, cancellationToken);
             }
         }
 
-        /// <summary>业务月首（UTC），与金库服务同口径</summary>
-        private static DateTime BusinessMonthStartUtc()
-        {
-            var bNow = BusinessClock.Now;
-            var bMonthStart = new DateTime(bNow.Year, bNow.Month, 1, 0, 0, 0, DateTimeKind.Unspecified);
-            return DateTime.SpecifyKind(bMonthStart - BusinessClock.Offset, DateTimeKind.Utc);
-        }
+        /// <summary>业务月首（UTC）：委托 BusinessClock.BusinessMonthStartUtc（v2.13.2 收敛）</summary>
+        private static DateTime BusinessMonthStartUtc() => BusinessClock.BusinessMonthStartUtc;
 
         /// <summary>读 Business.* 整型配置（缺失/非法回退默认）</summary>
         private async Task<int> GetConfigAsync(string key, int fallback, CancellationToken ct)

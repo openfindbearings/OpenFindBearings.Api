@@ -5,6 +5,7 @@ using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
 using OpenFindBearings.Domain.Specifications;
 using OpenFindBearings.Infrastructure.Persistence.Data;
+using OpenFindBearings.Infrastructure.Persistence.Extensions;
 
 namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 {
@@ -67,13 +68,11 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         }
 
         /// <inheritdoc/>
-        public async Task UpdateAsync(User user, CancellationToken cancellationToken = default)
+        public Task UpdateAsync(User user, CancellationToken cancellationToken = default)
         {
-            var entry = _context.Entry(user);
-            if (entry.State != EntityState.Added)
-            {
-                entry.State = EntityState.Modified;
-            }
+            // 改动说明（v2.13.2 收敛）：原内联 Added 守卫改走统一 MarkModified 助手
+            _context.MarkModified(user);
+            return Task.CompletedTask;
         }
 
         /// <inheritdoc/>

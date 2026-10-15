@@ -244,34 +244,8 @@ namespace OpenFindBearings.Domain.Entities
         /// <summary>是否可进自动推荐（v2.16.0）：公域可见且非"仅供参考"档</summary>
         public bool IsAutoRecommendable => IsPubliclyVisible && !IsFunctional();
 
-        /// <summary>
-        /// 获取可信度等级描述
-        /// </summary>
-        public string GetConfidenceLevel()
-        {
-            return Confidence switch
-            {
-                >= 90 => "非常高",
-                >= 70 => "高",
-                >= 50 => "中等",
-                >= 30 => "低",
-                _ => "非常低"
-            };
-        }
-
-        /// <summary>
-        /// 获取替代类型的中文描述（v2.16.0 三级治理口径）
-        /// exact=标准等效替代；conditional=条件替代（需评估）；functional=仅供参考（不构成推荐）
-        /// </summary>
-        public string GetInterchangeTypeDescription()
-        {
-            return InterchangeType switch
-            {
-                "exact" => "标准等效替代（同尺寸/精度/结构，可直接替换）",
-                "conditional" => "条件替代（精度/密封/游隙等差异，需技术确认）",
-                "functional" => "仅供参考（类似用途，不构成平台推荐，请人工咨询）",
-                _ => InterchangeType ?? "未知"
-            };
-        }
+        // 改动说明（v2.13.2 僵尸方法清理）：删除无任何调用方的 GetConfidenceLevel 与
+        //   GetInterchangeTypeDescription——后者还与唯一口径 BearingInterchangeExtensions.ToTypeLabel 分歧，
+        //   是"同一概念两套标签"的漂移源；标签统一由扩展方法提供
     }
 }

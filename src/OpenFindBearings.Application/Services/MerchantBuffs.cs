@@ -1,3 +1,5 @@
+using OpenFindBearings.Domain.Enums;
+
 namespace OpenFindBearings.Application.Services
 {
     /// <summary>
@@ -8,15 +10,8 @@ namespace OpenFindBearings.Application.Services
     public static class MerchantBuffs
     {
         /// <summary>等级数值 → 等级序数（Standard=1 入驻 / Verified=2 认证 / Premium=3 口碑 / Gold=4 金牌）。
-        /// 枚举数值非单调（历史映射），一切比较必须走本函数</summary>
-        public static int Rank(int grade) => grade switch
-        {
-            1 => 1, // Standard
-            3 => 2, // Verified
-            2 => 3, // Premium
-            4 => 4, // Gold
-            _ => 0  // Unknown/散人
-        };
+        /// 改动说明（v2.13.2 序数统一）：委托 Domain.MerchantGradeExtensions.Rank，消除枚举数值映射的二次维护</summary>
+        public static int Rank(int grade) => ((MerchantGrade)grade).Rank();
 
         /// <summary>每日签到加数（Lv1+1 / Lv2+1 / Lv3+2 / Lv4+3）</summary>
         public static int CheckinBonus(int grade) => Rank(grade) switch { >= 4 => 3, 3 => 2, >= 1 => 1, _ => 0 };

@@ -165,7 +165,7 @@ namespace OpenFindBearings.Api.Endpoints
                             // 改动说明（v2.12.0 等级玩法铭牌曝光）：经办人段位（无账户=Lv1 青铜，
                             // 铭牌仍展示——低段位也是真实信号）
                             responderLevel = responderLevel.Level > 0 ? responderLevel.Level : 1,
-                            responderLevelName = responderLevel.Name ?? "倔强青铜",
+                            responderLevelName = responderLevel.Name ?? PointLevel.DefaultName,
                             // v1.5.0 多行标书：应答型号行（发布人逐行挑选依据）
                             items = items.Select(i => new
                             {

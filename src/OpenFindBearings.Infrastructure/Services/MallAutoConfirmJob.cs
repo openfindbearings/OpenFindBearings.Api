@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.Services;
+using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
 
@@ -92,10 +93,10 @@ namespace OpenFindBearings.Infrastructure.Services
                             var admins = await members.GetActiveByMerchantAsync(item.OwnerMerchantId.Value, ct);
                             foreach (var admin in admins.Where(m => m.IsAdmin))
                             {
-                                await notifications.AddInAppAsync(admin.UserId, "gift_settlement",
+                                await notifications.AddInAppAsync(admin.UserId, Notification.TypeGiftSettlement,
                                     "礼品订单自动结算",
                                     $"「{fresh.ItemName}」发货满 {AutoConfirmDays} 天自动确认，{settled} 积分已入商家金库。",
-                                    "mall_order", fresh.Id, ct);
+                                    Notification.BizMallOrder, fresh.Id, ct);
                             }
                         }
                     }

@@ -2,6 +2,7 @@
 using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Repositories;
 using OpenFindBearings.Infrastructure.Persistence.Data;
+using OpenFindBearings.Infrastructure.Persistence.Extensions;
 
 namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 {
@@ -89,7 +90,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         /// <inheritdoc/>
         public async Task UpdateAsync(Permission permission, CancellationToken cancellationToken = default)
         {
-            _context.Permissions.Update(permission);
+            _context.MarkModified(permission);
             
         }
 

@@ -2,6 +2,7 @@
 using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Repositories;
 using OpenFindBearings.Infrastructure.Persistence.Data;
+using OpenFindBearings.Infrastructure.Persistence.Extensions;
 
 namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 {
@@ -52,7 +53,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 
         public async Task UpdateAsync(BearingType bearingType, CancellationToken cancellationToken = default)
         {
-            _context.BearingTypes.Update(bearingType);
+            _context.MarkModified(bearingType);
         }
 
         public async Task<BearingType?> GetByIdIgnoringFilterAsync(Guid id, CancellationToken cancellationToken = default)

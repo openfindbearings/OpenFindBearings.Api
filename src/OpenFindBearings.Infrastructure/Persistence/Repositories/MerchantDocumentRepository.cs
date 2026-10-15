@@ -3,6 +3,7 @@ using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
 using OpenFindBearings.Infrastructure.Persistence.Data;
+using OpenFindBearings.Infrastructure.Persistence.Extensions;
 
 namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 {
@@ -67,7 +68,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 
         public async Task UpdateAsync(MerchantDocument document, CancellationToken cancellationToken = default)
         {
-            _context.MerchantDocuments.Update(document);
+            _context.MarkModified(document);
         }
 
         /// <summary>待审材料数（仪表盘角标），与变更队列同口径：排除入驻审核中商户的随单材料</summary>

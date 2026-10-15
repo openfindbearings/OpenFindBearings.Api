@@ -5,20 +5,8 @@ namespace OpenFindBearings.Application.Extensions
 {
     public static class CorrectionExtensions
     {
-        private static readonly Dictionary<string, string> FieldDisplayNames = new()
-        {
-            { "PartNumber", "型号" },
-            { "Name", "名称" },
-            { "Phone", "电话" },
-            { "Address", "地址" },
-            { "InnerDiameter", "内径" },
-            { "OuterDiameter", "外径" },
-            { "Width", "宽度" },
-            { "Price", "价格" },
-            { "Brand", "品牌" },
-            { "BearingType", "轴承类型" }
-        };
-
+        // 改动说明（v2.13.2 标签收敛）：删除本地 PascalCase FieldDisplayNames（与库中 camelCase 字段名
+        //   永不匹配、恒回退原值），统一走 Domain.CorrectionFieldLabels
         public static CorrectionDto ToDto(this CorrectionRequest correction)
         {
             var targetDisplay = correction.TargetType switch
@@ -35,7 +23,7 @@ namespace OpenFindBearings.Application.Extensions
                 TargetId = correction.TargetId,
                 TargetDisplay = targetDisplay,
                 FieldName = correction.FieldName,
-                FieldDisplayName = FieldDisplayNames.GetValueOrDefault(correction.FieldName, correction.FieldName),
+                FieldDisplayName = CorrectionFieldLabels.Label(correction.TargetType, correction.FieldName),
                 OriginalValue = correction.OriginalValue,
                 SuggestedValue = correction.SuggestedValue,
                 Reason = correction.Reason,

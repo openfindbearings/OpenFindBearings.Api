@@ -60,9 +60,10 @@ namespace OpenFindBearings.Infrastructure.Services
                 if (merchant == null || merchant.Status != MerchantStatus.Active)
                     return; // 非在营商户不定级（释放路径已由域方法落 Standard）
 
-                var lv3Min = await GetConfigAsync("Business.MerchantPremiumOnSaleMin", 5, cancellationToken);
-                var lv4Min = await GetConfigAsync("Business.MerchantGoldOnSaleMin", 10, cancellationToken);
-                var lv4Treasury = await GetConfigAsync("Business.MerchantGoldTreasuryMin", 500, cancellationToken);
+                // 改动说明（v2.13.2 配置收口）：阈值/默认值统一走 MerchantGradeSettings，与端点侧同源
+                var lv3Min = await GetConfigAsync(MerchantGradeSettings.PremiumOnSaleMinKey, MerchantGradeSettings.PremiumOnSaleMinDefault, cancellationToken);
+                var lv4Min = await GetConfigAsync(MerchantGradeSettings.GoldOnSaleMinKey, MerchantGradeSettings.GoldOnSaleMinDefault, cancellationToken);
+                var lv4Treasury = await GetConfigAsync(MerchantGradeSettings.GoldTreasuryMinKey, MerchantGradeSettings.GoldTreasuryMinDefault, cancellationToken);
                 var account = await _treasury.GetByMerchantIdAsync(merchantId, cancellationToken);
                 var treasuryEarned = account?.TotalEarned ?? 0;
                 // 定级口径用实时在售明细数而非 Merchant.ProductCount 冗余列——
@@ -105,7 +106,7 @@ namespace OpenFindBearings.Infrastructure.Services
                 }
 
                 // 降档：先过保级缓冲闸（v2.12.0）——挂钟期内维持原档与成员 buff
-                var graceDays = await GetConfigAsync("Business.MerchantGradeGraceDays", 15, cancellationToken);
+                var graceDays = await GetConfigAsync(MerchantGradeSettings.GraceDaysKey, MerchantGradeSettings.GraceDaysDefault, cancellationToken);
                 if (graceDays <= 0)
                 {
                     merchant.UpdateGrade(target); // 0=关闭缓冲，立即落档
@@ -137,9 +138,9 @@ namespace OpenFindBearings.Infrastructure.Services
         /// </summary>
         private async Task<int> GetGradeUpBonusAsync(int rank, CancellationToken ct) => rank switch
         {
-            2 => await GetConfigAsync("Business.MerchantGradeBonusLv2", 50, ct),
-            3 => await GetConfigAsync("Business.MerchantGradeBonusLv3", 150, ct),
-            4 => await GetConfigAsync("Business.MerchantGradeBonusLv4", 300, ct),
+            2 => await GetConfigAsync(MerchantGradeSettings.BonusLv2Key, MerchantGradeSettings.BonusLv2Default, ct),
+            3 => await GetConfigAsync(MerchantGradeSettings.BonusLv3Key, MerchantGradeSettings.BonusLv3Default, ct),
+            4 => await GetConfigAsync(MerchantGradeSettings.BonusLv4Key, MerchantGradeSettings.BonusLv4Default, ct),
             _ => 0
         };
 

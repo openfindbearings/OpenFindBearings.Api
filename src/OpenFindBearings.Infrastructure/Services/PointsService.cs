@@ -288,7 +288,7 @@ namespace OpenFindBearings.Infrastructure.Services
             var levelAfter = ResolveLevel(levels, account.TotalEarned);
             var leveledUp = (levelAfter?.Level ?? 1) > (levelBefore?.Level ?? 1);
             return new CheckinResult(amount, streak, false, critMultiplier,
-                levelAfter?.Level ?? 1, levelAfter?.Name ?? "倔强青铜", leveledUp);
+                levelAfter?.Level ?? 1, levelAfter?.Name ?? PointLevel.DefaultName, leveledUp);
         }
 
         /// <summary>

@@ -2,6 +2,7 @@
 using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Repositories;
 using OpenFindBearings.Infrastructure.Persistence.Data;
+using OpenFindBearings.Infrastructure.Persistence.Extensions;
 
 namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 {
@@ -50,7 +51,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
             if (existing != null)
             {
                 existing.UpdateViewTime();
-                _context.UserBearingHistories.Update(existing);
+                _context.MarkModified(existing);
             }
             else
             {
