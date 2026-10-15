@@ -9,20 +9,31 @@ namespace OpenFindBearings.Application.Services
     /// </summary>
     public static class MerchantBuffs
     {
+        // 改动说明（v2.17.0 规则数据源）：把 buff 上限抽取为具名常量，供规则页下发复用，
+        // 避免"页面文案 +3 / ×1.25"与代码实现双份维护而漂移
+        /// <summary>签到 buff 最大加数（金牌 +3，规则页"最高 +N"展示用）</summary>
+        public const int CheckinBonusMax = 3;
+
+        /// <summary>每日登录 buff 加数（认证及以上 +1）</summary>
+        public const int LoginBonusMax = 1;
+
+        /// <summary>纠错采纳 buff 最大乘数（金牌 ×1.25）</summary>
+        public const double CorrectionMultiplierMax = 1.25;
+
         /// <summary>等级数值 → 等级序数（Standard=1 入驻 / Verified=2 认证 / Premium=3 口碑 / Gold=4 金牌）。
         /// 改动说明（v2.13.2 序数统一）：委托 Domain.MerchantGradeExtensions.Rank，消除枚举数值映射的二次维护</summary>
         public static int Rank(int grade) => ((MerchantGrade)grade).Rank();
 
         /// <summary>每日签到加数（Lv1+1 / Lv2+1 / Lv3+2 / Lv4+3）</summary>
-        public static int CheckinBonus(int grade) => Rank(grade) switch { >= 4 => 3, 3 => 2, >= 1 => 1, _ => 0 };
+        public static int CheckinBonus(int grade) => Rank(grade) switch { >= 4 => CheckinBonusMax, 3 => 2, >= 1 => 1, _ => 0 };
 
         /// <summary>每日登录加数（Lv2 起 +1）</summary>
-        public static int LoginBonus(int grade) => Rank(grade) >= 2 ? 1 : 0;
+        public static int LoginBonus(int grade) => Rank(grade) >= 2 ? LoginBonusMax : 0;
 
         /// <summary>纠错被采纳乘数（Lv2 ×1.1 / Lv3 ×1.2 / Lv4 ×1.25），返回加成后的整数值</summary>
         public static int ApplyCorrectionBonus(int baseAmount, int grade) => Rank(grade) switch
         {
-            >= 4 => (int)Math.Ceiling(baseAmount * 1.25),
+            >= 4 => (int)Math.Ceiling(baseAmount * CorrectionMultiplierMax),
             3 => (int)Math.Ceiling(baseAmount * 1.20),
             2 => (int)Math.Ceiling(baseAmount * 1.10),
             _ => baseAmount

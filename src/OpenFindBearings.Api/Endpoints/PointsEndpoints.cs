@@ -1,7 +1,9 @@
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using OpenFindBearings.Api.Extensions;
 using OpenFindBearings.Api.Helpers;
 using OpenFindBearings.Api.Services;
+using OpenFindBearings.Application.Queries.Points.GetPointRules;
 using OpenFindBearings.Application.Services;
 using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Services;
@@ -761,6 +763,26 @@ namespace OpenFindBearings.Api.Endpoints
             .WithSummary("更新商家集体任务")
             .WithDescription("调整目标/周期/奖励/启停，实时生效")
             .RequirePermission("points.manage");
+
+            // ============ 公开端（无需认证） ============
+
+            /// <summary>
+            /// 轴承币与商家金规则数据源（v2.17.0 规则数据源）：Taro 规则页渲染用，
+            /// 聚合轴承币/商家金各项数值（分值/阶梯/上限/汇率/升档礼），匿名可访问——
+            /// 规则页对未登录用户亦展示，数值随运营改配置实时跟随，消除前端硬编码漂移
+            /// </summary>
+            app.MapGet("/api/points/rules", async (
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                var query = new GetPointRulesQuery();
+                var result = await mediator.Send(query);
+                return ApiResponseHelper.Ok(result, httpContext: httpContext);
+            })
+            .WithName("GetPublicPointRules")
+            .WithSummary("轴承币与商家金规则数据源")
+            .WithDescription("规则页数据源：轴承币/商家金各项数值，匿名可访问")
+            .AllowAnonymous();
         }
 
         /// <summary>
