@@ -8,7 +8,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.DeleteRejectedApplicat
     /// 守卫：商户处于 Suspended（仅被驳回的申请可删，审核中走 withdraw、生效后属正式商户）
     /// 且调用者是在职 MerchantAdmin（申请人本人）。
     /// 清理分支与撤回同构（ApplicantApplicationCleanup）：Self 硬删商户+成员、
-    /// Claim 解除认领人并退回爬虫认领池、Nomination/None 拒绝。
+    /// Claim 解除认领人并退回互联网认领池、Nomination/None 拒绝。
     /// </summary>
     public record DeleteRejectedApplicationCommand : IRequest, ICommand
     {

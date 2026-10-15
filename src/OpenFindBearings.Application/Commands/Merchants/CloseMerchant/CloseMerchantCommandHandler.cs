@@ -19,7 +19,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.CloseMerchant
     /// - claim / 提名已有商家（ApplicationMode=None 但 DataSource=Manual——提名已有不打模式标记）→
     ///   release 分支：ReleaseToPool + 清场 helper，商户回公海待认领。
     /// 通知：helper 预取在职成员名单（事件 commit 后派发届时查必空），逐人 AddInAppAsync。
-    /// Sync refresh 由端点层在命令成功后 best-effort 调用（失败仅日志+可手动补，不回滚关店）。
+    /// 互联网数据刷新 由端点层在命令成功后 best-effort 调用（失败仅日志+可手动补，不回滚关店）。
     /// </summary>
     public class CloseMerchantCommandHandler : IRequestHandler<CloseMerchantCommand, CloseMerchantResult>
     {
@@ -108,7 +108,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.CloseMerchant
                 await ApplicantApplicationCleanup.ResetOperationalDataForReleaseAsync(
                     merchant.Id, _memberRepository, _merchantBearingRepository, _documentRepository,
                     _invitationRepository, _correctionRepository, _mallItemRepository, _merchantPoints, cancellationToken);
-                // 归属轴重置（DataSource 回 Crawler/认证与核验轴清/Contact 隐私止血/ProductCount 归零）
+                // 归属轴重置（DataSource 回 Internet/认证与核验轴清/Contact 隐私止血/ProductCount 归零）
                 merchant.ReleaseToPool();
                 await _merchantRepository.UpdateAsync(merchant, cancellationToken);
                 result = "released";

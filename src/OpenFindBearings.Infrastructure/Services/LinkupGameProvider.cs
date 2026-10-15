@@ -7,7 +7,7 @@ namespace OpenFindBearings.Infrastructure.Services
 {
     /// <summary>
     /// 轴承连连看 Provider（v2.10.1 游戏中心首款插件游戏）：
-    /// 题库=MinIO 爬取图管线沉淀的有图轴承（类型打散防"照片脸盲"），
+    /// 题库=MinIO 互联网图管线沉淀的有图轴承（类型打散防"照片脸盲"），
     /// 结算=每局 gameId 幂等发分（规则 minigame：5 分/局、日上限 10 分）。
     /// 原型口径：低额奖励客户端信任制（与签到同级防刷），不验游戏过程。
     /// </summary>
@@ -38,7 +38,7 @@ namespace OpenFindBearings.Infrastructure.Services
             var n = Math.Clamp(size ?? 18, 6, 24);
             var bearings = await _bearings.GetRandomWithImageAsync(n, cancellationToken);
             // 改动说明（v2.10.2 真机反馈）：只取平台媒体库键（/images 前缀=已下载可加载）——
-            // 3D 是 /images 用 3D，否则用 /images 的 2D；爬虫原始 http 地址多死链不取
+            // 3D 是 /images 用 3D，否则用 /images 的 2D；互联网原始 http 地址多死链不取
             static bool IsMedia(string? u) => u != null && u.StartsWith("/images");
             return bearings.Select(b => new
             {

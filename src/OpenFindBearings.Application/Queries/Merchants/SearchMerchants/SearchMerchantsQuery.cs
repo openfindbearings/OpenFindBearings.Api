@@ -42,9 +42,9 @@ namespace OpenFindBearings.Application.Queries.Merchants.SearchMerchants
         public MerchantStatus? Status { get; set; }
 
         /// <summary>
-        /// 是否排除爬虫来源商家（仅显示入驻申请商家）
+        /// 是否排除互联网来源商家（仅显示入驻申请商家）
         /// </summary>
-        public bool? ExcludeCrawler { get; set; }
+        public bool? ExcludeInternet { get; set; }
 
         /// <summary>
         /// 排序字段（name=名称 / productcount=在售数 / 空=认证优先默认）

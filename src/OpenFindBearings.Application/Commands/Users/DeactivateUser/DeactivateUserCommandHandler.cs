@@ -199,7 +199,7 @@ namespace OpenFindBearings.Application.Commands.Users.DeactivateUser
             }
             else
             {
-                await ApplicantApplicationCleanup.RemoveClaimAndRevertToCrawlerAsync(
+                await ApplicantApplicationCleanup.RemoveClaimAndRevertToInternetAsync(
                     merchant, member, _merchantRepository, _memberRepository, cancellationToken);
             }
         }

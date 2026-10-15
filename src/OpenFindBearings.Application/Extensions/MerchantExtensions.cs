@@ -34,7 +34,7 @@ namespace OpenFindBearings.Application.Extensions
                 // 改动说明（v2.13.2 大小写统一）：原 ToString() 出 PascalCase（"Self"），
                 //   与 GetApplicationDetailQueryHandler 的 ToLowerInvariant()（"self"）分歧；Taro 按小写判等，统一为小写
                 ApplicationMode = merchant.ApplicationMode.ToString().ToLowerInvariant(),
-            // v1.31.0：Admin 解除归属按钮可用性判定（None+Manual=提名已有 vs None+Crawler=公海）
+            // v1.31.0：Admin 解除归属按钮可用性判定（None+Manual=提名已有 vs None+Internet=公海）
             DataSource = merchant.DataSource?.ToString(),
                 SubmittedAt = merchant.CreatedAt,
                 RejectReason = merchant.SuspensionReason
@@ -75,7 +75,7 @@ namespace OpenFindBearings.Application.Extensions
                 // 改动说明（v2.13.2 大小写统一）：原 ToString() 出 PascalCase（"Self"），
                 //   与 GetApplicationDetailQueryHandler 的 ToLowerInvariant()（"self"）分歧；Taro 按小写判等，统一为小写
                 ApplicationMode = merchant.ApplicationMode.ToString().ToLowerInvariant(),
-            // v1.31.0：Admin 解除归属按钮可用性判定（None+Manual=提名已有 vs None+Crawler=公海）
+            // v1.31.0：Admin 解除归属按钮可用性判定（None+Manual=提名已有 vs None+Internet=公海）
             DataSource = merchant.DataSource?.ToString(),
                 SubmittedAt = merchant.CreatedAt,
                 RejectReason = merchant.SuspensionReason,
@@ -115,7 +115,7 @@ namespace OpenFindBearings.Application.Extensions
                 // 改动说明（v2.13.2 大小写统一）：原 ToString() 出 PascalCase（"Self"），
                 //   与 GetApplicationDetailQueryHandler 的 ToLowerInvariant()（"self"）分歧；Taro 按小写判等，统一为小写
                 ApplicationMode = merchant.ApplicationMode.ToString().ToLowerInvariant(),
-            // v1.31.0：Admin 解除归属按钮可用性判定（None+Manual=提名已有 vs None+Crawler=公海）
+            // v1.31.0：Admin 解除归属按钮可用性判定（None+Manual=提名已有 vs None+Internet=公海）
             DataSource = merchant.DataSource?.ToString(),
                 SubmittedAt = merchant.CreatedAt,
                 RejectReason = merchant.SuspensionReason,

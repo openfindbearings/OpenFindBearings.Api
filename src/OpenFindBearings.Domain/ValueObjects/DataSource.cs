@@ -5,7 +5,7 @@ namespace OpenFindBearings.Domain.ValueObjects
 {
     /// <summary>
     /// 数据来源值对象
-    /// 记录轴承数据的来源信息，用于判断是否允许爬虫数据覆盖
+    /// 记录轴承数据的来源信息，用于判断是否允许互联网数据覆盖
     /// 包含三个核心字段：SourceType、ImportedBy、ImportedAt
     /// </summary>
     public class DataSource : ValueObject
@@ -16,7 +16,7 @@ namespace OpenFindBearings.Domain.ValueObjects
         public DataSourceType? SourceType { get; private set; }
 
         /// <summary>
-        /// 录入人/系统（爬虫时存站点名称）
+        /// 录入人/系统（互联网时存站点名称）
         /// </summary>
         public string? ImportedBy { get; private set; }
 
@@ -44,13 +44,13 @@ namespace OpenFindBearings.Domain.ValueObjects
         }
 
         /// <summary>
-        /// 创建爬虫数据源（站点名存到 ImportedBy）
+        /// 创建互联网数据源（站点名存到 ImportedBy）
         /// </summary>
-        public static DataSource FromCrawler(string siteName)
+        public static DataSource FromInternet(string siteName)
         {
             return new DataSource
             {
-                SourceType = DataSourceType.Crawler,
+                SourceType = DataSourceType.Internet,
                 ImportedBy = siteName,
                 ImportedAt = DateTime.UtcNow
             };
@@ -72,7 +72,7 @@ namespace OpenFindBearings.Domain.ValueObjects
         /// <summary>
         /// 创建API对接的数据源
         /// </summary>
-        public static DataSource FromApi(string? importedBy = "ApiSync")
+        public static DataSource FromApi(string? importedBy = "Api")
         {
             return new DataSource
             {
@@ -109,9 +109,9 @@ namespace OpenFindBearings.Domain.ValueObjects
         }
 
         /// <summary>
-        /// 是否为爬虫数据（可以被覆盖）
+        /// 是否为互联网数据（可以被覆盖）
         /// </summary>
-        public bool IsCrawler => SourceType == DataSourceType.Crawler;
+        public bool IsInternet => SourceType == DataSourceType.Internet;
 
         /// <summary>
         /// 获取来源摘要

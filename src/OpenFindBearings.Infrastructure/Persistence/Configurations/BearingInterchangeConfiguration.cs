@@ -31,7 +31,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
                 .HasDefaultValue(true);
 
             // ============ 审核治理（v2.16.0） ============
-            // 默认 Approved：存量种子/爬虫行保持生效可见；商家提交时显式置 Pending
+            // 默认 Approved：存量种子/互联网行保持生效可见；商家提交时显式置 Pending
             builder.Property(bi => bi.ReviewStatus)
                 .HasConversion<int>()
                 .HasDefaultValue(InterchangeReviewStatus.Approved);

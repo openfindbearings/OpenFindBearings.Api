@@ -150,7 +150,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.AcceptNomination
                     request.Address ?? c?.Address));
             }
 
-            // 改动说明：接受提名=进入真人维护链路，来源置 Manual 使其不再被 Sync 爬虫覆盖
+            // 改动说明：接受提名=进入真人维护链路，来源置 Manual 使其不再被 互联网数据互联网覆盖
             merchant.SetDataSource(OpenFindBearings.Domain.ValueObjects.DataSource.FromManual(request.NomineeUserId.ToString()));
 
             // 仅"提名新建"需 Draft→Pending；"提名认领已有商家"保持其原状态（本就非 Draft）

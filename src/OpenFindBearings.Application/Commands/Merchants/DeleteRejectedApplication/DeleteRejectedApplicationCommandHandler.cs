@@ -76,11 +76,11 @@ namespace OpenFindBearings.Application.Commands.Merchants.DeleteRejectedApplicat
                     _treasuryAccountRepository, _treasuryTxRepository, _mallItemRepository, cancellationToken);
                     break;
                 case ApplicationMode.Claim:
-                    await ApplicantApplicationCleanup.RemoveClaimAndRevertToCrawlerAsync(
+                    await ApplicantApplicationCleanup.RemoveClaimAndRevertToInternetAsync(
                         merchant, member, _merchantRepository, _merchantMemberRepository, cancellationToken);
                     break;
                 default:
-                    // 提名被拒后商户仍归发起人邀请流程管理；None 为历史/爬虫数据无申请人，均不开放自助删除
+                    // 提名被拒后商户仍归发起人邀请流程管理；None 为历史/互联网数据无申请人，均不开放自助删除
                     throw new InvalidOperationException("该申请暂不支持自助删除");
             }
 

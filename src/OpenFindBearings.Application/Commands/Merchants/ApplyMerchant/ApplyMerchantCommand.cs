@@ -5,7 +5,7 @@ using OpenFindBearings.Application.DTOs;
 namespace OpenFindBearings.Application.Commands.Merchants.ApplyMerchant
 {
     /// <summary>
-    /// 商户入驻申请命令（模式 self 自助当管理员 / claim 认领爬虫商家）
+    /// 商户入驻申请命令（模式 self 自助当管理员 / claim 认领互联网商家）
     /// 提交后创建/绑定 Pending 商户 + 申请人 MerchantAdmin 成员行，待 Admin 审核
     /// </summary>
     public record ApplyMerchantCommand : IRequest<Guid>, ICommand
@@ -16,7 +16,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.ApplyMerchant
         public string Mode { get; init; } = "self";
 
         /// <summary>
-        /// 认领的已有爬虫商家ID（mode=claim 时必填）
+        /// 认领的已有互联网商家ID（mode=claim 时必填）
         /// </summary>
         public Guid? ClaimMerchantId { get; init; }
 

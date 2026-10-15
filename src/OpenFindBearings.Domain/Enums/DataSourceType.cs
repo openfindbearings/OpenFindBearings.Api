@@ -21,9 +21,9 @@
         Api = 2,
 
         /// <summary>
-        /// 爬虫采集
+        /// 互联网采集
         /// </summary>
-        Crawler = 3,
+        Internet = 3,
 
         /// <summary>
         /// 用户提交/众包

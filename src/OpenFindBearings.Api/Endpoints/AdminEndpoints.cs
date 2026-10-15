@@ -598,7 +598,7 @@ namespace OpenFindBearings.Api.Endpoints
 
             /// <summary>
             /// 强制解除商户归属（v2.17.0）：管理员跑路/僵尸无主/违规商户的平台侧处置——
-            /// 清场回公海（商品/证照/邀请/纠错全清、联系方式隐私止血），存在性交爬虫管线裁判；
+            /// 清场回公海（商品/证照/邀请/纠错全清、联系方式隐私止血），存在性交互联网管线裁判；
             /// self/提名新建商户无公海数据会被拒绝（应走删除）。
             /// </summary>
             group.MapPost("/merchants/{id:guid}/detach", async (
@@ -672,11 +672,11 @@ namespace OpenFindBearings.Api.Endpoints
 
                 var command = new VerifyMerchantCommand(id, currentUser.UserId.Value.ToString());
                 await mediator.Send(command);
-                return ApiResponseHelper.Ok("商家认证成功，已清除爬虫数据", httpContext);
+                return ApiResponseHelper.Ok("商家认证成功，已清除互联网来源数据", httpContext);
             })
             .WithName("VerifyMerchant")
             .WithSummary("认证商家")
-            .WithDescription("商家认证审核，通过后将清除该商家的爬虫关联数据")
+            .WithDescription("商家认证审核，通过后将清除该商家的互联网来源数据")
             .RequirePermission("merchant.verify");
 
             /// <summary>
@@ -713,7 +713,7 @@ namespace OpenFindBearings.Api.Endpoints
                 [FromQuery] bool? verifiedOnly = null,
                 [FromQuery] bool? includeDeleted = null,
                 [FromQuery] int? status = null,
-                [FromQuery] bool? excludeCrawler = null,
+                [FromQuery] bool? excludeInternet = null,
                 [FromQuery] int page = 1,
                 [FromQuery] int pageSize = 20) =>
             {
@@ -725,7 +725,7 @@ namespace OpenFindBearings.Api.Endpoints
                     Status = status.HasValue ? (MerchantStatus?)status : null,
                     VerifiedOnly = verifiedOnly,
                     IncludeDeleted = includeDeleted,
-                    ExcludeCrawler = excludeCrawler,
+                    ExcludeInternet = excludeInternet,
                     Page = page,
                     PageSize = pageSize
                 };

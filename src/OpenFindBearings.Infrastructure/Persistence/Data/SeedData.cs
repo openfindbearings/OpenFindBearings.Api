@@ -461,13 +461,13 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
             ("Price.NumericForSorting", "true", "Price", "是否启用数值化价格", "bool", true),
             ("Price.ExtractPattern", @"¥(\d+(?:\.\d+)?)", "Price", "价格提取正则（需含首个捕获组）", "string", false),
 
-            // 数据同步（限流 + 可信度阈值）
-            ("RateLimit.Guest.RequestsPerMinute", "30", "Sync", "游客每分钟请求数", "int", true),
-            ("RateLimit.User.RequestsPerMinute", "60", "Sync", "用户每分钟请求数", "int", true),
-            ("RateLimit.Premium.RequestsPerMinute", "120", "Sync", "付费用户每分钟请求数", "int", true),
-            ("Reliability.AutoSyncThreshold", "85", "Sync", "自动同步阈值（可信度≥此值直接入库）", "int", false),
-            ("Reliability.ReviewThreshold", "60", "Sync", "人工审核阈值（可信度≥此值进入待审核）", "int", false),
-            ("Reliability.DefaultSourceScore", "80", "Sync", "来源默认基础分", "int", false),
+            // 系统（限流 + 可信度阈值）；改动说明：分组名由 Sync 改为 System，开源不再出现 Sync 概念
+            ("RateLimit.Guest.RequestsPerMinute", "30", "System", "游客每分钟请求数", "int", true),
+            ("RateLimit.User.RequestsPerMinute", "60", "System", "用户每分钟请求数", "int", true),
+            ("RateLimit.Premium.RequestsPerMinute", "120", "System", "付费用户每分钟请求数", "int", true),
+            ("Reliability.AutoSyncThreshold", "85", "System", "自动同步阈值（可信度≥此值直接入库）", "int", false),
+            ("Reliability.ReviewThreshold", "60", "System", "人工审核阈值（可信度≥此值进入待审核）", "int", false),
+            ("Reliability.DefaultSourceScore", "80", "System", "来源默认基础分", "int", false),
 
             // 移动端版本更新（供 /api/mobile/version/check 消费；由 Taro 集群侧 CronJob apk-sync 拉包齐备后自动改写，Admin 页手动兜底）
             ("Mobile.AppVersion", "v1.0.0-rc.1", "Mobile", "移动端最新版本号（SemVer 带点 prerelease，如 v1.0.0-rc.2）", "string", true),

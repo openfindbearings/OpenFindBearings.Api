@@ -230,7 +230,7 @@ namespace OpenFindBearings.Application.Shared.Constants
         /// </summary>
         public const string SearchMerchants = "search:merchants:{0}";
 
-        // ============ 同步任务相关 (Sync) ============
+        // ============ 同步任务相关 (互联网数据) ============
 
         /// <summary>
         /// 同步任务状态缓存键

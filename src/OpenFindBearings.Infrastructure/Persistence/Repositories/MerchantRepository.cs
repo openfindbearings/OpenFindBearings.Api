@@ -66,10 +66,10 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                 // 不应泄露到 C 端搜索与 Admin 入驻审核列表；显式按状态过滤时不受影响
                 query = query.Where(m => m.Status != MerchantStatus.Draft);
 
-            if (searchParams.ExcludeCrawler == true)
+            if (searchParams.ExcludeInternet == true)
                 query = query.Where(m =>
                     m.DataSource == null ||
-                    m.DataSource.SourceType != Domain.Enums.DataSourceType.Crawler);
+                    m.DataSource.SourceType != Domain.Enums.DataSourceType.Internet);
 
             var totalCount = await query.CountAsync(cancellationToken);
 
@@ -156,7 +156,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         }
 
         // 根据名称精确获取商家
-        // 修复 B6：排除提名草稿（Draft）商户——Sync 按名称匹配合并时不得覆盖未生效的草稿资料
+        // 修复 B6：排除提名草稿（Draft）商户——互联网数据按名称匹配合并时不得覆盖未生效的草稿资料
         public async Task<Merchant?> GetByNameAsync(string name, CancellationToken cancellationToken = default)
         {
             return await _context.Merchants
@@ -204,7 +204,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
             return await _context.Merchants
                 .Where(m => m.IsActive &&
                             m.Status == MerchantStatus.Pending &&
-                            (m.DataSource == null || m.DataSource.SourceType != Domain.Enums.DataSourceType.Crawler))
+                            (m.DataSource == null || m.DataSource.SourceType != Domain.Enums.DataSourceType.Internet))
                 .CountAsync(cancellationToken);
         }
 

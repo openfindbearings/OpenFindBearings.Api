@@ -73,7 +73,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.NominateMerchant
             }
             else
             {
-                // 提名新建：建 Draft 商户（未生效前不可被检索、不被 Sync 合并）
+                // 提名新建：建 Draft 商户（未生效前不可被检索、不被 互联网数据合并）
                 if (string.IsNullOrWhiteSpace(request.Name))
                 {
                     throw new InvalidOperationException("商户名称不能为空");

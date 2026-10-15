@@ -74,7 +74,7 @@ namespace OpenFindBearings.Domain.Entities
 
         /// <summary>
         /// 销售状态（v2.15.0 状态统一）：已下架/出售中/补货中，替代原 IsOnSale + IsRestocking 两个互斥 bool。
-        /// 默认出售中（保护 Sync/存量数据：爬虫与历史关联保持公域可见）
+        /// 默认出售中（保护 互联网数据/存量数据：互联网与历史关联保持公域可见）
         /// </summary>
         public SaleState SaleState { get; private set; } = Enums.SaleState.OnSale;
 
@@ -105,7 +105,7 @@ namespace OpenFindBearings.Domain.Entities
 
         /// <summary>
         /// 审核状态（v2.15.0 状态统一）：仓库中/审核中/已通过/已驳回，替代原 IsPendingApproval bool。
-        /// 默认已通过（保护 Sync/存量数据）；商家新建走 MoveToWarehouse 落仓库中
+        /// 默认已通过（保护 互联网数据/存量数据）；商家新建走 MoveToWarehouse 落仓库中
         /// </summary>
         public ListingReviewStatus ReviewStatus { get; private set; } = ListingReviewStatus.Approved;
 
@@ -115,7 +115,7 @@ namespace OpenFindBearings.Domain.Entities
         public string? ApprovalComment { get; private set; }
 
         /// <summary>
-        /// 数据来源类型（爬虫/手动录入）
+        /// 数据来源类型（互联网/手动录入）
         /// </summary>
         public DataSourceType? DataSourceType { get; private set; }
 
@@ -148,7 +148,7 @@ namespace OpenFindBearings.Domain.Entities
             PriceDescription = priceDescription;
             StockDescription = stockDescription;
 
-            // v2.15.0 状态统一：默认出售中 + 已通过（保护 Sync/存量数据；商家新建走 MoveToWarehouse 落仓库中）
+            // v2.15.0 状态统一：默认出售中 + 已通过（保护 互联网数据/存量数据；商家新建走 MoveToWarehouse 落仓库中）
             SaleState = Enums.SaleState.OnSale;
             ReviewStatus = ListingReviewStatus.Approved;
         }

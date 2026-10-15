@@ -9,7 +9,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.WithdrawApplication
     /// <summary>
     /// 申请人自助撤回入驻申请处理器。
     /// 前置校验：商户必须处于 Pending，且调用者是它当前在职的 MerchantAdmin 成员（即申请人本人）。
-    /// 按 ApplicationMode 分支清理：Self 硬删商户及其成员；Claim 解除认领人成员并把来源退回爬虫。
+    /// 按 ApplicationMode 分支清理：Self 硬删商户及其成员；Claim 解除认领人成员并把来源退回互联网。
     /// </summary>
     public class WithdrawApplicationCommandHandler : IRequestHandler<WithdrawApplicationCommand>
     {
@@ -78,7 +78,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.WithdrawApplication
                         _treasuryAccountRepository, _treasuryTxRepository, _mallItemRepository, cancellationToken);
                     break;
                 case ApplicationMode.Claim:
-                    await ApplicantApplicationCleanup.RemoveClaimAndRevertToCrawlerAsync(
+                    await ApplicantApplicationCleanup.RemoveClaimAndRevertToInternetAsync(
                         merchant, member, _merchantRepository, _merchantMemberRepository, cancellationToken);
                     break;
                 default:
