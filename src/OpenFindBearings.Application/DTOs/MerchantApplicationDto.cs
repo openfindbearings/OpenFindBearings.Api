@@ -69,9 +69,13 @@ namespace OpenFindBearings.Application.DTOs
         public string? CompanyName { get; set; }
 
         /// <summary>
-        /// 商家类型
+        /// 商家类型（枚举名）。
+        /// 改动说明（v2.13.2 字段语义统一）：原此处存中文展示名，与 MerchantDto.Type（枚举名）同名不同义，统一为枚举名
         /// </summary>
         public string Type { get; set; } = string.Empty;
+
+        /// <summary>类型中文展示名（v2.13.2 新增，承接原 Type 的中文语义）</summary>
+        public string TypeDisplay { get; set; } = string.Empty;
 
         /// <summary>
         /// 是否可认领（未认证 + 无在职成员 + 无进行中提名锁定）

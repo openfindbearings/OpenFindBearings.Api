@@ -13,6 +13,8 @@ namespace OpenFindBearings.Application.Extensions
                 Name = merchant.Name,
                 CompanyName = merchant.CompanyName,
                 Type = merchant.Type.ToString(),
+                // 改动说明（v2.13.2）：补类型中文展示名，消费方免自映射
+                TypeDisplay = merchant.GetMerchantTypeDisplayName(),
                 ContactPerson = merchant.Contact?.ContactPerson,
                 Phone = merchant.Contact?.Phone,
                 Mobile = merchant.Contact?.Mobile,
@@ -48,6 +50,8 @@ namespace OpenFindBearings.Application.Extensions
                 CompanyName = merchant.CompanyName,
                 Status = merchant.Status.ToString(),
                 Type = merchant.Type.ToString(),
+                // 改动说明（v2.13.2）：补类型中文展示名，消费方免自映射
+                TypeDisplay = merchant.GetMerchantTypeDisplayName(),
                 ContactPerson = merchant.Contact?.ContactPerson,
                 Phone = merchant.Contact?.Phone,
                 Mobile = merchant.Contact?.Mobile,
@@ -87,6 +91,8 @@ namespace OpenFindBearings.Application.Extensions
                 Name = merchant.Name,
                 CompanyName = merchant.CompanyName,
                 Type = merchant.Type.ToString(),
+                // 改动说明（v2.13.2）：补类型中文展示名，消费方免自映射
+                TypeDisplay = merchant.GetMerchantTypeDisplayName(),
                 // ========== 敏感信息控制 ==========
                 ContactPerson = isAuthenticated ? merchant.Contact?.ContactPerson : null,
                 Phone = isAuthenticated ? merchant.Contact?.Phone : null,

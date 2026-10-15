@@ -22,9 +22,14 @@ namespace OpenFindBearings.Application.DTOs
         public string? CompanyName { get; set; }
 
         /// <summary>
-        /// 商家类型
+        /// 商家类型（枚举名：Manufacturer/AuthorizedDealer/Distributor/Trader）
         /// </summary>
         public string Type { get; set; } = string.Empty;
+
+        /// <summary>类型中文展示名（生产厂家/授权经销商/分销商/贸易商）。
+        /// 改动说明（v2.13.2）：与 GradeDisplay 对齐补齐——原只有 Type（枚举名），
+        /// 消费方各自硬编码枚举→中文映射，且 ClaimableMerchantDto 同名 Type 却存中文造成跨 DTO 语义漂移</summary>
+        public string TypeDisplay { get; set; } = string.Empty;
 
         /// <summary>
         /// 联系人姓名

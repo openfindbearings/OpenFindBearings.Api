@@ -97,7 +97,9 @@ namespace OpenFindBearings.Application.Queries.Merchants.ClaimableMerchants
                     Id = m.Id,
                     Name = m.Name,
                     CompanyName = m.CompanyName,
-                    Type = m.GetMerchantTypeDisplayName(),
+                    // 改动说明（v2.13.2 字段语义统一）：Type 改回枚举名（与 MerchantDto 同义），中文展示走新字段 TypeDisplay
+                    Type = m.Type.ToString(),
+                    TypeDisplay = m.GetMerchantTypeDisplayName(),
                     IsClaimable = claimable,
                     IsMine = isMine,
                     StatusText = statusText
