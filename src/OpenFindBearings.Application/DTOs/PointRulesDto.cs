@@ -67,7 +67,7 @@ namespace OpenFindBearings.Application.DTOs
         /// <summary>段位升档礼区间上限（默认 120）</summary>
         public int LevelBonusMax { get; set; } = 120;
 
-        /// <summary>业务切日时区偏移小时数（默认 8，即东八区）</summary>
+        /// <summary>业务切日时区偏移小时数（默认 8，即东八区/北京时间）</summary>
         public int TzOffsetHours { get; set; } = 8;
 
         // ============ buff（MerchantBuffs 代码常量） ============

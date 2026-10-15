@@ -115,6 +115,7 @@ namespace OpenFindBearings.Application.Queries.Points.GetPointRules
                 dto.LevelBonusMax = bonuses.Max();
             }
 
+            // 切日时区偏移随 Business.TimeZoneOffsetHours 配置联动，规则页展示用
             dto.TzOffsetHours = ReadCfg("Business.TimeZoneOffsetHours", dto.TzOffsetHours);
 
             // buff 上限走 MerchantBuffs 代码常量（与发放侧同源）
