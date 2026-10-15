@@ -32,7 +32,7 @@ namespace OpenFindBearings.Application.Queries.Merchants.SearchMerchants
                 Type = request.Type,
                 Status = request.Status,
                 VerifiedOnly = request.VerifiedOnly,
-                ExcludeCrawler = request.ExcludeCrawler,
+                ExcludeInternet = request.ExcludeInternet,
                 IsActive = request.IncludeDeleted == true ? null : true,
                 SortBy = request.SortBy,
                 SortOrder = request.SortOrder,

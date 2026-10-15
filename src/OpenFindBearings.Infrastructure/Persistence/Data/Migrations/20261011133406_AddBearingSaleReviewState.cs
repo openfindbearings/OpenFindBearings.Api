@@ -34,7 +34,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                 nullable: false,
                 defaultValue: 0);
 
-            // 3) 从旧列回填（v2.15.0 状态统一，保证存量/爬虫数据保持公域可见）：
+            // 3) 从旧列回填（v2.15.0 状态统一，保证存量/互联网数据保持公域可见）：
             //    SaleState: IsOnSale→1(出售中) / IsRestocking→2(补货中) / 否则 0(已下架)
             //    ReviewStatus: IsPendingApproval→1(审核中) / 否则 2(已通过)
             migrationBuilder.Sql(

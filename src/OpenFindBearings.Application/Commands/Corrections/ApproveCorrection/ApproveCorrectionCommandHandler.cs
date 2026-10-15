@@ -111,8 +111,8 @@ namespace OpenFindBearings.Application.Commands.Corrections.ApproveCorrection
                     break;
             }
 
-            // 覆盖保护：纠错审批通过后标记为非爬虫来源，
-            // 使后续爬虫批量同步跳过，避免人工纠错结果被爬虫数据覆盖
+            // 覆盖保护：纠错审批通过后标记为非互联网来源，
+            // 使后续互联网批量同步跳过，避免人工纠错结果被互联网数据覆盖
             bearing.SetDataSource(DataSource.FromManual());
 
             await _bearingRepository.UpdateAsync(bearing, cancellationToken);
@@ -176,8 +176,8 @@ namespace OpenFindBearings.Application.Commands.Corrections.ApproveCorrection
                     break;
             }
 
-            // 覆盖保护：纠错审批通过后标记为非爬虫来源，
-            // 使后续爬虫批量同步跳过，避免人工纠错结果被爬虫数据覆盖
+            // 覆盖保护：纠错审批通过后标记为非互联网来源，
+            // 使后续互联网批量同步跳过，避免人工纠错结果被互联网数据覆盖
             merchant.SetDataSource(DataSource.FromManual());
 
             await _merchantRepository.UpdateAsync(merchant, cancellationToken);

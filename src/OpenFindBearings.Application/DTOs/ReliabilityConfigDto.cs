@@ -1,7 +1,7 @@
 namespace OpenFindBearings.Application.DTOs
 {
     /// <summary>
-    /// 可信度阈值配置 DTO，供 Sync 运行时拉取，替代其 appsettings 默认值
+    /// 可信度阈值配置 DTO，供 互联网数据运行时拉取，替代其 appsettings 默认值
     /// </summary>
     public class ReliabilityConfigDto
     {

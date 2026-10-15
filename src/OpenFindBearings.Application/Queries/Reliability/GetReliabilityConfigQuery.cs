@@ -7,7 +7,7 @@ namespace OpenFindBearings.Application.Queries.Reliability
 {
     /// <summary>
     /// 获取可信度阈值配置查询
-    /// 职责：从 SystemConfigs 读取同步流程使用的可信度三阈值，供 Sync 运行时拉取
+    /// 职责：从 SystemConfigs 读取同步流程使用的可信度三阈值，供 互联网数据运行时拉取
     /// </summary>
     public class GetReliabilityConfigQuery : IRequest<ReliabilityConfigDto>, IQuery
     {

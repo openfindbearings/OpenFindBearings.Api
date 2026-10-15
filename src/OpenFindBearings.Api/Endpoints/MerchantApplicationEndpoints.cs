@@ -30,7 +30,7 @@ namespace OpenFindBearings.Api.Endpoints
                 .RequireAuthorization();
 
             /// <summary>
-            /// 提交入驻申请（self 新建 / claim 认领爬虫商家）
+            /// 提交入驻申请（self 新建 / claim 认领互联网商家）
             /// </summary>
             group.MapPost("/apply", async (
                 ApplyMerchantRequest request,
@@ -66,7 +66,7 @@ namespace OpenFindBearings.Api.Endpoints
             })
             .WithName("ApplyMerchant")
             .WithSummary("提交入驻申请")
-            .WithDescription("提交商户入驻申请（self 新建或 claim 认领爬虫商家），申请人成为该商户管理员");
+            .WithDescription("提交商户入驻申请（self 新建或 claim 认领互联网商家），申请人成为该商户管理员");
 
             /// <summary>
             /// 查询当前用户在各商户的入驻状态
@@ -87,7 +87,7 @@ namespace OpenFindBearings.Api.Endpoints
             .WithDescription("查询当前用户在各商户的入驻进度（待审核/已生效/已拒绝）");
 
             /// <summary>
-            /// 申请人自助撤回待审核的入驻申请（self 新建硬删 / claim 认领退回爬虫）
+            /// 申请人自助撤回待审核的入驻申请（self 新建硬删 / claim 认领退回互联网）
             /// </summary>
             group.MapPost("/{merchantId:guid}/withdraw", async (
                 Guid merchantId,

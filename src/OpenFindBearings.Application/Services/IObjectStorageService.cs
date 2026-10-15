@@ -4,7 +4,7 @@ namespace OpenFindBearings.Application.Services
     /// 对象存储服务抽象（S3 标准协议语义）。
     /// 改动说明（v1.5.0）：取代从未被消费的 IFileService 死代码——用户上传（头像/Logo/证照材料）
     /// 落盘从"端点直写 wwwroot 本地盘"改为走本抽象，生产实现为 MinIO（S3 协议），
-    /// 开发实现为本地盘，配置 FileStorage:Provider 切换，与 Sync 的对象存储模型同构。
+    /// 开发实现为本地盘，配置 FileStorage:Provider 切换，与 互联网数据的对象存储模型同构。
     /// key 为对象相对路径（如 uploads/avatars/{id}_{ts}.jpg），URL 形态保持 "/{key}"
     /// 相对键入库，展示层（media 服务 + MediaBaseUrl 拼接）不变。
     /// </summary>

@@ -72,7 +72,7 @@ namespace OpenFindBearings.Domain.Entities
 
         /// <summary>
         /// 数据来源（覆盖保护用）
-        /// 人工维护/审核过的替代品来源标记为非爬虫，爬虫批量同步不再覆盖
+        /// 人工维护/审核过的替代品来源标记为非互联网，互联网批量同步不再覆盖
         /// </summary>
         public DataSource? DataSource { get; private set; }
 

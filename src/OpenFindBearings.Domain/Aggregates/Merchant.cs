@@ -103,8 +103,8 @@ namespace OpenFindBearings.Domain.Aggregates
         public string? SuspensionReason { get; private set; }
 
         /// <summary>
-        /// 入驻渠道标记（Self/Claim/Nomination），用于申请人撤回时决定"删商户"还是"退回爬虫"。
-        /// 改动说明：新增，默认 None 兼容爬虫/种子/历史数据。
+        /// 入驻渠道标记（Self/Claim/Nomination），用于申请人撤回时决定"删商户"还是"退回互联网"。
+        /// 改动说明：新增，默认 None 兼容互联网/种子/历史数据。
         /// </summary>
         public ApplicationMode ApplicationMode { get; private set; }
 
@@ -209,7 +209,7 @@ namespace OpenFindBearings.Domain.Aggregates
         }
 
         /// <summary>
-        /// 创建商家（用于爬虫/导入）
+        /// 创建商家（用于互联网/导入）
         /// </summary>
         public static Merchant CreateFromSource(
             string name,
@@ -294,7 +294,7 @@ namespace OpenFindBearings.Domain.Aggregates
         }
 
         /// <summary>
-        /// 标记为提名草稿（提名他人为管理员时使用，Draft 状态不可被C端检索、不被Sync合并）
+        /// 标记为提名草稿（提名他人为管理员时使用，Draft 状态不可被C端检索、不被互联网数据合并）
         /// </summary>
         public void MarkAsDraft()
         {
@@ -315,7 +315,7 @@ namespace OpenFindBearings.Domain.Aggregates
         }
 
         /// <summary>
-        /// 重新开放认领（修复 B7：曾被拒绝的爬虫商家再次被认领时，
+        /// 重新开放认领（修复 B7：曾被拒绝的互联网商家再次被认领时，
         /// 清除拒绝标记恢复为待审核，重新走审核流程）
         /// </summary>
         public void ReopenForClaim()
@@ -501,29 +501,29 @@ namespace OpenFindBearings.Domain.Aggregates
         }
 
         /// <summary>
-        /// 认领撤回：把商户退回"爬虫自有"状态——来源退回 Crawler（重新可被 Sync 覆盖、重新进入认领池），
-        /// 渠道标记归 None。改动说明：认领时曾置 Manual 以护住认领人编辑，撤回后应还原为可被爬虫刷写。
+        /// 认领撤回：把商户退回"互联网自有"状态——来源退回 Internet（重新可被 互联网数据覆盖、重新进入认领池），
+        /// 渠道标记归 None。改动说明：认领时曾置 Manual 以护住认领人编辑，撤回后应还原为可被互联网刷写。
         /// </summary>
-        /// <param name="crawlerSiteName">回退后归属的爬虫站点名（占位标识即可）</param>
-        public void RevertClaimedToCrawler(string crawlerSiteName)
+        /// <param name="internetSiteName">回退后归属的互联网站点名（占位标识即可）</param>
+        public void RevertClaimedToInternet(string internetSiteName)
         {
-            SetDataSource(DataSource.FromCrawler(crawlerSiteName));
+            SetDataSource(DataSource.FromInternet(internetSiteName));
             ApplicationMode = ApplicationMode.None;
             UpdateTimestamp();
         }
 
         /// <summary>
         /// 解除归属回公海（v2.17.0 商户关店/Admin 强制解除）：Active→Pending + 认领相关轴全部重置，
-        /// 实体存在性交还爬虫管线裁判（Sync refresh 重置 staging 行后，下轮爬取经
-        /// DataSource=Crawler 覆盖通道刷新；源头页面消亡则自然不再更新）。
+        /// 实体存在性交还互联网管线裁判（互联网数据刷新 重置 staging 行后，下轮互联网经
+        /// DataSource=Internet 覆盖通道刷新；源头页面消亡则自然不再更新）。
         /// 成员/商品/证照/邀请/纠错等关联行由 ApplicantApplicationCleanup.ResetOperationalDataForReleaseAsync 清理（聚合外职责）。
         /// 保留轴：CompanyName/UnifiedSocialCreditCode/Type/Description/Logo——入驻审批已核实或属公开信息，
-        ///   Sync 覆盖通道不会回填这些字段，清掉反而丢失经核实的主体信息且误导预填。
+        ///   互联网数据覆盖通道不会回填这些字段，清掉反而丢失经核实的主体信息且误导预填。
         /// 清空轴：Contact 全部（上一任认领人私人联系方式，管线刷新前不得在公海暴露——隐私止血）、
-        ///   Website（认领人自填且 Sync 不回填，错误值会误导买家）。
+        ///   Website（认领人自填且 互联网数据不回填，错误值会误导买家）。
         /// </summary>
-        /// <param name="crawlerSiteName">回退后归属的爬虫站点占位标识</param>
-        public void ReleaseToPool(string crawlerSiteName = "released")
+        /// <param name="internetSiteName">回退后归属的互联网站点占位标识</param>
+        public void ReleaseToPool(string internetSiteName = "released")
         {
             // 守卫：仅生效商户可释放；Pending 走撤回、Suspended 走删申请，三态入口不混用
             if (Status != MerchantStatus.Active)
@@ -531,9 +531,9 @@ namespace OpenFindBearings.Domain.Aggregates
                 throw new InvalidOperationException($"仅生效商户可解除归属，当前状态：{Status}");
             }
 
-            Status = MerchantStatus.Pending; // 公海待认领态：重新认领提交后必再走审核（与爬虫新商户同构）
+            Status = MerchantStatus.Pending; // 公海待认领态：重新认领提交后必再走审核（与互联网新商户同构）
             IsActive = true;                 // 保持搜索可见（公海商户可被发现/认领）
-            RevertClaimedToCrawler(crawlerSiteName); // DataSource 回 Crawler + ApplicationMode 归 None
+            RevertClaimedToInternet(internetSiteName); // DataSource 回 Internet + ApplicationMode 归 None
 
             // 认证轴重置：认领期获得的认证状态/申请标记/等级不带入公海
             if (IsVerified)
@@ -550,13 +550,13 @@ namespace OpenFindBearings.Domain.Aggregates
                 UpdateGrade(MerchantGrade.Standard);
             }
 
-            // 数据核验轴重置：上一任认领期留下的"已核验"标记与新爬虫商户（天然 false）区分，必须清
+            // 数据核验轴重置：上一任认领期留下的"已核验"标记与新互联网商户（天然 false）区分，必须清
             IsDataVerified = false;
             LastVerifiedAt = null;
             VerifiedBy = null;
             DataRemark = null;
 
-            // 认领人覆写的联系方式与官网清空（隐私+误导止血，Sync 管线刷新前保持空白）
+            // 认领人覆写的联系方式与官网清空（隐私+误导止血，互联网数据管线刷新前保持空白）
             Contact = new ContactInfo();
             Website = null;
 

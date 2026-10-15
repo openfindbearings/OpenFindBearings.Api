@@ -128,13 +128,13 @@ namespace OpenFindBearings.Application.Commands.Bearings.CreateBearing
             var sourceType = request.DataSource ?? "manual";
             var importedBy = request.SourceSite ?? request.ImportedBy;
 
-            if (sourceType.Equals("crawler", StringComparison.OrdinalIgnoreCase))
+            if (sourceType.Equals("internet", StringComparison.OrdinalIgnoreCase))
             {
-                bearing.SetDataSource(DataSource.FromCrawler(importedBy ?? "unknown"));
+                bearing.SetDataSource(DataSource.FromInternet(importedBy ?? "unknown"));
             }
             else if (sourceType.Equals("api", StringComparison.OrdinalIgnoreCase))
             {
-                bearing.SetDataSource(DataSource.FromApi(importedBy ?? "ApiSync"));
+                bearing.SetDataSource(DataSource.FromApi(importedBy ?? "Api"));
             }
             else if (sourceType.Equals("file", StringComparison.OrdinalIgnoreCase) || sourceType.Equals("fileimport", StringComparison.OrdinalIgnoreCase))
             {

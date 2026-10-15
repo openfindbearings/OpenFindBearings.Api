@@ -65,7 +65,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.DetachMerchant
                 throw new InvalidOperationException("仅生效商户可解除归属");
             }
 
-            // 通道守卫：self/提名新建无公海数据，release 会造永不被爬虫裁判的幽灵商户
+            // 通道守卫：self/提名新建无公海数据，release 会造永不被互联网裁判的幽灵商户
             if (merchant.ApplicationMode is ApplicationMode.Self or ApplicationMode.Nomination)
             {
                 throw new InvalidOperationException("自助创建或提名新建的商户无公海数据可退回，请使用删除操作");

@@ -113,9 +113,9 @@ namespace OpenFindBearings.Application.DTOs
         public string? RejectReason { get; set; }
 
         /// <summary>
-        /// 数据来源（Crawler/Manual，null=未知）。
+        /// 数据来源（Internet/Manual，null=未知）。
         /// 改动说明（v1.31.0）：Admin 商户列表"解除归属"按钮可用性判定需要——
-        /// 提名已有商户 ApplicationMode=None 但 DataSource=Manual，与公海商户（None+Crawler）
+        /// 提名已有商户 ApplicationMode=None 但 DataSource=Manual，与公海商户（None+Internet）
         /// 同渠道不同语义，仅靠渠道字段无法区分，与 DetachMerchant 守卫严格同口径
         /// </summary>
         public string? DataSource { get; set; }

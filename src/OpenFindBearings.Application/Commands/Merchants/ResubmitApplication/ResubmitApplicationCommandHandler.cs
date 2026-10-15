@@ -54,7 +54,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.ResubmitApplication
                 throw new InvalidOperationException("无权重新提交该申请");
             }
 
-            // 渠道守卫与 withdraw 同口径：提名重提走"接受提名"原通道，None 为历史/爬虫数据不开放
+            // 渠道守卫与 withdraw 同口径：提名重提走"接受提名"原通道，None 为历史/互联网数据不开放
             if (merchant.ApplicationMode is not (ApplicationMode.Self or ApplicationMode.Claim))
             {
                 throw new InvalidOperationException("该申请暂不支持自助重新提交");

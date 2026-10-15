@@ -9,7 +9,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.ApplicationCleanup
     /// 申请人放弃入驻申请（撤回/删除被拒）的共用清理逻辑（v2.6.0 提取）。
     /// 改动说明：withdraw（Pending）与 delete-application（Suspended）两个命令的
     /// 按渠道分支清理完全同构，此前若复制两份会随字段演进漂移，提取为单一实现。
-    /// Self 硬删商户+成员、Claim 解除认领人并退回爬虫认领池，仓储变更由 UnitOfWork 统一提交。
+    /// Self 硬删商户+成员、Claim 解除认领人并退回互联网认领池，仓储变更由 UnitOfWork 统一提交。
     /// </summary>
     internal static class ApplicantApplicationCleanup
     {
@@ -53,10 +53,10 @@ namespace OpenFindBearings.Application.Commands.Merchants.ApplicationCleanup
         }
 
         /// <summary>
-        /// claim 通道：不删商户（本就属于爬虫/平台），仅软移除认领人成员关系，
-        /// 并把商户来源退回 Crawler、渠道归 None，使其重新进入认领池且可被 Sync 覆盖。
+        /// claim 通道：不删商户（本就属于互联网/平台），仅软移除认领人成员关系，
+        /// 并把商户来源退回 Internet、渠道归 None，使其重新进入认领池且可被 互联网数据覆盖。
         /// </summary>
-        public static async Task RemoveClaimAndRevertToCrawlerAsync(
+        public static async Task RemoveClaimAndRevertToInternetAsync(
             Merchant merchant,
             MerchantMember applicantMember,
             IMerchantRepository merchantRepository,
@@ -66,13 +66,13 @@ namespace OpenFindBearings.Application.Commands.Merchants.ApplicationCleanup
             applicantMember.Remove();
             await merchantMemberRepository.UpdateAsync(applicantMember, cancellationToken);
 
-            merchant.RevertClaimedToCrawler("apply-abandon");
+            merchant.RevertClaimedToInternet("apply-abandon");
             await merchantRepository.UpdateAsync(merchant, cancellationToken);
         }
 
         /// <summary>
         /// 商户被真人接管（认领/接受提名）时的经营性数据重置（v2.16.0）：
-        /// 1. 在售商品关联清空——爬虫抓的价格/库存/MOQ 未经核实，继承会误导寻货买家，
+        /// 1. 在售商品关联清空——互联网抓的价格/库存/MOQ 未经核实，继承会误导寻货买家，
         ///    且新认领人在商品管理页逐条删比重新录入更烦（对标高德/美团认领后商品从零自建）；
         /// 2. 旧证照材料清空——上一任认领人（被拒重开场景）的营业执照属其个人申请资料，
         ///    留给新认领人/Admin 抽屉可见是隐私泄露；
@@ -103,7 +103,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.ApplicationCleanup
         /// 商户解除归属（关店/Admin 强制 detach）清场重置（v2.17.0）——与"接管"ResetOperationalDataForTakeoverAsync
         /// 语义分叉：接管=新主人进场清旧账，释放=全员离场归公海。差异点：
         /// 1. 成员行全量清退（接管不动成员——认领人即新主人；释放必须清，否则认领门"有在职成员"永久挡住再认领）；
-        /// 2. 商品关联全删含爬虫行（历史爬虫关联释放后 staging 不会重推回填，保留=残缺混合体；
+        /// 2. 商品关联全删含互联网行（历史互联网关联释放后 staging 不会重推回填，保留=残缺混合体；
         ///    ProductCount 归零由 Merchant.ReleaseToPool 负责）；
         /// 3. 证照材料全删；
         /// 4. 非终态邀请全作废——含 Accepted 提名行（接管只清 Pending；Accepted 提名残留会在公海商户
@@ -136,7 +136,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.ApplicationCleanup
                 await memberRepository.UpdateAsync(member, cancellationToken);
             }
 
-            // 2/3. 商品与证照全删（ExecuteDelete 批量，认领人真人来源与爬虫来源一并清）
+            // 2/3. 商品与证照全删（ExecuteDelete 批量，认领人真人来源与互联网来源一并清）
             await merchantBearingRepository.DeleteByMerchantAsync(merchantId, cancellationToken);
             await documentRepository.DeleteByMerchantAsync(merchantId, cancellationToken);
 

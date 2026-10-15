@@ -12,7 +12,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.ApplyMerchant
 {
     /// <summary>
     /// 商户入驻申请命令处理器
-    /// self：新建 Pending 商户 + 申请人 MerchantAdmin 成员；claim：认领爬虫商家并绑定管理员
+    /// self：新建 Pending 商户 + 申请人 MerchantAdmin 成员；claim：认领互联网商家并绑定管理员
     /// </summary>
     public class ApplyMerchantCommandHandler : IRequestHandler<ApplyMerchantCommand, Guid>
     {
@@ -132,8 +132,8 @@ namespace OpenFindBearings.Application.Commands.Merchants.ApplyMerchant
                 logoUrl: null,
                 website: null);
 
-            // 改动说明：真人新建的商户即"人工维护"，来源置 Manual，杜绝被后续爬虫同步覆盖或夺走；
-            //   此前 ApplySelf 未设来源(null)，会被 BatchCreateMerchants 视为可覆盖并回填 Crawler（漏洞修复）
+            // 改动说明：真人新建的商户即"人工维护"，来源置 Manual，杜绝被后续互联网同步覆盖或夺走；
+            //   此前 ApplySelf 未设来源(null)，会被 BatchCreateMerchants 视为可覆盖并回填 Internet（漏洞修复）
             merchant.SetDataSource(DataSource.FromManual("apply-self"));
             // 改动说明：标记入驻渠道为 Self，申请人撤回时据此硬删除商户（见 WithdrawApplicationCommandHandler）
             merchant.MarkApplicationMode(ApplicationMode.Self);
@@ -186,7 +186,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.ApplyMerchant
         }
 
         /// <summary>
-        /// 模式 claim：认领爬虫商家并绑定管理员（仅可认领未认领的爬虫来源商家）
+        /// 模式 claim：认领互联网商家并绑定管理员（仅可认领未认领的互联网来源商家）
         /// </summary>
         private async Task<Merchant> ApplyClaimAsync(ApplyMerchantCommand request, CancellationToken cancellationToken)
         {
@@ -201,8 +201,8 @@ namespace OpenFindBearings.Application.Commands.Merchants.ApplyMerchant
                 throw new InvalidOperationException("要认领的商家不存在");
             }
 
-            // 改动说明：认领门由"来源=Crawler"改为"未认证"——可认领只看 IsVerified（与"是否被爬虫覆盖"的
-            //   DataSource 轴解耦）。已认证商家不可认领；未认证的开放商家（含爬虫来源）均可被真人认领。
+            // 改动说明：认领门由"来源=Internet"改为"未认证"——可认领只看 IsVerified（与"是否被互联网覆盖"的
+            //   DataSource 轴解耦）。已认证商家不可认领；未认证的开放商家（含互联网来源）均可被真人认领。
             if (merchant.IsVerified)
             {
                 throw new InvalidOperationException("该商家已认证，无法认领");
@@ -214,7 +214,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.ApplyMerchant
             {
                 if (merchant.Status == MerchantStatus.Suspended)
                 {
-                    // 修复 B7：曾被拒绝的爬虫商家再次被认领——解除旧成员关系（原认领人申请失败），
+                    // 修复 B7：曾被拒绝的互联网商家再次被认领——解除旧成员关系（原认领人申请失败），
                     // 商户恢复 Pending 重新走审核；否则原认领人将被"已被认领"永久锁死
                     foreach (var oldMember in activeMembers)
                     {
@@ -231,7 +231,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.ApplyMerchant
                 }
             }
 
-            // 改动说明（v2.13.1）：认领即真人全面接管——爬虫残留且认领表单未覆盖的字段显式清空
+            // 改动说明（v2.13.1）：认领即真人全面接管——互联网残留且认领表单未覆盖的字段显式清空
             //   （邮箱/手机号/官网/英文名/经营范围：互联网数据常见字段错位，如邮箱列存着地址），
             //   认领人在信息维护页全新自维护（空=清除语义已支持）；logo 保留（可能是真实品牌图，接管后可换）。
             merchant.UpdateBasicInfo(
@@ -254,14 +254,14 @@ namespace OpenFindBearings.Application.Commands.Merchants.ApplyMerchant
             }
 
             merchant.SetDataSource(DataSource.FromManual(request.ApplicantUserId.ToString()));
-            // 改动说明：标记入驻渠道为 Claim，申请人撤回时据此仅解除成员+退回爬虫、不删商户本体
+            // 改动说明：标记入驻渠道为 Claim，申请人撤回时据此仅解除成员+退回互联网、不删商户本体
             merchant.MarkApplicationMode(ApplicationMode.Claim);
             // 改动说明（v2.16.0）：接管重置经营性数据——清互联网来源在售商品关联、
             //   旧认领人证照（隐私）、待确认邀请（防旧邀请人混入新商户成员）。
             //   含 B7"被拒后重新认领"分支（同走此路径，旧认领人未经审核的数据一律不继承）
             await ApplicantApplicationCleanup.ResetOperationalDataForTakeoverAsync(
                 merchant.Id, _merchantBearingRepository, _documentRepository, _invitationRepository, cancellationToken);
-            // 改动说明（v2.7.0）：认领向导核对/改选了商家类型则应用（爬虫默认类型不代表真人身份声明）
+            // 改动说明（v2.7.0）：认领向导核对/改选了商家类型则应用（互联网默认类型不代表真人身份声明）
             var claimedType = (MerchantType)request.Type!.Value;
             if (merchant.Type != claimedType)
             {
@@ -274,7 +274,7 @@ namespace OpenFindBearings.Application.Commands.Merchants.ApplyMerchant
                 MerchantMember.RoleMerchantAdmin);
             await _merchantMemberRepository.AddAsync(member, cancellationToken);
 
-            _logger.LogInformation("认领爬虫商家: MerchantId={MerchantId}", merchant.Id);
+            _logger.LogInformation("认领互联网商家: MerchantId={MerchantId}", merchant.Id);
             return merchant;
         }
     }

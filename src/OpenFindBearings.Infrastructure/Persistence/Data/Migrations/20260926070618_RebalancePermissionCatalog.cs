@@ -43,7 +43,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     ('merchant.import', '商家库存导入'),
                     ('mapping.view', '查看映射维护'),
                     ('mapping.manage', '管理映射关系'),
-                    ('sync.run', '触发爬虫任务'),
+                    ('sync.run', '触发互联网任务'),
                     ('user.view', '查看用户'),
                     ('user.ban', '封禁与解禁用户'),
                     ('user.assign', '分配平台角色'),
