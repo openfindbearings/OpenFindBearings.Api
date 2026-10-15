@@ -28,6 +28,15 @@ namespace OpenFindBearings.Domain.Aggregates
         /// <summary>关联平台轴承 ID（型号搜索选中时有值；长尾型号自由文本时为 null）</summary>
         public Guid? BearingId { get; private set; }
 
+        /// <summary>
+        /// 定向商户 ID（可空，v1.6.0 定向询价）：非空=定向单（仅推给该商户、不进公开大厅）；
+        /// null=广播单（进大厅 + 匹配推送认证商家）
+        /// </summary>
+        public Guid? TargetMerchantId { get; private set; }
+
+        /// <summary>是否定向单（不进公开大厅，仅目标商户与发布人可见）</summary>
+        public bool IsTargeted => TargetMerchantId.HasValue;
+
         /// <summary>型号文本（必填，结构化比价与搜索的核心字段）</summary>
         public string PartNumber { get; private set; } = string.Empty;
 
@@ -83,9 +92,10 @@ namespace OpenFindBearings.Domain.Aggregates
         /// <param name="description">补充说明</param>
         /// <param name="publisherMerchantId">发布商户（v2.12.0 商户名义发布，null=个人名义）</param>
         /// <param name="publisherMerchantName">商户名称快照（商户名义时必填）</param>
+        /// <param name="targetMerchantId">定向商户（v1.6.0 定向询价，null=广播进大厅）</param>
         public static SourcingDemand Create(Guid publisherUserId, string partNumber, Guid? bearingId,
             string? brand, string? quantity, string? expectedDelivery, string? region, string? description,
-            Guid? publisherMerchantId = null, string? publisherMerchantName = null)
+            Guid? publisherMerchantId = null, string? publisherMerchantName = null, Guid? targetMerchantId = null)
         {
             return new SourcingDemand
             {
@@ -94,6 +104,8 @@ namespace OpenFindBearings.Domain.Aggregates
                 PublisherMerchantName = publisherMerchantId.HasValue ? Truncate(publisherMerchantName, 100) : null,
                 PartNumber = partNumber.Trim(),
                 BearingId = bearingId,
+                // 改动说明（v1.6.0 定向询价）：定向单只在目标商户侧可见，不进公开大厅
+                TargetMerchantId = targetMerchantId,
                 Brand = Truncate(brand, 50),
                 Quantity = Truncate(quantity, 30),
                 ExpectedDelivery = Truncate(expectedDelivery, 30),

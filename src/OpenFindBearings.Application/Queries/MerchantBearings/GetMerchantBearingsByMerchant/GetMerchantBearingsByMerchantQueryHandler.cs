@@ -69,7 +69,7 @@ namespace OpenFindBearings.Application.Queries.MerchantBearings.GetMerchantBeari
 
             return new PagedResult<MerchantBearingDto>
             {
-                Items = sorted.Select(mb => mb.ToDto(request.IsAuthenticated)).ToList(),
+                Items = sorted.Select(mb => mb.ToDto()).ToList(),
                 TotalCount = result.TotalCount,
                 Page = result.Page,
                 PageSize = result.PageSize

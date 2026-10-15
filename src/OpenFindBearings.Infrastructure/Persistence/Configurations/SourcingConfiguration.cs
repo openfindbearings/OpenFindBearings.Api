@@ -41,6 +41,8 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             builder.Property(d => d.PinnedUntil);
             // 改动说明（v2.12.0 列表删除）：软删标记（仅发布方列表隐藏，数据与应答方视图保留）
             builder.Property(d => d.IsDeleted).IsRequired().HasDefaultValue(false);
+            // 改动说明（v1.6.0 定向询价）：定向商户列（非空=定向单，不进公开大厅）
+            builder.Property(d => d.TargetMerchantId);
 
             // feed：进行中列表按时间倒序是最高频查询
             builder.HasIndex(d => new { d.Status, d.CreatedAt })
@@ -51,6 +53,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             // 商户名义发布的单按商户查（v2.12.0）
             builder.HasIndex(d => d.PublisherMerchantId)
                 .HasDatabaseName("IX_SourcingDemands_PublisherMerchantId");
+            // 定向单按目标商户查（v1.6.0 定向询价：商家侧"定向给我的"）
+            builder.HasIndex(d => d.TargetMerchantId)
+                .HasDatabaseName("IX_SourcingDemands_TargetMerchantId");
             // 型号搜索（自由文本模糊匹配前缀加速）
             builder.HasIndex(d => d.PartNumber)
                 .HasDatabaseName("IX_SourcingDemands_PartNumber");

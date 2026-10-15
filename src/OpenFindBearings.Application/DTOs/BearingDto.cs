@@ -56,5 +56,11 @@
         // 图片
         public string? Image3DUrl { get; set; }
         public string? Image2DUrl { get; set; }
+
+        /// <summary>
+        /// 参数来源（v1.6.0 数据可信联动）：Internet/OcrExtract/SeedData=仅供参考，其余=可信。
+        /// 供前端对参数区标注"参数来源：互联网 · 仅供参考"
+        /// </summary>
+        public string? DataSource { get; set; }
     }
 }

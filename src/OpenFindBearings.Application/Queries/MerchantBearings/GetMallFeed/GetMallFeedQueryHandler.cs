@@ -54,7 +54,7 @@ namespace OpenFindBearings.Application.Queries.MerchantBearings.GetMallFeed
 
             return new PagedResult<MerchantBearingDto>
             {
-                Items = result.Items.Select(mb => mb.ToDto(request.IsAuthenticated)).ToList(),
+                Items = result.Items.Select(mb => mb.ToDto()).ToList(),
                 TotalCount = result.TotalCount,
                 Page = result.Page,
                 PageSize = result.PageSize

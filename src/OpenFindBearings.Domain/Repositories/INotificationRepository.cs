@@ -23,6 +23,13 @@ namespace OpenFindBearings.Domain.Repositories
         /// <summary>未读条数（角标用）</summary>
         Task<int> CountUnreadAsync(Guid userId, CancellationToken cancellationToken = default);
 
+        /// <summary>
+        /// 统计收件人今日某类型、正文含指定片段的通知数（v1.6.0 寻货提醒限频：同型号每日上限判定）。
+        /// 日界按 BusinessClock（SystemConfig Business.TimeZoneOffsetHours，默认 +8）切分。
+        /// </summary>
+        Task<int> CountTodayByTypeAsync(Guid userId, string type, string bodyContains,
+            CancellationToken cancellationToken = default);
+
         /// <summary>把收件人全部未读批量置已读，返回影响行数</summary>
         Task<int> MarkAllReadAsync(Guid userId, CancellationToken cancellationToken = default);
 

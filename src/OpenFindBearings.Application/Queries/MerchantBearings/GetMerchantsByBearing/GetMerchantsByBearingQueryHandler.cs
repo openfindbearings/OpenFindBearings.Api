@@ -63,6 +63,8 @@ public class GetMerchantsByBearingQueryHandler : IRequestHandler<GetMerchantsByB
                         Price = best.PriceDescription,
                         SaleState = best.SaleState,
                         RestockEta = best.RestockEta,
+                        // 改动说明（v1.6.0 数据可信联动）：透出认证标记——行动门"询价只对认证商家开放"的判定依据
+                        IsVerified = best.Merchant!.IsVerified,
                         IsPinned = pinnedUntil > DateTime.MinValue,
                         PinnedUntil = pinnedUntil > DateTime.MinValue ? pinnedUntil : null
                     },
@@ -111,6 +113,9 @@ public class BearingMerchantDto
 
     /// <summary>补货预计到货时间（自由文本，可空）</summary>
     public string? RestockEta { get; set; }
+
+    /// <summary>商家是否已认证（v1.6.0 数据可信联动；询价行动门只对认证商家开放）</summary>
+    public bool IsVerified { get; set; }
 
     /// <summary>是否处于置顶期（v2.3.0 商城置顶卡；前端渲染"置顶"角标）</summary>
     public bool IsPinned { get; set; }

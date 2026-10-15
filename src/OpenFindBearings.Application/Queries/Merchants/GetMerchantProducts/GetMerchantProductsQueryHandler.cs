@@ -38,7 +38,7 @@ namespace OpenFindBearings.Application.Queries.Merchants.GetMerchantProducts
             var items = products
                 .Skip((request.Page - 1) * request.PageSize)
                 .Take(request.PageSize)
-                .Select(p => p.ToDto(request.IsAuthenticated))
+                .Select(p => p.ToDto())
                 .ToList();
 
             return new PagedResult<MerchantBearingDto>

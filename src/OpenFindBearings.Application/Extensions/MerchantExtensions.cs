@@ -14,11 +14,8 @@ namespace OpenFindBearings.Application.Extensions
                 CompanyName = merchant.CompanyName,
                 Type = merchant.Type.ToString(),
                 // 改动说明（v2.13.2）：补类型中文展示名，消费方免自映射
-                TypeDisplay = merchant.GetMerchantTypeDisplayName(),
+TypeDisplay = merchant.GetMerchantTypeDisplayName(),
                 ContactPerson = merchant.Contact?.ContactPerson,
-                Phone = merchant.Contact?.Phone,
-                Mobile = merchant.Contact?.Mobile,
-                Email = merchant.Contact?.Email,
                 Address = merchant.Contact?.Address,
                 IsVerified = merchant.IsVerified,
                 VerifyRequested = merchant.VerifyRequested,
@@ -53,9 +50,6 @@ namespace OpenFindBearings.Application.Extensions
                 // 改动说明（v2.13.2）：补类型中文展示名，消费方免自映射
                 TypeDisplay = merchant.GetMerchantTypeDisplayName(),
                 ContactPerson = merchant.Contact?.ContactPerson,
-                Phone = merchant.Contact?.Phone,
-                Mobile = merchant.Contact?.Mobile,
-                Email = merchant.Contact?.Email,
                 Address = merchant.Contact?.Address,
                 IsVerified = merchant.IsVerified,
                 // v2.9.0：申请认证标记透传（Taro 按钮态 / BFF application）
@@ -83,7 +77,7 @@ namespace OpenFindBearings.Application.Extensions
             };
         }
 
-        public static MerchantDetailDto ToDetailDto(this Merchant merchant, List<MerchantBearingDto> products, bool isAuthenticated)
+public static MerchantDetailDto ToDetailDto(this Merchant merchant, List<MerchantBearingDto> products)
         {
             return new MerchantDetailDto
             {
@@ -93,12 +87,10 @@ namespace OpenFindBearings.Application.Extensions
                 Type = merchant.Type.ToString(),
                 // 改动说明（v2.13.2）：补类型中文展示名，消费方免自映射
                 TypeDisplay = merchant.GetMerchantTypeDisplayName(),
-                // ========== 敏感信息控制 ==========
-                ContactPerson = isAuthenticated ? merchant.Contact?.ContactPerson : null,
-                Phone = isAuthenticated ? merchant.Contact?.Phone : null,
-                Mobile = isAuthenticated ? merchant.Contact?.Mobile : null,
-                Email = isAuthenticated ? merchant.Contact?.Email : null,
-                Address = isAuthenticated ? merchant.Contact?.Address : null,
+                // 改动说明（v1.6.0 电话单轨）：联系方式整体移出公共查询面，原 isAuthenticated 屏蔽分支
+                //   与参数一并删除——号码只在寻货撮合达成后互给
+                ContactPerson = merchant.Contact?.ContactPerson,
+                Address = merchant.Contact?.Address,
                 IsVerified = merchant.IsVerified,
                 VerifyRequested = merchant.VerifyRequested,
                 Grade = merchant.Grade.ToString(),

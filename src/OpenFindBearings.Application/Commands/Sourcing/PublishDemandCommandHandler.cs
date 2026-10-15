@@ -2,6 +2,7 @@ using MediatR;
 using OpenFindBearings.Application.Services;
 using OpenFindBearings.Domain.Aggregates;
 using OpenFindBearings.Domain.Entities;
+using OpenFindBearings.Domain.Events;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Commands.Sourcing
@@ -21,10 +22,11 @@ namespace OpenFindBearings.Application.Commands.Sourcing
     /// <param name="Description">补充说明</param>
     /// <param name="UsePoints">免费额度用完后确认花积分</param>
     /// <param name="MerchantId">v2.12.0 商户名义发布：发布商户（须为在职成员）；null=个人名义</param>
+    /// <param name="TargetMerchantId">v1.6.0 定向询价：定向目标商户；null=广播进大厅</param>
     public record PublishDemandCommand(
         Guid UserId, string PartNumber, Guid? BearingId, string? Brand, string? Quantity,
         string? ExpectedDelivery, string? Region, string? Description, bool UsePoints,
-        Guid? MerchantId = null) : IRequest<Guid>;
+        Guid? MerchantId = null, Guid? TargetMerchantId = null) : IRequest<Guid>;
 
     /// <summary>
     /// 发布寻货处理器
@@ -42,6 +44,8 @@ namespace OpenFindBearings.Application.Commands.Sourcing
         // v2.12.0 商户名义发布：成员校验 + 商户名快照
         private readonly IMerchantMemberRepository _memberRepository;
         private readonly IMerchantRepository _merchantRepository;
+        // v1.6.0 搜索寻货联动：发布成功后发布事件，驱动"匹配认证商家"推送
+        private readonly IPublisher _publisher;
 
         /// <summary>
         /// 构造：需求仓储 + 配置/规则仓储 + 积分服务（加量扣分）+ 商家等级（额度 buff）+ 成就引擎（发布计数）
@@ -55,7 +59,8 @@ namespace OpenFindBearings.Application.Commands.Sourcing
             IMerchantGradeService grades,
             IAchievementService achievements,
             IMerchantMemberRepository memberRepository,
-            IMerchantRepository merchantRepository)
+            IMerchantRepository merchantRepository,
+            IPublisher publisher)
         {
             _demandRepository = demandRepository;
             _configRepository = configRepository;
@@ -65,6 +70,7 @@ namespace OpenFindBearings.Application.Commands.Sourcing
             _achievements = achievements;
             _memberRepository = memberRepository;
             _merchantRepository = merchantRepository;
+            _publisher = publisher;
         }
 
         /// <inheritdoc/>
@@ -115,7 +121,7 @@ namespace OpenFindBearings.Application.Commands.Sourcing
 
             var demand = SourcingDemand.Create(request.UserId, request.PartNumber, request.BearingId,
                 request.Brand, request.Quantity, request.ExpectedDelivery, request.Region, request.Description,
-                publishMerchant?.Id, publishMerchant?.Name);
+                publishMerchant?.Id, publishMerchant?.Name, request.TargetMerchantId);
             await _demandRepository.AddAsync(demand, cancellationToken);
             // 改动说明（v2.6.0 新手旅程）：发布成功喂 sourcing_publish_total 计数（"旗开得胜"勋章）；
             // 成就失败绝不反噬发布主流程（需求行仍由 UnitOfWork 管道提交），吞异常继续
@@ -125,6 +131,11 @@ namespace OpenFindBearings.Application.Commands.Sourcing
                     request.UserId, "sourcing_publish_total", 1, cancellationToken);
             }
             catch { /* 成就旁路，吞 */ }
+            // 改动说明（v1.6.0 搜索寻货联动）：发布成功发布事件——广播单匹配在售本轴承的认证商家推送，
+            //   定向单仅推目标商户；多方式提醒与限频在订阅者内处理
+            await _publisher.Publish(new SourcingDemandPublishedEvent(
+                demand.Id, request.UserId, request.BearingId, demand.PartNumber, request.Brand,
+                request.TargetMerchantId), cancellationToken);
             return demand.Id;
         }
     }

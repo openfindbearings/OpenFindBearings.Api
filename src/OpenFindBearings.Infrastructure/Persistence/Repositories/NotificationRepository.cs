@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Repositories;
+using OpenFindBearings.Domain.Services;
 using OpenFindBearings.Infrastructure.Persistence.Data;
 using OpenFindBearings.Infrastructure.Persistence.Extensions;
 
@@ -56,6 +57,18 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         {
             return await _context.Set<Notification>()
                 .CountAsync(n => n.UserId == userId && !n.IsRead, cancellationToken);
+        }
+
+        /// <inheritdoc/>
+        public async Task<int> CountTodayByTypeAsync(Guid userId, string type, string bodyContains,
+            CancellationToken cancellationToken = default)
+        {
+            // 改动说明（v1.6.0 寻货提醒限频）：日界按 BusinessClock 切分（默认 +8），正文包含匹配型号
+            var todayUtc = BusinessClock.TodayUtc;
+            var pattern = $"%{bodyContains}%";
+            return await _context.Set<Notification>()
+                .CountAsync(n => n.UserId == userId && n.Type == type && n.CreatedAt >= todayUtc
+                    && EF.Functions.Like(n.Body, pattern), cancellationToken);
         }
 
         public async Task<int> MarkAllReadAsync(Guid userId, CancellationToken cancellationToken = default)

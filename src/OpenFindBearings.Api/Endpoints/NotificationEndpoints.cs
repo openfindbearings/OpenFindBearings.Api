@@ -1,14 +1,17 @@
 using MediatR;
 using OpenFindBearings.Application.Commands.Notifications.BatchOperations;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using OpenFindBearings.Api.Helpers;
 using OpenFindBearings.Api.Services;
 using OpenFindBearings.Application.Commands.Notifications.ClearReadNotifications;
 using OpenFindBearings.Application.Commands.Notifications.DeleteNotification;
 using OpenFindBearings.Application.Commands.Notifications.MarkAllRead;
 using OpenFindBearings.Application.Commands.Notifications.MarkNotificationRead;
+using OpenFindBearings.Application.Commands.Users.UpdateUserPreference;
 using OpenFindBearings.Application.Queries.Notifications.GetNotifications;
 using OpenFindBearings.Application.Queries.Notifications.GetUnreadCount;
+using OpenFindBearings.Application.Queries.Users.GetUserPreference;
 
 namespace OpenFindBearings.Api.Endpoints
 {
@@ -180,10 +183,65 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("ClearReadNotifications")
             .WithSummary("清空已读站内信")
             .WithDescription("批量删除当前用户所有已读消息，未读不受影响，返回删除条数");
+
+            /// <summary>
+            /// 读取通知偏好（v1.6.0 通知设置）：渠道开关 + 短信网关就绪标记
+            /// </summary>
+            group.MapGet("/preferences", async (
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMediator mediator,
+                [FromServices] IConfiguration configuration,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                var dto = await mediator.Send(new GetUserPreferenceQuery(currentUser.UserId.Value));
+                return ApiResponseHelper.Ok(new
+                {
+                    dto.SmsNotificationEnabled,
+                    dto.WeChatNotificationEnabled,
+                    dto.EmailNotificationEnabled,
+                    // 短信通道是否就绪（未接网关时前端隐藏短信开关，避免"勾了收不到"）
+                    smsGatewayReady = configuration.GetValue<bool?>("Sms:Enabled") ?? false
+                }, httpContext: httpContext);
+            })
+            .WithName("GetNotificationPreferences")
+            .WithSummary("读取通知偏好")
+            .WithDescription("当前用户通知渠道开关 + 短信网关就绪标记");
+
+            /// <summary>
+            /// 更新通知偏好（v1.6.0 用户自勾选接收渠道；站内信恒开不在本接口范围）
+            /// </summary>
+            group.MapPut("/preferences", async (
+                UpdateNotificationPreferenceRequest request,
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                await mediator.Send(new UpdateUserPreferenceCommand
+                {
+                    UserId = currentUser.UserId.Value,
+                    SmsNotificationEnabled = request.SmsNotificationEnabled,
+                    WeChatNotificationEnabled = request.WeChatNotificationEnabled,
+                    EmailNotificationEnabled = request.EmailNotificationEnabled
+                });
+                return ApiResponseHelper.Ok("已保存", httpContext);
+            })
+            .WithName("UpdateNotificationPreferences")
+            .WithSummary("更新通知偏好")
+            .WithDescription("保存用户勾选的短信/微信/邮件通知渠道开关");
         }
     }
 
 
     /// <summary>批量 ID 请求（通知/收藏/关注/历史批量操作共用，v2.12.0 列表多选）</summary>
     public record BatchIdsRequest(List<Guid> Ids);
+
+    /// <summary>更新通知偏好请求体（v1.6.0 通知设置；null=不改）</summary>
+    public record UpdateNotificationPreferenceRequest(bool? SmsNotificationEnabled,
+        bool? WeChatNotificationEnabled, bool? EmailNotificationEnabled);
 }

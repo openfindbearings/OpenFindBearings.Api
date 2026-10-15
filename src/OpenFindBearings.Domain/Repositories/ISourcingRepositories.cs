@@ -19,11 +19,12 @@ namespace OpenFindBearings.Domain.Repositories
 
         /// <summary>
         /// feed 分页：状态过滤（null=进行中全部）+ 型号关键词（模糊）+ 品牌/地区筛选（包含匹配，v1.4.0 大厅筛选），
-        /// newestFirst=发布时间降序（默认最新）/升序（最早）；pinFirst=true 时有效置顶排前（v2.10.0，仅公开大厅启用）
+        /// newestFirst=发布时间降序（默认最新）/升序（最早）；pinFirst=true 时有效置顶排前（v2.10.0，仅公开大厅启用）；
+        /// broadcastOnly=true 时仅广播单（排除定向单，v1.6.0 定向询价：定向单不进公开大厅）
         /// </summary>
         Task<(List<SourcingDemand> Items, int Total)> GetListAsync(int? status, string? keyword, bool onlyOpen,
             int page, int pageSize, bool pinFirst = false, string? brand = null, string? region = null,
-            bool newestFirst = true, CancellationToken cancellationToken = default);
+            bool newestFirst = true, bool broadcastOnly = false, CancellationToken cancellationToken = default);
 
         /// <summary>我发布的（含全部状态，时间倒序）。改动说明（v2.12.0 商户名义发布）：
         /// 仅个人名义单——商户名义的归商户工作台（GetByPublisherMerchantAsync），双体系不混排</summary>
@@ -31,6 +32,9 @@ namespace OpenFindBearings.Domain.Repositories
 
         /// <summary>商户名义发布的单（v2.12.0 商户工作台"寻货管理-我发布的"，含全部状态，时间倒序）</summary>
         Task<List<SourcingDemand>> GetByPublisherMerchantAsync(Guid merchantId, CancellationToken cancellationToken = default);
+
+        /// <summary>定向给某商户的进行中需求（v1.6.0 定向询价，商家侧"定向给我的"，时间倒序）</summary>
+        Task<List<SourcingDemand>> GetOpenTargetedForMerchantAsync(Guid merchantId, CancellationToken cancellationToken = default);
 
         /// <summary>今日已发布数（免费额度判定；含取消单，防"发了删删了发"绕额度）</summary>
         Task<int> CountPublishedTodayAsync(Guid userId, CancellationToken cancellationToken = default);

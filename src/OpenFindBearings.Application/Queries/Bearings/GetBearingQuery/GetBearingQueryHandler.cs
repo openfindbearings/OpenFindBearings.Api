@@ -49,7 +49,7 @@ namespace OpenFindBearings.Application.Queries.Bearings.GetBearingQuery
                     && (mb.SaleState == SaleState.OnSale || mb.SaleState == SaleState.Restocking))
                 // 改动说明（v2.13.2 映射收敛）：原内联 new MerchantBearingDto 只填子集，漏 RestockEta/Dimensions/
                 //   BearingPartNumber/BrandName/图片等，与唯一映射 BearingExtensions.ToPublicDto 分歧；改走统一扩展
-                .Select(mb => mb.ToPublicDto())
+                .Select(mb => mb.ToDto())
                 // 出售中优先，再按价格（原 IsFeatured 排序已废弃）
                 .OrderByDescending(mb => mb.SaleState == SaleState.OnSale)
                 .ThenBy(mb => mb.NumericPrice)
