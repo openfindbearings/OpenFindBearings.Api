@@ -49,7 +49,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             {
                 ds.Property(d => d.SourceType)
                     .HasColumnName("DataSourceType")
-                    .HasConversion<string>()
+                    .HasConversion(DataSourceTypeValueConverter.Instance)
                     .HasMaxLength(50);
 
                 ds.Property(d => d.ImportedBy)
