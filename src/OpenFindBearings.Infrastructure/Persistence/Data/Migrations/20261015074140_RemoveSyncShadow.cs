@@ -7,7 +7,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
     /// <summary>
     /// 开源去 Sync 影子（v2.18.0 通用扩展机制）：
     /// 1) 系统配置分组 Sync 更名为 System；
-    /// 2) 删除 sync.run/sync.review 权限及其角色绑定（Sync 专属，改由闭源扩展补种）。
+    /// 2) 删除 sync.run/sync.review 权限及其角色绑定（Sync 专属，改由扩展补种）。
     /// 数据迁移，不改表结构，模型快照不变。
     /// </summary>
     public partial class RemoveSyncShadow : Migration
