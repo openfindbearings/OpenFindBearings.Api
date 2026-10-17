@@ -98,9 +98,23 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         }
 
         public async Task<(List<BearingInterchange> Items, int Total)> GetPagedAsync(
-            string? keyword, InterchangeReviewStatus? status, int page, int pageSize, CancellationToken cancellationToken = default)
+            string? keyword, InterchangeReviewStatus? status,
+            DateTime? createdFromUtc, DateTime? createdToUtc, bool? internetSource,
+            int page, int pageSize, CancellationToken cancellationToken = default)
         {
             var query = _context.BearingInterchanges.AsQueryable();
+
+            // 改动说明（v1.50.0 下钻筛选）：创建时间区间（下限含、上限不含）与来源（互联网/非互联网）
+            if (createdFromUtc.HasValue)
+                query = query.Where(bi => bi.CreatedAt >= createdFromUtc.Value);
+            if (createdToUtc.HasValue)
+                query = query.Where(bi => bi.CreatedAt < createdToUtc.Value);
+            if (internetSource.HasValue)
+            {
+                query = internetSource.Value
+                    ? query.Where(bi => bi.DataSource != null && bi.DataSource.SourceType == DataSourceType.Internet)
+                    : query.Where(bi => bi.DataSource == null || bi.DataSource.SourceType != DataSourceType.Internet);
+            }
 
             if (status.HasValue)
                 query = query.Where(bi => bi.ReviewStatus == status.Value);
@@ -157,6 +171,31 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                 .Where(bi => bi.ProposedByMerchantId == merchantId)
                 .OrderByDescending(bi => bi.UpdatedAt)
                 .ToListAsync(cancellationToken);
+        }
+
+        /// <inheritdoc/>
+        public async Task<int> GetTotalCountAsync(CancellationToken cancellationToken = default)
+        {
+            return await _context.BearingInterchanges.CountAsync(bi => bi.IsActive, cancellationToken);
+        }
+
+        /// <inheritdoc/>
+        public async Task<int> GetPendingCountAsync(CancellationToken cancellationToken = default)
+        {
+            return await _context.BearingInterchanges
+                .CountAsync(bi => bi.IsActive && bi.ReviewStatus == InterchangeReviewStatus.Pending, cancellationToken);
+        }
+
+        /// <inheritdoc/>
+        public async Task<int> GetCountSinceBySourceAsync(DateTime since, bool isInternet, CancellationToken cancellationToken = default)
+        {
+            // 改动说明（v1.50.0 来源拆分统计）：互联网=DataSource.SourceType 为 Internet（Sync 批量），
+            //   人工=非互联网（平台维护 Manual + 商家报候选 UserSubmitted）
+            var query = _context.BearingInterchanges.Where(bi => bi.IsActive && bi.CreatedAt >= since);
+            query = isInternet
+                ? query.Where(bi => bi.DataSource != null && bi.DataSource.SourceType == DataSourceType.Internet)
+                : query.Where(bi => bi.DataSource == null || bi.DataSource.SourceType != DataSourceType.Internet);
+            return await query.CountAsync(cancellationToken);
         }
     }
 }

@@ -62,9 +62,21 @@ namespace OpenFindBearings.Domain.Repositories
         Task<List<Merchant>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// 获取指定时间后创建的商家数量
+        /// 获取指定时间后新增的互联网来源商家数
+        /// （v1.50.0 来源拆分统计：口径 = IsActive 且在册，排除提名草稿）
         /// </summary>
-        Task<int> GetCountSinceAsync(DateTime since, CancellationToken cancellationToken = default);
+        Task<int> GetInternetAddedCountSinceAsync(DateTime since, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 获取指定时间后入驻生效的商家数
+        /// （v1.50.0 入驻统计：口径 = OnboardedAt 且 IsActive 在册，含"认领"既有互联网商户）
+        /// </summary>
+        Task<int> GetOnboardedCountSinceAsync(DateTime since, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 获取已入驻商户总数（OnboardedAt 非空，口径 = IsActive 且在册）
+        /// </summary>
+        Task<int> GetOnboardedCountAsync(CancellationToken cancellationToken = default);
 
         /// <summary>
         /// 获取已验证商家数量

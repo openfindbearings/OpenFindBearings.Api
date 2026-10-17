@@ -105,5 +105,17 @@ namespace OpenFindBearings.Application.Queries.Bearings.SearchBearings
         /// 每页条数
         /// </summary>
         public int PageSize { get; set; } = 20;
+
+        /// <summary>
+        /// 创建起始日期（业务日历 yyyy-MM-dd，含）——按 BusinessClock 日界换算为 UTC 过滤
+        /// 改动说明（v1.50.0 下钻筛选）
+        /// </summary>
+        public DateOnly? CreatedFrom { get; set; }
+
+        /// <summary>创建截止日期（业务日历 yyyy-MM-dd，含）</summary>
+        public DateOnly? CreatedTo { get; set; }
+
+        /// <summary>来源筛选：true=仅互联网来源 / false=仅非互联网来源 / null=不限</summary>
+        public bool? InternetSource { get; set; }
     }
 }

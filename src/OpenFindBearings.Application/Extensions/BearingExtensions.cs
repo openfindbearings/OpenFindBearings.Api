@@ -31,7 +31,9 @@ namespace OpenFindBearings.Application.Extensions
                 Image3DUrl = bearing.Image3DUrl,
                 Image2DUrl = bearing.Image2DUrl,
                 // 改动说明（v1.6.0 数据可信联动）：下发参数来源，前端据此标注"仅供参考"
-                DataSource = bearing.DataSource?.SourceType.ToString()
+                DataSource = bearing.DataSource?.SourceType.ToString(),
+                // 改动说明（v1.50.0 下钻筛选）：下发创建时间，Admin 轴承列表据此显示"创建时间"并支持时间下钻核对
+                CreatedAt = bearing.CreatedAt
             };
         }
     }

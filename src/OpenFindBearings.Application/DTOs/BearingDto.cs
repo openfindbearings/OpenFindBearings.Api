@@ -62,5 +62,11 @@
         /// 供前端对参数区标注"参数来源：互联网 · 仅供参考"
         /// </summary>
         public string? DataSource { get; set; }
+
+        /// <summary>
+        /// 创建时间（UTC）。
+        /// 改动说明（v1.50.0 下钻筛选）：Admin 轴承列表展示"创建时间"列并支持按下钻起点核对。
+        /// </summary>
+        public DateTime CreatedAt { get; set; }
     }
 }

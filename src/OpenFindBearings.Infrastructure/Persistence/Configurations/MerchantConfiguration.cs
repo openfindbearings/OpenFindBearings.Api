@@ -65,6 +65,10 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             builder.Property(m => m.LastVerifiedAt)
                 .HasColumnName("LastVerifiedAt");
 
+            // 改动说明（v1.50.0 入驻统计）：入驻生效时间列（可空），区分"互联网同步新增"与"入驻新增（含认领）"
+            builder.Property(m => m.OnboardedAt)
+                .HasColumnName("OnboardedAt");
+
             builder.Property(m => m.VerifiedBy)
                 .HasMaxLength(100)
                 .HasColumnName("VerifiedBy");

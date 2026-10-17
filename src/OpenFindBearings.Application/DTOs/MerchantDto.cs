@@ -95,6 +95,12 @@ namespace OpenFindBearings.Application.DTOs
         public DateTime SubmittedAt { get; set; }
 
         /// <summary>
+        /// 入驻生效时间（UTC，审核通过时写入）。
+        /// 改动说明（v1.50.0 入驻统计）：null=尚未入驻（互联网/种子/未认领数据）；用于区分互联网新增与入驻新增。
+        /// </summary>
+        public DateTime? OnboardedAt { get; set; }
+
+        /// <summary>
         /// 审核拒绝原因（Suspended 时有值）。
         /// 改动说明：审批页"已拒绝"Tab 与抽屉展示驳回原因，此前只能从实体列间接推断
         /// </summary>

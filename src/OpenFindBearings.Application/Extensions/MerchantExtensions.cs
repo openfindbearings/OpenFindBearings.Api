@@ -34,6 +34,8 @@ TypeDisplay = merchant.GetMerchantTypeDisplayName(),
             // v1.31.0：Admin 解除归属按钮可用性判定（None+Manual=提名已有 vs None+Internet=公海）
             DataSource = merchant.DataSource?.ToString(),
                 SubmittedAt = merchant.CreatedAt,
+                // 改动说明（v1.50.0 入驻时间）：下发入驻生效时间，供 Admin 商家列表展示与筛选
+                OnboardedAt = merchant.OnboardedAt,
                 RejectReason = merchant.SuspensionReason
             };
         }

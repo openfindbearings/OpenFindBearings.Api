@@ -91,6 +91,14 @@ namespace OpenFindBearings.Domain.Repositories
         Task<int> GetCountSinceAsync(DateTime since, CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// 获取指定时间后创建、且按来源区分的轴承数量
+        /// （v1.50.0 来源拆分统计：互联网新增 vs 人工新增）
+        /// </summary>
+        /// <param name="since">起始时间（UTC，含）</param>
+        /// <param name="isInternet">true=互联网来源（爬虫/Sync）；false=非互联网来源</param>
+        Task<int> GetCountSinceBySourceAsync(DateTime since, bool isInternet, CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// 彻底删除轴承（物理删除）
         /// </summary>
         Task RemoveAsync(Bearing bearing, CancellationToken cancellationToken = default);
