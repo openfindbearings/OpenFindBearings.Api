@@ -71,6 +71,26 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                     m.DataSource == null ||
                     m.DataSource.SourceType != Domain.Enums.DataSourceType.Internet);
 
+            // 改动说明（v1.50.0 商家注册时间筛选）：按注册时间区间过滤（下限含、上限不含）
+            if (searchParams.RegisteredFromUtc.HasValue)
+                query = query.Where(m => m.CreatedAt >= searchParams.RegisteredFromUtc.Value);
+            if (searchParams.RegisteredToUtc.HasValue)
+                query = query.Where(m => m.CreatedAt < searchParams.RegisteredToUtc.Value);
+
+            // 改动说明（v1.50.0 入驻时间筛选）：按入驻生效时间区间过滤（OnboardedAt，下限含、上限不含）
+            if (searchParams.OnboardedFromUtc.HasValue)
+                query = query.Where(m => m.OnboardedAt != null && m.OnboardedAt >= searchParams.OnboardedFromUtc.Value);
+            if (searchParams.OnboardedToUtc.HasValue)
+                query = query.Where(m => m.OnboardedAt != null && m.OnboardedAt < searchParams.OnboardedToUtc.Value);
+
+            // 改动说明（v1.50.0 来源筛选）：true=仅互联网来源；false=仅非互联网来源（含无来源记录）
+            if (searchParams.InternetSource.HasValue)
+            {
+                query = searchParams.InternetSource.Value
+                    ? query.Where(m => m.DataSource != null && m.DataSource.SourceType == Domain.Enums.DataSourceType.Internet)
+                    : query.Where(m => m.DataSource == null || m.DataSource.SourceType != Domain.Enums.DataSourceType.Internet);
+            }
+
             var totalCount = await query.CountAsync(cancellationToken);
 
             // 改动说明（v2.15.0 搜索权重批次）：主排序由"已认证优先（IsVerified）"升级为"商家等级序数优先"——
@@ -91,6 +111,14 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                 "productcount" => desc
                     ? query.OrderByDescending(gradeRank).ThenBy(m => m.ProductCount)
                     : query.OrderByDescending(gradeRank).ThenByDescending(m => m.ProductCount),
+                // 改动说明（v1.50.0）：按注册时间排序走纯时间序（不再叠加等级优先），供"最新注册"名单消费
+                "registeredat" => desc
+                    ? query.OrderByDescending(m => m.CreatedAt)
+                    : query.OrderBy(m => m.CreatedAt),
+                // 改动说明（v1.50.0）：按入驻时间排序（OnboardedAt 为空的行自然排在末位）
+                "onboardedat" => desc
+                    ? query.OrderByDescending(m => m.OnboardedAt)
+                    : query.OrderBy(m => m.OnboardedAt),
                 _ => query.OrderByDescending(gradeRank).ThenBy(m => m.Name)
             };
 
@@ -185,10 +213,34 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
             
         }
 
-        public async Task<int> GetCountSinceAsync(DateTime since, CancellationToken cancellationToken = default)
+        /// <inheritdoc/>
+        public async Task<int> GetInternetAddedCountSinceAsync(DateTime since, CancellationToken cancellationToken = default)
+        {
+            // 改动说明（v1.50.0 来源拆分统计）：互联网新增 = DataSource.SourceType 为 Internet（爬虫/Sync），
+            //   CreatedAt >= since；口径与"总数"一致（IsActive、排除提名草稿）
+            return await _context.Merchants
+                .Where(m => m.IsActive && m.Status != MerchantStatus.Draft
+                    && m.DataSource != null && m.DataSource.SourceType == Domain.Enums.DataSourceType.Internet
+                    && m.CreatedAt >= since)
+                .CountAsync(cancellationToken);
+        }
+
+        /// <inheritdoc/>
+        public async Task<int> GetOnboardedCountSinceAsync(DateTime since, CancellationToken cancellationToken = default)
+        {
+            // 改动说明（v1.50.0 入驻统计）：入驻新增 = OnboardedAt >= since；
+            //   因认领的是既有（互联网）行、CreatedAt 为老时间，只有本口径能正确计入"本周完成的认领"
+            return await _context.Merchants
+                .Where(m => m.IsActive && m.Status != MerchantStatus.Draft
+                    && m.OnboardedAt != null && m.OnboardedAt >= since)
+                .CountAsync(cancellationToken);
+        }
+
+        /// <inheritdoc/>
+        public async Task<int> GetOnboardedCountAsync(CancellationToken cancellationToken = default)
         {
             return await _context.Merchants
-                .Where(m => m.IsActive && m.CreatedAt >= since)
+                .Where(m => m.IsActive && m.Status != MerchantStatus.Draft && m.OnboardedAt != null)
                 .CountAsync(cancellationToken);
         }
 

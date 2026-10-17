@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.DTOs;
 using OpenFindBearings.Application.Extensions;
 using OpenFindBearings.Domain.Repositories;
+using OpenFindBearings.Domain.Services;
 using OpenFindBearings.Domain.Specifications;
 
 namespace OpenFindBearings.Application.Queries.Merchants.SearchMerchants
@@ -36,6 +37,22 @@ namespace OpenFindBearings.Application.Queries.Merchants.SearchMerchants
                 IsActive = request.IncludeDeleted == true ? null : true,
                 SortBy = request.SortBy,
                 SortOrder = request.SortOrder,
+                // 改动说明（v1.50.0 商家注册时间筛选）：前端传业务日历日期，此处按 BusinessClock 日界换算为 UTC：
+                //   下限取当日零点（含）；上限取"次日零点（不含）"以实现"含当日"，全端不做时区自算
+                RegisteredFromUtc = request.RegisteredFrom.HasValue
+                    ? DateTime.SpecifyKind(request.RegisteredFrom.Value.ToDateTime(TimeOnly.MinValue) - BusinessClock.Offset, DateTimeKind.Utc)
+                    : null,
+                RegisteredToUtc = request.RegisteredTo.HasValue
+                    ? DateTime.SpecifyKind(request.RegisteredTo.Value.AddDays(1).ToDateTime(TimeOnly.MinValue) - BusinessClock.Offset, DateTimeKind.Utc)
+                    : null,
+                // 改动说明（v1.50.0 入驻时间筛选）：同上按业务日历换算，用于"入驻新增"下钻
+                OnboardedFromUtc = request.OnboardedFrom.HasValue
+                    ? DateTime.SpecifyKind(request.OnboardedFrom.Value.ToDateTime(TimeOnly.MinValue) - BusinessClock.Offset, DateTimeKind.Utc)
+                    : null,
+                OnboardedToUtc = request.OnboardedTo.HasValue
+                    ? DateTime.SpecifyKind(request.OnboardedTo.Value.AddDays(1).ToDateTime(TimeOnly.MinValue) - BusinessClock.Offset, DateTimeKind.Utc)
+                    : null,
+                InternetSource = request.InternetSource,
                 Page = request.Page,
                 PageSize = request.PageSize
             };

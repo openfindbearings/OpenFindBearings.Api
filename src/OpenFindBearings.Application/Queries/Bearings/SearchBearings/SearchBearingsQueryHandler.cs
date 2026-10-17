@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.DTOs;
 using OpenFindBearings.Application.Extensions;
 using OpenFindBearings.Domain.Repositories;
+using OpenFindBearings.Domain.Services;
 using OpenFindBearings.Domain.Specifications;
 
 namespace OpenFindBearings.Application.Queries.Bearings.SearchBearings
@@ -44,6 +45,15 @@ namespace OpenFindBearings.Application.Queries.Bearings.SearchBearings
                 IsActive = request.IncludeDeleted == true ? null : true,
                 SortBy = request.SortBy,
                 SortOrder = request.SortOrder,
+                // 改动说明（v1.50.0 下钻筛选）：创建时间按业务日历（BusinessClock）换算为 UTC 区间，
+                //   下限含、上限取"次日零点不含"以含当日；来源筛选直接透传
+                CreatedFromUtc = request.CreatedFrom.HasValue
+                    ? DateTime.SpecifyKind(request.CreatedFrom.Value.ToDateTime(TimeOnly.MinValue) - BusinessClock.Offset, DateTimeKind.Utc)
+                    : null,
+                CreatedToUtc = request.CreatedTo.HasValue
+                    ? DateTime.SpecifyKind(request.CreatedTo.Value.AddDays(1).ToDateTime(TimeOnly.MinValue) - BusinessClock.Offset, DateTimeKind.Utc)
+                    : null,
+                InternetSource = request.InternetSource,
                 Page = request.Page,
                 PageSize = request.PageSize
             };

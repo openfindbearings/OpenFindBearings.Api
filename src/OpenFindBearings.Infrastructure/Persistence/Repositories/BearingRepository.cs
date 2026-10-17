@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using OpenFindBearings.Domain.Aggregates;
+using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
 using OpenFindBearings.Domain.Specifications;
 using OpenFindBearings.Infrastructure.Persistence.Data;
@@ -40,6 +41,18 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                 .Include(b => b.Brand)
                 .AsNoTracking()
                 .Where(b => searchParams.IsActive == null || b.IsActive == searchParams.IsActive.Value);
+
+            // 改动说明（v1.50.0 下钻筛选）：创建时间区间（下限含、上限不含）与来源（互联网/非互联网）
+            if (searchParams.CreatedFromUtc.HasValue)
+                query = query.Where(b => b.CreatedAt >= searchParams.CreatedFromUtc.Value);
+            if (searchParams.CreatedToUtc.HasValue)
+                query = query.Where(b => b.CreatedAt < searchParams.CreatedToUtc.Value);
+            if (searchParams.InternetSource.HasValue)
+            {
+                query = searchParams.InternetSource.Value
+                    ? query.Where(b => b.DataSource != null && b.DataSource.SourceType == DataSourceType.Internet)
+                    : query.Where(b => b.DataSource == null || b.DataSource.SourceType != DataSourceType.Internet);
+            }
 
             // 现行代号搜索
             if (!string.IsNullOrWhiteSpace(searchParams.PartNumber))
@@ -176,6 +189,18 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         public async Task<int> GetTotalCountAsync(BearingSearchParams searchParams, CancellationToken cancellationToken = default)
         {
             var query = _context.Bearings.Where(b => b.IsActive);
+
+            // 改动说明（v1.50.0 下钻筛选）：与 SearchAsync 保持同口径（创建时间区间 + 来源）
+            if (searchParams.CreatedFromUtc.HasValue)
+                query = query.Where(b => b.CreatedAt >= searchParams.CreatedFromUtc.Value);
+            if (searchParams.CreatedToUtc.HasValue)
+                query = query.Where(b => b.CreatedAt < searchParams.CreatedToUtc.Value);
+            if (searchParams.InternetSource.HasValue)
+            {
+                query = searchParams.InternetSource.Value
+                    ? query.Where(b => b.DataSource != null && b.DataSource.SourceType == DataSourceType.Internet)
+                    : query.Where(b => b.DataSource == null || b.DataSource.SourceType != DataSourceType.Internet);
+            }
 
             if (!string.IsNullOrWhiteSpace(searchParams.PartNumber))
                 query = query.Where(b => b.PartNumber.Contains(searchParams.PartNumber));
@@ -329,6 +354,19 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
             return await _context.Bearings
                 .Where(b => b.IsActive && b.CreatedAt >= since)
                 .CountAsync(cancellationToken);
+        }
+
+        /// <inheritdoc/>
+        public async Task<int> GetCountSinceBySourceAsync(DateTime since, bool isInternet, CancellationToken cancellationToken = default)
+        {
+            // 改动说明（v1.50.0 来源拆分统计）：互联网=DataSource.SourceType 为 Internet
+            //   （经 DataSourceTypeValueConverter 落库为 "Crawler"），非互联网=其余来源（手工/Excel/OCR/API/种子）；
+            //   比较经 LINQ 表达，值转换器由 EF 自动套用，不写库内字面量
+            var query = _context.Bearings.Where(b => b.IsActive && b.CreatedAt >= since);
+            query = isInternet
+                ? query.Where(b => b.DataSource != null && b.DataSource.SourceType == DataSourceType.Internet)
+                : query.Where(b => b.DataSource == null || b.DataSource.SourceType != DataSourceType.Internet);
+            return await query.CountAsync(cancellationToken);
         }
 
         public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)

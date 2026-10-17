@@ -278,6 +278,10 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
+                    b.Property<DateTime?>("OnboardedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("OnboardedAt");
+
                     b.Property<int>("ProductCount")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")

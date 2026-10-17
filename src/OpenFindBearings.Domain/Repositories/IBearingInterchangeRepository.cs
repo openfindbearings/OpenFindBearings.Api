@@ -60,7 +60,9 @@ namespace OpenFindBearings.Domain.Repositories
         /// 分页获取替代关系（平台管理列表）：可按关键字（源/目标型号）与审核状态过滤
         /// </summary>
         Task<(List<BearingInterchange> Items, int Total)> GetPagedAsync(
-            string? keyword, InterchangeReviewStatus? status, int page, int pageSize, CancellationToken cancellationToken = default);
+            string? keyword, InterchangeReviewStatus? status,
+            DateTime? createdFromUtc, DateTime? createdToUtc, bool? internetSource,
+            int page, int pageSize, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// 分页获取待审核替代关系（平台审核队列）
@@ -72,5 +74,22 @@ namespace OpenFindBearings.Domain.Repositories
         /// 获取某商户提交的替代候选（含各审核状态，供商家查看进度与驳回理由）
         /// </summary>
         Task<List<BearingInterchange>> GetByProposerAsync(Guid merchantId, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 替代关系总数（v1.50.0 仪表盘统计）
+        /// </summary>
+        Task<int> GetTotalCountAsync(CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 待审核替代关系数（v1.50.0 仪表盘统计）
+        /// </summary>
+        Task<int> GetPendingCountAsync(CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 获取指定时间后新增、且按来源区分的替代关系数（v1.50.0 来源拆分统计）
+        /// </summary>
+        /// <param name="since">起始时间（UTC，含）</param>
+        /// <param name="isInternet">true=互联网来源（Sync 批量）；false=人工来源（平台维护 + 商家报候选）</param>
+        Task<int> GetCountSinceBySourceAsync(DateTime since, bool isInternet, CancellationToken cancellationToken = default);
     }
 }

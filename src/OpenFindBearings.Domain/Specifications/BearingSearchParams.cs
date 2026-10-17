@@ -115,5 +115,16 @@ namespace OpenFindBearings.Domain.Specifications
         /// 每页条数，默认20，最大100
         /// </summary>
         public int PageSize { get; set; } = 20;
+
+        // ============ 来源与创建时间筛选（v1.50.0 下钻）============
+
+        /// <summary>创建时间下限（UTC，含）——由上层按业务日历（BusinessClock）换算后传入</summary>
+        public DateTime? CreatedFromUtc { get; set; }
+
+        /// <summary>创建时间上限（UTC，不含）——"含当日"由上层传次日零点实现</summary>
+        public DateTime? CreatedToUtc { get; set; }
+
+        /// <summary>来源筛选：true=仅互联网来源 / false=仅非互联网来源 / null=不限</summary>
+        public bool? InternetSource { get; set; }
     }
 }

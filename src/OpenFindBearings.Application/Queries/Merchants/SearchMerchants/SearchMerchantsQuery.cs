@@ -47,7 +47,7 @@ namespace OpenFindBearings.Application.Queries.Merchants.SearchMerchants
         public bool? ExcludeInternet { get; set; }
 
         /// <summary>
-        /// 排序字段（name=名称 / productcount=在售数 / 空=认证优先默认）
+        /// 排序字段（name=名称 / productcount=在售数 / registeredat=注册时间 / 空=认证优先默认）
         /// </summary>
         public string? SortBy { get; set; }
 
@@ -55,6 +55,31 @@ namespace OpenFindBearings.Application.Queries.Merchants.SearchMerchants
         /// 排序方向（asc/desc）
         /// </summary>
         public string? SortOrder { get; set; }
+
+        /// <summary>
+        /// 注册起始日期（业务日历 yyyy-MM-dd，含）——按 BusinessClock 日界换算为 UTC 过滤
+        /// </summary>
+        public DateOnly? RegisteredFrom { get; set; }
+
+        /// <summary>
+        /// 注册截止日期（业务日历 yyyy-MM-dd，含）
+        /// </summary>
+        public DateOnly? RegisteredTo { get; set; }
+
+        /// <summary>
+        /// 入驻起始日期（业务日历 yyyy-MM-dd，含）——按 BusinessClock 日界换算为 UTC 过滤
+        /// </summary>
+        public DateOnly? OnboardedFrom { get; set; }
+
+        /// <summary>
+        /// 入驻截止日期（业务日历 yyyy-MM-dd，含）
+        /// </summary>
+        public DateOnly? OnboardedTo { get; set; }
+
+        /// <summary>
+        /// 来源筛选（v1.50.0 来源拆分）：true=仅互联网来源；false=仅非互联网来源；null=不限
+        /// </summary>
+        public bool? InternetSource { get; set; }
 
         /// <summary>
         /// 页码

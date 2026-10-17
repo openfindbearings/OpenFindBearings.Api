@@ -82,6 +82,13 @@ namespace OpenFindBearings.Domain.Aggregates
         public DateTime? VerifiedAt { get; private set; }
 
         /// <summary>
+        /// 入驻生效时间（审核通过时写入，UTC）。
+        /// 改动说明（v1.50.0 入驻统计）：用于区分"互联网同步新增"（CreatedAt）与"入驻新增"（含认领既有商家）；
+        /// 为 null 表示尚未入驻生效（互联网/种子/历史未认领数据）。
+        /// </summary>
+        public DateTime? OnboardedAt { get; private set; }
+
+        /// <summary>
         /// 商家等级
         /// </summary>
         public MerchantGrade Grade { get; private set; }
@@ -285,6 +292,9 @@ namespace OpenFindBearings.Domain.Aggregates
                 throw new InvalidOperationException($"当前状态为 {Status}，无法审核");
 
             Status = MerchantStatus.Active;
+            // 改动说明（v1.50.0 入驻时间）：入驻生效即记时（`??=` 幂等，重复审核不覆盖首次）；
+            //   Self/Claim/Nomination 三条入驻路径都经本方法，故认领既有商家（CreatedAt 为老时间）也能被正确计时
+            OnboardedAt ??= DateTime.UtcNow;
             UpdateTimestamp();
 
             // 改动说明：补发"入驻审核通过"事件（站内信订阅者据此通知管理员）；

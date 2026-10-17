@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using System.Globalization;
 using OpenFindBearings.Api.Extensions;
 using OpenFindBearings.Api.Helpers;
 using OpenFindBearings.Api.Middleware;
@@ -228,13 +229,22 @@ namespace OpenFindBearings.Api.Endpoints
                 HttpContext httpContext,
                 [FromQuery] string? keyword = null,
                 [FromQuery] int? reviewStatus = null,
+                [FromQuery] string? createdFrom = null,
+                [FromQuery] string? createdTo = null,
+                [FromQuery] bool? internetSource = null,
                 [FromQuery] int page = 1,
                 [FromQuery] int pageSize = 20) =>
             {
+                // 改动说明（v1.50.0 下钻筛选）：创建日期按 yyyy-MM-dd 解析（业务日历），处理器换算为 UTC 区间
+                DateOnly? incFrom = DateOnly.TryParse(createdFrom, CultureInfo.InvariantCulture, DateTimeStyles.None, out var icf) ? icf : null;
+                DateOnly? incTo = DateOnly.TryParse(createdTo, CultureInfo.InvariantCulture, DateTimeStyles.None, out var ict) ? ict : null;
                 var result = await mediator.Send(new GetInterchangesQuery
                 {
                     Keyword = keyword,
                     ReviewStatus = reviewStatus,
+                    CreatedFrom = incFrom,
+                    CreatedTo = incTo,
+                    InternetSource = internetSource,
                     Page = page,
                     PageSize = pageSize
                 });
@@ -359,13 +369,22 @@ namespace OpenFindBearings.Api.Endpoints
                 HttpContext httpContext,
                 [FromQuery] string? keyword = null,
                 [FromQuery] bool? includeDeleted = null,
+                [FromQuery] string? createdFrom = null,
+                [FromQuery] string? createdTo = null,
+                [FromQuery] bool? internetSource = null,
                 [FromQuery] int page = 1,
                 [FromQuery] int pageSize = 20) =>
             {
+                // 改动说明（v1.50.0 下钻筛选）：创建日期按 yyyy-MM-dd 解析（业务日历），处理器换算为 UTC 区间
+                DateOnly? bFrom = DateOnly.TryParse(createdFrom, CultureInfo.InvariantCulture, DateTimeStyles.None, out var bf) ? bf : null;
+                DateOnly? bTo = DateOnly.TryParse(createdTo, CultureInfo.InvariantCulture, DateTimeStyles.None, out var bt) ? bt : null;
                 var query = new SearchBearingsQuery
                 {
                     Keyword = keyword,
                     IncludeDeleted = includeDeleted,
+                    CreatedFrom = bFrom,
+                    CreatedTo = bTo,
+                    InternetSource = internetSource,
                     Page = page,
                     PageSize = pageSize
                 };
@@ -714,9 +733,22 @@ namespace OpenFindBearings.Api.Endpoints
                 [FromQuery] bool? includeDeleted = null,
                 [FromQuery] int? status = null,
                 [FromQuery] bool? excludeInternet = null,
+                [FromQuery] string? registeredFrom = null,
+                [FromQuery] string? registeredTo = null,
+                [FromQuery] string? onboardedFrom = null,
+                [FromQuery] string? onboardedTo = null,
+                [FromQuery] bool? internetSource = null,
+                [FromQuery] string? sortBy = null,
+                [FromQuery] string? sortOrder = null,
                 [FromQuery] int page = 1,
                 [FromQuery] int pageSize = 20) =>
             {
+                // 改动说明（v1.50.0 商家注册/入驻时间与来源筛选）：日期按 yyyy-MM-dd 解析（业务日历），
+                //   由查询处理器换算为 UTC 区间；internetSource 为来源拆分下钻用（true=仅互联网）
+                DateOnly? regFrom = DateOnly.TryParse(registeredFrom, CultureInfo.InvariantCulture, DateTimeStyles.None, out var rf) ? rf : null;
+                DateOnly? regTo = DateOnly.TryParse(registeredTo, CultureInfo.InvariantCulture, DateTimeStyles.None, out var rt) ? rt : null;
+                DateOnly? onbFrom = DateOnly.TryParse(onboardedFrom, CultureInfo.InvariantCulture, DateTimeStyles.None, out var of) ? of : null;
+                DateOnly? onbTo = DateOnly.TryParse(onboardedTo, CultureInfo.InvariantCulture, DateTimeStyles.None, out var ot) ? ot : null;
                 var query = new SearchMerchantsQuery
                 {
                     Keyword = keyword,
@@ -726,6 +758,13 @@ namespace OpenFindBearings.Api.Endpoints
                     VerifiedOnly = verifiedOnly,
                     IncludeDeleted = includeDeleted,
                     ExcludeInternet = excludeInternet,
+                    RegisteredFrom = regFrom,
+                    RegisteredTo = regTo,
+                    OnboardedFrom = onbFrom,
+                    OnboardedTo = onbTo,
+                    InternetSource = internetSource,
+                    SortBy = sortBy,
+                    SortOrder = sortOrder,
                     Page = page,
                     PageSize = pageSize
                 };
