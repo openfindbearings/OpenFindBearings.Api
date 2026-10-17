@@ -153,8 +153,8 @@ namespace OpenFindBearings.Domain.Events
     }
 
     /// <summary>
-    /// 撮合达成事件（v1.6.0 开闭源边界预留）：发布人选定应答（互给电话）时发布，
-    /// 供闭源交易域订阅接续（下单/支付）。开源侧不含任何闭源实现，仅留此事件为衔接点。
+    /// 撮合达成事件（v1.6.0 边界预留）：发布人选定应答（互给电话）时发布，
+    /// 供后续交易域订阅接续（下单/支付）。开源侧不含该实现，仅留此事件为衔接点。
     /// </summary>
     public class MatchCompletedEvent : INotification
     {

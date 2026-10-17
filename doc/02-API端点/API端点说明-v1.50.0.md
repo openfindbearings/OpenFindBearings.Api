@@ -618,7 +618,7 @@ OpenFindBearings.Api（以下简称 API）共注册 **163** 个端点，按职�
 > 多渠道通知（站内信必发 + 短信/微信/邮件按用户偏好扇出，网关未就绪只记日志），限频 `Sourcing.NotifyMaxPerMerchantPerDay`（默认 3）。
 > 深链修复：寻货通知 `bizType` 由字面量 `"SourcingDemand"` 改常量 `Notification.BizSourcingDemand`（`sourcing_demand`），前端消息中心路由到寻货详情。
 > 应答分发：**商户名义**发布的寻货收到应答时通知该商户**全部在职成员**（此前仅经办人；站内信必发 + 外部按各自偏好），**个人名义**仅通知发布人。
-> 预留 `MatchCompletedEvent`（撮合达成=互给电话，供闭源交易域订阅；开源侧不含实现）。
+> 预留 `MatchCompletedEvent`（撮合达成=互给电话，供后续交易域订阅；开源侧不含实现）。
 > 迁移 `AddSourcingTargetMerchant`（SourcingDemands 加 `TargetMerchantId` + 索引）。
 > 僵尸清理：删 `GetMerchantByUserIdQuery`/`GetMerchantByUserIdQueryHandler`；`MerchantExtensions.ToDetailDto` 移除仅用于屏蔽 contact 的 `isAuthenticated` 分支。
 > 端点总数 189 → 191（"为你匹配"与通知偏好共 +2；明细以本表为准）。
@@ -676,4 +676,4 @@ OpenFindBearings.Api（以下简称 API）共注册 **163** 个端点，按职�
 
 > 三端下钻一致：轴承柱 → `/Data/Bearings?dateFrom=…&sourceFilter=internet|noninternet`；
 > 替代品柱 → `/Interchanges?createdFrom=…&sourceFilter=internet|noninternet`；商家柱见上。
-> 注：开源版无 Sync，「互联网新增」系列恒为 0，仅有「人工新增」有数据；闭源部署（`Features:SyncIntegration=true`）才出互联网数据。
+> 注：未启用互联网数据管线的部署，「互联网新增」系列恒为 0，仅「人工新增」有数据。
