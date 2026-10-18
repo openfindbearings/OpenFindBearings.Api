@@ -1,13 +1,13 @@
 using OpenFindBearings.Application.DTOs;
 using OpenFindBearings.Domain.Aggregates;
 using OpenFindBearings.Domain.Entities;
-using OpenFindBearings.Domain.Enums;
 
 namespace OpenFindBearings.Application.Extensions
 {
     /// <summary>
-    /// 替代关系映射扩展（v2.16.0 替代品治理）：实体到公域条目 DTO / 管理行 DTO 的转换，
-    /// 以及三级替代类型、审核状态的中文标签口径（唯一来源，避免各处重复）
+    /// 替代关系映射扩展：实体到公域条目 DTO / 管理行 DTO 的转换，
+    /// 以及三级替代类型的中文标签口径（唯一来源，避免各处重复）。
+    /// 改动说明（v2.17.0 替代品字典化）：删除审核状态标签口径（状态机已取消），同步去掉 Enums 引用
     /// </summary>
     public static class BearingInterchangeExtensions
     {
@@ -21,15 +21,6 @@ namespace OpenFindBearings.Application.Extensions
             "conditional" => "条件替代（需评估）",
             "functional" => "仅供参考",
             _ => type ?? "未知"
-        };
-
-        /// <summary>审核状态中文标签</summary>
-        public static string ToReviewStatusLabel(this InterchangeReviewStatus status) => status switch
-        {
-            InterchangeReviewStatus.Approved => "已生效",
-            InterchangeReviewStatus.Pending => "待审核",
-            InterchangeReviewStatus.Rejected => "已驳回",
-            _ => "未知"
         };
 
         /// <summary>
@@ -73,10 +64,6 @@ namespace OpenFindBearings.Application.Extensions
                 Origin = bi.Source,
                 Remarks = bi.Remarks,
                 IsBidirectional = bi.IsBidirectional,
-                ReviewStatus = (int)bi.ReviewStatus,
-                ReviewStatusLabel = bi.ReviewStatus.ToReviewStatusLabel(),
-                ReviewComment = bi.ReviewComment,
-                ProposedByMerchantId = bi.ProposedByMerchantId,
                 DataSourceType = bi.DataSource?.SourceType?.ToString(),
                 CreatedAt = bi.CreatedAt,
                 UpdatedAt = bi.UpdatedAt ?? bi.CreatedAt

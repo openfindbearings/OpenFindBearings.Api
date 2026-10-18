@@ -76,21 +76,9 @@ namespace OpenFindBearings.Domain.Entities
         /// </summary>
         public DataSource? DataSource { get; private set; }
 
-        /// <summary>
-        /// 审核状态（v2.16.0 替代品治理）：平台自建/审核通过=已生效；商家提交=待审核；驳回=已驳回。
-        /// 仅"已生效"对公域可见
-        /// </summary>
-        public InterchangeReviewStatus ReviewStatus { get; private set; } = InterchangeReviewStatus.Approved;
-
-        /// <summary>
-        /// 驳回理由（v2.16.0）：仅 Rejected 时有值，提交方可改后重提
-        /// </summary>
-        public string? ReviewComment { get; private set; }
-
-        /// <summary>
-        /// 提出该候选替代的商户ID（v2.16.0）：商家提交时记录，供追溯与责任/黑名单；平台自建为 null
-        /// </summary>
-        public Guid? ProposedByMerchantId { get; private set; }
+        // 改动说明（v2.17.0 替代品字典化）：删除 ReviewStatus/ReviewComment/ProposedByMerchantId——
+        //   替代关系回归"平台维护的字典"（爬取候选在 Sync staging 侧审核通过后入库，人工由平台管理员维护），
+        //   商家的长尾贡献改走既有纠错流（对源轴承提交"替代关系"纠错），故 API 侧的商家候选审核状态机整体取消
 
         /// <summary>
         /// 无参构造函数，仅供EF Core使用
@@ -187,42 +175,6 @@ namespace OpenFindBearings.Domain.Entities
             UpdateTimestamp();
         }
 
-        /// <summary>平台自建/审核通过标记（v2.16.0）：置为已生效并清空驳回理由</summary>
-        public void MarkApproved()
-        {
-            ReviewStatus = InterchangeReviewStatus.Approved;
-            ReviewComment = null;
-            UpdateTimestamp();
-        }
-
-        /// <summary>商家提交候选（v2.16.0）：置待审核并记录提出商户</summary>
-        public void SubmitByMerchant(Guid merchantId)
-        {
-            if (merchantId == Guid.Empty)
-                throw new ArgumentException("商户ID不能为空", nameof(merchantId));
-
-            ReviewStatus = InterchangeReviewStatus.Pending;
-            ProposedByMerchantId = merchantId;
-            ReviewComment = null;
-            UpdateTimestamp();
-        }
-
-        /// <summary>平台审核通过（v2.16.0）：生效并清空驳回理由</summary>
-        public void Approve()
-        {
-            ReviewStatus = InterchangeReviewStatus.Approved;
-            ReviewComment = null;
-            UpdateTimestamp();
-        }
-
-        /// <summary>平台驳回（v2.16.0）：记录理由，提交方可改后重提</summary>
-        public void Reject(string reason)
-        {
-            ReviewStatus = InterchangeReviewStatus.Rejected;
-            ReviewComment = reason;
-            UpdateTimestamp();
-        }
-
         /// <summary>
         /// 判断是否为完全替代
         /// </summary>
@@ -238,11 +190,10 @@ namespace OpenFindBearings.Domain.Entities
         /// </summary>
         public bool IsFunctional() => InterchangeType == "functional";
 
-        /// <summary>公域可见（v2.16.0）：未删除且已生效</summary>
-        public bool IsPubliclyVisible => IsActive && ReviewStatus == InterchangeReviewStatus.Approved;
-
-        /// <summary>是否可进自动推荐（v2.16.0）：公域可见且非"仅供参考"档</summary>
-        public bool IsAutoRecommendable => IsPubliclyVisible && !IsFunctional();
+        // 改动说明（v2.17.0 替代品字典化）：删除无引用的 IsPubliclyVisible；
+        //   IsAutoRecommendable 口径由"公域可见"简化为"未删除"（审核状态机已取消）
+        /// <summary>是否可进自动推荐：未删除且非"仅供参考"档</summary>
+        public bool IsAutoRecommendable => IsActive && !IsFunctional();
 
         // 改动说明（v2.13.2 僵尸方法清理）：删除无任何调用方的 GetConfidenceLevel 与
         //   GetInterchangeTypeDescription——后者还与唯一口径 BearingInterchangeExtensions.ToTypeLabel 分歧，

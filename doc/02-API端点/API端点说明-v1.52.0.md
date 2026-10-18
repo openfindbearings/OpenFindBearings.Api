@@ -1,6 +1,6 @@
 # API 端点说明文档
 
-**版本：** v1.51.0
+**版本：** v1.52.0
 **日期：** 2026-10-18
 **状态：** 与代码同步
 
@@ -11,6 +11,7 @@
 
 | 版本 | 日期 | 变更说明 |
 |------|------|----------|
+| v1.52.0 | 2026-10-18 | **替代品字典化：撤销"商家候选 + 平台审核"**——替代关系回归**平台维护的主数据（字典）**：爬取候选仍在 Sync staging 审核（进 API 即生效），平台在管理页人工维护/按纠错核实。① 移除 5 个端点：`GET /api/admin/interchanges/pending`、`POST /api/admin/interchanges/{id:guid}/approve`、`POST /api/admin/interchanges/{id:guid}/reject`、`POST /api/merchant/interchanges`、`GET /api/merchant/interchanges`；② `GET /api/admin/interchanges` 去掉 `reviewStatus` 参数；③ `GET /api/bearings/{id:guid}/interchanges` 语义改为"全部生效关系"（审核态过滤随状态机删除，行为等价）；④ 仪表盘 `interchanges.pendingCount` 删除（恒为 0）；⑤ 纠错新增可纠错字段 `interchange`（替代关系报告；审批不自动应用，由平台在替代品管理页落地）。迁移 `RemoveInterchangeReview`（删 `ReviewStatus`/`ReviewComment`/`ProposedByMerchantId` 三列与索引，先清除历史未生效候选行）。后台管理端点组 75→72、商家端点组 26→24。明细见文末"本版增量"章节 |
 | v1.51.0 | 2026-10-18 | **寻货发布回传匹配家数（搜索—寻货两条路径可见化）**：`POST /api/sourcing/demands` 响应由 `{ id }` 扩为 `{ id, matchedMerchantCount }`——广播单=本次**已匹配并推送的认证商家家数**（口径=公域可见在售本轴承 + 已认证），定向单=1，无匹配=0；前端据此区分"已通知 N 家认证商家"与"仅进入寻货大厅等应答"。匹配逻辑抽出 `SourcingMatcher.GetMatchedMerchantIdsAsync`，由**发布处理器**（回传家数）与**发布通知订阅者**（逐户推送）共用，消除两处口径漂移（含无 `bearingId` 时按型号文本精确匹配主数据兜底）。端点数量不变。配套《搜索寻货与数据可信联动设计 v1.1.0》。明细见文末"本版增量"章节 |
 | v1.50.0 | 2026-10-17 | **仪表盘"新增"改真值并按来源拆分 + 商家入驻时间字段**（消除假数据）：① 新增 `Merchant.OnboardedAt`（入驻生效时间，`Approve()` 幂等写入；迁移 `AddMerchantOnboardedAt` 加列 + 回填存量已入驻商户为 `CreatedAt`）；② `GET /api/admin/dashboard/stats` 重排：轴承、替代品新增按 **互联网 / 人工** 拆分，商家新增按 **互联网同步 / 入驻（`OnboardedAt`，含认领）** 拆分（三者均含今日/本周/本月），新增顶层 `periods`（业务日历起点，供图表下钻）与 `interchanges` 统计块、`merchants.onboardedCount`（已入驻真值）；移除旧字段 `merchants.todayRegistered/thisWeekRegistered/thisMonthRegistered` 与 `bearings.todayAdded/thisWeekAdded/thisMonthAdded`；③ `GET /api/admin/merchants` 新增参数 `onboardedFrom`/`onboardedTo`（入驻时间区间，业务日历含端点）、`internetSource`（true=仅互联网 / false=仅非互联网，来源拆分行下钻用），`sortBy` 增 `onboardedat`；`MerchantDto` 增 `onboardedAt`。④ **下钻筛选贯通**：`GET /api/admin/bearings` 新增 `createdFrom`/`createdTo`/`internetSource`（`BearingDto` 增 `createdAt`）；`GET /api/admin/interchanges` 新增 `createdFrom`/`createdTo`/`internetSource`。端点数量不变（仅字段与参数增量）。明细见文末"本版增量"章节 |
 | v1.49.0 | 2026-10-15 | **搜索—寻货—认证商家与数据可信联动**（配套《搜索寻货与数据可信联动设计 v1.0.0》）：① 通知偏好：新增 `GET/PUT /api/notifications/preferences`（渠道开关 + `smsGatewayReady`；写复用 UpdateUserPreferenceCommand）。② 寻货联动：`POST /api/sourcing/demands` 请求体加可选 `targetMerchantId`（定向询价，仅推目标商户、不进大厅；迁移 `AddSourcingTargetMerchant`）；新增 `GET /api/sourcing/matched`（商家侧"为你匹配的寻货"：定向给我的 + 匹配我在售型号的进行中广播）；发布新增领域事件 `SourcingDemandPublishedEvent` → 匹配"在售本轴承的认证商家"多渠道通知（站内信 + 外部通道按偏好，`Sourcing.NotifyMaxPerMerchantPerDay` 默认 3 限频）；`GET /api/sourcing/demands/{id}` 输出加 `isTargeted`。③ 数据可信标注：`BearingDto` 加 `DataSource`、`BearingMerchantDto` 加 `IsVerified`（询价行动门"仅认证商家可询价"依据）。④ 电话单轨：公共查询 `MerchantDto` 移除 `Phone/Mobile/Email`，`MerchantDetailDto` 改嵌套 `Contact`（仅本商户成员自看下发）。⑤ 深链修复：寻货通知 `bizType` 字面量 `"SourcingDemand"` → 常量 `Notification.BizSourcingDemand`（`sourcing_demand`）。⑥ 僵尸清理：删 `GetMerchantByUserIdQuery(Handler)`。端点总数 187 → 189。明细见文末"本版增量"章节 |
@@ -218,7 +219,7 @@ OpenFindBearings.Api（以下简称 API）共注册 **163** 个端点，按职�
 
 ---
 
-## 7. 商家端点 `/api/merchant`（26 个）
+## 7. 商家端点 `/api/merchant`（24 个）
 
 组授权：`RequireAuthorization("Merchant")`。商家端点不通过 RequirePermission 校验，通过 ICurrentUserService 限定操作到当前商户范围（X-Merchant-Id 或首个在职成员商户）。
 
@@ -278,7 +279,7 @@ OpenFindBearings.Api（以下简称 API）共注册 **163** 个端点，按职�
 
 ---
 
-## 8. 后台管理端点 `/api/admin`（75 个）
+## 8. 后台管理端点 `/api/admin`（72 个）
 
 组授权：`RequireAuthorization("Admin")`。所有端点通过 `RequirePermission("bearing.xxx")` 或 `RequireRole("SuperAdmin,Admin")` 控制访问。
 
@@ -545,6 +546,8 @@ OpenFindBearings.Api（以下简称 API）共注册 **163** 个端点，按职�
 
 ## 本版增量（v1.48.0）：商家商品审核 + 状态统一 + 替代品三级治理（+13）
 
+> v1.52.0 更新：本节 ③ 替代品三级治理中的 **`GET /api/admin/interchanges/pending`、`POST .../approve`、`POST .../reject`、`POST /api/merchant/interchanges`、`GET /api/merchant/interchanges` 五个端点已移除**（替代品字典化，见文末 v1.52.0 章节）；三级类型标签（标准等效/条件替代/仅供参考）与公域查询保留。
+
 ### 商家商品审核（/api/admin/merchant-bearings，merchant.verify）
 | 方法 | 路径 | 说明 |
 |---|---|---|
@@ -565,29 +568,28 @@ OpenFindBearings.Api（以下简称 API）共注册 **163** 个端点，按职�
 ### 替代品三级治理（/api/admin/interchanges，merchant.verify）
 | 方法 | 路径 | 说明 |
 |---|---|---|
-| GET | /api/admin/interchanges | 替代关系列表（关键字/审核状态过滤，分页） |
-| GET | /api/admin/interchanges/pending | 待审替代候选队列 |
+| GET | /api/admin/interchanges | 替代关系列表（关键字/创建时间/来源过滤，分页） |
 | POST | /api/admin/interchanges | 平台新建替代关系（源/目标型号 + 类型 + 置信度 + 双向，直接生效） |
 | PUT | /api/admin/interchanges/{id:guid} | 编辑替代关系（类型/置信度/来源/备注/双向） |
 | DELETE | /api/admin/interchanges/{id:guid} | 删除替代关系（物理删除） |
-| POST | /api/admin/interchanges/{id:guid}/approve | 审核通过（→已生效，公域可见） |
-| POST | /api/admin/interchanges/{id:guid}/reject | 审核驳回（附理由） |
+| ~~GET /api/admin/interchanges/pending~~ | **已于 v1.52.0 移除**（替代品字典化，无候选流） |
+| ~~POST /api/admin/interchanges/{id:guid}/approve~~ | **已于 v1.52.0 移除**（同上） |
+| ~~POST /api/admin/interchanges/{id:guid}/reject~~ | **已于 v1.52.0 移除**（同上） |
 
 ### 商家替代候选（/api/merchant/interchanges）
-| 方法 | 路径 | 说明 |
-|---|---|---|
-| POST | /api/merchant/interchanges | 商家提交替代候选（源/目标型号 + 类型 + 置信度 + 双向 → 待审） |
-| GET | /api/merchant/interchanges | 我的替代提交（进度 / 驳回原因） |
+
+> **已于 v1.52.0 整组移除**（替代品字典化）：`POST /api/merchant/interchanges`（提交候选）、`GET /api/merchant/interchanges`（我的提交）。
+> 商家/用户的参与通道改为**纠错**字段 `interchange`（详见文末 v1.52.0 章节）。
 
 ### 公域查询（变更）
 | 方法 | 路径 | 说明 |
 |---|---|---|
-| GET | /api/bearings/{id:guid}/interchanges | 轴承替代品列表（只放已生效；返回含 `typeLabel` 的富 DTO） |
+| GET | /api/bearings/{id:guid}/interchanges | 轴承替代品列表（v1.52.0 起返回全部生效关系——审核态已取消；返回含 `typeLabel` 的富 DTO） |
 
 > 三级替代类型：`exact`=标准等效替代 / `conditional`=条件替代（需评估）/ `functional`=仅供参考（不进自动推荐）。
 > 双向语义修复：查询改"源 ∪ 目标"合并，`isBidirectional=true` 的反向替代也可见（带方向标注）。
-> 迁移 `AddBearingSaleReviewState`（商品两轴状态收敛 + 回填 + 删四旧列）、`AddInterchangeReview`（替代审核位，存量行默认已生效保持可见）。
-> 配套文档：《15-数据状态设计 v1.2.0》《16-替代品治理设计 v1.0.0》。
+> 迁移 `AddBearingSaleReviewState`（商品两轴状态收敛 + 回填 + 删四旧列）、`AddInterchangeReview`（替代审核位，存量行默认已生效保持可见；**后者已由 v1.52.0 的 `RemoveInterchangeReview` 撤销**）。
+> 配套文档：《15-数据状态设计 v1.3.0》《16-替代品治理设计 v2.0.0》。
 
 ---
 
@@ -643,7 +645,7 @@ OpenFindBearings.Api（以下简称 API）共注册 **163** 个端点，按职�
 | `bearings.internetAdded` / `bearings.manualAdded` | 新增：轴承新增按来源拆分（`{ today, week, month }`）；互联网=`DataSource=Internet`，人工=非互联网 |
 | `merchants.internetAdded` / `merchants.onboarded` | 新增：商家新增按来源拆分（`{ today, week, month }`）；互联网=`DataSource=Internet` 且 `CreatedAt≥起点`，入驻=`OnboardedAt≥起点`（**含认领既有商户**） |
 | `merchants.onboardedCount` | 新增：已入驻商户数（`OnboardedAt` 非空），仪表盘卡片"已入驻"真值（此前误用 `verifiedCount`） |
-| `interchanges` | 新增统计块：`totalCount` / `pendingCount` / `internetAdded` / `manualAdded`（`{ today, week, month }`） |
+| `interchanges` | 新增统计块：`totalCount` / `internetAdded` / `manualAdded`（`{ today, week, month }`）。**v1.52.0 删除 `pendingCount`**（无候选待审，恒为 0） |
 | `periods` | 新增顶层对象 `{ today, weekStart, monthStart }`（业务日历 `yyyy-MM-dd` 起点），供前端图表下钻使用同一日界 |
 | 移除 | `bearings.todayAdded/thisWeekAdded/thisMonthAdded`、`merchants.todayRegistered/thisWeekRegistered/thisMonthRegistered`（改由上述拆分字段承载） |
 
@@ -660,7 +662,7 @@ OpenFindBearings.Api（以下简称 API）共注册 **163** 个端点，按职�
 > 用途：仪表盘拆两张图——**互联网新增**（爬虫/同步）与**人工新增**（平台维护 / 商家入驻），各含 轴承/商家/替代品 三系列；
 > 点"商家"柱按 `periods` 起点下钻：互联网图 → `/Data/Merchants?dateField=registered&dateFrom=<起点>&sourceFilter=internet`，
 > 人工图 → `/Data/Merchants?dateField=onboarded&dateFrom=<起点>`。
-> 各实体来源口径：轴承=创建时 `DataSource`；商家=互联网为 `DataSource`，人工为**入驻生效**（含认领）；替代品=互联网为 `DataSource`，人工为平台维护（Manual）+ 商家报候选（UserSubmitted）。
+> 各实体来源口径：轴承=创建时 `DataSource`；商家=互联网为 `DataSource`，人工为**入驻生效**（含认领）；替代品=互联网为 `DataSource`（管线推送），人工为平台维护（Manual）。
 
 ### 轴承列表查询参数（`GET /api/admin/bearings`，`bearing.view`）
 | 参数/字段 | 说明 |
@@ -673,7 +675,7 @@ OpenFindBearings.Api（以下简称 API）共注册 **163** 个端点，按职�
 | 参数 | 说明 |
 |---|---|
 | `createdFrom` / `createdTo` | 创建时间区间（业务日历 `yyyy-MM-dd`，两端含） |
-| `internetSource` | `true`=仅互联网来源（Sync 批量）；`false`=仅非互联网来源（平台维护 + 商家报候选） |
+| `internetSource` | `true`=仅互联网来源（数据管线批量）；`false`=仅非互联网来源（平台维护） |
 
 > 三端下钻一致：轴承柱 → `/Data/Bearings?dateFrom=…&sourceFilter=internet|noninternet`；
 > 替代品柱 → `/Interchanges?createdFrom=…&sourceFilter=internet|noninternet`；商家柱见上。

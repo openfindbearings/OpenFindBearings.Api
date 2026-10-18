@@ -1,8 +1,8 @@
 namespace OpenFindBearings.Application.DTOs
 {
     /// <summary>
-    /// 替代关系管理行 DTO（v2.16.0）：平台管理列表 / 审核队列 / 商家提交进度共用。
-    /// 含源/目标轴承精简信息、三级类型、审核状态与驳回理由。
+    /// 替代关系管理行 DTO（v2.17.0 字典化）：平台管理列表使用。
+    /// 含源/目标轴承精简信息、三级类型、可信度与来源。
     /// </summary>
     public class InterchangeAdminDto
     {
@@ -33,22 +33,10 @@ namespace OpenFindBearings.Application.DTOs
         /// <summary>是否双向替代</summary>
         public bool IsBidirectional { get; set; }
 
-        /// <summary>审核状态（0=已生效 1=待审核 2=已驳回）</summary>
-        public int ReviewStatus { get; set; }
+        // 改动说明（v2.17.0 替代品字典化）：删除审核状态/驳回理由/提出商户四字段——
+        //   替代关系不再有"商家候选待审"概念，进 API 即生效（爬取候选在 Sync staging 审核）
 
-        /// <summary>审核状态中文标签</summary>
-        public string ReviewStatusLabel { get; set; } = string.Empty;
-
-        /// <summary>驳回理由（仅已驳回有值）</summary>
-        public string? ReviewComment { get; set; }
-
-        /// <summary>提出候选的商户ID（平台自建为 null）</summary>
-        public Guid? ProposedByMerchantId { get; set; }
-
-        /// <summary>提出候选的商户名称（平台自建为 null）</summary>
-        public string? ProposedByMerchantName { get; set; }
-
-        /// <summary>数据来源类型（Manual/Internet/UserSubmitted 等）</summary>
+        /// <summary>数据来源类型（Manual/Internet 等）</summary>
         public string? DataSourceType { get; set; }
 
         /// <summary>创建时间（UTC，展示层转本地）</summary>

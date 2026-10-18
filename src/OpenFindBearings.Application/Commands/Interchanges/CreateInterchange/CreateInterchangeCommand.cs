@@ -75,8 +75,8 @@ namespace OpenFindBearings.Application.Commands.Interchanges.CreateInterchange
                 request.Remarks,
                 request.IsBidirectional);
 
+            // 改动说明（v2.17.0 替代品字典化）：平台新建即生效，不再需要 MarkApproved（审核状态机已取消）
             entity.SetDataSource(DataSource.FromManual());
-            entity.MarkApproved();
 
             await _interchangeRepository.AddAsync(entity, cancellationToken);
             _logger.LogInformation("平台新建替代关系: {Source} -> {Target}", source.PartNumber, target.PartNumber);

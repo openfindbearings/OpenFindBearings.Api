@@ -56,7 +56,7 @@ namespace OpenFindBearings.Application.Queries.Bearings.GetBearingQuery
                 .ToList();
 
             // 获取替代品列表（v2.16.0：仅已生效，源∪双向反向；含三级类型）
-            var interchanges = await _interchangeRepository.GetApprovedForBearingAsync(bearing.Id, cancellationToken);
+            var interchanges = await _interchangeRepository.GetForBearingAsync(bearing.Id, cancellationToken);
             var interchangeItems = interchanges
                 .Select(i => i.ToInterchangeDto(bearing.Id))
                 .ToList();

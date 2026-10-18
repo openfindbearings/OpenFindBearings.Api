@@ -7,7 +7,9 @@ namespace OpenFindBearings.Application.Queries.Corrections.GetCorrectableFields
     /// <summary>
     /// 可纠错字段查询处理器：读取目标实体当前值并按类型输出字段清单。
     /// 清单集合与 ApproveCorrectionCommandHandler 的 Apply switch 严格对齐——
-    /// 审批端能应用的字段才允许用户纠错，杜绝"提交了但采纳也不生效"的假选项
+    /// 审批端能应用的字段才允许用户纠错，杜绝"提交了但采纳也不生效"的假选项。
+    /// 唯一例外：interchange（替代关系报告，v2.17.0 替代品字典化）为"提交类"字段，
+    /// 审批不自动应用——由平台管理员在替代品管理页落地替代关系后再审批
     /// </summary>
     public class GetCorrectableFieldsQueryHandler : IRequestHandler<GetCorrectableFieldsQuery, List<CorrectionFieldOptionDto>>
     {
@@ -40,8 +42,11 @@ namespace OpenFindBearings.Application.Queries.Corrections.GetCorrectableFields
 
             static string? S(object? v) => v?.ToString();
             // 改动说明（v2.13.2 标签收敛）：字段 id 与值的清单在此维护，显示名统一取自 CorrectionFieldLabels
+            // 改动说明（v2.17.0 替代品字典化）：新增 interchange（替代关系报告）——无当前值（Value=null），
+            //   作为"报告替代关系有误 / 建议补充替代型号"的反馈入口；审批不自动应用，由平台在替代品管理页落地
             (string Id, string? Value)[] raw =
             [
+                ("interchange", null),
                 ("oldNumber", bearing.OldNumber),
                 ("description", bearing.Description),
                 ("weight", S(bearing.Weight)),

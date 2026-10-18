@@ -30,19 +30,8 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             builder.Property(bi => bi.IsBidirectional)
                 .HasDefaultValue(true);
 
-            // ============ 审核治理（v2.16.0） ============
-            // 默认 Approved：存量种子/互联网行保持生效可见；商家提交时显式置 Pending
-            builder.Property(bi => bi.ReviewStatus)
-                .HasConversion<int>()
-                .HasDefaultValue(InterchangeReviewStatus.Approved);
-
-            builder.Property(bi => bi.ReviewComment)
-                .HasMaxLength(500);
-
-            builder.Property(bi => bi.ProposedByMerchantId);
-
-            builder.HasIndex(bi => bi.ReviewStatus)
-                .HasDatabaseName("IX_BearingInterchanges_ReviewStatus");
+            // 改动说明（v2.17.0 替代品字典化）：删除审核治理三字段与审核状态索引
+            //   （ReviewStatus/ReviewComment/ProposedByMerchantId）——替代关系进 API 即生效
 
             // ============ 值对象 - DataSource（覆盖保护） ============
             builder.OwnsOne(bi => bi.DataSource, ds =>

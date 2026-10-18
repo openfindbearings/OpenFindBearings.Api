@@ -25,7 +25,7 @@ namespace OpenFindBearings.Application.Queries.Bearings.GetBearingInterchanges
 
         public async Task<List<BearingInterchangeDto>> Handle(GetBearingInterchangesQuery request, CancellationToken cancellationToken)
         {
-            var interchanges = await _interchangeRepository.GetApprovedForBearingAsync(request.BearingId, cancellationToken);
+            var interchanges = await _interchangeRepository.GetForBearingAsync(request.BearingId, cancellationToken);
             return interchanges.Select(bi => bi.ToInterchangeDto(request.BearingId)).ToList();
         }
     }
