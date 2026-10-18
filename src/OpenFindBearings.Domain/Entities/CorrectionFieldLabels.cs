@@ -31,7 +31,9 @@ namespace OpenFindBearings.Domain.Entities
             { "staticLoad", "静载荷" },
             { "limitingSpeed", "极限转速" },
             { "limitingSpeedGrease", "极限转速（脂润滑）" },
-            { "limitingSpeedOil", "极限转速（油润滑）" }
+            { "limitingSpeedOil", "极限转速（油润滑）" },
+            // 改动说明（v2.17.0 替代品字典化）：替代关系报告的显示名（提交类字段，无当前值）
+            { "interchange", "替代关系" }
         };
 
         /// <summary>商家字段标签（键为 camelCase 字段 id）</summary>

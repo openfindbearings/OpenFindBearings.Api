@@ -183,13 +183,12 @@
     {
         public int TotalCount { get; set; }
 
-        /// <summary>待审核候选数（商家报候选/平台提交后未生效）</summary>
-        public int PendingCount { get; set; }
+        // 改动说明（v2.17.0 替代品字典化）：删除 PendingCount——替代关系不再有"候选待审"，该值恒为 0
 
         /// <summary>互联网来源新增（Sync 批量），按今日/本周/本月</summary>
         public PeriodCountDto InternetAdded { get; set; } = new();
 
-        /// <summary>人工来源新增（平台维护 + 商家报候选），按今日/本周/本月</summary>
+        /// <summary>人工来源新增（平台维护），按今日/本周/本月</summary>
         public PeriodCountDto ManualAdded { get; set; } = new();
     }
 

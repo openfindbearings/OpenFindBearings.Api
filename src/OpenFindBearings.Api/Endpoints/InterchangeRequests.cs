@@ -18,6 +18,5 @@ namespace OpenFindBearings.Api.Endpoints
         string? Remarks,
         bool? IsBidirectional);
 
-    /// <summary>驳回替代候选请求（平台，附理由，v2.16.0）</summary>
-    public record RejectInterchangeRequest(string? Reason);
+    // 改动说明（v2.17.0 替代品字典化）：删除 RejectInterchangeRequest——驳回端点随商家候选流一并取消
 }

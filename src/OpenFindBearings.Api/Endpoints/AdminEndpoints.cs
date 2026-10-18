@@ -7,7 +7,6 @@ using OpenFindBearings.Api.Middleware;
 using OpenFindBearings.Api.Services;
 using OpenFindBearings.Application.Commands.Admin.ApproveDocument;
 using OpenFindBearings.Application.Commands.Admin.RejectDocument;
-// 改动说明 G4：平台兜底指定商户成员（命令与实体引用）
 using OpenFindBearings.Application.Commands.Merchants.AssignMerchantMember;
 using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Application.Commands.Bearings.CreateBearing;
@@ -31,20 +30,15 @@ using OpenFindBearings.Application.Commands.Merchants.ApproveMerchant;
 using OpenFindBearings.Application.Commands.Merchants.DeleteMerchant;
 using OpenFindBearings.Application.Commands.Merchants.HardDeleteMerchant;
 using OpenFindBearings.Application.Commands.Merchants.DetachMerchant;
-using OpenFindBearings.Api.Services;
 using OpenFindBearings.Application.Commands.Merchants.RejectMerchant;
 using OpenFindBearings.Application.Commands.Merchants.VerifyMerchant;
 using OpenFindBearings.Application.Commands.Admin.ApproveMerchantBearing;
 using OpenFindBearings.Application.Commands.Admin.RejectMerchantBearing;
 using OpenFindBearings.Application.Queries.Admin.GetPendingMerchantBearings;
-// 替代品治理（v2.16.0）：平台建标准、审关系
 using OpenFindBearings.Application.Commands.Interchanges.CreateInterchange;
 using OpenFindBearings.Application.Commands.Interchanges.UpdateInterchange;
 using OpenFindBearings.Application.Commands.Interchanges.DeleteInterchange;
-using OpenFindBearings.Application.Commands.Interchanges.ApproveInterchange;
-using OpenFindBearings.Application.Commands.Interchanges.RejectInterchange;
 using OpenFindBearings.Application.Queries.Admin.GetInterchanges;
-using OpenFindBearings.Application.Queries.Admin.GetPendingInterchanges;
 using OpenFindBearings.Application.Commands.Merchants.RestoreMerchant;
 using OpenFindBearings.Application.Commands.Roles.AssignPermissionsToRole;
 using OpenFindBearings.Application.Commands.Roles.AssignRoleToUser;
@@ -228,7 +222,7 @@ namespace OpenFindBearings.Api.Endpoints
                 [FromServices] IMediator mediator,
                 HttpContext httpContext,
                 [FromQuery] string? keyword = null,
-                [FromQuery] int? reviewStatus = null,
+                // 改动说明（v2.17.0 字典化）：去掉审核状态过滤参数（替代关系审核状态机已取消）
                 [FromQuery] string? createdFrom = null,
                 [FromQuery] string? createdTo = null,
                 [FromQuery] bool? internetSource = null,
@@ -241,7 +235,6 @@ namespace OpenFindBearings.Api.Endpoints
                 var result = await mediator.Send(new GetInterchangesQuery
                 {
                     Keyword = keyword,
-                    ReviewStatus = reviewStatus,
                     CreatedFrom = incFrom,
                     CreatedTo = incTo,
                     InternetSource = internetSource,
@@ -252,23 +245,12 @@ namespace OpenFindBearings.Api.Endpoints
             })
             .WithName("GetInterchanges")
             .WithSummary("替代关系列表")
-            .WithDescription("平台管理替代关系列表（可按关键字/审核状态过滤）")
-            .RequirePermission("merchant.verify");
+            .WithDescription("平台管理替代关系列表（可按关键字/创建时间/来源过滤）")
+            // 改动说明（v2.17.0 替代品字典化）：替代品属主数据，权限由 merchant.verify 改为 interchange.view
+            .RequirePermission("interchange.view");
 
-            /// <summary>待审核替代候选列表（平台）</summary>
-            group.MapGet("/interchanges/pending", async (
-                [FromServices] IMediator mediator,
-                HttpContext httpContext,
-                [FromQuery] int page = 1,
-                [FromQuery] int pageSize = 20) =>
-            {
-                var result = await mediator.Send(new GetPendingInterchangesQuery { Page = page, PageSize = pageSize });
-                return ApiResponseHelper.Paged(result.Items.ToList(), result.TotalCount, result.Page, result.PageSize, httpContext);
-            })
-            .WithName("GetPendingInterchanges")
-            .WithSummary("待审核替代候选")
-            .WithDescription("商家提交的替代候选待审核队列")
-            .RequirePermission("merchant.verify");
+            // 改动说明（v2.17.0 替代品字典化）：删除 /interchanges/pending 端点——
+            //   商家候选流取消，不再有"待审核队列"
 
             /// <summary>平台新建替代关系（直接生效）</summary>
             group.MapPost("/interchanges", async (
@@ -291,7 +273,8 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("CreateInterchange")
             .WithSummary("新建替代关系")
             .WithDescription("平台自建替代关系（直接生效、公域可见）")
-            .RequirePermission("merchant.verify");
+            // 改动说明（v2.17.0 替代品字典化）：写操作权限改为 interchange.manage
+            .RequirePermission("interchange.manage");
 
             /// <summary>平台编辑替代关系</summary>
             group.MapPut("/interchanges/{id:guid}", async (
@@ -314,7 +297,8 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("UpdateInterchange")
             .WithSummary("编辑替代关系")
             .WithDescription("平台编辑替代关系的类型/可信度/来源/备注/双向")
-            .RequirePermission("merchant.verify");
+            // 改动说明（v2.17.0 替代品字典化）：写操作权限改为 interchange.manage
+            .RequirePermission("interchange.manage");
 
             /// <summary>平台删除替代关系（物理删除）</summary>
             group.MapDelete("/interchanges/{id:guid}", async (
@@ -328,36 +312,11 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("DeleteInterchange")
             .WithSummary("删除替代关系")
             .WithDescription("平台删除替代关系（物理删除，唯一键释放）")
-            .RequirePermission("merchant.verify");
+            // 改动说明（v2.17.0 替代品字典化）：写操作权限改为 interchange.manage
+            .RequirePermission("interchange.manage");
 
-            /// <summary>审核通过替代候选</summary>
-            group.MapPost("/interchanges/{id:guid}/approve", async (
-                Guid id,
-                [FromServices] IMediator mediator,
-                HttpContext httpContext) =>
-            {
-                await mediator.Send(new ApproveInterchangeCommand { Id = id });
-                return ApiResponseHelper.Ok("已通过", httpContext);
-            })
-            .WithName("ApproveInterchange")
-            .WithSummary("审核通过替代候选")
-            .WithDescription("通过后该替代关系生效并对公域可见")
-            .RequirePermission("merchant.verify");
-
-            /// <summary>驳回替代候选（附理由）</summary>
-            group.MapPost("/interchanges/{id:guid}/reject", async (
-                Guid id,
-                RejectInterchangeRequest body,
-                [FromServices] IMediator mediator,
-                HttpContext httpContext) =>
-            {
-                await mediator.Send(new RejectInterchangeCommand { Id = id, Reason = body.Reason ?? string.Empty });
-                return ApiResponseHelper.Ok("已驳回", httpContext);
-            })
-            .WithName("RejectInterchange")
-            .WithSummary("驳回替代候选")
-            .WithDescription("驳回商家替代候选（附理由，提交方可见）")
-            .RequirePermission("merchant.verify");
+            // 改动说明（v2.17.0 替代品字典化）：删除"审核通过/审核驳回"两个端点——
+            //   替代关系不再有候选待审，平台在"替代品管理"页直接维护
 
             // ============ 4.2 轴承管理 ============
 

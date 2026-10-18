@@ -84,7 +84,7 @@ namespace OpenFindBearings.Application.Queries.Admin.GetDashboardStats
             var merchantTypeDist = await _merchantRepository.GetTypeDistributionAsync(cancellationToken);
 
             var interchangeTotal = await _interchangeRepository.GetTotalCountAsync(cancellationToken);
-            var interchangePending = await _interchangeRepository.GetPendingCountAsync(cancellationToken);
+            // 改动说明（v2.17.0 替代品字典化）：删除替代品待审核计数（替代关系不再有"候选待审"，该值恒为 0）
             var interchangeInternetToday = await _interchangeRepository.GetCountSinceBySourceAsync(todayStart, true, cancellationToken);
             var interchangeInternetWeek = await _interchangeRepository.GetCountSinceBySourceAsync(weekStart, true, cancellationToken);
             var interchangeInternetMonth = await _interchangeRepository.GetCountSinceBySourceAsync(monthStart, true, cancellationToken);
@@ -189,7 +189,6 @@ namespace OpenFindBearings.Application.Queries.Admin.GetDashboardStats
                 Interchanges = new InterchangesStatsDto
                 {
                     TotalCount = interchangeTotal,
-                    PendingCount = interchangePending,
                     InternetAdded = new PeriodCountDto { Today = interchangeInternetToday, Week = interchangeInternetWeek, Month = interchangeInternetMonth },
                     ManualAdded = new PeriodCountDto { Today = interchangeManualToday, Week = interchangeManualWeek, Month = interchangeManualMonth }
                 },

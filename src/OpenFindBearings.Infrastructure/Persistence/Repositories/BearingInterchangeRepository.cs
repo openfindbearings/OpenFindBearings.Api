@@ -36,17 +36,8 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                 .ToListAsync(cancellationToken);
         }
 
-        public async Task<List<BearingInterchange>> GetByTargetBearingAsync(Guid bearingId, CancellationToken cancellationToken = default)
-        {
-            return await _context.BearingInterchanges
-                .Include(bi => bi.SourceBearing)
-                    .ThenInclude(b => b.Brand)
-                .Include(bi => bi.SourceBearing)
-                    .ThenInclude(b => b.BearingTypeNavigation)
-                .Where(bi => bi.TargetBearingId == bearingId && bi.IsActive)
-                .OrderByDescending(bi => bi.Confidence)
-                .ToListAsync(cancellationToken);
-        }
+        // 改动说明（v2.17.0 僵尸方法清理）：删除无任何调用方的 GetByTargetBearingAsync
+        //   （反向关系已由 GetForBearingAsync 的"源∪双向反向"合并覆盖）
 
         public async Task<bool> ExistsAsync(Guid sourceId, Guid targetId, CancellationToken cancellationToken = default)
         {
@@ -81,16 +72,16 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
             }
         }
 
-        public async Task<List<BearingInterchange>> GetApprovedForBearingAsync(Guid bearingId, CancellationToken cancellationToken = default)
+        public async Task<List<BearingInterchange>> GetForBearingAsync(Guid bearingId, CancellationToken cancellationToken = default)
         {
             // 正向（该轴承为源）+ 反向（该轴承为目标且双边）合并，双向标记因此真正生效
+            // 改动说明（v2.17.0 字典化）：去掉 ReviewStatus==Approved 条件（审核状态机已取消，进 API 即生效）
             return await _context.BearingInterchanges
                 .Include(bi => bi.SourceBearing).ThenInclude(b => b!.Brand)
                 .Include(bi => bi.SourceBearing).ThenInclude(b => b!.BearingTypeNavigation)
                 .Include(bi => bi.TargetBearing).ThenInclude(b => b!.Brand)
                 .Include(bi => bi.TargetBearing).ThenInclude(b => b!.BearingTypeNavigation)
                 .Where(bi => bi.IsActive
-                    && bi.ReviewStatus == InterchangeReviewStatus.Approved
                     && (bi.SourceBearingId == bearingId
                         || (bi.TargetBearingId == bearingId && bi.IsBidirectional)))
                 .OrderByDescending(bi => bi.Confidence)
@@ -98,7 +89,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         }
 
         public async Task<(List<BearingInterchange> Items, int Total)> GetPagedAsync(
-            string? keyword, InterchangeReviewStatus? status,
+            string? keyword,
             DateTime? createdFromUtc, DateTime? createdToUtc, bool? internetSource,
             int page, int pageSize, CancellationToken cancellationToken = default)
         {
@@ -116,8 +107,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                     : query.Where(bi => bi.DataSource == null || bi.DataSource.SourceType != DataSourceType.Internet);
             }
 
-            if (status.HasValue)
-                query = query.Where(bi => bi.ReviewStatus == status.Value);
+            // 改动说明（v2.17.0 字典化）：去掉审核状态过滤（状态机已取消）
 
             if (!string.IsNullOrWhiteSpace(keyword))
             {
@@ -141,37 +131,8 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
             return (items, total);
         }
 
-        public async Task<(List<BearingInterchange> Items, int Total)> GetPendingAsync(
-            int page, int pageSize, CancellationToken cancellationToken = default)
-        {
-            var query = _context.BearingInterchanges
-                .Where(bi => bi.ReviewStatus == InterchangeReviewStatus.Pending);
-
-            var total = await query.CountAsync(cancellationToken);
-            var items = await query
-                .Include(bi => bi.SourceBearing).ThenInclude(b => b!.Brand)
-                .Include(bi => bi.SourceBearing).ThenInclude(b => b!.BearingTypeNavigation)
-                .Include(bi => bi.TargetBearing).ThenInclude(b => b!.Brand)
-                .Include(bi => bi.TargetBearing).ThenInclude(b => b!.BearingTypeNavigation)
-                .OrderBy(bi => bi.CreatedAt)
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .ToListAsync(cancellationToken);
-
-            return (items, total);
-        }
-
-        public async Task<List<BearingInterchange>> GetByProposerAsync(Guid merchantId, CancellationToken cancellationToken = default)
-        {
-            return await _context.BearingInterchanges
-                .Include(bi => bi.SourceBearing).ThenInclude(b => b!.Brand)
-                .Include(bi => bi.SourceBearing).ThenInclude(b => b!.BearingTypeNavigation)
-                .Include(bi => bi.TargetBearing).ThenInclude(b => b!.Brand)
-                .Include(bi => bi.TargetBearing).ThenInclude(b => b!.BearingTypeNavigation)
-                .Where(bi => bi.ProposedByMerchantId == merchantId)
-                .OrderByDescending(bi => bi.UpdatedAt)
-                .ToListAsync(cancellationToken);
-        }
+        // 改动说明（v2.17.0 替代品字典化）：删除 GetPendingAsync 与 GetByProposerAsync——
+        //   商家候选流取消，"待审核队列/我的提交"不再存在
 
         /// <inheritdoc/>
         public async Task<int> GetTotalCountAsync(CancellationToken cancellationToken = default)
@@ -180,17 +141,10 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         }
 
         /// <inheritdoc/>
-        public async Task<int> GetPendingCountAsync(CancellationToken cancellationToken = default)
-        {
-            return await _context.BearingInterchanges
-                .CountAsync(bi => bi.IsActive && bi.ReviewStatus == InterchangeReviewStatus.Pending, cancellationToken);
-        }
-
-        /// <inheritdoc/>
         public async Task<int> GetCountSinceBySourceAsync(DateTime since, bool isInternet, CancellationToken cancellationToken = default)
         {
             // 改动说明（v1.50.0 来源拆分统计）：互联网=DataSource.SourceType 为 Internet（Sync 批量），
-            //   人工=非互联网（平台维护 Manual + 商家报候选 UserSubmitted）
+            //   人工=非互联网（平台维护）；v2.17.0 起不再有商家报候选
             var query = _context.BearingInterchanges.Where(bi => bi.IsActive && bi.CreatedAt >= since);
             query = isInternet
                 ? query.Where(bi => bi.DataSource != null && bi.DataSource.SourceType == DataSourceType.Internet)

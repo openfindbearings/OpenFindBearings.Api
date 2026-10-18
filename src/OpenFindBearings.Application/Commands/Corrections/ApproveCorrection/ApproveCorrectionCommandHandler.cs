@@ -109,6 +109,11 @@ namespace OpenFindBearings.Application.Commands.Corrections.ApproveCorrection
                     );
                     bearing.UpdatePerformance(newPerf);
                     break;
+                case "interchange":
+                    // 改动说明（v2.17.0 替代品字典化）：替代关系报告不自动应用——
+                    //   建议值为自由文本，无法确定性解析为"源→目标"一对轴承；由平台管理员在
+                    //   "替代品管理"页落地该替代关系后再审批，审批即代表该报告已核实处理
+                    break;
             }
 
             // 覆盖保护：纠错审批通过后标记为非互联网来源，
