@@ -246,7 +246,8 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("GetInterchanges")
             .WithSummary("替代关系列表")
             .WithDescription("平台管理替代关系列表（可按关键字/创建时间/来源过滤）")
-            .RequirePermission("merchant.verify");
+            // 改动说明（v2.17.0 替代品字典化）：替代品属主数据，权限由 merchant.verify 改为 interchange.view
+            .RequirePermission("interchange.view");
 
             // 改动说明（v2.17.0 替代品字典化）：删除 /interchanges/pending 端点——
             //   商家候选流取消，不再有"待审核队列"
@@ -272,7 +273,8 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("CreateInterchange")
             .WithSummary("新建替代关系")
             .WithDescription("平台自建替代关系（直接生效、公域可见）")
-            .RequirePermission("merchant.verify");
+            // 改动说明（v2.17.0 替代品字典化）：写操作权限改为 interchange.manage
+            .RequirePermission("interchange.manage");
 
             /// <summary>平台编辑替代关系</summary>
             group.MapPut("/interchanges/{id:guid}", async (
@@ -295,7 +297,8 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("UpdateInterchange")
             .WithSummary("编辑替代关系")
             .WithDescription("平台编辑替代关系的类型/可信度/来源/备注/双向")
-            .RequirePermission("merchant.verify");
+            // 改动说明（v2.17.0 替代品字典化）：写操作权限改为 interchange.manage
+            .RequirePermission("interchange.manage");
 
             /// <summary>平台删除替代关系（物理删除）</summary>
             group.MapDelete("/interchanges/{id:guid}", async (
@@ -309,7 +312,8 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("DeleteInterchange")
             .WithSummary("删除替代关系")
             .WithDescription("平台删除替代关系（物理删除，唯一键释放）")
-            .RequirePermission("merchant.verify");
+            // 改动说明（v2.17.0 替代品字典化）：写操作权限改为 interchange.manage
+            .RequirePermission("interchange.manage");
 
             // 改动说明（v2.17.0 替代品字典化）：删除"审核通过/审核驳回"两个端点——
             //   替代关系不再有候选待审，平台在"替代品管理"页直接维护

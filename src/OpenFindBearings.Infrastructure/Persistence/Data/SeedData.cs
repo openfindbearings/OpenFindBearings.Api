@@ -105,6 +105,10 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
                 new("type.create", "创建型号"),
                 new("type.edit", "编辑型号"),
                 new("type.delete", "删除型号"),
+                // 改动说明（v2.17.0 替代品字典化）：替代关系已成为平台维护的主数据（字典），
+                //   与品牌/类型/轴承同维，独立成键，不再借用 merchant.verify（认证审核语义）
+                new("interchange.view", "查看替代关系"),
+                new("interchange.manage", "维护替代关系"),
                 new("merchant.view", "查看商家"),
                 new("merchant.manage", "编辑商家"),
                 new("merchant.verify", "认证审核商家"),
@@ -164,11 +168,13 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
             // Operator（v1.39.0 重定义）= 仪表盘 + 数据管理 view/create/edit（无删除/恢复/解除归属）
             // + 审核组全量 + 映射查看 + 用户封禁（客服常规处置）；
             // 刻意不含：delete/restore/harddelete/detach/user.assign/role.manage
+            // 改动说明（v2.17.0 替代品字典化）：替代品属主数据维护，操作员给 view + manage
             string[] operatorPerms = [
                 "dashboard.view",
                 "bearing.view", "bearing.create", "bearing.edit",
                 "brand.view", "brand.create", "brand.edit",
                 "type.view", "type.create", "type.edit",
+                "interchange.view", "interchange.manage",
                 "merchant.view", "merchant.manage", "merchant.verify",
                 
                 "correction.review", "sourcing.view", "sourcing.manage",
@@ -180,8 +186,10 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
             }
 
             // Auditor = 只读监察：全部 view 键 + 审计日志（无任何写权限点）
+            // 改动说明（v2.17.0）：含替代关系查看键（只读可进替代品管理页）
             string[] auditorPerms = [
                 "dashboard.view", "bearing.view", "brand.view", "type.view", "merchant.view",
+                "interchange.view",
                  "correction.review", "sourcing.view",
                 "user.view", "permission.view", "system.view", "audit.view",
             ];
