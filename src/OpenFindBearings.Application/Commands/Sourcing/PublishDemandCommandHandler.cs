@@ -26,12 +26,21 @@ namespace OpenFindBearings.Application.Commands.Sourcing
     public record PublishDemandCommand(
         Guid UserId, string PartNumber, Guid? BearingId, string? Brand, string? Quantity,
         string? ExpectedDelivery, string? Region, string? Description, bool UsePoints,
-        Guid? MerchantId = null, Guid? TargetMerchantId = null) : IRequest<Guid>;
+        Guid? MerchantId = null, Guid? TargetMerchantId = null) : IRequest<PublishDemandResult>;
+
+    /// <summary>
+    /// 发布寻货结果（v1.7.0 两条路径可见化）：DemandId=新建寻货单 ID；
+    /// MatchedMerchantCount=本次已匹配并推送的认证商家家数（广播单按在售匹配口径、定向单=1、无匹配=0），
+    /// 供前端区分"已通知在售商家"与"进入大厅等应答"两种反馈。
+    /// </summary>
+    /// <param name="DemandId">新建寻货单 ID</param>
+    /// <param name="MatchedMerchantCount">已匹配并推送的认证商家家数</param>
+    public record PublishDemandResult(Guid DemandId, int MatchedMerchantCount);
 
     /// <summary>
     /// 发布寻货处理器
     /// </summary>
-    public class PublishDemandCommandHandler : IRequestHandler<PublishDemandCommand, Guid>
+    public class PublishDemandCommandHandler : IRequestHandler<PublishDemandCommand, PublishDemandResult>
     {
         private readonly ISourcingDemandRepository _demandRepository;
         private readonly ISystemConfigRepository _configRepository;
@@ -46,6 +55,9 @@ namespace OpenFindBearings.Application.Commands.Sourcing
         private readonly IMerchantRepository _merchantRepository;
         // v1.6.0 搜索寻货联动：发布成功后发布事件，驱动"匹配认证商家"推送
         private readonly IPublisher _publisher;
+        // 改动说明（v1.7.0 两条路径可见化）：回传"已匹配认证商家家数"，与推送订阅者共用 SourcingMatcher 口径
+        private readonly IBearingRepository _bearingRepository;
+        private readonly IMerchantBearingRepository _merchantBearingRepository;
 
         /// <summary>
         /// 构造：需求仓储 + 配置/规则仓储 + 积分服务（加量扣分）+ 商家等级（额度 buff）+ 成就引擎（发布计数）
@@ -60,7 +72,9 @@ namespace OpenFindBearings.Application.Commands.Sourcing
             IAchievementService achievements,
             IMerchantMemberRepository memberRepository,
             IMerchantRepository merchantRepository,
-            IPublisher publisher)
+            IPublisher publisher,
+            IBearingRepository bearingRepository,
+            IMerchantBearingRepository merchantBearingRepository)
         {
             _demandRepository = demandRepository;
             _configRepository = configRepository;
@@ -71,10 +85,12 @@ namespace OpenFindBearings.Application.Commands.Sourcing
             _memberRepository = memberRepository;
             _merchantRepository = merchantRepository;
             _publisher = publisher;
+            _bearingRepository = bearingRepository;
+            _merchantBearingRepository = merchantBearingRepository;
         }
 
         /// <inheritdoc/>
-        public async Task<Guid> Handle(PublishDemandCommand request, CancellationToken cancellationToken)
+        public async Task<PublishDemandResult> Handle(PublishDemandCommand request, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(request.PartNumber))
                 throw new InvalidOperationException("请填写寻货型号");
@@ -136,7 +152,15 @@ namespace OpenFindBearings.Application.Commands.Sourcing
             await _publisher.Publish(new SourcingDemandPublishedEvent(
                 demand.Id, request.UserId, request.BearingId, demand.PartNumber, request.Brand,
                 request.TargetMerchantId), cancellationToken);
-            return demand.Id;
+
+            // 改动说明（v1.7.0 两条路径可见化）：回传本次已匹配并推送的认证商家家数，供前端区分
+            //   "已通知在售商家"（>0）与"进入大厅等应答"（=0）；定向单只推目标商户，家数恒为 1
+            var matchedCount = request.TargetMerchantId.HasValue
+                ? 1
+                : (await SourcingMatcher.GetMatchedMerchantIdsAsync(
+                    _bearingRepository, _merchantBearingRepository, _merchantRepository,
+                    request.BearingId, demand.PartNumber, cancellationToken)).Count;
+            return new PublishDemandResult(demand.Id, matchedCount);
         }
     }
 }
