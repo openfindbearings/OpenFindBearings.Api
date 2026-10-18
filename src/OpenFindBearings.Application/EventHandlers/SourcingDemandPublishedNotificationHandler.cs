@@ -2,7 +2,6 @@ using MediatR;
 using OpenFindBearings.Application.Commands.Sourcing;
 using OpenFindBearings.Application.Services;
 using OpenFindBearings.Domain.Entities;
-using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Events;
 using OpenFindBearings.Domain.Repositories;
 
@@ -11,6 +10,7 @@ namespace OpenFindBearings.Application.EventHandlers
     /// <summary>
     /// 寻货发布通知订阅者（v1.6.0 搜索寻货联动）。
     /// 广播单：匹配"在售本轴承（公域可见）的认证商家"，向其管理员推提醒；
+    ///   改动说明（v1.7.0 匹配口径统一）：匹配逻辑改走 SourcingMatcher，与发布处理器回传的"已匹配家数"同口径。
     /// 定向单：仅推目标商户管理员。
     /// 多方式提醒：站内信必发 + 外部通道（短信/微信/邮件，按偏好，网关预留）。
     /// 限频：同一管理员、同型号每日至多 N 条（SystemConfig Sourcing.NotifyMaxPerMerchantPerDay，默认 3），
@@ -57,33 +57,14 @@ namespace OpenFindBearings.Application.EventHandlers
                 return;
             }
 
-            // 广播单：优先用关联轴承；无 bearingId（如从发现页直接发布、自由文本型号）时按型号文本精确匹配主数据兜底
-            var bearingId = notification.BearingId;
-            if (!bearingId.HasValue && !string.IsNullOrWhiteSpace(notification.PartNumber))
-            {
-                var bearing = await _bearingRepository.GetByPartNumberAsync(notification.PartNumber.Trim(), cancellationToken);
-                bearingId = bearing?.Id;
-            }
-            // 仍未命中主数据（长尾自由型号，无人有该型号在售）则不打扰任何人
-            if (!bearingId.HasValue)
-                return;
-
-            var listings = await _merchantBearingRepository.GetByBearingAsync(bearingId.Value, cancellationToken);
-            // 公域可见 = 审核通过 且（出售中 或 补货中）
-            var merchantIds = listings
-                .Where(mb => mb.ReviewStatus == ListingReviewStatus.Approved
-                    && (mb.SaleState == SaleState.OnSale || mb.SaleState == SaleState.Restocking))
-                .Select(mb => mb.MerchantId)
-                .Distinct()
-                .ToList();
+            // 改动说明（v1.7.0 匹配口径统一）：广播单改走 SourcingMatcher（公域可见在售 + 已认证；无 bearingId 时
+            //   按型号文本兜底；未命中主数据或无人匹配则谁都不打扰），与发布处理器回传的匹配家数同一口径
+            var merchantIds = await SourcingMatcher.GetMatchedMerchantIdsAsync(
+                _bearingRepository, _merchantBearingRepository, _merchantRepository,
+                notification.BearingId, notification.PartNumber, cancellationToken);
 
             foreach (var merchantId in merchantIds)
             {
-                var merchant = await _merchantRepository.GetByIdAsync(merchantId, cancellationToken);
-                // 仅认证商家（可信数据），未认证的不打扰
-                if (merchant == null || !merchant.IsVerified)
-                    continue;
-
                 await NotifyMerchantAdminsAsync(merchantId, notification,
                     "有买家寻货，您的在售型号匹配",
                     $"有买家正在寻货「{notification.PartNumber}」，您的在售型号匹配，点此应答报价。",

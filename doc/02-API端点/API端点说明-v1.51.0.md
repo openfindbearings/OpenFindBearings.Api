@@ -1,7 +1,7 @@
 # API 端点说明文档
 
-**版本：** v1.50.0
-**日期：** 2026-10-17
+**版本：** v1.51.0
+**日期：** 2026-10-18
 **状态：** 与代码同步
 
 ---
@@ -11,6 +11,7 @@
 
 | 版本 | 日期 | 变更说明 |
 |------|------|----------|
+| v1.51.0 | 2026-10-18 | **寻货发布回传匹配家数（搜索—寻货两条路径可见化）**：`POST /api/sourcing/demands` 响应由 `{ id }` 扩为 `{ id, matchedMerchantCount }`——广播单=本次**已匹配并推送的认证商家家数**（口径=公域可见在售本轴承 + 已认证），定向单=1，无匹配=0；前端据此区分"已通知 N 家认证商家"与"仅进入寻货大厅等应答"。匹配逻辑抽出 `SourcingMatcher.GetMatchedMerchantIdsAsync`，由**发布处理器**（回传家数）与**发布通知订阅者**（逐户推送）共用，消除两处口径漂移（含无 `bearingId` 时按型号文本精确匹配主数据兜底）。端点数量不变。配套《搜索寻货与数据可信联动设计 v1.1.0》。明细见文末"本版增量"章节 |
 | v1.50.0 | 2026-10-17 | **仪表盘"新增"改真值并按来源拆分 + 商家入驻时间字段**（消除假数据）：① 新增 `Merchant.OnboardedAt`（入驻生效时间，`Approve()` 幂等写入；迁移 `AddMerchantOnboardedAt` 加列 + 回填存量已入驻商户为 `CreatedAt`）；② `GET /api/admin/dashboard/stats` 重排：轴承、替代品新增按 **互联网 / 人工** 拆分，商家新增按 **互联网同步 / 入驻（`OnboardedAt`，含认领）** 拆分（三者均含今日/本周/本月），新增顶层 `periods`（业务日历起点，供图表下钻）与 `interchanges` 统计块、`merchants.onboardedCount`（已入驻真值）；移除旧字段 `merchants.todayRegistered/thisWeekRegistered/thisMonthRegistered` 与 `bearings.todayAdded/thisWeekAdded/thisMonthAdded`；③ `GET /api/admin/merchants` 新增参数 `onboardedFrom`/`onboardedTo`（入驻时间区间，业务日历含端点）、`internetSource`（true=仅互联网 / false=仅非互联网，来源拆分行下钻用），`sortBy` 增 `onboardedat`；`MerchantDto` 增 `onboardedAt`。④ **下钻筛选贯通**：`GET /api/admin/bearings` 新增 `createdFrom`/`createdTo`/`internetSource`（`BearingDto` 增 `createdAt`）；`GET /api/admin/interchanges` 新增 `createdFrom`/`createdTo`/`internetSource`。端点数量不变（仅字段与参数增量）。明细见文末"本版增量"章节 |
 | v1.49.0 | 2026-10-15 | **搜索—寻货—认证商家与数据可信联动**（配套《搜索寻货与数据可信联动设计 v1.0.0》）：① 通知偏好：新增 `GET/PUT /api/notifications/preferences`（渠道开关 + `smsGatewayReady`；写复用 UpdateUserPreferenceCommand）。② 寻货联动：`POST /api/sourcing/demands` 请求体加可选 `targetMerchantId`（定向询价，仅推目标商户、不进大厅；迁移 `AddSourcingTargetMerchant`）；新增 `GET /api/sourcing/matched`（商家侧"为你匹配的寻货"：定向给我的 + 匹配我在售型号的进行中广播）；发布新增领域事件 `SourcingDemandPublishedEvent` → 匹配"在售本轴承的认证商家"多渠道通知（站内信 + 外部通道按偏好，`Sourcing.NotifyMaxPerMerchantPerDay` 默认 3 限频）；`GET /api/sourcing/demands/{id}` 输出加 `isTargeted`。③ 数据可信标注：`BearingDto` 加 `DataSource`、`BearingMerchantDto` 加 `IsVerified`（询价行动门"仅认证商家可询价"依据）。④ 电话单轨：公共查询 `MerchantDto` 移除 `Phone/Mobile/Email`，`MerchantDetailDto` 改嵌套 `Contact`（仅本商户成员自看下发）。⑤ 深链修复：寻货通知 `bizType` 字面量 `"SourcingDemand"` → 常量 `Notification.BizSourcingDemand`（`sourcing_demand`）。⑥ 僵尸清理：删 `GetMerchantByUserIdQuery(Handler)`。端点总数 187 → 189。明细见文末"本版增量"章节 |
 | v1.48.0 | 2026-10-13 | **商家商品审核出口 + 状态统一 + 替代品三级治理端点补记**：① 补齐"有骨架无出口"的商品审核：Admin 组新增 `GET /api/admin/merchant-bearings/pending`、`POST /api/admin/merchant-bearings/{id:guid}/approve`、`POST /api/admin/merchant-bearings/{id:guid}/reject`（merchant.verify，Admin「商品审核」页数据源）。② 商品状态契约变更：`MerchantBearingDto` 的 `isOnSale/isRestocking/isPendingApproval/isFeatured` 四字段收敛为 `saleState`（0已下架/1出售中/2补货中）+ `reviewStatus`（0仓库中/1审核中/2已通过/3已驳回，`isFeatured` 为僵尸字段已删）；新增 `DELETE /api/merchant/bearings/{id:guid}`（出售中/补货中禁删，其余物理删除）；"上架"语义改为未通过→提交审核、已通过→直接上架；公域三面统一过滤 `reviewStatus=2 且 saleState∈{1,2}`。③ 替代品三级治理：Admin 组新增 `GET/POST/PUT/DELETE /api/admin/interchanges[/{id:guid}]` + `GET /api/admin/interchanges/pending` + `POST /api/admin/interchanges/{id:guid}/approve|reject`（merchant.verify）；商家组新增 `POST /api/merchant/interchanges`、`GET /api/merchant/interchanges`；`GET /api/bearings/{id:guid}/interchanges` 改只放已生效、返回含 `typeLabel` 富 DTO（三级：标准等效/条件替代(需评估)/仅供参考）。商家端点组 23→26、后台管理端点组 65→75，端点总数 174→187。明细见文末"本版增量"章节 |
@@ -422,7 +423,7 @@ OpenFindBearings.Api（以下简称 API）共注册 **163** 个端点，按职�
 |---|---|---|---|
 | GET（v1.46.0 同版追加：输出 publisherMerchantId/publisherMerchantName/publisherType） | 匿名 |
 | GET；v1.46.0 同版追加：透出发布方身份三字段，选定解锁的 publisherContact 分流——商户单=商户公开电话，个人单=注册手机 | 登录可选 |
-| POST | /demands | 发布寻货（免费 3 条/日，超限 NEED_POINTS 协议 + usePoints 重提交，硬上限 10；v1.46.0 同版追加：请求体可选 merchantId=商户名义发布，在职成员校验前置不耗额度） | 登录 |
+| POST | /demands | 发布寻货（免费 3 条/日，超限 NEED_POINTS 协议 + usePoints 重提交，硬上限 10；v1.46.0 同版追加：请求体可选 merchantId=商户名义发布，在职成员校验前置不耗额度；v1.51.0：响应回传 matchedMerchantCount=已匹配并推送的认证商家家数，0=仅进大厅等应答） | 登录 |
 | POST | /demands/{id:guid}/respond | 商户应答（v1.45.0 多行标书：请求体 `items[]` 每行型号必填+可引在售商品，说明 remark 整份必填，至少一行；一商户一需求单条可更新=整份替换行；免费 20/日超限花积分，硬上限 50） | 登录+商户 |
 | DELETE | /demands/{id:guid}/respond | 撤销应答（同版本追加：招投标"开标前撤标"——仅待处理可撤，撤后需求回到未应答，行表 DB 级联删除；仅本人+在职成员，当日额度不退还） | 登录+商户 |
 | POST | /demands/batch-delete | 批量删除寻货（v2.12.0 列表多选：软删终态单，仅经办人本人，进行中拒删计 skipped） | 登录 |
@@ -677,3 +678,18 @@ OpenFindBearings.Api（以下简称 API）共注册 **163** 个端点，按职�
 > 三端下钻一致：轴承柱 → `/Data/Bearings?dateFrom=…&sourceFilter=internet|noninternet`；
 > 替代品柱 → `/Interchanges?createdFrom=…&sourceFilter=internet|noninternet`；商家柱见上。
 > 注：未启用互联网数据管线的部署，「互联网新增」系列恒为 0，仅「人工新增」有数据。
+
+---
+
+## 本版增量（v1.51.0）：寻货发布回传匹配家数（端点数量不变）
+
+| 对象 | 变更 |
+|---|---|
+| `POST /api/sourcing/demands` 响应 | 由 `{ id }` 扩为 `{ id, matchedMerchantCount }`：本次发布**已匹配并推送**的认证商家家数（广播单按在售匹配口径、定向单=1、无匹配=0） |
+
+> 背景：轴承详情此前只有「发起寻货」一个入口，用户看不出"有在售 → 直接推给这些商家"与"无在售 → 进大厅等应答"两条路径的差别，也看不出"在售"≠"可询价"。
+> 口径统一：匹配逻辑抽为 `SourcingMatcher.GetMatchedMerchantIdsAsync`（公域可见在售本轴承 → 去重商户 → 仅认证商家；无 `bearingId` 时按型号文本精确匹配主数据兜底），
+> 发布处理器（回传家数）与 `SourcingDemandPublishedNotificationHandler`（逐户推送）同源，保证"回传家数"与"实际推送对象"永远一致。
+> 前端消费：Taro 发布页按家数差异化反馈（定向="已定向推送给该商家"；广播匹配>0="已通知 N 家认证商家"；=0="已进入寻货大厅"）；轴承详情按钮/路径说明文案按认证在售数自适应。
+> 行为边界不变：广播单仍只有登录门槛（不加"仅认证在售才可发起"），触达范围仍固定为"在售本轴承的认证商家"（故无需再单独发一轮定向——一条广播即覆盖两条路径）。
+> 配套文档：《搜索寻货与数据可信联动设计 v1.1.0》。

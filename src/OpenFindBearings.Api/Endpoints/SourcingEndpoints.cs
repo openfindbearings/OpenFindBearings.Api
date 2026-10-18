@@ -275,11 +275,13 @@ namespace OpenFindBearings.Api.Endpoints
                 if (!currentUser.UserId.HasValue)
                     return ApiResponseHelper.Unauthorized(httpContext: httpContext);
 
-                var demandId = await mediator.Send(new PublishDemandCommand(
+                // 改动说明（v1.7.0 两条路径可见化）：回传 id + 已匹配并推送的认证商家家数，
+                //   前端据此区分"已通知在售商家"与"进入大厅等应答"两种反馈文案
+                var result = await mediator.Send(new PublishDemandCommand(
                     currentUser.UserId.Value, request.PartNumber, request.BearingId, request.Brand,
                     request.Quantity, request.ExpectedDelivery, request.Region, request.Description,
                     request.UsePoints, request.MerchantId, request.TargetMerchantId), httpContext.RequestAborted);
-                return ApiResponseHelper.Ok(new { id = demandId }, httpContext: httpContext);
+                return ApiResponseHelper.Ok(new { id = result.DemandId, matchedMerchantCount = result.MatchedMerchantCount }, httpContext: httpContext);
             })
             .RequireAuthorization()
             .WithName("PublishSourcingDemand")
