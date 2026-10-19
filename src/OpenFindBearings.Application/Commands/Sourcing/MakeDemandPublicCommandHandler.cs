@@ -1,4 +1,7 @@
 using MediatR;
+using OpenFindBearings.Application.Services;
+using OpenFindBearings.Domain.Enums;
+using OpenFindBearings.Domain.Events;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Commands.Sourcing
@@ -7,6 +10,8 @@ namespace OpenFindBearings.Application.Commands.Sourcing
     /// 转为公开招标命令（v1.8.0 公开招标/邀标）：邀标单进行中时由发布人放开为公开
     /// （需求进公开大厅，人人可见可应答）。解决"邀标后无人应答只能取消重建"的损耗
     /// （原定向单只能取消再发，发布额度与积分不退还）。
+    /// 改动说明（v1.8.2 转公开补发通知）：放开后按"匹配集合 − 原邀标收件人"差集补发通知——
+    ///   新纳入的认证在售商家也被告知（口径与发布即公开一致），而已被告知过的原收件人不再打扰（绝不二次）
     /// </summary>
     /// <param name="DemandId">寻货单 ID</param>
     /// <param name="UserId">操作人（仅发布人本人可操作，与列表管理按钮口径一致）</param>
@@ -18,13 +23,27 @@ namespace OpenFindBearings.Application.Commands.Sourcing
     public class MakeDemandPublicCommandHandler : IRequestHandler<MakeDemandPublicCommand>
     {
         private readonly ISourcingDemandRepository _demandRepository;
+        // 改动说明（v1.8.2 转公开补发通知）：复用 SourcingMatcher 现算匹配集合 + 事件携带收件人集合，只推新商家
+        private readonly IBearingRepository _bearingRepository;
+        private readonly IMerchantBearingRepository _merchantBearingRepository;
+        private readonly IMerchantRepository _merchantRepository;
+        private readonly IPublisher _publisher;
 
         /// <summary>
-        /// 构造：需求仓储
+        /// 构造：需求仓储 + 匹配所需仓储（轴承/商家商品/商户）+ 事件发布器
         /// </summary>
-        public MakeDemandPublicCommandHandler(ISourcingDemandRepository demandRepository)
+        public MakeDemandPublicCommandHandler(
+            ISourcingDemandRepository demandRepository,
+            IBearingRepository bearingRepository,
+            IMerchantBearingRepository merchantBearingRepository,
+            IMerchantRepository merchantRepository,
+            IPublisher publisher)
         {
             _demandRepository = demandRepository;
+            _bearingRepository = bearingRepository;
+            _merchantBearingRepository = merchantBearingRepository;
+            _merchantRepository = merchantRepository;
+            _publisher = publisher;
         }
 
         /// <inheritdoc/>
@@ -36,8 +55,24 @@ namespace OpenFindBearings.Application.Commands.Sourcing
             if (demand.PublisherUserId != request.UserId)
                 throw new UnauthorizedAccessException("只有发布人可以将寻货转为公开招标");
 
+            // 改动说明（v1.8.2）：MakePublic 会清空收件人快照，故先留存原收件人集合，供差集补发判定
+            var invitedBefore = demand.InvitedMerchantIds.ToList();
+
             demand.MakePublic();
             await _demandRepository.UpdateAsync(demand, cancellationToken);
+
+            // 差集补发：只通知"本次放开后新纳入、且此前未被告知"的认证在售商家（原收件人已收到邀标通知，不二次打扰）
+            var matched = await SourcingMatcher.GetMatchedMerchantIdsAsync(
+                _bearingRepository, _merchantBearingRepository, _merchantRepository,
+                demand.BearingId, demand.PartNumber, cancellationToken, demand.PublisherMerchantId);
+            var alreadyNotified = invitedBefore.ToHashSet();
+            var fresh = matched.Where(id => !alreadyNotified.Contains(id)).ToList();
+            if (fresh.Count > 0)
+            {
+                await _publisher.Publish(new SourcingDemandPublishedEvent(
+                    demand.Id, demand.PublisherUserId, demand.BearingId, demand.PartNumber, demand.Brand,
+                    SourcingVisibility.Public, fresh), cancellationToken);
+            }
         }
     }
 }

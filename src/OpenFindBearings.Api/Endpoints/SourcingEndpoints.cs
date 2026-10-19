@@ -167,7 +167,9 @@ namespace OpenFindBearings.Api.Endpoints
                         // 改动说明（v1.5.0 证据力体系 P1）：逐条透出商家实力摘要——
                         // 在售商品数（现货凭证）+ 集体任务累计达成（历史履约能力）+ 公司名，
                         // 发布人选定前的判断依据从"自述文本"升级为"结构化证据"
-                        var onSaleCount = await merchantBearingRepository.CountOnSaleAsync(r.MerchantId, httpContext.RequestAborted);
+                        // 改动说明（v1.8.2 在售口径统一）：摘要口径改"公域可见商品数"（出售中+补货中），
+                        //   与该商家等级/寻货匹配一致——旧口径只算出售中，会出现"能被匹配却显示 0 件"的展示矛盾
+                        var onSaleCount = await merchantBearingRepository.CountPubliclyVisibleAsync(r.MerchantId, httpContext.RequestAborted);
                         var completedTaskCount = await taskRepository.CountCompletionsAsync(r.MerchantId, httpContext.RequestAborted);
                         levelMap.TryGetValue(r.RespondedUserId, out var responderLevel);
                         fullResponses.Add(new
@@ -290,10 +292,13 @@ namespace OpenFindBearings.Api.Endpoints
 
                 // 改动说明（v1.8.1）：回传 id + 收件人集合大小（公开=在售匹配家数、邀标=勾选∩匹配家数、无匹配=0）；
                 //   字段名由 notifiedMerchantCount 改为 recipientMerchantCount——实际投递还取决于收件商户是否有在职管理员
+                // 改动说明（v1.8.2 彻底幂等）：客户端可选带 Idempotency-Key 请求头，重复提交（网络重试/双击）返回原单
+                var idempotencyKey = httpContext.Request.Headers["Idempotency-Key"].FirstOrDefault();
                 var result = await mediator.Send(new PublishDemandCommand(
                     currentUser.UserId.Value, request.PartNumber, request.BearingId, request.Brand,
                     request.Quantity, request.ExpectedDelivery, request.Region, request.Description,
-                    request.UsePoints, request.MerchantId, request.Visibility, request.InvitedMerchantIds),
+                    request.UsePoints, request.MerchantId, request.Visibility, request.InvitedMerchantIds,
+                    idempotencyKey),
                     httpContext.RequestAborted);
                 return ApiResponseHelper.Ok(new
                 {
@@ -829,9 +834,11 @@ namespace OpenFindBearings.Api.Endpoints
                 HttpContext httpContext) =>
             {
                 await demandRepository.ExpireOverdueAsync();
+                // 改动说明（v1.8.2 Admin 治理可见性）：治理列表纳入软删单（includeDeleted=true）——
+                //   发布人软删的终态单不再从管理员视野消失，配合行上的 isDeleted 标记可事后审计
                 var (items, total) = await demandRepository.GetListAsync(status, keyword, false,
                     page <= 0 ? 1 : page, pageSize is > 0 and <= 100 ? pageSize : 20,
-                    cancellationToken: httpContext.RequestAborted);
+                    includeDeleted: true, cancellationToken: httpContext.RequestAborted);
                 var list = new List<object>();
                 foreach (var d in items)
                 {
@@ -855,7 +862,9 @@ namespace OpenFindBearings.Api.Endpoints
                         closedAt = d.ClosedAt,
                         // 改动说明（v1.8.0 公开招标/邀标）：治理视图透出曝光范围与邀标收件人家数
                         isPrivate = d.IsPrivate,
-                        invitedCount = d.InvitedMerchantIds.Count
+                        invitedCount = d.InvitedMerchantIds.Count,
+                        // 改动说明（v1.8.2 Admin 治理可见性）：软删标记（治理列表含已删单，需一眼分辨）
+                        isDeleted = d.IsDeleted
                     });
                 }
                 return ApiResponseHelper.Ok(new { items = list, total }, httpContext: httpContext);
@@ -932,6 +941,8 @@ namespace OpenFindBearings.Api.Endpoints
                     // 改动说明（v1.8.0 公开招标/邀标）：治理视图透出曝光范围与邀标收件人明细
                     isPrivate = demand.IsPrivate,
                     invitedMerchantIds = demand.InvitedMerchantIds,
+                    // 改动说明（v1.8.2 Admin 治理可见性）：软删标记（治理详情同样可判已删单）
+                    isDeleted = demand.IsDeleted,
                     responses = list
                 }, httpContext: httpContext);
             })

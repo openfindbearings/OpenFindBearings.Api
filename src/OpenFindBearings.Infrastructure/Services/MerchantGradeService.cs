@@ -66,9 +66,11 @@ namespace OpenFindBearings.Infrastructure.Services
                 var lv4Treasury = await GetConfigAsync(MerchantGradeSettings.GoldTreasuryMinKey, MerchantGradeSettings.GoldTreasuryMinDefault, cancellationToken);
                 var account = await _treasury.GetByMerchantIdAsync(merchantId, cancellationToken);
                 var treasuryEarned = account?.TotalEarned ?? 0;
-                // 定级口径用实时在售明细数而非 Merchant.ProductCount 冗余列——
-                // 该列仅在部分聚合路径刷新，商家自助上/下架不经过它，规则输入必须取实
-                var onSaleCount = (await _bearings.GetOnSaleByMerchantAsync(merchantId, cancellationToken)).Count();
+                // 定级口径用实时"公域可见在售"明细数而非 Merchant.ProductCount 冗余列——
+                // 该列仅在部分聚合路径刷新，商家自助上/下架不经过它，规则输入必须取实时。
+                // 改动说明（v1.8.2 在售口径统一）：由"仅出售中"改为"出售中+补货中（公域可见）"，
+                //   与寻货匹配/SourcingMatcher 的可匹配口径一致——此前同一商家可能"被寻货通知却不计入等级在售"
+                var onSaleCount = (await _bearings.GetMatchableByMerchantAsync(merchantId, cancellationToken)).Count();
 
                 var target = ComputeGrade(merchant.IsVerified, onSaleCount, treasuryEarned, lv3Min, lv4Min, lv4Treasury);
                 if (target == MerchantGrade.Unknown)

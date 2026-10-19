@@ -46,6 +46,8 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             builder.Property(d => d.Visibility).IsRequired().HasDefaultValue(SourcingVisibility.Public);
             // 改动说明（v1.8.0 邀标）：收件人快照以 uuid[] 一列承载（无外键、无逐收件人状态，只需 ANY 判定）
             builder.Property(d => d.InvitedMerchantIds).IsRequired();
+            // 改动说明（v1.8.2 彻底幂等）：发布幂等键（可空），配合下方过滤唯一索引实现"重放返回原单"
+            builder.Property(d => d.IdempotencyKey).HasMaxLength(100);
 
             // feed：进行中列表按时间倒序是最高频查询
             builder.HasIndex(d => new { d.Status, d.CreatedAt })
@@ -63,6 +65,12 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             // 型号搜索（自由文本模糊匹配前缀加速）
             builder.HasIndex(d => d.PartNumber)
                 .HasDatabaseName("IX_SourcingDemands_PartNumber");
+            // 改动说明（v1.8.2 彻底幂等）：发布幂等键的过滤唯一索引——同发布人同 key 只允许一张单，
+            // 键为空（未提供幂等键）的行不参与唯一约束（过滤条件 IS NOT NULL）
+            builder.HasIndex(d => new { d.PublisherUserId, d.IdempotencyKey })
+                .IsUnique()
+                .HasFilter("\"IdempotencyKey\" IS NOT NULL")
+                .HasDatabaseName("UX_SourcingDemands_Publisher_IdemKey");
         }
 
         /// <summary>

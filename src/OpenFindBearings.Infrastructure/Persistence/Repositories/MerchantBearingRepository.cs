@@ -66,13 +66,14 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         }
 
         /// <summary>
-        /// 商家在售商品数量（v1.5.0 寻货比价"实力摘要"；v2.15.0 口径=审核通过且在售，轻量 Count 不加载全量）
+        /// 商家"公域可见"商品数量（v1.5.0 寻货比价"实力摘要"；v1.8.2 口径统一=审核通过 且（出售中/补货中）且未下架，轻量 Count 不加载全量）
         /// </summary>
-        public Task<int> CountOnSaleAsync(Guid merchantId, CancellationToken cancellationToken = default)
+        public Task<int> CountPubliclyVisibleAsync(Guid merchantId, CancellationToken cancellationToken = default)
             => _context.MerchantBearings.CountAsync(
                 mb => mb.MerchantId == merchantId
                     && mb.ReviewStatus == ListingReviewStatus.Approved
-                    && mb.SaleState == SaleState.OnSale, cancellationToken);
+                    && (mb.SaleState == SaleState.OnSale || mb.SaleState == SaleState.Restocking)
+                    && mb.IsActive, cancellationToken);
 
         /// <summary>
         /// 获取商家"可匹配寻货"的关联列表（v1.8.1 寻货聚合口径统一）
