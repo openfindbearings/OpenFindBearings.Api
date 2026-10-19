@@ -25,11 +25,12 @@ namespace OpenFindBearings.Application.Commands.Sourcing
     /// <param name="MerchantId">v2.12.0 商户名义发布：发布商户（须为在职成员）；null=个人名义</param>
     /// <param name="Visibility">v1.8.0 曝光范围：Public=公开招标（默认，进大厅 + 通知匹配商家）/ Invited=邀标（不进大厅，只推收件人）</param>
     /// <param name="InvitedMerchantIds">v1.8.0 邀标收件人勾选（空=全部匹配的认证在售商家；仅 Invited 时有意义）</param>
+    /// <param name="IdempotencyKey">v1.8.2 客户端幂等键（可空）：同发布人同 key 的重复提交直接返回原单，不重复建单/扣分</param>
     public record PublishDemandCommand(
         Guid UserId, string PartNumber, Guid? BearingId, string? Brand, string? Quantity,
         string? ExpectedDelivery, string? Region, string? Description, bool UsePoints,
         Guid? MerchantId = null, SourcingVisibility Visibility = SourcingVisibility.Public,
-        List<Guid>? InvitedMerchantIds = null) : IRequest<PublishDemandResult>;
+        List<Guid>? InvitedMerchantIds = null, string? IdempotencyKey = null) : IRequest<PublishDemandResult>;
 
     /// <summary>
     /// 发布寻货结果（v1.8.1 口径纠正）：DemandId=新建寻货单 ID；
@@ -101,6 +102,26 @@ namespace OpenFindBearings.Application.Commands.Sourcing
             if (request.PartNumber.Trim().Length > 100)
                 throw new InvalidOperationException("型号过长（限 100 字）");
 
+            // 改动说明（v1.8.2 彻底幂等）：幂等键先于一切副作用检查——重放（网络重试/双击）直接返回原单，
+            //   既不重复建单、也不重复扣分；键为空则维持原行为（不去重）
+            var idempotencyKey = string.IsNullOrWhiteSpace(request.IdempotencyKey) ? null : request.IdempotencyKey.Trim();
+            if (idempotencyKey != null)
+            {
+                var replayed = await _demandRepository.GetByPublisherAndKeyAsync(
+                    request.UserId, idempotencyKey, cancellationToken);
+                if (replayed != null)
+                {
+                    // 回传的家数须与原响应一致：邀标取快照家数，公开按匹配口径现算（口径唯一来源仍是 SourcingMatcher）
+                    var replayedCount = replayed.IsPrivate
+                        ? replayed.InvitedMerchantIds.Count
+                        : (await SourcingMatcher.GetMatchedMerchantIdsAsync(
+                            _bearingRepository, _merchantBearingRepository, _merchantRepository,
+                            replayed.BearingId, replayed.PartNumber, cancellationToken,
+                            replayed.PublisherMerchantId)).Count;
+                    return new PublishDemandResult(replayed.Id, replayedCount);
+                }
+            }
+
             // 改动说明（v1.8.1）：曝光范围必须落在枚举内——非法值会让单子"既进不了大厅、又不算邀标"（幽灵单），
             //   通知按公开文案发出却在大厅/matched 双向搜不到
             if (!Enum.IsDefined(request.Visibility))
@@ -168,20 +189,22 @@ namespace OpenFindBearings.Application.Commands.Sourcing
             // 超出免费额度：扣积分（余额不足由 DeductAsync 抛出转 400；扣分与建单同事务窗口）
             if (cost > 0)
             {
+                // 改动说明（v1.8.2 彻底幂等）：以客户端幂等键作扣分幂等键，同一键的重复扣分被积分流水拦截
+                //   （键为空时退化为原行为：不幂等，仅依赖"重放先命中原单"的建单去重兜底）
                 await _pointsService.DeductAsync(request.UserId, "sourcing_publish_bonus", cost,
-                    null, "寻货发布积分加量", cancellationToken);
+                    idempotencyKey, "寻货发布积分加量", cancellationToken);
             }
 
             var demand = SourcingDemand.Create(request.UserId, request.PartNumber, request.BearingId,
                 request.Brand, request.Quantity, request.ExpectedDelivery, request.Region, request.Description,
-                publishMerchant?.Id, publishMerchant?.Name, request.Visibility, recipients);
+                publishMerchant?.Id, publishMerchant?.Name, request.Visibility, recipients, idempotencyKey);
             await _demandRepository.AddAsync(demand, cancellationToken);
             // 改动说明（v2.6.0 新手旅程）：发布成功喂 sourcing_publish_total 计数（"旗开得胜"勋章）；
             // 成就失败绝不反噬发布主流程（需求行仍由 UnitOfWork 管道提交），吞异常继续
             try
             {
                 await _achievements.IncrementAsync(Domain.Entities.AchievementScope.Personal,
-                    request.UserId, "sourcing_publish_total", 1, cancellationToken);
+                    request.UserId, Domain.Entities.AchievementMetricKeys.SourcingPublishTotal, 1, cancellationToken);
             }
             catch { /* 成就旁路，吞 */ }
             // 改动说明（v1.8.0 公开招标/邀标）：事件携带最终收件人集合——订阅者直接按集合推送，

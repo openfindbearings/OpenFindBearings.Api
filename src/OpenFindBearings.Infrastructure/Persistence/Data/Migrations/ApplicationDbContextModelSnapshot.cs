@@ -382,6 +382,10 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     b.Property<DateTime>("ExpiryAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("IdempotencyKey")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
                     b.PrimitiveCollection<List<Guid>>("InvitedMerchantIds")
                         .IsRequired()
                         .HasColumnType("uuid[]");
@@ -454,6 +458,11 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
 
                     b.HasIndex("PublisherUserId")
                         .HasDatabaseName("IX_SourcingDemands_PublisherUserId");
+
+                    b.HasIndex("PublisherUserId", "IdempotencyKey")
+                        .IsUnique()
+                        .HasDatabaseName("UX_SourcingDemands_Publisher_IdemKey")
+                        .HasFilter("\"IdempotencyKey\" IS NOT NULL");
 
                     b.HasIndex("Status", "CreatedAt")
                         .HasDatabaseName("IX_SourcingDemands_Status_CreatedAt");

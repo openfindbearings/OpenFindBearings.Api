@@ -25,6 +25,12 @@ namespace OpenFindBearings.Domain.Aggregates
         /// <summary>发布商户名称快照（列表/详情展示免 join；商户改名不回刷，保留发布时点事实）</summary>
         public string? PublisherMerchantName { get; private set; }
 
+        /// <summary>
+        /// 客户端发布幂等键（v1.8.2 彻底幂等）：同一发布人携带同一 key 的重复提交视为同一张单
+        /// （唯一索引兜底，重放直接返回原单且不重复扣分）；空=客户端未提供，不做去重
+        /// </summary>
+        public string? IdempotencyKey { get; private set; }
+
         /// <summary>关联平台轴承 ID（型号搜索选中时有值；长尾型号自由文本时为 null）</summary>
         public Guid? BearingId { get; private set; }
 
@@ -105,11 +111,13 @@ namespace OpenFindBearings.Domain.Aggregates
         /// <param name="publisherMerchantName">商户名称快照（商户名义时必填）</param>
         /// <param name="visibility">曝光范围（v1.8.0 公开招标/邀标，默认公开）</param>
         /// <param name="invitedMerchantIds">邀标收件人（v1.8.0；仅邀标时有意义，调用方已按"在售匹配 ∩ 勾选"解析）</param>
+        /// <param name="idempotencyKey">客户端幂等键（v1.8.2 彻底幂等，可空=不去重）</param>
         /// <exception cref="InvalidOperationException">邀标但收件人为空（调用方应先解析，此处兜底防脏数据）</exception>
         public static SourcingDemand Create(Guid publisherUserId, string partNumber, Guid? bearingId,
             string? brand, string? quantity, string? expectedDelivery, string? region, string? description,
             Guid? publisherMerchantId = null, string? publisherMerchantName = null,
-            SourcingVisibility visibility = SourcingVisibility.Public, IReadOnlyList<Guid>? invitedMerchantIds = null)
+            SourcingVisibility visibility = SourcingVisibility.Public, IReadOnlyList<Guid>? invitedMerchantIds = null,
+            string? idempotencyKey = null)
         {
             // 不变量：邀标必须至少一位收件人，否则单子谁都看不见（发布处理器已按匹配口径解析，这里兜底）
             var invited = invitedMerchantIds?.Where(id => id != Guid.Empty).Distinct().ToList() ?? new List<Guid>();
@@ -123,6 +131,8 @@ namespace OpenFindBearings.Domain.Aggregates
                 PublisherMerchantName = publisherMerchantId.HasValue ? Truncate(publisherMerchantName, 100) : null,
                 PartNumber = partNumber.Trim(),
                 BearingId = bearingId,
+                // 改动说明（v1.8.2 彻底幂等）：发布幂等键随单落库，重复提交（同发布人同 key）由唯一索引拦截并返回原单
+                IdempotencyKey = string.IsNullOrWhiteSpace(idempotencyKey) ? null : idempotencyKey.Trim(),
                 // 改动说明（v1.8.0 公开招标/邀标）：公开单不收件人（通知集合按在售匹配实时算），邀标单存收件人快照
                 Visibility = visibility,
                 InvitedMerchantIds = visibility == SourcingVisibility.Invited ? invited : new List<Guid>(),
@@ -173,6 +183,8 @@ namespace OpenFindBearings.Domain.Aggregates
         /// 转为公开招标（v1.8.0）：邀标单进行中时，由发布人放开为公开（需求进大厅，人人可见可应答），
         /// 收件人快照随之清空（不变量：邀请态等价于收件人非空）。
         /// 改动说明：邀标后无人应答时不必取消重建——原"定向单"只能取消再发，额度白白损耗。
+        /// 改动说明（v1.8.2 转公开补发通知）：清空快照前调用方需自行留存原收件人集合（差集补发用），
+        /// 本方法职责不变，仅做状态与快照变更。
         /// </summary>
         /// <exception cref="InvalidOperationException">已是公开单，或已非进行中（终态不可再放开）</exception>
         public void MakePublic()

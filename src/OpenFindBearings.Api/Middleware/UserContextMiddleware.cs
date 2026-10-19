@@ -216,8 +216,9 @@ namespace OpenFindBearings.Api.Middleware
                     {
                         try
                         {
+                            // 改动说明（v1.8.2 计量键收口）：改用 AchievementMetricKeys 常量，消除裸字符串拼写漂移风险
                             await achievements.IncrementAsync(Domain.Entities.AchievementScope.Personal,
-                                resolvedUserId.Value, "login_total", 1);
+                                resolvedUserId.Value, Domain.Entities.AchievementMetricKeys.LoginTotal, 1);
                         }
                         catch { /* 成就旁路，吞 */ }
                     }

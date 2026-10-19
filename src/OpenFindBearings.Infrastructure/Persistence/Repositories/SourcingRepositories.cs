@@ -39,10 +39,14 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         /// <inheritdoc/>
         public async Task<(List<SourcingDemand> Items, int Total)> GetListAsync(int? status, string? keyword, bool onlyOpen,
             int page, int pageSize, bool pinFirst = false, string? brand = null, string? region = null,
-            bool newestFirst = true, bool publicOnly = false, CancellationToken cancellationToken = default)
+            bool newestFirst = true, bool publicOnly = false, bool includeDeleted = false,
+            CancellationToken cancellationToken = default)
         {
-            // 改动说明（v2.12.0 列表删除）：feed/Admin 列表排除软删单（软删仅发布方视角隐藏，数据保留）
-            var query = _context.Set<SourcingDemand>().Where(d => !d.IsDeleted).AsQueryable();
+            // 改动说明（v2.12.0 列表删除）：feed/商家列表排除软删单（软删仅发布方视角隐藏，数据保留）；
+            // 改动说明（v1.8.2 Admin 治理可见性）：includeDeleted=true 时不排除，让管理员仍能审计已删单
+            var query = _context.Set<SourcingDemand>().AsQueryable();
+            if (!includeDeleted)
+                query = query.Where(d => !d.IsDeleted);
 
             // 改动说明（v1.8.0 公开招标/邀标）：公开大厅/反向导购仅取公开招标单，邀标单只对收件人与发布人可见
             if (publicOnly)
@@ -132,6 +136,13 @@ if (status.HasValue)
                 .CountAsync(d => d.PublisherUserId == userId && d.CreatedAt >= BusinessClock.TodayUtc, cancellationToken);
 
         /// <inheritdoc/>
+        public Task<SourcingDemand?> GetByPublisherAndKeyAsync(Guid publisherUserId, string idempotencyKey,
+            CancellationToken cancellationToken = default)
+            // 改动说明（v1.8.2 彻底幂等）：命中即"这是同一次提交的重放"，调用方直接返回原单（不建单、不扣分）
+            => _context.Set<SourcingDemand>().FirstOrDefaultAsync(
+                d => d.PublisherUserId == publisherUserId && d.IdempotencyKey == idempotencyKey, cancellationToken);
+
+        /// <inheritdoc/>
         public async Task<int> ExpireOverdueAsync(CancellationToken cancellationToken = default)
         {
             // 惰性过期统一收口：进行中且已过 ExpiryAt → Expired（feed 顶部与详情读时各调一次，成本一条 UPDATE）
@@ -171,16 +182,10 @@ if (status.HasValue)
         }
 
         /// <inheritdoc/>
-        public Task RemoveAsync(SourcingResponse response, CancellationToken cancellationToken = default)
-        {
-            _context.Set<SourcingResponse>().Remove(response);
-            return Task.CompletedTask;
-        }
-
-        /// <inheritdoc/>
         public async Task<List<SourcingResponse>> GetByDemandAsync(Guid demandId, CancellationToken cancellationToken = default)
             => await _context.Set<SourcingResponse>()
-                .Where(r => r.DemandId == demandId)
+                // 改动说明（v1.8.2 撤销应答软取消）：撤销行不进比价展示（等价原删行对外语义）
+                .Where(r => r.DemandId == demandId && r.Status != SourcingResponseStatus.Cancelled)
                 .OrderBy(r => r.CreatedAt)
                 .ToListAsync(cancellationToken);
 
@@ -192,7 +197,8 @@ if (status.HasValue)
         /// <inheritdoc/>
         public async Task<List<SourcingResponse>> GetByMerchantAsync(Guid merchantId, CancellationToken cancellationToken = default)
             => await _context.Set<SourcingResponse>()
-                .Where(r => r.MerchantId == merchantId)
+                // 改动说明（v1.8.2 撤销应答软取消）：撤销行不出现在"我的应答"（撤销即从我方视角移除）
+                .Where(r => r.MerchantId == merchantId && r.Status != SourcingResponseStatus.Cancelled)
                 // 改动说明（v2.12.0）：待处理应答恒排前（还活着的商机优先），已选定/未选中按时间倒序
                 .OrderBy(r => r.Status == SourcingResponseStatus.Pending ? 0 : 1)
                 .ThenByDescending(r => r.CreatedAt)

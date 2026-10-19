@@ -384,8 +384,9 @@ namespace OpenFindBearings.Api.Endpoints
                 if (merchant == null)
                     return ApiResponseHelper.NotFound("商家不存在", httpContext);
 
-                // 规则输入与 MerchantGradeService 同源：实时在售明细数（非 ProductCount 冗余列）+ 金库累计
-                var onSaleCount = (await bearingRepository.GetOnSaleByMerchantAsync(merchantId, cancellationToken)).Count();
+                // 规则输入与 MerchantGradeService 同源：实时"公域可见在售"明细数（非 ProductCount 冗余列）+ 金库累计
+                // 改动说明（v1.8.2 在售口径统一）：改用 GetMatchableByMerchantAsync（出售中+补货中），与定级/寻货匹配口径一致
+                var onSaleCount = (await bearingRepository.GetMatchableByMerchantAsync(merchantId, cancellationToken)).Count();
                 var treasuryAccount = await treasuryRepository.GetByMerchantIdAsync(merchantId, cancellationToken);
                 var treasuryEarned = treasuryAccount?.TotalEarned ?? 0;
                 // 改动说明（v2.13.2 配置收口）：键/默认值走 MerchantGradeSettings，与 MerchantGradeService 同源

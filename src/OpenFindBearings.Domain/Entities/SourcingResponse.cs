@@ -59,6 +59,32 @@ Remark = remark.Trim(),
         /// <summary>需求关闭但未被选定</summary>
         public void MarkNotSelected() => Status = SourcingResponseStatus.NotSelected;
 
+        /// <summary>
+        /// 撤销应答（v1.8.2 软取消）：仅待处理态可撤，改为置 Cancelled 而非删行——
+        /// 行保留以满足"是否已应答"排除判定与审计，同时因行仍存在使当日额度/三件套应答项不回退
+        /// </summary>
+        /// <exception cref="InvalidOperationException">非待处理态（已被选定/已落选/已撤销）</exception>
+        public void Cancel()
+        {
+            if (Status != SourcingResponseStatus.Pending)
+                throw new InvalidOperationException("该应答已被处理，无法撤销");
+            Status = SourcingResponseStatus.Cancelled;
+        }
+
+        /// <summary>
+        /// 撤销后重新应答（v1.8.2 软取消配套）：已撤销的行复用而非新插一行——
+        /// 复用行既守住 (DemandId, MerchantId) 唯一约束，又天然不重复占额度/不重复扣分
+        /// </summary>
+        /// <param name="remark">新的应答说明</param>
+        /// <exception cref="InvalidOperationException">非已撤销态（该方法是撤销回退专用）</exception>
+        public void Revive(string remark)
+        {
+            if (Status != SourcingResponseStatus.Cancelled)
+                throw new InvalidOperationException("仅已撤销的应答可以重新提交");
+            Status = SourcingResponseStatus.Pending;
+            Remark = remark.Trim();
+        }
+
         /// <summary>更新应答说明（同需求重复应答=覆盖更新，仅待处理态可改；型号行由调用方整体替换）</summary>
         /// <param name="remark">应答说明</param>
         public void UpdateContent(string remark)

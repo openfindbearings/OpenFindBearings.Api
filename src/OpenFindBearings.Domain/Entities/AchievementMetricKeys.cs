@@ -21,7 +21,9 @@ namespace OpenFindBearings.Domain.Entities
         public const string SourcingSelected = "sourcing_selected";
         /// <summary>发布寻货计数（个人轨）</summary>
         public const string SourcingPublishTotal = "sourcing_publish_total";
-        /// <summary>在售商品数仪表（商户轨）</summary>
+        /// <summary>在售商品数仪表（商户轨）。
+        /// 口径说明（v1.8.2）：本仪表保持"现货在售"口径，不随等级/寻货的"公域可见（含补货中）"口径统一——
+        /// 成就阈值与历史进度回填已按现货口径固定，中途改口径会凭空白送"货架满满"勋章</summary>
         public const string ListingCount = "listing_count";
         /// <summary>商户应答被选定计数（商户轨）</summary>
         public const string MerchantSelected = "merchant_selected";

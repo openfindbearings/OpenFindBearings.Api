@@ -2,6 +2,7 @@ using MediatR;
 using OpenFindBearings.Application.Services;
 using OpenFindBearings.Domain.Aggregates;
 using OpenFindBearings.Domain.Entities;
+using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Events;
 using OpenFindBearings.Domain.Repositories;
 
@@ -107,10 +108,24 @@ namespace OpenFindBearings.Application.Commands.Sourcing
                 throw new InvalidOperationException("商户当前状态不允许应答");
 
             // 重复应答=更新既有（不占额度、不再发事件）
+            // 改动说明（v1.8.2 撤销应答软取消）：已撤销（Cancelled）的既有行走"复活"而非新插一行——
+            //   撤销后行仍在（兑现"额度不回退"），故必须复用同一行，否则撞 (DemandId,MerchantId) 唯一约束
             var existing = await _responseRepository.GetByDemandAndMerchantAsync(
                 request.DemandId, request.MerchantId, cancellationToken);
             if (existing != null)
             {
+                if (existing.Status == SourcingResponseStatus.Cancelled)
+                {
+                    // 复活：状态回待处理 + 覆盖说明，型号行整体替换；需求应答冗余列同步 +1（撤销时已 -1）
+                    existing.Revive(request.Remark);
+                    await _responseRepository.UpdateAsync(existing, cancellationToken);
+                    await _responseRepository.DeleteItemsAsync(existing.Id, cancellationToken);
+                    await _responseRepository.AddItemsAsync(
+                        BuildItems(existing.Id, request.Items), cancellationToken);
+                    demand.IncrementResponseCount();
+                    await _demandRepository.UpdateAsync(demand, cancellationToken);
+                    return;
+                }
                 existing.UpdateContent(request.Remark);
                 await _responseRepository.UpdateAsync(existing, cancellationToken);
                 // 型号行整体替换：先清旧行再写新行（显式 Add，规避 EF 导航陷阱）
@@ -141,8 +156,10 @@ namespace OpenFindBearings.Application.Commands.Sourcing
 
             if (cost > 0)
             {
+                // 改动说明（v1.8.2 彻底幂等）：扣分幂等键取"需求+商户"确定性键——一商户一需求终身只可能
+                //   在首次创建时扣一次（重复应答走更新分支不扣），并发的重复提交亦被该键去重，不会重复扣分
                 await _pointsService.DeductAsync(request.UserId, "sourcing_respond_bonus", cost,
-                    null, "寻货应答积分加量", cancellationToken);
+                    $"sourcing_respond:{request.DemandId}:{request.MerchantId}", "寻货应答积分加量", cancellationToken);
             }
 
             var response = SourcingResponse.Create(request.DemandId, request.MerchantId, request.UserId,
