@@ -21,16 +21,19 @@ namespace OpenFindBearings.Application.Commands.Sourcing
     {
         private readonly ISourcingResponseRepository _responseRepository;
         private readonly IMerchantMemberRepository _memberRepository;
+        private readonly ISourcingDemandRepository _demandRepository;
 
         /// <summary>
-        /// 构造：应答/成员仓储
+        /// 构造：应答/成员/需求仓储（需求仓储用于撤标后同步递减应答冗余列）
         /// </summary>
         public CancelResponseCommandHandler(
             ISourcingResponseRepository responseRepository,
-            IMerchantMemberRepository memberRepository)
+            IMerchantMemberRepository memberRepository,
+            ISourcingDemandRepository demandRepository)
         {
             _responseRepository = responseRepository;
             _memberRepository = memberRepository;
+            _demandRepository = demandRepository;
         }
 
         /// <inheritdoc/>
@@ -51,6 +54,15 @@ namespace OpenFindBearings.Application.Commands.Sourcing
 
             // 删除应答（型号行 DB 级联删除，UnitOfWork 提交）
             await _responseRepository.RemoveAsync(existing, cancellationToken);
+
+            // 改动说明（v1.8.1 撤标计数维护）：同步递减需求的应答冗余列（同一 UnitOfWork 提交）。
+            //   该列驱动 matched/opportunities 的"尚无人应答"推荐，不递减会让单子在其他商家面前永久消失
+            var demand = await _demandRepository.GetByIdAsync(request.DemandId, cancellationToken);
+            if (demand != null)
+            {
+                demand.DecrementResponseCount();
+                await _demandRepository.UpdateAsync(demand, cancellationToken);
+            }
         }
     }
 }

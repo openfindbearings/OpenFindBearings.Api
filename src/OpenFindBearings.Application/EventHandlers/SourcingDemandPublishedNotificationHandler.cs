@@ -46,7 +46,7 @@ namespace OpenFindBearings.Application.EventHandlers
             var isInvited = notification.Visibility == SourcingVisibility.Invited;
             foreach (var merchantId in notification.RecipientMerchantIds)
             {
-                await NotifyMerchantAdminsAsync(merchantId, notification,
+                await NotifyMerchantAdminsAsync(merchantId, notification, isInvited,
                     isInvited ? "有客户向您发出寻货邀请" : "有买家寻货，您的在售型号匹配",
                     isInvited
                         ? $"客户邀请您对「{notification.PartNumber}」报价，点此查看并应答。"
@@ -56,23 +56,33 @@ namespace OpenFindBearings.Application.EventHandlers
         }
 
         /// <summary>
-        /// 向商户全部在职管理员发提醒（站内信必发 + 外部通道按偏好外发），
-        /// 并按"同型号每日上限"限频（超量的管理员跳过）。
+        /// 向商户全部在职管理员发提醒（站内信必发 + 外部通道按偏好外发）。
+        /// 限频：仅公开招标按"同型号每日上限"跳过超量管理员；邀标豁免（v1.8.1，见内注释）。
         /// </summary>
+        /// <param name="merchantId">收件商户</param>
+        /// <param name="e">发布事件（取需求 ID/型号）</param>
+        /// <param name="isInvited">是否邀标单（true=豁免日限频）</param>
+        /// <param name="title">通知标题</param>
+        /// <param name="body">通知正文</param>
+        /// <param name="cancellationToken">取消令牌</param>
         private async Task NotifyMerchantAdminsAsync(Guid merchantId, SourcingDemandPublishedEvent e,
-            string title, string body, CancellationToken cancellationToken)
+            bool isInvited, string title, string body, CancellationToken cancellationToken)
         {
-            var maxPerDay = await SourcingConfigReader.GetIntAsync(
-                _configRepository, "Sourcing.NotifyMaxPerMerchantPerDay", 3);
-
             var admins = await _memberRepository.GetActiveByMerchantAsync(merchantId, cancellationToken);
             foreach (var admin in admins.Where(m => m.Role == MerchantMember.RoleMerchantAdmin))
             {
-                // 限频：该管理员今日同型号寻货提醒数达上限则跳过（正文含型号，按正文包含匹配）
-                var sentToday = await _notificationRepository.CountTodayByTypeAsync(
-                    admin.UserId, Notification.TypeSourcing, e.PartNumber, cancellationToken);
-                if (sentToday >= maxPerDay)
-                    continue;
+                // 改动说明（v1.8.1）：邀标豁免"同型号每日上限"——受邀是发布人点名勾选的定向邀约（受众可控），
+                //   限频会让受邀商家收不到通知，直接违背"受邀必达"承诺；限频只保留给公开招标（匹配面广、易刷屏）
+                if (!isInvited)
+                {
+                    var maxPerDay = await SourcingConfigReader.GetIntAsync(
+                        _configRepository, "Sourcing.NotifyMaxPerMerchantPerDay", 3);
+                    // 限频：该管理员今日同型号寻货提醒数达上限则跳过（正文含型号，按正文包含匹配）
+                    var sentToday = await _notificationRepository.CountTodayByTypeAsync(
+                        admin.UserId, Notification.TypeSourcing, e.PartNumber, cancellationToken);
+                    if (sentToday >= maxPerDay)
+                        continue;
+                }
 
                 await _notificationService.AddInAppAsync(admin.UserId, Notification.TypeSourcing,
                     title, body, Notification.BizSourcingDemand, e.DemandId, cancellationToken);

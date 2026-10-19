@@ -91,6 +91,12 @@ namespace OpenFindBearings.Application.Commands.Sourcing
             if (!demand.IsOpen)
                 throw new InvalidOperationException("该寻货已结束，无法应答");
 
+            // 改动说明（v1.8.1 邀标边界）：邀标单只允许收件商家应答——详情端点已对非收件商户 404，
+            //   应答链路同样需要守卫，否则知道 id 的第三方可插队应答，邀标边界（只邀这几家）被击穿；
+            //   判定基于发布时点快照而非"当前是否仍有货"，避免受邀商家事后下架就被拒
+            if (demand.IsPrivate && !demand.IsInvitedTo(request.MerchantId))
+                throw new InvalidOperationException("该寻货为邀标单，仅受邀商家可应答");
+
             // 应答资格：操作人须为该商户在职成员（员工可代商户应答），商户须生效
             var member = await _memberRepository.GetActiveByUserAndMerchantAsync(
                 request.UserId, request.MerchantId, cancellationToken)
