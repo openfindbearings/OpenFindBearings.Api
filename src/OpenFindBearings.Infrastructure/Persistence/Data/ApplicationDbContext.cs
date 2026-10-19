@@ -63,6 +63,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
         public DbSet<SourcingResponse> SourcingResponses { get; set; }
         // v1.5.0 寻货多行标书：应答型号行（报价/库存/交期按行携带）
         public DbSet<SourcingResponseItem> SourcingResponseItems { get; set; }
+        // v2.18.0 T1 撮合会话：绑定"寻货单 × 商户"的私域对话（会话容器 + 文本消息）
+        public DbSet<SourcingConversation> SourcingConversations { get; set; }
+        public DbSet<SourcingMessage> SourcingMessages { get; set; }
 
         // v2.1.0 成就子系统：成就定义目录 + 一表双轨解锁进度（个人/商户）
         public DbSet<AchievementDefinition> AchievementDefinitions { get; set; }

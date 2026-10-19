@@ -47,7 +47,9 @@ namespace OpenFindBearings.Domain.Entities
             { "phone", "电话" },
             { "mobile", "手机" },
             { "email", "邮箱" },
-            { "address", "地址" }
+            { "address", "地址" },
+            // 改动说明（v2.18.0 卡级重构）：商家对卡级结果的申诉入口（提交类字段，无当前值，不自动应用）
+            { "merchantGrade", "商家卡级（申诉）" }
         };
 
         /// <summary>

@@ -179,6 +179,11 @@ namespace OpenFindBearings.Application.Commands.Corrections.ApproveCorrection
                     );
                     merchant.UpdateContact(newContact);
                     break;
+                case "merchantgrade":
+                    // 改动说明（v2.18.0 卡级重构）：卡级申诉不自动改级——建议值为自由文本，
+                    //   且卡级由认证/在售/成功撮合实时算出，人工改级须走管理侧"人工调级"口并留痕；
+                    //   审批本申诉即代表已核实处理（记录于纠错台账）
+                    break;
             }
 
             // 覆盖保护：纠错审批通过后标记为非互联网来源，

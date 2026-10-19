@@ -8,6 +8,8 @@ using OpenFindBearings.Api.Services;
 using OpenFindBearings.Application.Commands.Admin.ApproveDocument;
 using OpenFindBearings.Application.Commands.Admin.RejectDocument;
 using OpenFindBearings.Application.Commands.Merchants.AssignMerchantMember;
+// 改动说明（v2.18.0 卡级重构）：管理侧人工调级命令
+using OpenFindBearings.Application.Commands.Merchants.AdjustMerchantGrade;
 using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Application.Commands.Bearings.CreateBearing;
 using OpenFindBearings.Application.Commands.Bearings.DeleteBearing;
@@ -469,6 +471,31 @@ namespace OpenFindBearings.Api.Endpoints
             .WithSummary("获取商家详情")
             .WithDescription("按 ID 获取商家详细信息")
             .RequirePermission("merchant.manage");
+
+            /// <summary>
+            /// 人工调整商家卡级（v2.18.0 卡级重构）：申诉核实后的补偿/异常刷分核实后的降级，
+            /// 写请求级审计；未认证商户不得授予卡级
+            /// </summary>
+            group.MapPost("/merchants/{id:guid}/grade", async (
+                Guid id,
+                [FromBody] AdjustMerchantGradeRequest request,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                if (!Enum.IsDefined(typeof(OpenFindBearings.Domain.Enums.MerchantGrade), request.Grade))
+                    return ApiResponseHelper.BadRequest("卡级不合法", httpContext: httpContext);
+                await mediator.Send(new AdjustMerchantGradeCommand
+                {
+                    MerchantId = id,
+                    Grade = (OpenFindBearings.Domain.Enums.MerchantGrade)request.Grade,
+                    Reason = request.Reason
+                });
+                return ApiResponseHelper.Ok("卡级已调整", httpContext: httpContext);
+            })
+            .WithName("AdminAdjustMerchantGrade")
+            .WithSummary("人工调整商家卡级（Admin）")
+            .WithDescription("管理侧人工设定卡级（留审计）；未认证商户不得授予卡级（merchant.grade.manage）")
+            .RequirePermission("merchant.grade.manage");
 
             /// <summary>
             /// 商户证照材料列表（v2.7.0 新增，审批抽屉"申请材料"区数据源）
@@ -1639,4 +1666,11 @@ namespace OpenFindBearings.Api.Endpoints
     /// 商家商品驳回请求体（v2.15.0 商品审核）
     /// </summary>
     public record MerchantBearingRejectRequest(string? Reason);
+
+    /// <summary>
+    /// 商家卡级人工调整请求体（v2.18.0 卡级重构）
+    /// </summary>
+    /// <param name="Grade">目标卡级枚举值（1=注册商户/2=铜卡/3=银卡/4=金卡）</param>
+    /// <param name="Reason">调整原因（复核/申诉依据）</param>
+    public record AdjustMerchantGradeRequest(int Grade, string? Reason);
 }

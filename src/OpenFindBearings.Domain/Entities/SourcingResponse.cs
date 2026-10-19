@@ -31,6 +31,30 @@ namespace OpenFindBearings.Domain.Entities
         /// <summary>应答型号行（v1.5.0 多行标书：发布人挑选的依据，每行可引用在售商品）</summary>
         public List<SourcingResponseItem> Items { get; private set; } = new();
 
+        /// <summary>被选定时刻（UTC；v2.18.0 撮合成交链，供成交回执窗口与审计）</summary>
+        public DateTime? AdoptedAt { get; private set; }
+
+        /// <summary>成交回执结果（null=需求方未回填，中性不计分；v2.18.0）</summary>
+        public SourcingDealOutcome? FeedbackOutcome { get; private set; }
+
+        /// <summary>回执补充说明（可选，如"其他"原因的文字描述）</summary>
+        public string? FeedbackReason { get; private set; }
+
+        /// <summary>回执提交时刻（UTC）</summary>
+        public DateTime? FeedbackAt { get; private set; }
+
+        /// <summary>
+        /// 该回执是否计入商家卡级（v2.18.0 反刷）：仅"谈成 + 通过自关联/资格/异常校验"才为 true；
+        /// 管理员撤销回执亦翻转为 false（留痕不改结果，便于审计）
+        /// </summary>
+        public bool IsCounted { get; private set; }
+
+        /// <summary>不计分留痕说明（自关联/资格不足/异常检测命中，供 Admin 复核）</summary>
+        public string? FlagNote { get; private set; }
+
+        /// <summary>回执提交来源 IP（v2.18.0 反刷：同 IP 短时集中提交用于异常检测，仅内部留痕）</summary>
+        public string? FeedbackIp { get; private set; }
+
         /// <summary>EF 专用无参构造</summary>
         protected SourcingResponse() { }
 
@@ -53,8 +77,48 @@ Remark = remark.Trim(),
             };
         }
 
-        /// <summary>被发布人选定</summary>
-        public void Adopt() => Status = SourcingResponseStatus.Adopted;
+        /// <summary>
+        /// 被发布人选定（v2.18.0：同时记录选定时刻，作为成交回执的窗口锚点）
+        /// </summary>
+        public void Adopt()
+        {
+            Status = SourcingResponseStatus.Adopted;
+            AdoptedAt ??= DateTime.UtcNow;
+        }
+
+        /// <summary>
+        /// 提交/更新成交回执（v2.18.0 撮合成交链，仅需求方本人可调，由端点校验身份）：
+        /// 只有 Confirmed 且校验通过时 isCounted 才为 true，进入商家卡级统计
+        /// </summary>
+        /// <param name="outcome">洽谈结果</param>
+        /// <param name="reason">原因/补充说明（可选）</param>
+        /// <param name="isCounted">是否计入卡级（反刷校验结论）</param>
+        /// <param name="flagNote">不计分留痕说明（可选）</param>
+        /// <param name="ip">提交来源 IP（可选，异常检测留痕）</param>
+        public void SubmitFeedback(SourcingDealOutcome outcome, string? reason, bool isCounted, string? flagNote,
+            string? ip = null)
+        {
+            FeedbackOutcome = outcome;
+            FeedbackReason = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim();
+            IsCounted = isCounted;
+            FlagNote = string.IsNullOrWhiteSpace(flagNote) ? null : flagNote.Trim();
+            FeedbackIp = string.IsNullOrWhiteSpace(ip) ? null : ip.Trim();
+            FeedbackAt = DateTime.UtcNow;
+            UpdateTimestamp();
+        }
+
+        /// <summary>
+        /// 翻转该回执的计分标记（v2.18.0 管理侧复核/撤销）：不影响已记录的回执结果，只决定是否参与卡级统计
+        /// </summary>
+        /// <param name="counted">是否计分</param>
+        /// <param name="note">复核说明（写入留痕）</param>
+        public void SetFeedbackCounted(bool counted, string? note)
+        {
+            IsCounted = counted;
+            if (!string.IsNullOrWhiteSpace(note))
+                FlagNote = note.Trim();
+            UpdateTimestamp();
+        }
 
         /// <summary>需求关闭但未被选定</summary>
         public void MarkNotSelected() => Status = SourcingResponseStatus.NotSelected;

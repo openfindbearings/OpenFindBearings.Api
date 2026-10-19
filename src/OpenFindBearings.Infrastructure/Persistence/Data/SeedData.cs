@@ -113,6 +113,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
                 new("merchant.manage", "编辑商家"),
                 new("merchant.verify", "认证审核商家"),
                 new("merchant.detach", "解除商家归属"),
+                // 改动说明（v2.18.0 卡级重构）：卡级人工调整与成交回执撤销属信任治理动作，
+                //   独立成键（不借用 merchant.verify 认证审核语义，也不借用 merchant.manage 编辑语义）
+                new("merchant.grade.manage", "调整商家卡级"),
                 new("data.restore", "恢复已删数据"),
                 new("data.harddelete", "彻底删除数据"),
                 new("correction.review", "审核纠错"),
@@ -176,6 +179,8 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
                 "type.view", "type.create", "type.edit",
                 "interchange.view", "interchange.manage",
                 "merchant.view", "merchant.manage", "merchant.verify",
+                // 改动说明（v2.18.0 卡级重构）：卡级调整与回执撤销同属信任治理，操作员（日常审核角色）给权
+                "merchant.grade.manage",
                 
                 "correction.review", "sourcing.view", "sourcing.manage",
                 "user.view", "user.ban",

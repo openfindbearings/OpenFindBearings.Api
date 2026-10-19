@@ -1,12 +1,12 @@
 ﻿namespace OpenFindBearings.Domain.Enums
 {
     /// <summary>
-    /// 商家等级枚举（v2.5.0 商家经济：与"商家等级"统一为同一把梯子，不另设字段——
-    ///   Standard=入驻 / Verified=认证 / Premium=口碑 / Gold=金牌，
-    ///   由 IMerchantGradeService 按"认证态+在售数+金库累计"规则重算，
-    ///   等级是商家 buff 的唯一输入：成员取全部在职商户中最高的一家享受被动加成）
-    /// 注意：数值保留历史映射（Standard=1/Premium=2/Verified=3/Gold=4），推进路径
-    ///   为 Standard→Verified→Premium→Gold，与数值大小无关，比较请以规则函数为准
+    /// 商家卡级枚举（v2.18.0 卡级重构）：与"认证"解耦——认证是商家类型（Merchant.IsVerified，独立徽章），
+    /// 卡级只描述经营水平，由 IMerchantGradeService 按"认证门槛 + 公域可见在售件数 + 近窗口期成功撮合次数"重算。
+    /// 递增序列：注册商户（未认证）→ 铜卡（已认证）→ 银卡 → 金卡；钻卡位预留，当前不启用。
+    /// 改动说明：v2.18.0 起枚举数值调整为单调（与业务推进顺序一致），
+    ///   Rank 即 (int)Grade，消除旧"数值非单调、需三元映射"的历史包袱；
+    ///   金库累计已退出定级判定（金库是平台激励货币账户，非供货能力，且只增不减与可降级卡级语义冲突）。
     /// </summary>
     public enum MerchantGrade
     {
@@ -15,19 +15,19 @@
         /// </summary>
         Unknown = 0,
         /// <summary>
-        /// 入驻商家（Lv1：Active 即得）
+        /// 注册商户（Lv1）：未认证或认证审核中，仅登记入驻、无卡级
         /// </summary>
-        Standard = 1,
+        Registered = 1,
         /// <summary>
-        /// 口碑商家（Lv3：认证 + 在售商品达阈值；v2.13.0 由"活跃供给"改名，四档统一"XX商家"）
+        /// 铜卡（Lv2）：已认证（信任基线，不承诺持续供货）
         /// </summary>
-        Premium = 2,
+        Bronze = 2,
         /// <summary>
-        /// 认证商家（Lv2：证照审核通过）
+        /// 银卡（Lv3）：已认证 + 在售达阈值 + 近窗口期内有成功撮合
         /// </summary>
-        Verified = 3,
+        Silver = 3,
         /// <summary>
-        /// 金牌商家（Lv4：认证 + 在售达阈值 + 金库累计入账达阈值）
+        /// 金卡（Lv4）：已认证 + 在售达阈值 + 近窗口期内成功撮合达更高阈值
         /// </summary>
         Gold = 4
     }

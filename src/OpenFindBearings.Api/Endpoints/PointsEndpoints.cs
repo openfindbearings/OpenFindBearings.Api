@@ -6,6 +6,7 @@ using OpenFindBearings.Api.Services;
 using OpenFindBearings.Application.Queries.Points.GetPointRules;
 using OpenFindBearings.Application.Services;
 using OpenFindBearings.Domain.Entities;
+using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Services;
 using OpenFindBearings.Domain.Repositories;
 
@@ -314,12 +315,14 @@ namespace OpenFindBearings.Api.Endpoints
                 }
 
                 var rank = OpenFindBearings.Application.Services.MerchantBuffs.Rank(grade);
+                // 改动说明（v2.18.0 卡级重构）：升级引导文案按新口径（认证 → 铜卡；认证 + 在售 + 近窗口期成功撮合 → 银/金卡），
+                // 金库已退出定级，不再出现在提示里
                 string nextHint = rank switch
                 {
-                    0 => "加入认证商家可享：签到 +1、寻货应答 +1/日",
-                    1 => "商户通过认证后解锁：登录 +1、纠错 +10%、发布 +1/日",
-                    2 => "在售满 5 件升口碑商家：纠错 +20%、应答 +3/日、置顶 9 折",
-                    3 => "在售满 10 件且金库累计 500 升金牌：纠错 +25%、应答 +5/日、置顶 8 折",
+                    0 => "完成商家认证即入铜卡：签到 +1、寻货应答 +1/日",
+                    1 => "商户通过认证后入铜卡：签到 +1、登录 +1、纠错 +10%、发布 +1/日",
+                    2 => "在售达标且有成交（近 180 天）升银卡：纠错 +20%、应答 +3/日、置顶 9 折",
+                    3 => "近 180 天成功撮合达 3 次升金卡：纠错 +25%、应答 +5/日、置顶 8 折",
                     _ => "已达最高等级"
                 };
 
@@ -357,8 +360,8 @@ namespace OpenFindBearings.Api.Endpoints
             .WithDescription("成员被动加成数据源：等级/福利清单/升级提示（散人为空；merchantId=本店视角需在职成员）");
 
             /// <summary>
-            /// 商家等级详情（v2.13.0 等级玩法：商家等级页数据源）：当前等级+双指标达标进度
-            /// （在售数/金库累计 vs 下一档阈值）+四档阶梯条件与升档礼+已领档+保级钟。
+            /// 商家卡级详情（v2.13.0 等级玩法，v2.18.0 卡级重构改口径）：当前卡级 + 升档前置进度
+            /// （认证 / 公域可见在售数 / 近窗口期成功撮合次数）+ 四档阶梯条件与升档礼 + 已领档 + 保级钟。
             /// 校验请求者为该商家在职成员（与福利卡本店视角同口径，防窥探他店经营数据）
             /// </summary>
             group.MapGet("/merchant-grade", async (
@@ -366,7 +369,7 @@ namespace OpenFindBearings.Api.Endpoints
                 [FromServices] IMerchantMemberRepository memberRepository,
                 [FromServices] IMerchantRepository merchantRepository,
                 [FromServices] IMerchantBearingRepository bearingRepository,
-                [FromServices] IMerchantPointAccountRepository treasuryRepository,
+                [FromServices] ISourcingResponseRepository responseRepository,
                 [FromServices] IMerchantPointTransactionRepository treasuryTxRepository,
                 [FromServices] ISystemConfigRepository configs,
                 [FromQuery] Guid merchantId,
@@ -384,15 +387,16 @@ namespace OpenFindBearings.Api.Endpoints
                 if (merchant == null)
                     return ApiResponseHelper.NotFound("商家不存在", httpContext);
 
-                // 规则输入与 MerchantGradeService 同源：实时"公域可见在售"明细数（非 ProductCount 冗余列）+ 金库累计
-                // 改动说明（v1.8.2 在售口径统一）：改用 GetMatchableByMerchantAsync（出售中+补货中），与定级/寻货匹配口径一致
+                // 规则输入与 MerchantGradeService 同源：认证门槛 + 实时"公域可见在售"明细数 + 近窗口期成功撮合次数
+                // 改动说明（v1.8.2 在售口径统一）：GetMatchableByMerchantAsync（出售中+补货中），与定级/寻货匹配口径一致
+                // 改动说明（v2.18.0）：金库退出定级，改为统计窗口期内的计分成交（IsCounted + Confirmed）
                 var onSaleCount = (await bearingRepository.GetMatchableByMerchantAsync(merchantId, cancellationToken)).Count();
-                var treasuryAccount = await treasuryRepository.GetByMerchantIdAsync(merchantId, cancellationToken);
-                var treasuryEarned = treasuryAccount?.TotalEarned ?? 0;
-                // 改动说明（v2.13.2 配置收口）：键/默认值走 MerchantGradeSettings，与 MerchantGradeService 同源
-                var lv3Min = await ReadIntConfigAsync(configs, MerchantGradeSettings.PremiumOnSaleMinKey, MerchantGradeSettings.PremiumOnSaleMinDefault);
-                var lv4Min = await ReadIntConfigAsync(configs, MerchantGradeSettings.GoldOnSaleMinKey, MerchantGradeSettings.GoldOnSaleMinDefault);
-                var lv4TreasuryMin = await ReadIntConfigAsync(configs, MerchantGradeSettings.GoldTreasuryMinKey, MerchantGradeSettings.GoldTreasuryMinDefault);
+                var windowDays = await ReadIntConfigAsync(configs, MerchantGradeSettings.WindowDaysKey, MerchantGradeSettings.WindowDaysDefault);
+                var dealCount = await responseRepository.GetCountedDealCountAsync(
+                    merchantId, DateTime.UtcNow.AddDays(-windowDays), cancellationToken);
+                var onSaleMin = await ReadIntConfigAsync(configs, MerchantGradeSettings.GradeOnSaleMinKey, MerchantGradeSettings.GradeOnSaleMinDefault);
+                var silverDealMin = await ReadIntConfigAsync(configs, MerchantGradeSettings.SilverDealMinKey, MerchantGradeSettings.SilverDealMinDefault);
+                var goldDealMin = await ReadIntConfigAsync(configs, MerchantGradeSettings.GoldDealMinKey, MerchantGradeSettings.GoldDealMinDefault);
                 var bonusLv2 = await ReadIntConfigAsync(configs, MerchantGradeSettings.BonusLv2Key, MerchantGradeSettings.BonusLv2Default);
                 var bonusLv3 = await ReadIntConfigAsync(configs, MerchantGradeSettings.BonusLv3Key, MerchantGradeSettings.BonusLv3Default);
                 var bonusLv4 = await ReadIntConfigAsync(configs, MerchantGradeSettings.BonusLv4Key, MerchantGradeSettings.BonusLv4Default);
@@ -406,6 +410,17 @@ namespace OpenFindBearings.Api.Endpoints
                 }
 
                 var rank2 = OpenFindBearings.Application.Services.MerchantBuffs.Rank((int)merchant.Grade);
+
+                // 距下一档（v2.18.0 卡级重构）：未认证 → 铜卡（只差认证）；铜卡 → 银卡；银卡 → 金卡；
+                // 金卡已达顶不再有下一档。返回缺什么，由 Taro 渲染"距下一档还差 X"
+                object? nextTier = null;
+                if (rank2 == 1)
+                    nextTier = new { grade = (int)MerchantGrade.Bronze, label = "铜卡", requiredOnSale = 0, requiredDeals = 0, metOnSale = true, metDeals = true };
+                else if (rank2 == 2)
+                    nextTier = new { grade = (int)MerchantGrade.Silver, label = "银卡", requiredOnSale = onSaleMin, requiredDeals = silverDealMin, metOnSale = onSaleCount >= onSaleMin, metDeals = dealCount >= silverDealMin };
+                else if (rank2 == 3)
+                    nextTier = new { grade = (int)MerchantGrade.Gold, label = "金卡", requiredOnSale = onSaleMin, requiredDeals = goldDealMin, metOnSale = onSaleCount >= onSaleMin, metDeals = dealCount >= goldDealMin };
+
                 return ApiResponseHelper.Ok(new
                 {
                     merchantId = merchant.Id,
@@ -415,21 +430,23 @@ namespace OpenFindBearings.Api.Endpoints
                     gradeDisplay = merchant.GetGradeDisplayName(),
                     isVerified = merchant.IsVerified,
                     onSaleCount,
-                    treasuryEarned,
-                    lv3OnSaleMin = lv3Min,
-                    lv4OnSaleMin = lv4Min,
-                    lv4TreasuryMin = lv4TreasuryMin,
+                    dealCount,
+                    windowDays,
+                    onSaleMin,
+                    silverDealMin,
+                    goldDealMin,
                     bonusLv2,
                     bonusLv3,
                     bonusLv4,
                     claimedRanks,
+                    nextTier,
                     graceUntil = merchant.GradeGraceUntil,
                     labels = OpenFindBearings.Application.Services.MerchantBuffs.BuffLabels((int)merchant.Grade)
                 }, httpContext: httpContext);
             })
             .WithName("GetMerchantGrade")
-            .WithSummary("商家等级详情")
-            .WithDescription("商家等级页数据源：双指标进度/四档阶梯/升档礼已领/保级钟（在职成员可见）");
+            .WithSummary("商家卡级详情")
+            .WithDescription("商家卡级页数据源：认证/在售/近窗口期成功撮合三项进度 + 四档阶梯 + 升档礼已领 + 保级钟（在职成员可见）");
 
             /// <summary>
             /// 商家集体任务板（v2.6.0 M3）：启用任务 + 本周期进度 + 完成态。

@@ -8,19 +8,21 @@ using OpenFindBearings.Domain.Repositories;
 namespace OpenFindBearings.Infrastructure.Services
 {
     /// <summary>
-    /// 商家等级服务实现（v2.5.0 商家经济）：等级重算规则 + 成员最佳商家解析。
-    /// 阈值走 SystemConfig（Business.Merchant* 键，Admin 可调实时生效）；
-    /// 重算吞失败（等级是附属计算值），解析路径纯读不写。
-    /// 改动说明（v2.12.0 等级玩法）：升档发一次性商家金升档礼（每商户每档终身一次，
-    /// 复升不重发防上下架刷金库）；降档先进保级缓冲（Business.MerchantGradeGraceDays 天，
-    /// 0=立即降），期内恢复达标自动清钟——buff 影响成员收益，降档要有挽回窗口
+    /// 商家卡级服务实现（v2.5.0 商家经济，v2.18.0 卡级重构改口径）：卡级重算规则 + 成员最佳商家解析。
+    /// 阈值走 SystemConfig（Business.Merchant* 键，Admin 可调实时生效）；重算吞失败（卡级是附属计算值），解析路径纯读不写。
+    /// 改动说明（v2.12.0 等级玩法）：升档发一次性商家金升档礼（每商户每档终身一次，复升不重发防上下架刷金库）；
+    /// 降档先进保级缓冲（Business.MerchantGradeGraceDays 天，0=立即降），期内恢复达标自动清钟。
+    /// 改动说明（v2.18.0 卡级重构）：定级口径改为「认证门槛 + 公域可见在售件数 + 近窗口期成功撮合次数」——
+    ///   金库累计退出判定（金库是平台激励货币账户、非供货能力，且只增不减与"可降级卡级"语义冲突），
+    ///   成功撮合以"需求方回执谈成 + 计分"为准（滚动窗口，滑出即衰减，使降级真实可发生）。
     /// </summary>
     public class MerchantGradeService : IMerchantGradeService
     {
         private readonly IMerchantRepository _merchants;
         private readonly IMerchantMemberRepository _members;
         private readonly IMerchantBearingRepository _bearings;
-        private readonly IMerchantPointAccountRepository _treasury;
+        // 改动说明（v2.18.0 卡级重构）：成功撮合次数取自寻货应答仓储（计分回执），替代原金库账户仓储输入
+        private readonly ISourcingResponseRepository _responses;
         private readonly ISystemConfigRepository _configs;
         private readonly IUnitOfWork _unitOfWork;
         // 改动说明（v2.12.0 等级玩法）：升档礼入账走金库服务（吞失败纪律在金库侧）
@@ -31,7 +33,7 @@ namespace OpenFindBearings.Infrastructure.Services
             IMerchantRepository merchants,
             IMerchantMemberRepository members,
             IMerchantBearingRepository bearings,
-            IMerchantPointAccountRepository treasury,
+            ISourcingResponseRepository responses,
             ISystemConfigRepository configs,
             IUnitOfWork unitOfWork,
             IMerchantPointsService merchantPoints,
@@ -40,7 +42,7 @@ namespace OpenFindBearings.Infrastructure.Services
             _merchants = merchants;
             _members = members;
             _bearings = bearings;
-            _treasury = treasury;
+            _responses = responses;
             _configs = configs;
             _unitOfWork = unitOfWork;
             _merchantPoints = merchantPoints;
@@ -61,18 +63,20 @@ namespace OpenFindBearings.Infrastructure.Services
                     return; // 非在营商户不定级（释放路径已由域方法落 Standard）
 
                 // 改动说明（v2.13.2 配置收口）：阈值/默认值统一走 MerchantGradeSettings，与端点侧同源
-                var lv3Min = await GetConfigAsync(MerchantGradeSettings.PremiumOnSaleMinKey, MerchantGradeSettings.PremiumOnSaleMinDefault, cancellationToken);
-                var lv4Min = await GetConfigAsync(MerchantGradeSettings.GoldOnSaleMinKey, MerchantGradeSettings.GoldOnSaleMinDefault, cancellationToken);
-                var lv4Treasury = await GetConfigAsync(MerchantGradeSettings.GoldTreasuryMinKey, MerchantGradeSettings.GoldTreasuryMinDefault, cancellationToken);
-                var account = await _treasury.GetByMerchantIdAsync(merchantId, cancellationToken);
-                var treasuryEarned = account?.TotalEarned ?? 0;
+                // 改动说明（v2.18.0 卡级重构）：合并在售前置为单键，新增窗口天数与两档撮合次数，删除金库键
+                var onSaleMin = await GetConfigAsync(MerchantGradeSettings.GradeOnSaleMinKey, MerchantGradeSettings.GradeOnSaleMinDefault, cancellationToken);
+                var silverDealMin = await GetConfigAsync(MerchantGradeSettings.SilverDealMinKey, MerchantGradeSettings.SilverDealMinDefault, cancellationToken);
+                var goldDealMin = await GetConfigAsync(MerchantGradeSettings.GoldDealMinKey, MerchantGradeSettings.GoldDealMinDefault, cancellationToken);
+                var windowDays = await GetConfigAsync(MerchantGradeSettings.WindowDaysKey, MerchantGradeSettings.WindowDaysDefault, cancellationToken);
                 // 定级口径用实时"公域可见在售"明细数而非 Merchant.ProductCount 冗余列——
                 // 该列仅在部分聚合路径刷新，商家自助上/下架不经过它，规则输入必须取实时。
                 // 改动说明（v1.8.2 在售口径统一）：由"仅出售中"改为"出售中+补货中（公域可见）"，
                 //   与寻货匹配/SourcingMatcher 的可匹配口径一致——此前同一商家可能"被寻货通知却不计入等级在售"
                 var onSaleCount = (await _bearings.GetMatchableByMerchantAsync(merchantId, cancellationToken)).Count();
+                // 改动说明（v2.18.0）：成功撮合取自计分回执（谈成），近 windowDays 滚动窗口——窗口滑出即衰减，卡级可真降
+                var dealCount = await _responses.GetCountedDealCountAsync(merchantId, DateTime.UtcNow.AddDays(-windowDays), cancellationToken);
 
-                var target = ComputeGrade(merchant.IsVerified, onSaleCount, treasuryEarned, lv3Min, lv4Min, lv4Treasury);
+                var target = ComputeGrade(merchant.IsVerified, onSaleCount, dealCount, onSaleMin, silverDealMin, goldDealMin);
                 if (target == MerchantGrade.Unknown)
                     return;
 
@@ -166,17 +170,20 @@ namespace OpenFindBearings.Infrastructure.Services
             return best;
         }
 
-        /// <summary>等级规则纯函数（数值语义见 MerchantGrade 枚举注释）</summary>
-        private static MerchantGrade ComputeGrade(bool verified, int onSaleCount, int treasuryEarned,
-            int lv3Min, int lv4Min, int lv4TreasuryMin)
+        /// <summary>
+        /// 卡级规则纯函数（v2.18.0 卡级重构；数值语义见 MerchantGrade 枚举注释）：
+        /// 未认证=注册商户；认证且在售达前置 + 近窗口期成功撮合达金/银阈值=金卡/银卡；其余=铜卡
+        /// </summary>
+        private static MerchantGrade ComputeGrade(bool verified, int onSaleCount, int dealCount,
+            int onSaleMin, int silverDealMin, int goldDealMin)
         {
             if (!verified)
-                return MerchantGrade.Standard;
-            if (onSaleCount >= lv4Min && treasuryEarned >= lv4TreasuryMin)
+                return MerchantGrade.Registered;
+            if (onSaleCount >= onSaleMin && dealCount >= goldDealMin)
                 return MerchantGrade.Gold;
-            if (onSaleCount >= lv3Min)
-                return MerchantGrade.Premium;
-            return MerchantGrade.Verified;
+            if (onSaleCount >= onSaleMin && dealCount >= silverDealMin)
+                return MerchantGrade.Silver;
+            return MerchantGrade.Bronze;
         }
 
         /// <summary>读 Business.* 整型配置（缺失/非法回退默认）</summary>

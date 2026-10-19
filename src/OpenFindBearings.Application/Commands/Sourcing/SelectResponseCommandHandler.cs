@@ -10,8 +10,9 @@ namespace OpenFindBearings.Application.Commands.Sourcing
 {
     /// <summary>
     /// 选定应答关闭寻货命令（v1.35.0）：发布人从应答列表确认一家合作——
-    /// 需求转 Closed、被选应答 Adopted、其余 Pending 批量 NotSelected、双方联系方式解锁
-    /// （解锁的读取判定在详情查询：SelectedResponseId 关联双方才返回 contact 字段）
+    /// 需求转 Closed、被选应答 Adopted、其余 Pending 批量 NotSelected、解锁商家联系方式
+    /// （改动说明 v2.18.0 电话单向：只解锁"需求方查看商家联系方式"，需求方号码不下发商家，防胁迫回执；
+    ///  解锁的读取判定在详情查询：SelectedResponseId 关联才返回 contact 字段）
     /// </summary>
     /// <param name="UserId">发布人（仅本人可操作）</param>
     /// <param name="DemandId">寻货需求</param>

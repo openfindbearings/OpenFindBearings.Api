@@ -88,6 +88,8 @@ namespace OpenFindBearings.Infrastructure
         // v1.35.0 寻货：需求/应答仓储
         services.AddScoped<ISourcingDemandRepository, SourcingDemandRepository>();
         services.AddScoped<ISourcingResponseRepository, SourcingResponseRepository>();
+        // 改动说明（v2.18.0 T1 会话）：撮合会话仓储（会话容器 + 消息，未读按已读水位实时推算）
+        services.AddScoped<ISourcingConversationRepository, SourcingConversationRepository>();
         // v2.1.0 成就子系统：定义目录 + 一表双轨解锁进度仓储
         services.AddScoped<IAchievementRepository, AchievementRepository>();
 

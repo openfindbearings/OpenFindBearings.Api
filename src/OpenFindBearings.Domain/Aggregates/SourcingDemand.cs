@@ -84,6 +84,12 @@ namespace OpenFindBearings.Domain.Aggregates
         /// <summary>被选定的应答 ID（StatusClosed 时有值，联系方式解锁的锚点）</summary>
         public Guid? SelectedResponseId { get; private set; }
 
+        /// <summary>
+        /// 联系方式解锁时刻（UTC，v2.18.0 电话单向）：选定即解锁"需求方查看被选商家号"，
+        /// 同时作为审计锚点（谁在何时获取了商家联系方式）；商家侧永不下发需求方号码
+        /// </summary>
+        public DateTime? ContactUnlockedAt { get; private set; }
+
         /// <summary>应答计数（列表展示用冗余列，应答时 +1；与子表行数的微小漂移可接受，避免列表 COUNT JOIN）</summary>
         public int ResponseCount { get; private set; }
 
@@ -163,13 +169,15 @@ namespace OpenFindBearings.Domain.Aggregates
             return true;
         }
 
-        /// <summary>发布人选定某条应答关闭（记录选定项，触发双方联系方式解锁）</summary>
+        /// <summary>发布人选定某条应答关闭（记录选定项，解锁商家联系方式——v2.18.0 单向，需求方号码不下发商家）</summary>
         /// <param name="responseId">被选定的应答 ID</param>
         public void Select(Guid responseId)
         {
             Status = SourcingDemandStatus.Closed;
             SelectedResponseId = responseId;
             ClosedAt = DateTime.UtcNow;
+            // 改动说明（v2.18.0 电话单向）：选定即解锁需求方查看商家联系方式，记录审计锚点
+            ContactUnlockedAt = DateTime.UtcNow;
         }
 
         /// <summary>发布人主动取消</summary>
