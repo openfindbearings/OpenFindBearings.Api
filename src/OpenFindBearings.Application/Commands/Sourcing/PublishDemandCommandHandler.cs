@@ -32,13 +32,14 @@ namespace OpenFindBearings.Application.Commands.Sourcing
         List<Guid>? InvitedMerchantIds = null) : IRequest<PublishDemandResult>;
 
     /// <summary>
-    /// 发布寻货结果（v1.7.0 两条路径可见化；v1.8.0 随收件人集合更名）：DemandId=新建寻货单 ID；
-    /// NotifiedMerchantCount=本次实际收到推送的认证商家家数（公开单=在售匹配家数、邀标单=勾选∩匹配家数、无匹配=0），
-    /// 供前端区分"已通知 N 家"与"进入大厅等应答"两种反馈。
+    /// 发布寻货结果（v1.8.1 口径纠正）：DemandId=新建寻货单 ID；
+    /// RecipientMerchantCount=本次**收件人集合大小**（公开招标=在售匹配家数、邀标=勾选∩匹配家数、无匹配=0）。
+    /// 改动说明（v1.8.1）：原字段名 NotifiedMerchantCount 暗示"实际收到推送的家数"，但实际站内信投递
+    /// 还受"该商户是否已有在职管理员"影响（邀标已免除日限频），名实不符故更名，避免前端承诺过头。
     /// </summary>
     /// <param name="DemandId">新建寻货单 ID</param>
-    /// <param name="NotifiedMerchantCount">实际收到推送的认证商家家数</param>
-    public record PublishDemandResult(Guid DemandId, int NotifiedMerchantCount);
+    /// <param name="RecipientMerchantCount">收件人集合大小（认证商家家数）</param>
+    public record PublishDemandResult(Guid DemandId, int RecipientMerchantCount);
 
     /// <summary>
     /// 发布寻货处理器
@@ -100,6 +101,14 @@ namespace OpenFindBearings.Application.Commands.Sourcing
             if (request.PartNumber.Trim().Length > 100)
                 throw new InvalidOperationException("型号过长（限 100 字）");
 
+            // 改动说明（v1.8.1）：曝光范围必须落在枚举内——非法值会让单子"既进不了大厅、又不算邀标"（幽灵单），
+            //   通知按公开文案发出却在大厅/matched 双向搜不到
+            if (!Enum.IsDefined(request.Visibility))
+                throw new InvalidOperationException("发布方式非法");
+            // 改动说明（v1.8.1）：公开招标不接受收件人——客户端误把"公开+勾选"当邀标时显式报错，不静默忽略
+            if (request.Visibility == SourcingVisibility.Public && request.InvitedMerchantIds is { Count: > 0 })
+                throw new InvalidOperationException("公开招标无需指定收件商家，如需只邀指定商家请选择邀标");
+
             // v2.12.0 商户名义发布：先验身份再动额度/积分（身份非法不得消耗额度）
             Merchant? publishMerchant = null;
             if (request.MerchantId.HasValue)
@@ -109,6 +118,31 @@ namespace OpenFindBearings.Application.Commands.Sourcing
                     ?? throw new InvalidOperationException("您不是该商户的在职成员，无法以其名义发布");
                 publishMerchant = await _merchantRepository.GetByIdAsync(request.MerchantId.Value, cancellationToken)
                     ?? throw new InvalidOperationException("商户不存在");
+            }
+
+            // 改动说明（v1.8.0 公开招标/邀标）：先解析"最终收件人集合"——它同时决定建单快照、推送事件与回传家数，
+            //   必须在扣积分之前算定（邀标无人可邀时不得先烧额度/积分），且匹配口径只此一处（SourcingMatcher）
+            // 改动说明（v1.8.1）：解析顺序提到额度评估之前——"无人可邀/勾选无效"必须在弹"花积分发布"确认框之前暴露；
+            //   商户名义发布时排除发布商户自己（不自邀、不给自己发提醒）
+            var matched = await SourcingMatcher.GetMatchedMerchantIdsAsync(
+                _bearingRepository, _merchantBearingRepository, _merchantRepository,
+                request.BearingId, request.PartNumber, cancellationToken, publishMerchant?.Id);
+
+            IReadOnlyList<Guid> recipients;
+            if (request.Visibility == SourcingVisibility.Invited)
+            {
+                if (matched.Count == 0)
+                    throw new InvalidOperationException("当前没有在售该型号的认证商家，无法邀标，请改为公开招标");
+                // 勾选为空=邀全部匹配商家；非空=勾选 ∩ 匹配（拦截未认证/无货的勾选，守住"只找有货的认证商家"口径）
+                recipients = request.InvitedMerchantIds is { Count: > 0 } picked
+                    ? matched.Where(picked.Contains).ToList()
+                    : matched.ToList();
+                if (recipients.Count == 0)
+                    throw new InvalidOperationException("所选商家均非该型号的在售认证商家，请重新选择");
+            }
+            else
+            {
+                recipients = matched.ToList();
             }
 
             // 额度评估：今日已发数（含取消单，防发了删删了发绕额度）
@@ -129,29 +163,6 @@ namespace OpenFindBearings.Application.Commands.Sourcing
                 case QuotaDecision.NeedPoints:
                     // 前端据此弹"花 X 积分发布"确认，带 UsePoints=true 重提交
                     throw new InvalidOperationException($"NEED_POINTS:{cost}");
-            }
-
-            // 改动说明（v1.8.0 公开招标/邀标）：先解析"最终收件人集合"——它同时决定建单快照、推送事件与回传家数，
-            //   必须在扣积分之前算定（邀标无人可邀时不得先烧额度/积分），且匹配口径只此一处（SourcingMatcher）
-            var matched = await SourcingMatcher.GetMatchedMerchantIdsAsync(
-                _bearingRepository, _merchantBearingRepository, _merchantRepository,
-                request.BearingId, request.PartNumber, cancellationToken);
-
-            IReadOnlyList<Guid> recipients;
-            if (request.Visibility == SourcingVisibility.Invited)
-            {
-                if (matched.Count == 0)
-                    throw new InvalidOperationException("当前没有在售该型号的认证商家，无法邀标，请改为公开招标");
-                // 勾选为空=邀全部匹配商家；非空=勾选 ∩ 匹配（拦截未认证/无货的勾选，守住"只找有货的认证商家"口径）
-                recipients = request.InvitedMerchantIds is { Count: > 0 } picked
-                    ? matched.Where(picked.Contains).ToList()
-                    : matched.ToList();
-                if (recipients.Count == 0)
-                    throw new InvalidOperationException("所选商家均非该型号的在售认证商家，请重新选择");
-            }
-            else
-            {
-                recipients = matched.ToList();
             }
 
             // 超出免费额度：扣积分（余额不足由 DeductAsync 抛出转 400；扣分与建单同事务窗口）
@@ -179,7 +190,7 @@ namespace OpenFindBearings.Application.Commands.Sourcing
                 demand.Id, request.UserId, request.BearingId, demand.PartNumber, request.Brand,
                 request.Visibility, recipients), cancellationToken);
 
-            // 回传实际推送家数，供前端区分"已通知 N 家认证商家"与"进入大厅等应答"
+            // 回传收件人集合大小，供前端区分"已通知 N 家认证商家"与"进入大厅等应答"
             return new PublishDemandResult(demand.Id, recipients.Count);
         }
     }

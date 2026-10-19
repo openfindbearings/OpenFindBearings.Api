@@ -75,6 +75,26 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                     && mb.SaleState == SaleState.OnSale, cancellationToken);
 
         /// <summary>
+        /// 获取商家"可匹配寻货"的关联列表（v1.8.1 寻货聚合口径统一）
+        /// 口径 = 审核通过 且（出售中 或 补货中）且未停用，与 SourcingMatcher 匹配口径一致
+        /// </summary>
+        public async Task<IEnumerable<MerchantBearing>> GetMatchableByMerchantAsync(
+            Guid merchantId,
+            CancellationToken cancellationToken = default)
+        {
+            return await _context.MerchantBearings
+                .Include(mb => mb.Bearing)
+                    .ThenInclude(b => b.Brand)
+                .Include(mb => mb.Bearing)
+                    .ThenInclude(b => b.BearingTypeNavigation)
+                .Where(mb => mb.MerchantId == merchantId
+                    && mb.ReviewStatus == ListingReviewStatus.Approved
+                    && (mb.SaleState == SaleState.OnSale || mb.SaleState == SaleState.Restocking)
+                    && mb.IsActive)
+                .ToListAsync(cancellationToken);
+        }
+
+        /// <summary>
         /// 获取待审核的关联列表（v2.15.0：审核中）
         /// </summary>
         public async Task<IEnumerable<MerchantBearing>> GetPendingApprovalAsync(CancellationToken cancellationToken = default)

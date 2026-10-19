@@ -31,6 +31,14 @@ namespace OpenFindBearings.Domain.Repositories
         Task<IEnumerable<MerchantBearing>> GetOnSaleByMerchantAsync(Guid merchantId, CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// 获取商家"可匹配寻货"的关联列表（v1.8.1）：审核通过 且（出售中 或 补货中）且未下架——
+        /// 与 <see cref="OpenFindBearings.Domain.Entities.MerchantBearing.IsPubliclyVisible"/> 及寻货匹配口径一致。
+        /// 改动说明：寻货"为你匹配/需求信号"原先误用只在售口径的 GetOnSaleByMerchantAsync，
+        /// 导致补货中商家被通知却在聚合面看不到，故独立出此方法（不改动在售口径方法的既有调用方）
+        /// </summary>
+        Task<IEnumerable<MerchantBearing>> GetMatchableByMerchantAsync(Guid merchantId, CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// 商家在售商品数量（v1.5.0 寻货比价视图"实力摘要"：发布人选定前的现货凭证）
         /// </summary>
         Task<int> CountOnSaleAsync(Guid merchantId, CancellationToken cancellationToken = default);

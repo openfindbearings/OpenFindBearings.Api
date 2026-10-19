@@ -196,6 +196,17 @@ namespace OpenFindBearings.Domain.Aggregates
         public void IncrementResponseCount() => ResponseCount++;
 
         /// <summary>
+        /// 应答数-1（v1.8.1 撤标计数维护）：撤回应答时同步递减冗余列，避免"撤了还显示有应答"的僵尸计数。
+        /// 改动说明：该列是 matched/opportunities "尚无人应答"推荐的依据，漂移会让单子在商家聚合面消失；
+        /// 带下界保护，绝不出现负数
+        /// </summary>
+        public void DecrementResponseCount()
+        {
+            if (ResponseCount > 0)
+                ResponseCount--;
+        }
+
+        /// <summary>
         /// 置顶（v2.10.0 需求置顶卡履约）：有效期内续接（叠加到旧到期时刻之上），
         /// 已过期/从未置顶从当前时刻起算——与商品置顶同语义，防"过期卡叠满未来"
         /// </summary>
