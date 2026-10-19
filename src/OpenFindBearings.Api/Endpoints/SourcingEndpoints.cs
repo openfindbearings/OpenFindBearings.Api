@@ -140,6 +140,8 @@ namespace OpenFindBearings.Api.Endpoints
                 // 改动说明（v1.8.1）：判定由 isPublisher 放宽为 isPublisherSide——商户名义发布时全店在职成员同权查看比价
                 List<object>? fullResponses = null;
                 string? selectedMerchantContact = null;
+                // 改动说明（v2.18.0 撮合成交链）：留存被选定的应答对象，用于回显成交回执（仅发布方可见）
+                SourcingResponse? selectedResponse = null;
                 if (isPublisherSide)
                 {
                     // 改动说明（v2.12.0 等级玩法铭牌曝光）：批量落档应答经办人的段位（一次查询防 N+1），
@@ -158,10 +160,14 @@ namespace OpenFindBearings.Api.Endpoints
                     foreach (var r in responses)
                     {
                         var merchant = await merchantRepository.GetByIdAsync(r.MerchantId, httpContext.RequestAborted);
-                        if (r.Status == SourcingResponseStatus.Adopted && merchant != null)
+                        if (r.Status == SourcingResponseStatus.Adopted)
                         {
-                            // 选定后解锁被选商户联系方式（手机优先，回退座机——与商家主页 merchantDetail 展示口径一致）
-                            selectedMerchantContact = merchant.Contact?.Mobile ?? merchant.Contact?.Phone;
+                            selectedResponse = r;
+                            if (merchant != null)
+                            {
+                                // 选定后解锁被选商户联系方式（手机优先，回退座机——与商家主页 merchantDetail 展示口径一致）
+                                selectedMerchantContact = merchant.Contact?.Mobile ?? merchant.Contact?.Phone;
+                            }
                         }
                         var items = await responseRepository.GetItemsAsync(r.Id, httpContext.RequestAborted);
                         // 改动说明（v1.5.0 证据力体系 P1）：逐条透出商家实力摘要——
@@ -202,23 +208,10 @@ namespace OpenFindBearings.Api.Endpoints
                     }
                 }
 
-                // 被选商户视图：解锁发布方联系方式。改动说明（v2.12.0 商户名义发布）：
-                //   商户单给商户公开电话（手机优先回退座机，与 selectedMerchantContact 口径对称，
-                //   不暴露经办人个人手机）；个人单维持发布人注册手机
-                string? publisherContact = null;
-                if (myResponse?.Status == SourcingResponseStatus.Adopted && userId.HasValue)
-                {
-                    if (demand.IsMerchantPublished)
-                    {
-                        var pubMerchant = await merchantRepository.GetByIdAsync(demand.PublisherMerchantId!.Value, httpContext.RequestAborted);
-                        publisherContact = pubMerchant?.Contact?.Mobile ?? pubMerchant?.Contact?.Phone;
-                    }
-                    else
-                    {
-                        var publisher = await userRepository.GetByIdAsync(demand.PublisherUserId, httpContext.RequestAborted);
-                        publisherContact = publisher?.Mobile;
-                    }
-                }
+                // 改动说明（v2.18.0 电话单向）：删除"被选商户视图解锁发布方联系方式"分支——
+                //   商家永不下发需求方号码（防胁迫回执、号码最小必要暴露）；
+                //   需求方号码仅在双方自有沟通渠道中自行交换，平台不代为下发。
+                //   商家侧可见"买家已获取你的联系方式"由 contactUnlockedAt 透出（商机跟进信号）
 
                 // v1.5.0 多行标书：商户视角自己的应答也透出型号行（查看/修改应答时逐行回显）
                 var myResponseItems = myResponse == null
@@ -271,7 +264,18 @@ namespace OpenFindBearings.Api.Endpoints
                         createdAt = myResponse.CreatedAt
                     },
                     selectedMerchantContact,
-                    publisherContact
+                    // 改动说明（v2.18.0 电话单向 + 成交回执）：删除 publisherContact（商家永不下发需求方号码）；
+                    // 新增解锁时刻（商家可见"买家已获取联系方式"）、选定应答 ID 与回执状态（仅发布方可回填/回显）
+                    contactUnlockedAt = demand.ContactUnlockedAt,
+                    selectedResponseId = demand.SelectedResponseId,
+                    canFeedback = isPublisherSide && selectedResponse != null,
+                    myFeedback = selectedResponse?.FeedbackOutcome == null ? null : new
+                    {
+                        outcome = (int)selectedResponse!.FeedbackOutcome!.Value,
+                        reason = selectedResponse.FeedbackReason,
+                        at = selectedResponse.FeedbackAt,
+                        counted = selectedResponse.IsCounted
+                    }
                 }, httpContext: httpContext);
             })
             .WithName("GetSourcingDetail")
@@ -379,7 +383,7 @@ namespace OpenFindBearings.Api.Endpoints
             .WithDescription("商户撤回本商户对该需求的待处理应答，需求回到未应答状态；当日额度不退还");
 
             /// <summary>
-            /// 选定应答关闭寻货（发布人；触发双方联系方式解锁与通知）
+            /// 选定应答关闭寻货（发布人；解锁商家联系方式并通知）
             /// </summary>
             group.MapPost("/demands/{id:guid}/select", async (
                 Guid id,
@@ -393,12 +397,43 @@ namespace OpenFindBearings.Api.Endpoints
 
                 await mediator.Send(new SelectResponseCommand(currentUser.UserId.Value, id, request.ResponseId),
                     httpContext.RequestAborted);
-                return ApiResponseHelper.Ok("已选定，双方联系方式已解锁", httpContext: httpContext);
+                return ApiResponseHelper.Ok("已选定，商家联系方式已解锁", httpContext: httpContext);
             })
             .RequireAuthorization()
             .WithName("SelectSourcingResponse")
             .WithSummary("选定应答")
-            .WithDescription("发布人确认合作商户，需求关闭并解锁双方联系方式");
+            .WithDescription("发布人确认合作商户，需求关闭并解锁商家联系方式（v2.18.0 单向：需求方号码不下发商家）");
+
+            /// <summary>
+            /// 提交/更新成交回执（v2.18.0 撮合成交链）：需求方对被选定的合作一键回填洽谈结果。
+            /// 只有"谈成"且通过反刷校验（自关联/配对去重/资格门槛/异常检测）才计入商家卡级成功撮合；
+            /// 重复提交为更新（幂等）
+            /// </summary>
+            group.MapPost("/responses/{id:guid}/feedback", async (
+                Guid id,
+                [FromBody] SubmitDealFeedbackRequest request,
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] MediatR.IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                // 异常检测留痕：优先取反向代理透传的真实来源 IP（K8s Ingress 场景），回退连接 IP
+                var ip = httpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault()?.Split(',')[0].Trim();
+                if (string.IsNullOrWhiteSpace(ip))
+                    ip = httpContext.Connection.RemoteIpAddress?.ToString();
+
+                var result = await mediator.Send(new SubmitDealFeedbackCommand(
+                        currentUser.UserId.Value, id, request.Outcome, request.Reason, ip),
+                    httpContext.RequestAborted);
+                return ApiResponseHelper.Ok(new { counted = result.Counted, note = result.Note },
+                    "已记录成交回执", httpContext: httpContext);
+            })
+            .RequireAuthorization()
+            .WithName("SubmitSourcingDealFeedback")
+            .WithSummary("提交成交回执")
+            .WithDescription("需求方确认撮合结果：谈成计入商家卡级成交，失败原因留痕供管理侧复核");
 
             /// <summary>
             /// 取消寻货（发布人；通知全体应答商户）
@@ -967,7 +1002,107 @@ namespace OpenFindBearings.Api.Endpoints
             .WithSummary("下架寻货（Admin）")
             .WithDescription("违规寻货软下架并通知发布人（sourcing.manage）")
             .RequirePermission("sourcing.manage");
+
+            /// <summary>
+            /// 成交回执记录（v2.18.0 管理侧复核）：分页查看需求方回执，含计分与否与留痕原因
+            /// </summary>
+            adminGroup.MapGet("/feedbacks", async (
+                [FromQuery] Guid? merchantId,
+                [FromQuery] int? outcome,
+                [FromQuery] int page,
+                [FromQuery] int pageSize,
+                [FromServices] ISourcingResponseRepository responseRepository,
+                [FromServices] ISourcingDemandRepository demandRepository,
+                [FromServices] IMerchantRepository merchantRepository,
+                [FromServices] IUserRepository userRepository,
+                HttpContext httpContext) =>
+            {
+                SourcingDealOutcome? filter = null;
+                if (outcome.HasValue)
+                {
+                    if (!Enum.IsDefined(typeof(SourcingDealOutcome), outcome.Value))
+                        return ApiResponseHelper.BadRequest("回执结果不合法", httpContext: httpContext);
+                    filter = (SourcingDealOutcome)outcome.Value;
+                }
+                var (items, total) = await responseRepository.GetFeedbackPagedAsync(
+                    merchantId, filter, page <= 0 ? 1 : page,
+                    pageSize is > 0 and <= 100 ? pageSize : 20, httpContext.RequestAborted);
+
+                var list = new List<object>();
+                foreach (var r in items)
+                {
+                    var demand = await demandRepository.GetByIdAsync(r.DemandId, httpContext.RequestAborted);
+                    var merchant = await merchantRepository.GetByIdAsync(r.MerchantId, httpContext.RequestAborted);
+                    var publisher = demand == null ? null : await userRepository.GetByIdAsync(demand.PublisherUserId, httpContext.RequestAborted);
+                    list.Add(new
+                    {
+                        responseId = r.Id,
+                        demandId = r.DemandId,
+                        partNumber = demand?.PartNumber,
+                        merchantId = r.MerchantId,
+                        merchantName = merchant?.Name,
+                        publisherName = publisher?.Nickname ?? "已注销用户",
+                        publisherMerchantName = demand?.PublisherMerchantName,
+                        outcome = (int)r.FeedbackOutcome!.Value,
+                        outcomeLabel = DealOutcomeLabel(r.FeedbackOutcome!.Value),
+                        reason = r.FeedbackReason,
+                        counted = r.IsCounted,
+                        flagNote = r.FlagNote,
+                        adoptedAt = r.AdoptedAt,
+                        feedbackAt = r.FeedbackAt
+                    });
+                }
+                return ApiResponseHelper.Ok(new { items = list, total }, httpContext: httpContext);
+            })
+            .WithName("AdminGetSourcingFeedbacks")
+            .WithSummary("成交回执记录（Admin）")
+            .WithDescription("分页查看需求方成交回执（结果/是否计分/留痕原因），可按商户与结果筛选（sourcing.view）")
+            .RequirePermission("sourcing.view");
+
+            /// <summary>
+            /// 撤销/恢复成交回执计分（v2.18.0 管理侧复核）：翻转 IsCounted 并触发商家卡级重算，留痕复核说明
+            /// </summary>
+            adminGroup.MapPost("/feedbacks/{responseId:guid}/revoke", async (
+                Guid responseId,
+                [FromBody] RevokeFeedbackRequest request,
+                [FromServices] ISourcingResponseRepository responseRepository,
+                [FromServices] IMerchantGradeService gradeService,
+                [FromServices] OpenFindBearings.Application.Shared.Interfaces.IUnitOfWork unitOfWork,
+                HttpContext httpContext) =>
+            {
+                var response = await responseRepository.GetByIdAsync(responseId, httpContext.RequestAborted);
+                if (response == null)
+                    return ApiResponseHelper.NotFound("回执不存在", httpContext: httpContext);
+                if (response.FeedbackOutcome == null)
+                    return ApiResponseHelper.BadRequest("该应答尚无成交回执", httpContext: httpContext);
+
+                // counted=false 撤销计分；counted=true 恢复计分（复核判定有误时回滚）
+                var counted = request?.Counted ?? false;
+                response.SetFeedbackCounted(counted, string.IsNullOrWhiteSpace(request?.Reason) ? "管理侧复核调整" : request!.Reason);
+                await responseRepository.UpdateAsync(response, httpContext.RequestAborted);
+                await unitOfWork.SaveChangesAsync(httpContext.RequestAborted);
+                // 计分状态变动直接影响成功撮合次数 → 触发卡级重算
+                await gradeService.RecomputeAsync(response.MerchantId, httpContext.RequestAborted);
+
+                return ApiResponseHelper.Ok(new { counted }, counted ? "已恢复计分" : "已撤销计分", httpContext);
+            })
+            .WithName("AdminRevokeSourcingFeedback")
+            .WithSummary("撤销/恢复回执计分（Admin）")
+            .WithDescription("翻转成交回执是否计入商家卡级并重算卡级，留痕复核说明（merchant.grade.manage）")
+            .RequirePermission("merchant.grade.manage");
         }
+
+        /// <summary>
+        /// 回执结果中文标签（管理侧展示口径，与 Taro 端文案保持一致）
+        /// </summary>
+        private static string DealOutcomeLabel(SourcingDealOutcome outcome) => outcome switch
+        {
+            SourcingDealOutcome.Confirmed => "谈成",
+            SourcingDealOutcome.NoStock => "没谈成·没货",
+            SourcingDealOutcome.PriceRaise => "没谈成·加价",
+            SourcingDealOutcome.Delayed => "没谈成·拖延",
+            _ => "没谈成·其他"
+        };
     }
 
     /// <summary>发布寻货请求体</summary>
@@ -997,10 +1132,20 @@ namespace OpenFindBearings.Api.Endpoints
     /// <param name="ResponseId">被选定的应答 ID</param>
     public record SelectResponseRequest(Guid ResponseId);
 
+    /// <summary>成交回执请求体（v2.18.0 撮合成交链）</summary>
+    /// <param name="Outcome">洽谈结果（0=谈成；1=没货；2=加价；3=拖延；4=其他）</param>
+    /// <param name="Reason">补充说明（可选）</param>
+    public record SubmitDealFeedbackRequest(int Outcome, string? Reason);
+
     /// <summary>下架请求体</summary>
     /// <param name="Reason">下架原因（透传发布人）</param>
     public record TakeDownRequest(string? Reason);
 
     /// <summary>批量删除寻货请求（v2.12.0 列表删除；左滑单删=ids 传一个）</summary>
     public record BatchDeleteDemandRequest(List<Guid> Ids);
+
+    /// <summary>撤销/恢复成交回执计分请求体（v2.18.0 管理侧复核）</summary>
+    /// <param name="Counted">目标计分状态：false=撤销计分（默认），true=恢复计分</param>
+    /// <param name="Reason">复核说明（写入留痕）</param>
+    public record RevokeFeedbackRequest(bool? Counted, string? Reason);
 }

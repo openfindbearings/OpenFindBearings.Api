@@ -368,6 +368,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     b.Property<DateTime?>("ClosedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTime?>("ContactUnlockedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -2133,7 +2136,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     b.ToTable("RolePermissions", (string)null);
                 });
 
-            modelBuilder.Entity("OpenFindBearings.Domain.Entities.SourcingResponse", b =>
+            modelBuilder.Entity("OpenFindBearings.Domain.Entities.SourcingConversation", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -2146,6 +2149,119 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("LastMessageAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LastMessagePreview")
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
+                    b.Property<Guid>("MerchantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("MerchantLastReadAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("PublisherLastReadAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("PublisherMerchantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PublisherUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DemandId", "MerchantId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_SourcingConversations_Demand_Merchant");
+
+                    b.HasIndex("MerchantId", "LastMessageAt")
+                        .HasDatabaseName("IX_SourcingConversations_Merchant_LastAt");
+
+                    b.HasIndex("PublisherUserId", "LastMessageAt")
+                        .HasDatabaseName("IX_SourcingConversations_Publisher_LastAt");
+
+                    b.ToTable("SourcingConversations", (string)null);
+                });
+
+            modelBuilder.Entity("OpenFindBearings.Domain.Entities.SourcingMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<Guid>("ConversationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("SenderSide")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("SenderUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConversationId", "CreatedAt")
+                        .HasDatabaseName("IX_SourcingMessages_Conversation_CreatedAt");
+
+                    b.ToTable("SourcingMessages", (string)null);
+                });
+
+            modelBuilder.Entity("OpenFindBearings.Domain.Entities.SourcingResponse", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("AdoptedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("DemandId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("FeedbackAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FeedbackIp")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("FeedbackOutcome")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("FeedbackReason")
+                        .HasColumnType("text");
+
+                    b.Property<string>("FlagNote")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsCounted")
                         .HasColumnType("boolean");
 
                     b.Property<Guid>("MerchantId")

@@ -1,5 +1,6 @@
 using OpenFindBearings.Domain.Aggregates;
 using OpenFindBearings.Domain.Entities;
+using OpenFindBearings.Domain.Enums;
 
 namespace OpenFindBearings.Domain.Repositories
 {
@@ -108,5 +109,81 @@ namespace OpenFindBearings.Domain.Repositories
 
         /// <summary>新增应答型号行（v1.5.0 显式 Add，规避 EF 导航陷阱）</summary>
         Task AddItemsAsync(IEnumerable<SourcingResponseItem> items, CancellationToken cancellationToken = default);
+
+        // ============ v2.18.0 撮合成交链（卡级"成功撮合"单一事实源） ============
+
+        /// <summary>
+        /// 商家在窗口期内的"成功撮合"次数（卡级唯一规模指标）：
+        /// 计分回执（IsCounted）且结果为 Confirmed，按 FeedbackAt 落在窗口内统计
+        /// </summary>
+        Task<int> GetCountedDealCountAsync(Guid merchantId, DateTime sinceUtc, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 是否存在该（发布人, 商户）对在窗口内的计分成交（v2.18.0 配对去重：
+        /// 同一对关系窗口内只计一次，防自刷/反复刷）
+        /// </summary>
+        Task<bool> HasCountedDealAsync(Guid merchantId, Guid publisherUserId, DateTime sinceUtc,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 统计某 IP 在时间窗内的回执提交数（v2.18.0 异常检测：同 IP 短时集中提交视为可疑）
+        /// </summary>
+        Task<int> CountFeedbackByIpSinceAsync(string ip, DateTime sinceUtc, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 回执分页（v2.18.0 管理侧复核）：按商户/结果过滤，仅取已回执的行，FeedbackAt 倒序
+        /// </summary>
+        Task<(List<SourcingResponse> Items, int Total)> GetFeedbackPagedAsync(Guid? merchantId,
+            SourcingDealOutcome? outcome, int page, int pageSize, CancellationToken cancellationToken = default);
+    }
+
+    /// <summary>
+    /// 撮合会话仓储（v2.18.0 T1 会话）：会话容器与消息的读写。
+    /// 未读用双方各自 LastReadAt 推算（对方消息中晚于本方已读水位的条数），不落冗余计数列。
+    /// </summary>
+    public interface ISourcingConversationRepository
+    {
+        /// <summary>按标识取会话</summary>
+        Task<SourcingConversation?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+
+        /// <summary>按"寻货单 × 商户"取会话（唯一锚点；不存在返回 null，调用方按需懒创建）</summary>
+        Task<SourcingConversation?> GetByDemandAndMerchantAsync(Guid demandId, Guid merchantId,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>新增会话</summary>
+        Task AddAsync(SourcingConversation conversation, CancellationToken cancellationToken = default);
+
+        /// <summary>更新会话（读水位/最后消息摘要）</summary>
+        Task UpdateAsync(SourcingConversation conversation, CancellationToken cancellationToken = default);
+
+        /// <summary>新增消息</summary>
+        Task AddMessageAsync(SourcingMessage message, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 拉取会话消息（倒序返回，供前端反转为时间正序）：before 为空取最新 limit 条，
+        /// 否则取早于 before 的 limit 条（上滑翻历史）
+        /// </summary>
+        Task<List<SourcingMessage>> GetMessagesAsync(Guid conversationId, DateTime? before, int limit,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 某方未读数：会话内对方发的、且晚于本方已读水位的消息条数
+        /// </summary>
+        Task<int> CountUnreadAsync(Guid conversationId, SourcingSenderSide side, DateTime? lastReadAt,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>需求方会话列表（按最后活跃倒序分页）</summary>
+        Task<List<SourcingConversation>> GetForPublisherAsync(Guid publisherUserId, int skip, int take,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>需求方会话总数</summary>
+        Task<int> CountForPublisherAsync(Guid publisherUserId, CancellationToken cancellationToken = default);
+
+        /// <summary>商户方会话列表（按最后活跃倒序分页；userMerchantIds=当前用户在职业的商户集合）</summary>
+        Task<List<SourcingConversation>> GetForMerchantAsync(List<Guid> userMerchantIds, int skip, int take,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>商户方会话总数</summary>
+        Task<int> CountForMerchantAsync(List<Guid> userMerchantIds, CancellationToken cancellationToken = default);
     }
 }

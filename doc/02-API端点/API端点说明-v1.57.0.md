@@ -1,9 +1,18 @@
 # API 端点说明文档
 
-**版本：** v1.56.0
+**版本：** v1.57.0
 **日期：** 2026-10-19
-**上一版：** v1.55.0
+**上一版：** v1.56.0
 **状态：** 与代码同步
+
+> v1.57.0 变更（卡级重构 + 撮合成交链 + T1 会话 + 电话单向 + 管理侧复核）：
+> 1. **卡级重构**：`MerchantGrade` 单调重排（Registered=1/Bronze=2/Silver=3/Gold=4，迁移 `AddMerchantCardTiers`）；
+>    `GET /api/points/merchant-grade` 改口径——入参判定去掉金库，新增 `dealCount`/`windowDays`/`onSaleMin`/`silverDealMin`/`goldDealMin`/`nextTier`；`/api/points/merchant-buff` 的等级名与提示文案同步。
+> 2. **成交回执**：新增 `POST /api/sourcing/responses/{id}/feedback`（需求方回填洽谈结果；"谈成"计入商家卡级并触发重算）。
+> 3. **T1 会话**：新增 `GET /api/sourcing/conversations`、`/conversations/unread-count`、`GET|POST /api/sourcing/conversations/{demandId}/{merchantId}/messages`、`POST .../read`（绑定"寻货单 × 商户"，单据结束后只读）。
+> 4. **电话单向**：寻货详情删除 `publisherContact`（商家任何情况下拿不到需求方号码），新增 `contactUnlockedAt`/`selectedResponseId`/`canFeedback`/`myFeedback`；选定文案改"解锁商家联系方式"。
+> 5. **管理侧**：新增 `GET /api/admin/sourcing/feedbacks`（`sourcing.view`）、`POST /api/admin/sourcing/feedbacks/{responseId}/revoke` 与 `POST /api/admin/merchants/{id}/grade`（均 `merchant.grade.manage`，权限键由迁移 `AddGradeManagePermission` 补插并授权 Admin/Operator）。
+
 
 ---
 

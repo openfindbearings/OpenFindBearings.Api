@@ -73,8 +73,11 @@ namespace OpenFindBearings.Application.Queries.Corrections.GetCorrectableFields
             if (merchant == null) return [];
 
             // 改动说明（v2.13.2 标签收敛）：显示名统一取自 CorrectionFieldLabels
+            // 改动说明（v2.18.0 卡级重构）：新增 merchantGrade（卡级申诉）——无当前值（Value=null），
+            //   作为商家对卡级结果提出异议的申诉入口；审批不自动改级，由管理员在人工调级口落地
             (string Id, string? Value)[] raw =
             [
+                ("merchantGrade", null),
                 ("name", merchant.Name),
                 ("companyName", merchant.CompanyName),
                 ("description", merchant.Description),

@@ -211,7 +211,8 @@ namespace OpenFindBearings.Domain.Aggregates
             Name = name;
             Type = type;
             Contact = contact ?? throw new ArgumentNullException(nameof(contact));
-            Grade = MerchantGrade.Standard;
+            // 改动说明（v2.18.0 卡级重构）：初始档由"入驻商家"改为"注册商户"（未认证即无卡级）
+            Grade = MerchantGrade.Registered;
             Status = MerchantStatus.Pending;  // 新商家默认待审核
         }
 
@@ -410,9 +411,9 @@ namespace OpenFindBearings.Domain.Aggregates
             // 改动说明（v2.9.0）：认证完成即清除商户的待处理申请标记
             VerifyRequested = false;
 
-            // 改动说明（v2.5.0 商家经济）：等级数值非单调（Premium=2 语义却是 Lv3），
-            // 不能再按"<"比较定级——认证一律落 Lv2，Lv3/4 由重算服务在供给/金库事件时上修
-            Grade = MerchantGrade.Verified;
+            // 改动说明（v2.18.0 卡级重构）：认证通过即达"铜卡"（银/金卡由重算服务按在售+成功撮合上修）；
+            // 认证是卡级门槛而非档位名——认证徽章独立展示（IsVerified）
+            Grade = MerchantGrade.Bronze;
             // 改动说明（v2.12.0 等级玩法）：认证事件直接落级，历史保级钟作废
             GradeGraceUntil = null;
 
@@ -431,10 +432,10 @@ namespace OpenFindBearings.Domain.Aggregates
 
             IsVerified = false;
             VerifiedAt = null;
-            // 改动说明（v2.5.0 商家经济）：认证是 Lv2+ 的硬前提，撤销认证等级即回落实
-            // （回 Standard，后续供给事件会按规则重新上修）。撤销认证属平台执法动作，
+            // 改动说明（v2.18.0 卡级重构）：认证是卡级的硬前提，撤销认证卡级即回落"注册商户"
+            // （回 Registered，后续供给事件会按规则重新上修）。撤销认证属平台执法动作，
             // 不走 v2.12.0 保级缓冲——直接落级并作废保级钟
-            Grade = MerchantGrade.Standard;
+            Grade = MerchantGrade.Registered;
             GradeGraceUntil = null;
             UpdateTimestamp();
 
@@ -555,9 +556,10 @@ namespace OpenFindBearings.Domain.Aggregates
                 VerifiedAt = null;
             }
             VerifyRequested = false;
-            if (Grade > MerchantGrade.Standard)
+            // 改动说明（v2.18.0 卡级重构）：枚举单调后"高于注册商户"即持卡级，回海域一律落回注册商户
+            if (Grade > MerchantGrade.Registered)
             {
-                UpdateGrade(MerchantGrade.Standard);
+                UpdateGrade(MerchantGrade.Registered);
             }
 
             // 数据核验轴重置：上一任认领期留下的"已核验"标记与新互联网商户（天然 false）区分，必须清
@@ -737,12 +739,12 @@ namespace OpenFindBearings.Domain.Aggregates
         /// </summary>
         public string GetGradeDisplayName() => Grade switch
         {
-            // v2.5.0 商家经济：等级=商家等级（buff 唯一输入），文案与 Lv1-4 定案一致
-            // v2.13.0 改名：Lv3 "活跃供给"→"口碑"（四档统一"XX商家"格式，展示名自带"商家"后缀）
-            MerchantGrade.Standard => "入驻商家",
-            MerchantGrade.Verified => "认证商家",
-            MerchantGrade.Premium => "口碑商家",
-            MerchantGrade.Gold => "金牌商家",
+            // 改动说明（v2.18.0 卡级重构）：展示名改为卡级口径（注册商户/铜卡/银卡/金卡），
+            // 认证不再是档位名（认证徽章由 IsVerified 独立展示）
+            MerchantGrade.Registered => "注册商户",
+            MerchantGrade.Bronze => "铜卡",
+            MerchantGrade.Silver => "银卡",
+            MerchantGrade.Gold => "金卡",
             _ => "未定级"
         };
     }

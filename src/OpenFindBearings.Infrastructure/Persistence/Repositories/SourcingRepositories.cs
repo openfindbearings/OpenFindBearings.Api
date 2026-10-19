@@ -244,5 +244,152 @@ if (status.HasValue)
             // 改动说明（v1.5.0 多行标书）：显式 Add 行，不走聚合根导航集合，
             // 规避 EF"导航发现新实体+更新根"的 Modified 误判陷阱
             => await _context.Set<SourcingResponseItem>().AddRangeAsync(items, cancellationToken);
+
+        /// <inheritdoc/>
+        public Task<int> GetCountedDealCountAsync(Guid merchantId, DateTime sinceUtc,
+            CancellationToken cancellationToken = default)
+            // 改动说明（v2.18.0 撮合成交链）：卡级"成功撮合"的唯一统计口——
+            // 计分（IsCounted）且谈成（Confirmed），按回执时刻落在滚动窗口内
+            => _context.Set<SourcingResponse>().CountAsync(r =>
+                r.MerchantId == merchantId
+                && r.IsCounted
+                && r.FeedbackOutcome == SourcingDealOutcome.Confirmed
+                && r.FeedbackAt >= sinceUtc, cancellationToken);
+
+        /// <inheritdoc/>
+        public Task<bool> HasCountedDealAsync(Guid merchantId, Guid publisherUserId, DateTime sinceUtc,
+            CancellationToken cancellationToken = default)
+            // 改动说明（v2.18.0 配对去重）：同一（发布人, 商户）对在窗口内只允许一笔计分成交——
+            // SourcingResponse 不存发布人，经 DemandId 关联 SourcingDemand 取 PublisherUserId
+            => (from r in _context.Set<SourcingResponse>()
+                join d in _context.Set<SourcingDemand>() on r.DemandId equals d.Id
+                where r.MerchantId == merchantId
+                      && d.PublisherUserId == publisherUserId
+                      && r.IsCounted
+                      && r.FeedbackOutcome == SourcingDealOutcome.Confirmed
+                      && r.FeedbackAt >= sinceUtc
+                select r.Id).AnyAsync(cancellationToken);
+
+        /// <inheritdoc/>
+        public Task<int> CountFeedbackByIpSinceAsync(string ip, DateTime sinceUtc,
+            CancellationToken cancellationToken = default)
+            // 改动说明（v2.18.0 异常检测）：同 IP 在时间窗内的回执提交数（跨商户集中=可疑）
+            => _context.Set<SourcingResponse>().CountAsync(r =>
+                r.FeedbackIp == ip && r.FeedbackAt >= sinceUtc, cancellationToken);
+
+        /// <inheritdoc/>
+        public async Task<(List<SourcingResponse> Items, int Total)> GetFeedbackPagedAsync(Guid? merchantId,
+            SourcingDealOutcome? outcome, int page, int pageSize, CancellationToken cancellationToken = default)
+        {
+            var query = _context.Set<SourcingResponse>().Where(r => r.FeedbackOutcome != null);
+            if (merchantId.HasValue)
+                query = query.Where(r => r.MerchantId == merchantId.Value);
+            if (outcome.HasValue)
+                query = query.Where(r => r.FeedbackOutcome == outcome.Value);
+
+            var total = await query.CountAsync(cancellationToken);
+            var items = await query
+                .OrderByDescending(r => r.FeedbackAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
+            return (items, total);
+        }
+    }
+
+    /// <summary>
+    /// 撮合会话仓储实现（v2.18.0 T1 会话）：会话与消息读写；未读按已读水位实时推算，不落冗余计数
+    /// </summary>
+    public class SourcingConversationRepository : ISourcingConversationRepository
+    {
+        private readonly ApplicationDbContext _context;
+
+        /// <summary>构造：注入应用 DbContext</summary>
+        public SourcingConversationRepository(ApplicationDbContext context)
+        {
+            _context = context;
+        }
+
+        /// <inheritdoc/>
+        public Task<SourcingConversation?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+            => _context.Set<SourcingConversation>().FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
+
+        /// <inheritdoc/>
+        public Task<SourcingConversation?> GetByDemandAndMerchantAsync(Guid demandId, Guid merchantId,
+            CancellationToken cancellationToken = default)
+            => _context.Set<SourcingConversation>().FirstOrDefaultAsync(
+                c => c.DemandId == demandId && c.MerchantId == merchantId, cancellationToken);
+
+        /// <inheritdoc/>
+        public async Task AddAsync(SourcingConversation conversation, CancellationToken cancellationToken = default)
+            => await _context.Set<SourcingConversation>().AddAsync(conversation, cancellationToken);
+
+        /// <inheritdoc/>
+        public Task UpdateAsync(SourcingConversation conversation, CancellationToken cancellationToken = default)
+        {
+            // 仓储只负责标记 Modified，实际提交由 UnitOfWork（MediatR 管道）完成
+            _context.Set<SourcingConversation>().Update(conversation);
+            return Task.CompletedTask;
+        }
+
+        /// <inheritdoc/>
+        public async Task AddMessageAsync(SourcingMessage message, CancellationToken cancellationToken = default)
+            => await _context.Set<SourcingMessage>().AddAsync(message, cancellationToken);
+
+        /// <inheritdoc/>
+        public async Task<List<SourcingMessage>> GetMessagesAsync(Guid conversationId, DateTime? before, int limit,
+            CancellationToken cancellationToken = default)
+        {
+            var query = _context.Set<SourcingMessage>().Where(m => m.ConversationId == conversationId);
+            if (before.HasValue)
+                query = query.Where(m => m.CreatedAt < before.Value);
+            return await query
+                .OrderByDescending(m => m.CreatedAt)
+                .Take(limit)
+                .ToListAsync(cancellationToken);
+        }
+
+        /// <inheritdoc/>
+        public Task<int> CountUnreadAsync(Guid conversationId, SourcingSenderSide side, DateTime? lastReadAt,
+            CancellationToken cancellationToken = default)
+            // 未读=对方发的消息中晚于本方已读水位者（水位为空=从未读，全部对方消息均未读）
+            => _context.Set<SourcingMessage>().CountAsync(m =>
+                m.ConversationId == conversationId
+                && m.SenderSide != side
+                && (!lastReadAt.HasValue || m.CreatedAt > lastReadAt.Value), cancellationToken);
+
+        /// <inheritdoc/>
+        public async Task<List<SourcingConversation>> GetForPublisherAsync(Guid publisherUserId, int skip, int take,
+            CancellationToken cancellationToken = default)
+            => await _context.Set<SourcingConversation>()
+                .Where(c => c.PublisherUserId == publisherUserId)
+                .OrderByDescending(c => c.LastMessageAt)
+                .Skip(skip)
+                .Take(take)
+                .ToListAsync(cancellationToken);
+
+        /// <inheritdoc/>
+        public Task<int> CountForPublisherAsync(Guid publisherUserId, CancellationToken cancellationToken = default)
+            => _context.Set<SourcingConversation>().CountAsync(c => c.PublisherUserId == publisherUserId, cancellationToken);
+
+        /// <inheritdoc/>
+        public async Task<List<SourcingConversation>> GetForMerchantAsync(List<Guid> userMerchantIds, int skip, int take,
+            CancellationToken cancellationToken = default)
+        {
+            if (userMerchantIds.Count == 0)
+                return new List<SourcingConversation>();
+            return await _context.Set<SourcingConversation>()
+                .Where(c => userMerchantIds.Contains(c.MerchantId))
+                .OrderByDescending(c => c.LastMessageAt)
+                .Skip(skip)
+                .Take(take)
+                .ToListAsync(cancellationToken);
+        }
+
+        /// <inheritdoc/>
+        public Task<int> CountForMerchantAsync(List<Guid> userMerchantIds, CancellationToken cancellationToken = default)
+            => userMerchantIds.Count == 0
+                ? Task.FromResult(0)
+                : _context.Set<SourcingConversation>().CountAsync(c => userMerchantIds.Contains(c.MerchantId), cancellationToken);
     }
 }
