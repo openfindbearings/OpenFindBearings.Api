@@ -13,9 +13,11 @@ using OpenFindBearings.Domain.Services;
 namespace OpenFindBearings.Api.Endpoints
 {
     /// <summary>
-    /// 寻货端点（v1.35.0）：个人发布求购询价单 + 商户应答 + 选定解锁联系方式。
+    /// 寻货端点（v1.35.0）：个人发布求购单 + 商户应答（标书含可选报价）+ 选定解锁联系方式。
     /// 浏览公开（未登录可看 feed/详情），操作需登录；应答列表可见性分级——
-    /// 发布人看全部明细（比价），商户只见自己的应答（防报价泄露），匿名只见应答数
+    /// 发布人看全部明细（比价），商户只见自己的应答（防报价泄露），匿名只见应答数。
+    /// 改动说明（v1.8.0 公开招标/邀标）：原"定向询价"单字段升级为曝光范围（Public/Invited）+ 邀标收件人快照，
+    /// 公开单进大厅并通知匹配的认证在售商家，邀标单不进大厅、只推收件人，并可由发布人转为公开招标。
     /// </summary>
     public static class SourcingEndpoints
     {
@@ -54,8 +56,8 @@ namespace OpenFindBearings.Api.Endpoints
                     pinFirst: true,
                     brand: brand, region: region,
                     newestFirst: !string.Equals(sort, "asc", StringComparison.OrdinalIgnoreCase),
-                    // 改动说明（v1.6.0 定向询价）：公开大厅只列广播单，定向单不进大厅
-                    broadcastOnly: true);
+                    // 改动说明（v1.8.0 公开招标/邀标）：公开大厅只列公开招标单，邀标单只对收件人与发布人可见
+                    publicOnly: true);
                 var nowUtc = DateTime.UtcNow;
                 return ApiResponseHelper.Ok(new
                 {
@@ -112,9 +114,9 @@ namespace OpenFindBearings.Api.Endpoints
 
                 var userId = currentUser.UserId;
                 var isPublisher = userId.HasValue && demand.PublisherUserId == userId.Value;
-                // 改动说明（v1.6.0 定向询价）：定向单仅发布人与目标商户可见，其余一律 404（防越权窥探）
-                if (demand.IsTargeted && !isPublisher &&
-                    currentUser.CurrentMerchantId != demand.TargetMerchantId)
+                // 改动说明（v1.8.0 公开招标/邀标）：邀标单仅发布人与收件人快照内的商户可见，其余一律 404（防越权窥探）
+                if (demand.IsPrivate && !isPublisher &&
+                    !(currentUser.CurrentMerchantId.HasValue && demand.IsInvitedTo(currentUser.CurrentMerchantId.Value)))
                     return ApiResponseHelper.NotFound("寻货不存在", httpContext: httpContext);
                 // 当前商户在本需求上的应答（任意在职成员可见自己商户的应答详情）
                 SourcingResponse? myResponse = null;
@@ -238,8 +240,10 @@ namespace OpenFindBearings.Api.Endpoints
                     expiryAt = demand.ExpiryAt,
                     closedAt = demand.ClosedAt,
                     isPublisher,
-                    // 改动说明（v1.6.0 定向询价）：透出定向标记，前端据显出"定向询价"徽章
-                    isTargeted = demand.IsTargeted,
+                    // 改动说明（v1.8.0 公开招标/邀标）：透出曝光范围与邀标收件人家数，前端显出"公开招标 / 邀标(N家)"徽章
+                    visibility = (int)demand.Visibility,
+                    isPrivate = demand.IsPrivate,
+                    invitedCount = demand.InvitedMerchantIds.Count,
                     // 改动说明（v2.12.0 商户名义发布）：发布方身份透出（前端徽章/跳转用）
                     publisherMerchantId = demand.PublisherMerchantId,
                     publisherMerchantName = demand.PublisherMerchantName,
@@ -275,18 +279,44 @@ namespace OpenFindBearings.Api.Endpoints
                 if (!currentUser.UserId.HasValue)
                     return ApiResponseHelper.Unauthorized(httpContext: httpContext);
 
-                // 改动说明（v1.7.0 两条路径可见化）：回传 id + 已匹配并推送的认证商家家数，
-                //   前端据此区分"已通知在售商家"与"进入大厅等应答"两种反馈文案
+                // 改动说明（v1.8.0 公开招标/邀标）：回传 id + 实际收到推送的认证商家家数；
+                //   公开单=在售匹配家数、邀标单=勾选∩匹配家数，前端据此区分"已通知 N 家"与"进入大厅等应答"
                 var result = await mediator.Send(new PublishDemandCommand(
                     currentUser.UserId.Value, request.PartNumber, request.BearingId, request.Brand,
                     request.Quantity, request.ExpectedDelivery, request.Region, request.Description,
-                    request.UsePoints, request.MerchantId, request.TargetMerchantId), httpContext.RequestAborted);
-                return ApiResponseHelper.Ok(new { id = result.DemandId, matchedMerchantCount = result.MatchedMerchantCount }, httpContext: httpContext);
+                    request.UsePoints, request.MerchantId, request.Visibility, request.InvitedMerchantIds),
+                    httpContext.RequestAborted);
+                return ApiResponseHelper.Ok(new
+                {
+                    id = result.DemandId,
+                    notifiedMerchantCount = result.NotifiedMerchantCount
+                }, httpContext: httpContext);
             })
             .RequireAuthorization()
             .WithName("PublishSourcingDemand")
             .WithSummary("发布寻货")
-            .WithDescription("个人用户发布求购询价单（额度模型：免费+积分加量+硬上限）");
+            .WithDescription("个人用户发布求购单（额度模型：免费+积分加量+硬上限；曝光范围：公开招标进大厅 / 邀标只推收件人）");
+
+            /// <summary>
+            /// 转为公开招标（v1.8.0）：邀标单进行中时由发布人放开为公开（需求进大厅，人人可见可应答），
+            /// 免去"邀标无人应答只能取消重建"的额度与积分损耗
+            /// </summary>
+            group.MapPost("/demands/{id:guid}/publish-public", async (
+                Guid id,
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] MediatR.IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                await mediator.Send(new MakeDemandPublicCommand(id, currentUser.UserId.Value), httpContext.RequestAborted);
+                return ApiResponseHelper.Ok("已转为公开招标", httpContext: httpContext);
+            })
+            .RequireAuthorization()
+            .WithName("PublishSourcingDemandPublic")
+            .WithSummary("转为公开招标")
+            .WithDescription("邀标单进行中时由发布人放开为公开（进公开大厅）；已是公开或已结束的不予受理");
 
             /// <summary>
             /// 应答寻货（当前商户；重复应答=更新；报价等可选、说明必填）
@@ -406,7 +436,10 @@ namespace OpenFindBearings.Api.Endpoints
                     // 改动说明（v2.12.0 商户名义发布）："我的寻货"卡片显示发布身份
                     publisherMerchantId = d.PublisherMerchantId,
                     publisherMerchantName = d.PublisherMerchantName,
-                    publisherType = d.IsMerchantPublished ? "merchant" : "individual"
+                    publisherType = d.IsMerchantPublished ? "merchant" : "individual",
+                    // 改动说明（v1.8.0 公开招标/邀标）：卡片显示曝光范围与收件人家数（含"转为公开招标"按钮态）
+                    isPrivate = d.IsPrivate,
+                    invitedCount = d.InvitedMerchantIds.Count
                 }), httpContext: httpContext);
             })
             .RequireAuthorization()
@@ -457,7 +490,10 @@ namespace OpenFindBearings.Api.Endpoints
                         pinnedUntil = d.PinnedUntil,
                         // 经办人信息：管理按钮仅本人可见，其他成员提示"由发布人操作"
                         publisherName = publisher?.Nickname ?? "已注销用户",
-                        isMine = d.PublisherUserId == currentUser.UserId.Value
+                        isMine = d.PublisherUserId == currentUser.UserId.Value,
+                        // 改动说明（v1.8.0 公开招标/邀标）：本店寻货卡片显示曝光范围与收件人家数
+                        isPrivate = d.IsPrivate,
+                        invitedCount = d.InvitedMerchantIds.Count
                     });
                 }
                 return ApiResponseHelper.Ok(list, httpContext: httpContext);
@@ -676,7 +712,7 @@ namespace OpenFindBearings.Api.Endpoints
                 // 进行中未应答寻货（近 200 条内存聚合，冷启动量级足够；上量后改 SQL 聚合）
                 var (items, _) = await demandRepository.GetListAsync(
                     status: (int)SourcingDemandStatus.Published, keyword: null, onlyOpen: true,
-                    page: 1, pageSize: 200, broadcastOnly: true, cancellationToken: httpContext.RequestAborted);
+                    page: 1, pageSize: 200, publicOnly: true, cancellationToken: httpContext.RequestAborted);
                 var opportunities = items
                     .Where(d => d.ResponseCount == 0)
                     .GroupBy(d => (d.PartNumber ?? "").Trim().ToUpperInvariant())
@@ -698,8 +734,8 @@ namespace OpenFindBearings.Api.Endpoints
             .WithDescription("商户在售型号中被寻货且未应答的聚合清单（商家寻货页横幅数据源）");
 
             /// <summary>
-            /// 为你匹配的寻货（v1.6.0 搜索寻货联动）：定向给本商户的单 + 匹配本商户在售型号的广播单
-            /// （按 bearingId 精确优先，无 id 回退型号文本），作为商家工作台聚合面
+            /// 为你匹配的寻货（v1.6.0 搜索寻货联动；v1.8.0 口径改为邀标+公开匹配）：邀标给本商户的单
+            /// + 匹配本商户在售型号的公开招标单（按 bearingId 精确优先，无 id 回退型号文本），作为商家工作台聚合面
             /// </summary>
             group.MapGet("/matched", async (
                 [FromServices] ICurrentUserService currentUser,
@@ -718,16 +754,16 @@ namespace OpenFindBearings.Api.Endpoints
                     .Select(mb => (mb.Bearing!.PartNumber ?? "").Trim().ToUpperInvariant())
                     .Where(p => p.Length > 0).ToHashSet();
 
-                // 定向给我的（恒相关）
-                var targeted = await demandRepository.GetOpenTargetedForMerchantAsync(merchantId, httpContext.RequestAborted);
+                // 邀标给我的（恒相关：收件人快照命中本商户）
+                var invited = await demandRepository.GetOpenInvitedForMerchantAsync(merchantId, httpContext.RequestAborted);
 
-                // 广播单：进行中未应答，且关联轴承/型号与本商户在售匹配
+                // 公开招标单：进行中未应答，且关联轴承/型号与本商户在售匹配
                 var broadcast = new List<SourcingDemand>();
                 if (myBearingIds.Count > 0 || myParts.Count > 0)
                 {
                     var (items, _) = await demandRepository.GetListAsync(
                         status: (int)SourcingDemandStatus.Published, keyword: null, onlyOpen: true,
-                        page: 1, pageSize: 200, broadcastOnly: true, cancellationToken: httpContext.RequestAborted);
+                        page: 1, pageSize: 200, publicOnly: true, cancellationToken: httpContext.RequestAborted);
                     broadcast = items
                         .Where(d => d.ResponseCount == 0)
                         .Where(d => (d.BearingId.HasValue && myBearingIds.Contains(d.BearingId.Value))
@@ -736,7 +772,7 @@ namespace OpenFindBearings.Api.Endpoints
                         .ToList();
                 }
 
-                var merged = targeted.Concat(broadcast)
+                var merged = invited.Concat(broadcast)
                     .GroupBy(d => d.Id).Select(g => g.First())
                     .OrderByDescending(d => d.CreatedAt)
                     .Take(50)
@@ -751,7 +787,8 @@ namespace OpenFindBearings.Api.Endpoints
                         responseCount = d.ResponseCount,
                         createdAt = d.CreatedAt,
                         expiryAt = d.ExpiryAt,
-                        isTargeted = d.IsTargeted
+                        // 改动说明（v1.8.0 公开招标/邀标）：邀标单角标（原"定向询价"徽章改为"邀标"口径）
+                        isPrivate = d.IsPrivate
                     })
                     .ToList();
                 return ApiResponseHelper.Ok(merged, httpContext: httpContext);
@@ -759,7 +796,7 @@ namespace OpenFindBearings.Api.Endpoints
             .RequireAuthorization()
             .WithName("GetMatchedSourcingDemands")
             .WithSummary("为你匹配的寻货")
-            .WithDescription("定向给我的 + 匹配我在售型号的进行中寻货（商家侧聚合面）");
+            .WithDescription("邀标给我的 + 匹配我在售型号的进行中公开招标单（商家侧聚合面）");
 
             // ============ Admin 治理端点 ============
             var adminGroup = app.MapGroup("/api/admin/sourcing").RequireAuthorization();
@@ -796,7 +833,10 @@ namespace OpenFindBearings.Api.Endpoints
                         publisherName = publisher?.Nickname ?? "已注销用户",
                         createdAt = d.CreatedAt,
                         expiryAt = d.ExpiryAt,
-                        closedAt = d.ClosedAt
+                        closedAt = d.ClosedAt,
+                        // 改动说明（v1.8.0 公开招标/邀标）：治理视图透出曝光范围与邀标收件人家数
+                        isPrivate = d.IsPrivate,
+                        invitedCount = d.InvitedMerchantIds.Count
                     });
                 }
                 return ApiResponseHelper.Ok(new { items = list, total }, httpContext: httpContext);
@@ -866,6 +906,9 @@ namespace OpenFindBearings.Api.Endpoints
                     closedAt = demand.ClosedAt,
                     publisherName = publisher?.Nickname ?? "已注销用户",
                     publisherMobile = publisher?.Mobile,
+                    // 改动说明（v1.8.0 公开招标/邀标）：治理视图透出曝光范围与邀标收件人明细
+                    isPrivate = demand.IsPrivate,
+                    invitedMerchantIds = demand.InvitedMerchantIds,
                     responses = list
                 }, httpContext: httpContext);
             })
@@ -902,10 +945,12 @@ namespace OpenFindBearings.Api.Endpoints
     /// <param name="Region">地区</param>
     /// <param name="Description">补充说明</param>
     /// <param name="UsePoints">免费额度用尽后确认花积分</param>
-    /// <param name="TargetMerchantId">定向目标商户（v1.6.0 定向询价；null=广播进大厅）</param>
+    /// <param name="MerchantId">商户名义发布：发布商户（须为在职成员）；null=个人名义</param>
+    /// <param name="Visibility"> v1.8.0 曝光范围：Public=公开招标（默认，进大厅 + 通知匹配商家）/ Invited=邀标（不进大厅）</param>
+    /// <param name="InvitedMerchantIds">v1.8.0 邀标收件人勾选（空=全部匹配的认证在售商家；仅 Invited 时有意义）</param>
     public record PublishDemandRequest(string PartNumber, Guid? BearingId, string? Brand, string? Quantity,
         string? ExpectedDelivery, string? Region, string? Description, bool UsePoints, Guid? MerchantId = null,
-        Guid? TargetMerchantId = null);
+        SourcingVisibility Visibility = SourcingVisibility.Public, List<Guid>? InvitedMerchantIds = null);
 
     /// <summary>应答寻货请求体（v1.5.0 多行标书：报价/库存/交期按行携带）</summary>
     /// <param name="Items">应答型号行（至少一行，每行型号必填）</param>
