@@ -2,16 +2,16 @@ using MediatR;
 using OpenFindBearings.Application.Commands.Sourcing;
 using OpenFindBearings.Application.Services;
 using OpenFindBearings.Domain.Entities;
+using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Events;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.EventHandlers
 {
     /// <summary>
-    /// 寻货发布通知订阅者（v1.6.0 搜索寻货联动）。
-    /// 广播单：匹配"在售本轴承（公域可见）的认证商家"，向其管理员推提醒；
-    ///   改动说明（v1.7.0 匹配口径统一）：匹配逻辑改走 SourcingMatcher，与发布处理器回传的"已匹配家数"同口径。
-    /// 定向单：仅推目标商户管理员。
+    /// 寻货发布通知订阅者（v1.6.0 搜索寻货联动；v1.8.0 改为按事件携带的收件人集合推送）。
+    /// 收件人集合由发布处理器按"公开招标=在售匹配口径 / 邀标=勾选∩匹配"算定后随事件传入，
+    /// 本订阅者只负责扇出：公开=匹配文案，邀标=邀请文案；集合为空则谁都不打扰。
     /// 多方式提醒：站内信必发 + 外部通道（短信/微信/邮件，按偏好，网关预留）。
     /// 限频：同一管理员、同型号每日至多 N 条（SystemConfig Sourcing.NotifyMaxPerMerchantPerDay，默认 3），
     ///   超量不再弹信（该需求仍在商家侧"为你匹配的寻货"聚合面可见）。
@@ -21,53 +21,36 @@ namespace OpenFindBearings.Application.EventHandlers
         private readonly INotificationService _notificationService;
         private readonly INotificationRepository _notificationRepository;
         private readonly IMerchantMemberRepository _memberRepository;
-        private readonly IMerchantBearingRepository _merchantBearingRepository;
-        private readonly IMerchantRepository _merchantRepository;
         private readonly ISystemConfigRepository _configRepository;
-        // 改动说明（v1.6.0 兜底匹配）：无 bearingId（发现页直接发布）时按型号文本精确匹配轴承主数据
-        private readonly IBearingRepository _bearingRepository;
 
+        /// <summary>
+        /// 构造：通知服务 + 通知仓储（限频计数）+ 商户成员仓储（取管理员）+ 配置仓储（限频阈值）
+        /// </summary>
         public SourcingDemandPublishedNotificationHandler(
             INotificationService notificationService,
             INotificationRepository notificationRepository,
             IMerchantMemberRepository memberRepository,
-            IMerchantBearingRepository merchantBearingRepository,
-            IMerchantRepository merchantRepository,
-            ISystemConfigRepository configRepository,
-            IBearingRepository bearingRepository)
+            ISystemConfigRepository configRepository)
         {
             _notificationService = notificationService;
             _notificationRepository = notificationRepository;
             _memberRepository = memberRepository;
-            _merchantBearingRepository = merchantBearingRepository;
-            _merchantRepository = merchantRepository;
             _configRepository = configRepository;
-            _bearingRepository = bearingRepository;
         }
 
         /// <inheritdoc/>
         public async Task Handle(SourcingDemandPublishedEvent notification, CancellationToken cancellationToken)
         {
-            // 定向单：只推目标商户
-            if (notification.TargetMerchantId.HasValue)
-            {
-                await NotifyMerchantAdminsAsync(notification.TargetMerchantId.Value, notification,
-                    "有客户向您定向询价",
-                    $"客户定向询价「{notification.PartNumber}」，点此查看并应答报价。", cancellationToken);
-                return;
-            }
-
-            // 改动说明（v1.7.0 匹配口径统一）：广播单改走 SourcingMatcher（公域可见在售 + 已认证；无 bearingId 时
-            //   按型号文本兜底；未命中主数据或无人匹配则谁都不打扰），与发布处理器回传的匹配家数同一口径
-            var merchantIds = await SourcingMatcher.GetMatchedMerchantIdsAsync(
-                _bearingRepository, _merchantBearingRepository, _merchantRepository,
-                notification.BearingId, notification.PartNumber, cancellationToken);
-
-            foreach (var merchantId in merchantIds)
+            // 改动说明（v1.8.0 公开招标/邀标）：匹配不再发生在本订阅者内——收件人集合已由发布处理器算定
+            //   （SourcingMatcher 唯一调用处），此处只按集合推送，避免"回传家数"与"实际推送集合"口径漂移
+            var isInvited = notification.Visibility == SourcingVisibility.Invited;
+            foreach (var merchantId in notification.RecipientMerchantIds)
             {
                 await NotifyMerchantAdminsAsync(merchantId, notification,
-                    "有买家寻货，您的在售型号匹配",
-                    $"有买家正在寻货「{notification.PartNumber}」，您的在售型号匹配，点此应答报价。",
+                    isInvited ? "有客户向您发出寻货邀请" : "有买家寻货，您的在售型号匹配",
+                    isInvited
+                        ? $"客户邀请您对「{notification.PartNumber}」报价，点此查看并应答。"
+                        : $"有买家正在寻货「{notification.PartNumber}」，您的在售型号匹配，点此应答报价。",
                     cancellationToken);
             }
         }

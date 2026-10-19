@@ -29,13 +29,24 @@ namespace OpenFindBearings.Domain.Aggregates
         public Guid? BearingId { get; private set; }
 
         /// <summary>
-        /// 定向商户 ID（可空，v1.6.0 定向询价）：非空=定向单（仅推给该商户、不进公开大厅）；
-        /// null=广播单（进大厅 + 匹配推送认证商家）
+        /// 曝光范围（v1.8.0 公开招标/邀标）：Public=进公开大厅 + 推送匹配的认证在售商家；
+        /// Invited=不进大厅，只推给 InvitedMerchantIds 里的商家，且仅这些商家与发布人可见。
         /// </summary>
-        public Guid? TargetMerchantId { get; private set; }
+        public SourcingVisibility Visibility { get; private set; } = SourcingVisibility.Public;
 
-        /// <summary>是否定向单（不进公开大厅，仅目标商户与发布人可见）</summary>
-        public bool IsTargeted => TargetMerchantId.HasValue;
+        /// <summary>
+        /// 邀标收件人商户 ID 快照（v1.8.0 邀标；仅 Visibility=Invited 时非空，不变量：Invited 等价于非空）。
+        /// 改动说明：存 uuid[] 一列而非新建明细表——语义是发布时点快照（无外键、无逐收件人状态），
+        /// 可见性与"为你匹配"查询只需 ANY 判定；整体替换式赋值，不做原地增删（防 EF 变更追踪漏检）。
+        /// </summary>
+        public List<Guid> InvitedMerchantIds { get; private set; } = new();
+
+        /// <summary>是否邀标单（不进公开大厅，仅发布人与受邀商家可见）</summary>
+        public bool IsPrivate => Visibility == SourcingVisibility.Invited;
+
+        /// <summary>该商户是否在本次邀标收件人快照内（详情可见性判定用）</summary>
+        /// <param name="merchantId">待判定商户 ID</param>
+        public bool IsInvitedTo(Guid merchantId) => InvitedMerchantIds.Contains(merchantId);
 
         /// <summary>型号文本（必填，结构化比价与搜索的核心字段）</summary>
         public string PartNumber { get; private set; } = string.Empty;
@@ -92,11 +103,19 @@ namespace OpenFindBearings.Domain.Aggregates
         /// <param name="description">补充说明</param>
         /// <param name="publisherMerchantId">发布商户（v2.12.0 商户名义发布，null=个人名义）</param>
         /// <param name="publisherMerchantName">商户名称快照（商户名义时必填）</param>
-        /// <param name="targetMerchantId">定向商户（v1.6.0 定向询价，null=广播进大厅）</param>
+        /// <param name="visibility">曝光范围（v1.8.0 公开招标/邀标，默认公开）</param>
+        /// <param name="invitedMerchantIds">邀标收件人（v1.8.0；仅邀标时有意义，调用方已按"在售匹配 ∩ 勾选"解析）</param>
+        /// <exception cref="InvalidOperationException">邀标但收件人为空（调用方应先解析，此处兜底防脏数据）</exception>
         public static SourcingDemand Create(Guid publisherUserId, string partNumber, Guid? bearingId,
             string? brand, string? quantity, string? expectedDelivery, string? region, string? description,
-            Guid? publisherMerchantId = null, string? publisherMerchantName = null, Guid? targetMerchantId = null)
+            Guid? publisherMerchantId = null, string? publisherMerchantName = null,
+            SourcingVisibility visibility = SourcingVisibility.Public, IReadOnlyList<Guid>? invitedMerchantIds = null)
         {
+            // 不变量：邀标必须至少一位收件人，否则单子谁都看不见（发布处理器已按匹配口径解析，这里兜底）
+            var invited = invitedMerchantIds?.Where(id => id != Guid.Empty).Distinct().ToList() ?? new List<Guid>();
+            if (visibility == SourcingVisibility.Invited && invited.Count == 0)
+                throw new InvalidOperationException("邀标寻货至少需要一位在售该型号的认证商家");
+
             return new SourcingDemand
             {
                 PublisherUserId = publisherUserId,
@@ -104,8 +123,9 @@ namespace OpenFindBearings.Domain.Aggregates
                 PublisherMerchantName = publisherMerchantId.HasValue ? Truncate(publisherMerchantName, 100) : null,
                 PartNumber = partNumber.Trim(),
                 BearingId = bearingId,
-                // 改动说明（v1.6.0 定向询价）：定向单只在目标商户侧可见，不进公开大厅
-                TargetMerchantId = targetMerchantId,
+                // 改动说明（v1.8.0 公开招标/邀标）：公开单不收件人（通知集合按在售匹配实时算），邀标单存收件人快照
+                Visibility = visibility,
+                InvitedMerchantIds = visibility == SourcingVisibility.Invited ? invited : new List<Guid>(),
                 Brand = Truncate(brand, 50),
                 Quantity = Truncate(quantity, 30),
                 ExpectedDelivery = Truncate(expectedDelivery, 30),
@@ -147,6 +167,22 @@ namespace OpenFindBearings.Domain.Aggregates
         {
             Status = SourcingDemandStatus.Cancelled;
             ClosedAt = DateTime.UtcNow;
+        }
+
+        /// <summary>
+        /// 转为公开招标（v1.8.0）：邀标单进行中时，由发布人放开为公开（需求进大厅，人人可见可应答），
+        /// 收件人快照随之清空（不变量：邀请态等价于收件人非空）。
+        /// 改动说明：邀标后无人应答时不必取消重建——原"定向单"只能取消再发，额度白白损耗。
+        /// </summary>
+        /// <exception cref="InvalidOperationException">已是公开单，或已非进行中（终态不可再放开）</exception>
+        public void MakePublic()
+        {
+            if (Visibility == SourcingVisibility.Public)
+                throw new InvalidOperationException("该寻货已是公开招标");
+            if (!IsOpen)
+                throw new InvalidOperationException("仅进行中的寻货可转为公开招标");
+            Visibility = SourcingVisibility.Public;
+            InvitedMerchantIds = new List<Guid>();
         }
 
         /// <summary>平台下架（违规治理）</summary>

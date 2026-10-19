@@ -37,16 +37,16 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         }
 
         /// <inheritdoc/>
-public async Task<(List<SourcingDemand> Items, int Total)> GetListAsync(int? status, string? keyword, bool onlyOpen,
+        public async Task<(List<SourcingDemand> Items, int Total)> GetListAsync(int? status, string? keyword, bool onlyOpen,
             int page, int pageSize, bool pinFirst = false, string? brand = null, string? region = null,
-            bool newestFirst = true, bool broadcastOnly = false, CancellationToken cancellationToken = default)
+            bool newestFirst = true, bool publicOnly = false, CancellationToken cancellationToken = default)
         {
             // 改动说明（v2.12.0 列表删除）：feed/Admin 列表排除软删单（软删仅发布方视角隐藏，数据保留）
             var query = _context.Set<SourcingDemand>().Where(d => !d.IsDeleted).AsQueryable();
 
-            // 改动说明（v1.6.0 定向询价）：公开大厅/反向导购仅取广播单，定向单只在目标商户与发布人可见
-            if (broadcastOnly)
-                query = query.Where(d => d.TargetMerchantId == null);
+            // 改动说明（v1.8.0 公开招标/邀标）：公开大厅/反向导购仅取公开招标单，邀标单只对收件人与发布人可见
+            if (publicOnly)
+                query = query.Where(d => d.Visibility == SourcingVisibility.Public);
 
 if (status.HasValue)
                 query = query.Where(d => d.Status == (SourcingDemandStatus)status.Value);
@@ -116,10 +116,11 @@ if (status.HasValue)
                 .ToListAsync(cancellationToken);
 
         /// <inheritdoc/>
-        public async Task<List<SourcingDemand>> GetOpenTargetedForMerchantAsync(Guid merchantId, CancellationToken cancellationToken = default)
+        public async Task<List<SourcingDemand>> GetOpenInvitedForMerchantAsync(Guid merchantId, CancellationToken cancellationToken = default)
             => await _context.Set<SourcingDemand>()
-                // 改动说明（v1.6.0 定向询价）：定向给本商户的进行中需求（未软删、未过期）
-                .Where(d => d.TargetMerchantId == merchantId && !d.IsDeleted
+                // 改动说明（v1.8.0 公开招标/邀标）：邀标给本商户的进行中需求（收件人快照 ANY 判定、未软删、未过期）
+                .Where(d => d.Visibility == SourcingVisibility.Invited
+                    && d.InvitedMerchantIds.Contains(merchantId) && !d.IsDeleted
                     && d.Status == SourcingDemandStatus.Published && d.ExpiryAt > DateTime.UtcNow)
                 .OrderByDescending(d => d.CreatedAt)
                 .Take(100)

@@ -1,4 +1,5 @@
 using MediatR;
+using OpenFindBearings.Domain.Enums;
 
 namespace OpenFindBearings.Domain.Events
 {
@@ -119,8 +120,10 @@ namespace OpenFindBearings.Domain.Events
     }
 
     /// <summary>
-    /// 寻货发布事件（v1.6.0 搜索寻货联动）：发布成功后由命令处理器发布，
-    /// 订阅者按"在售本轴承的认证商家"匹配推送（广播），或仅推定向目标商户（定向单）。
+    /// 寻货发布事件（v1.6.0 搜索寻货联动；v1.8.0 改为携带收件人集合）：发布成功后由命令处理器发布，
+    /// 处理器按"公开=在售匹配口径 / 邀标=勾选∩匹配"解析出最终收件人集合并随事件传入，
+    /// 订阅者只按集合推送——收件人判定只有一处（SourcingMatcher 在处理器内调用），
+    /// 避免"回传家数"与"实际推送集合"两处口径漂移。
     /// </summary>
     public class SourcingDemandPublishedEvent : INotification
     {
@@ -134,21 +137,31 @@ namespace OpenFindBearings.Domain.Events
         public string PartNumber { get; }
         /// <summary>期望品牌（通知文案，可空）</summary>
         public string? Brand { get; }
-        /// <summary>定向目标商户 ID（可空；非空=定向单只推该商户）</summary>
-        public Guid? TargetMerchantId { get; }
+        /// <summary>曝光范围（决定通知文案口径：公开=匹配通知 / 邀标=邀请通知）</summary>
+        public SourcingVisibility Visibility { get; }
+        /// <summary>本次实际推送的认证商家集合（发布处理器算定的快照；空=无人匹配，谁都不打扰）</summary>
+        public IReadOnlyList<Guid> RecipientMerchantIds { get; }
 
         /// <summary>
         /// 构造寻货发布事件
         /// </summary>
+        /// <param name="demandId">寻货需求 ID</param>
+        /// <param name="publisherUserId">发布人</param>
+        /// <param name="bearingId">关联平台轴承（可空）</param>
+        /// <param name="partNumber">型号</param>
+        /// <param name="brand">期望品牌（可空）</param>
+        /// <param name="visibility">曝光范围</param>
+        /// <param name="recipientMerchantIds">实际推送的认证商家集合</param>
         public SourcingDemandPublishedEvent(Guid demandId, Guid publisherUserId, Guid? bearingId,
-            string partNumber, string? brand, Guid? targetMerchantId)
+            string partNumber, string? brand, SourcingVisibility visibility, IReadOnlyList<Guid> recipientMerchantIds)
         {
             DemandId = demandId;
             PublisherUserId = publisherUserId;
             BearingId = bearingId;
             PartNumber = partNumber;
             Brand = brand;
-            TargetMerchantId = targetMerchantId;
+            Visibility = visibility;
+            RecipientMerchantIds = recipientMerchantIds;
         }
     }
 

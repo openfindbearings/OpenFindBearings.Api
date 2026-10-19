@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using OpenFindBearings.Domain.Aggregates;
 using OpenFindBearings.Domain.Entities;
+using OpenFindBearings.Domain.Enums;
 
 namespace OpenFindBearings.Infrastructure.Persistence.Configurations
 {
@@ -41,8 +42,10 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             builder.Property(d => d.PinnedUntil);
             // 改动说明（v2.12.0 列表删除）：软删标记（仅发布方列表隐藏，数据与应答方视图保留）
             builder.Property(d => d.IsDeleted).IsRequired().HasDefaultValue(false);
-            // 改动说明（v1.6.0 定向询价）：定向商户列（非空=定向单，不进公开大厅）
-            builder.Property(d => d.TargetMerchantId);
+            // 改动说明（v1.8.0 公开招标/邀标）：曝光范围（0=公开招标为默认，存量与新建均落公开侧）
+            builder.Property(d => d.Visibility).IsRequired().HasDefaultValue(SourcingVisibility.Public);
+            // 改动说明（v1.8.0 邀标）：收件人快照以 uuid[] 一列承载（无外键、无逐收件人状态，只需 ANY 判定）
+            builder.Property(d => d.InvitedMerchantIds).IsRequired();
 
             // feed：进行中列表按时间倒序是最高频查询
             builder.HasIndex(d => new { d.Status, d.CreatedAt })
@@ -53,9 +56,10 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             // 商户名义发布的单按商户查（v2.12.0）
             builder.HasIndex(d => d.PublisherMerchantId)
                 .HasDatabaseName("IX_SourcingDemands_PublisherMerchantId");
-            // 定向单按目标商户查（v1.6.0 定向询价：商家侧"定向给我的"）
-            builder.HasIndex(d => d.TargetMerchantId)
-                .HasDatabaseName("IX_SourcingDemands_TargetMerchantId");
+            // 改动说明（v1.8.0 邀标）：收件人快照按"商户 ∈ 数组"查（商家侧"邀标给我的"），GIN 索引加速数组包含
+            builder.HasIndex(d => d.InvitedMerchantIds)
+                .HasDatabaseName("IX_SourcingDemands_InvitedMerchantIds")
+                .HasMethod("gin");
             // 型号搜索（自由文本模糊匹配前缀加速）
             builder.HasIndex(d => d.PartNumber)
                 .HasDatabaseName("IX_SourcingDemands_PartNumber");
