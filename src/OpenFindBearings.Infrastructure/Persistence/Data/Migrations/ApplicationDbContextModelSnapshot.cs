@@ -252,6 +252,12 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     b.Property<DateTime?>("GradeGraceUntil")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTime?>("GradePeriodEndAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("GradePeriodStartAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 

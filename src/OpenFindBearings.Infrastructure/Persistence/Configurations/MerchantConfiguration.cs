@@ -41,7 +41,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
 
             builder.Property(m => m.Grade)
                 .HasConversion<int>()
-                .HasDefaultValue(MerchantGrade.Registered)
+                .HasDefaultValue(MerchantGrade.Ordinary)
                 .HasSentinel(MerchantGrade.Unknown)  // 当值为 Unknown 时，使用数据库默认值
                 .HasColumnName("Grade");
 

@@ -20,9 +20,9 @@ namespace OpenFindBearings.Application.Services
         /// <summary>纠错采纳 buff 最大乘数（金牌 ×1.25）</summary>
         public const double CorrectionMultiplierMax = 1.25;
 
-        /// <summary>等级数值 → 等级序数（Registered=1 注册商户 / Bronze=2 铜卡 / Silver=3 银卡 / Gold=4 金卡）。
+        /// <summary>等级数值 → 等级序数（Ordinary=1 普通 / Bronze=2 铜牌 / Silver=3 银牌 / Gold=4 金牌）。
         /// 改动说明（v2.13.2 序数统一）：委托 Domain.MerchantGradeExtensions.Rank，消除枚举数值映射的二次维护
-        /// 改动说明（v1.57.1 注释清理）：枚举名已随卡级重构改名，注释同步为卡级口径</summary>
+        /// 改动说明（v2.19.0 牌级制）：枚举名与展示名同步为"普通/铜牌/银牌/金牌"</summary>
         public static int Rank(int grade) => ((MerchantGrade)grade).Rank();
 
         /// <summary>每日签到加数（Lv1+1 / Lv2+1 / Lv3+2 / Lv4+3）</summary>

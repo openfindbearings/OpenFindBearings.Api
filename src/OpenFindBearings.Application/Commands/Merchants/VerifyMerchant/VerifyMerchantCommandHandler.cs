@@ -16,17 +16,20 @@ namespace OpenFindBearings.Application.Commands.Merchants.VerifyMerchant
         private readonly IMerchantRepository _merchantRepository;
         private readonly IMerchantDocumentRepository _documentRepository;
         private readonly IAchievementService _achievements;
+        private readonly IMerchantGradeService _grades;
         private readonly ILogger<VerifyMerchantCommandHandler> _logger;
 
         public VerifyMerchantCommandHandler(
             IMerchantRepository merchantRepository,
             IMerchantDocumentRepository documentRepository,
             IAchievementService achievements,
+            IMerchantGradeService grades,
             ILogger<VerifyMerchantCommandHandler> logger)
         {
             _merchantRepository = merchantRepository;
             _documentRepository = documentRepository;
             _achievements = achievements;
+            _grades = grades;
             _logger = logger;
         }
 
@@ -56,6 +59,17 @@ namespace OpenFindBearings.Application.Commands.Merchants.VerifyMerchant
             //   使其不再被 互联网数据互联网同步覆盖（覆盖保护以 DataSource 为键，与认领轴解耦）。
             merchant.SetDataSource(OpenFindBearings.Domain.ValueObjects.DataSource.FromManual(request.VerifiedBy));
             await _merchantRepository.UpdateAsync(merchant, cancellationToken);
+
+            // 改动说明（v2.19.0 有效期制）：认证即入铜牌并起 180 天有效期；
+            // 走重算服务保证起期天数取 SystemConfig（而非域内硬编码），失败只记日志不反噬认证
+            try
+            {
+                await _grades.RecomputeAsync(merchant.Id, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "认证后牌级起期失败: {MerchantId}", request.Id);
+            }
 
             // 改动说明（v2.1.0 成就子系统）：认证通过设商户轨"认证商家"仪表成就（旁路，失败不反噬）
             try

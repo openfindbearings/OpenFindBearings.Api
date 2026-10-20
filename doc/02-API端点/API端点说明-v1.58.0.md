@@ -1,10 +1,18 @@
 # API 端点说明文档
 
-**版本：** v1.57.3
+**版本：** v1.58.0
 **日期：** 2026-10-20
-**上一版：** v1.57.2
+**上一版：** v1.57.3
 **状态：** 与代码同步
 
+> v1.58.0 变更（商家牌级改 180 天有效期制）：
+> 1. **枚举换名**：`MerchantGrade.Registered` → `Ordinary`（值仍为 1，无数据库变更），显示名统一为普通/铜牌/银牌/金牌。
+> 2. **有效期**：`Merchant` 新增 `GradePeriodStartAt`/`GradePeriodEndAt`（迁移 `AddMerchantGradePeriod`，存量已定级商家幂等回填一期）；升级或续期即重发一期，到期按本期成交续期或降档，零成交降至铜牌。
+> 3. **定级口径**：`MerchantGradeService.ComputeGrade(verified, onSaleCount, periodDealCount)`；在售按实时、成交按本期统计，两条都必达；在售连续不足超过保级期直接降普通，不等期末。
+> 4. **接口字段**：`GET /api/points/merchant-grade` 以 `periodDays`/`requiredDeals`/`periodStartAt`/`periodEndAt`/`downgradeTo` 取代 `windowDays`；`MerchantDto`（管理端列表）新增 `gradePeriodStartAt`/`gradePeriodEndAt`/`gradeGraceUntil`。
+> 5. **新增公开规则端点**：`GET /api/points/merchant-grade/rules`（匿名），返回一期天数、保级天数、在售门槛、成交阈值与四档说明，供规则页实时渲染。
+> 6. **新增每日巡检**：`MerchantGradeSweepJob`（每日 03:00 UTC+8）结算到期续/降档、在售不足降级与到期前 7 天提醒。
+>
 > v1.57.3 变更（自交易封堵，无表结构变更）：
 > 1. **匹配排除集合扩大**：`SourcingMatcher` 由"排除单个发布商户"改为"排除发布人在职的全部商户 + 商户名义发布的商户"，个人名义发布与一人多商户不再把自家店铺纳入匹配、通知与邀请候选。
 > 2. **应答守卫**：`POST /api/sourcing/demands/{id}/respond` 拒绝"发布人本人应答"、"应答商户就是发布商户"、"发布人是应答商户在职成员"三种自交易，即使知道 demand id 也不行。
@@ -41,6 +49,7 @@
 
 | 版本 | 日期 | 变更说明 |
 |------|------|----------|
+| v1.58.0 | 2026-10-20 | **商家牌级改有效期制**：`MerchantGrade.Registered` 换名 `Ordinary`（值仍 1）；`Merchant` 加 `GradePeriodStartAt`/`GradePeriodEndAt`（迁移 `AddMerchantGradePeriod`，存量已定级商户幂等回填一期）；`MerchantGradeService` 改按本期成交定级并在升级/续期时重发一期，到期按本期成交留档、零成交降至铜牌，在售连续不足超过保级期直接降普通；`GET /api/points/merchant-grade` 的 `windowDays` 拆为 `periodDays`，新增 `requiredDeals`/`periodStartAt`/`periodEndAt`/`downgradeTo`；新增匿名 `GET /api/points/merchant-grade/rules`；`MerchantDto` 增 `gradePeriodStartAt`/`gradePeriodEndAt`/`gradeGraceUntil`；新增每日巡检 `MerchantGradeSweepJob`。端点数量 +1 |
 | v1.57.3 | 2026-10-20 | **自交易封堵（无表结构变更）**：① `SourcingMatcher` 排除集合由"单个发布商户"扩为"发布人在职的全部商户 + 商户名义发布的商户"；② `POST /api/sourcing/demands/{id:guid}/respond` 新增三条守卫——发布人本人、发布商户本身、发布人是应答商户在职成员，一律拒绝；③ 邀请无候选人/勾选无效的错误文案区分"自家店铺不能邀请"与"均非在售认证商家"；④ `publish-public` 差集补发同口径排除，不给自己发通知。端点数量不变 |
 | v1.57.2 | 2026-10-20 | **寻货术语统一（无契约变更）**：发布方式文案「公开招标 / 邀标」→「公开 / 邀请」，删除"招投标、开标前撤标"等类比表述（平台不是招投标系统）。`SourcingVisibility` 枚举值、端点路径、请求/响应字段、权限键均不变；仅文档与注释措辞调整，不影响已对接客户端 |
 | v1.57.1 | 2026-10-20 | **寻货收口修复（向后兼容）**：① 回执幂等——配对去重查询排除当前响应自身，重复提交"谈成"不再被自己那条已计分行判为重复而把 `counted` 翻成 false；计分状态发生翻转（含谈成→没谈成）同样触发商家卡级重算。② `myFeedback` 增 `note`（未计分原因，反刷留痕），供需求方看到"为什么没算"。③ 会话只读改用 `IsOpen`（含 `ExpiryAt` 过期），开聊要求该商户为本单受邀或已应答（商户名义发布方成员同权），杜绝幽灵会话。④ 会话总未读改数据库聚合计数，去掉"只取前 200 个会话"的硬截断。⑤ `GET /api/bearings/{id:guid}/merchants` 补 `grade`/`gradeDisplay`（认证徽章与卡级彩牌并列）。⑥ `GET /api/admin/sourcing/demands/{id:guid}` 每次下发发布人手机号写审计 `ViewPublisherContact`（审计失败只记警告）。⑦ 金库已退出定级，摘除商城结算与自动确认后的空转重算。端点数量不变 |
@@ -832,3 +841,21 @@ OpenFindBearings.Api（以下简称 API）共注册 **163** 个端点，按职�
 | `POST /api/sourcing/demands/{id:guid}/publish-public` | 差集补发同口径排除发布人全部在职商户，不给自己发通知 |
 
 > 无迁移：仅匹配口径与守卫逻辑调整。存量已存在的自应答数据（历史脏数据）不回溯清理，选中与回执流程对其仍有反刷校验兜底。
+
+---
+
+## 本版增量（v1.58.0）：商家牌级 180 天有效期制
+
+| 端点 / 位置 | 变化 |
+|---|---|
+| `GET /api/points/merchant-grade?merchantId=` | **有效期字段**：删除 `windowDays`，改 `periodDays`（一期天数，默认 180）；新增 `requiredDeals`（保住当前牌级所需本期成交，普通/铜牌为 0）、`periodStartAt`/`periodEndAt`（本期起止，普通档为空）、`downgradeTo`（到期将降到的档位，按当前进度预演）。`dealCount` 语义改为"本期成功撮合次数"，`onSaleCount` 仍为实时公域在售 |
+| `GET /api/points/merchant-grade/rules` | **新增（匿名）**：返回 `periodDays`/`graceDays`/`onSaleMin`/`silverDealMin`/`goldDealMin` 与 `tiers[]`（`rank`/`name`/`requiredOnSale`/`requiredDeals`/`upBonus`/`note`）。阈值全部取自 SystemConfig，Admin 调整后规则页自动跟随 |
+| `GET /api/admin/merchants`（`MerchantDto`） | 新增 `gradePeriodStartAt`/`gradePeriodEndAt`/`gradeGraceUntil`，供 Admin 牌级页展示有效期与在售保级状态 |
+| `POST /api/admin/merchants/{id}/grade` | 人工调级成功后按新档位重发一期有效期；未认证商户授予铜牌及以上仍返回 400 |
+| `MerchantGrade` 枚举 | `Registered` → `Ordinary`（值仍为 1）；`Unknown=0/Ordinary=1/Bronze=2/Silver=3/Gold=4` 单调；显示名 普通/铜牌/银牌/金牌 |
+| 后台任务 | 新增 `MerchantGradeSweepJob`：每日 03:00（UTC+8）扫描在职商户，结算到期续期/降档、在售不足降级、到期前 7 天提醒 |
+
+> 迁移：`AddMerchantGradePeriod`（`Merchants` 加 `GradePeriodStartAt`/`GradePeriodEndAt`（timestamptz，可空）+ 对已定级商户幂等回填 `now` 至 `now + 180 天`）。仅 `db_api`，不触碰 `db_sync`/`db_raw`/`db_identity`。
+> 定级规则：升级/续期即重发一期（续期起点取原到期日 + 180 天，巡检延迟不漂移）；期内成交达到下一档且认证、在售达标立即升级；到期按本期成交保留能支撑的牌级，零成交降至铜牌并续期；在售连续不足超过 `MerchantGradeGraceDays`（默认 15）直接降普通。
+> 不参与定级：商家金余额、终身累计成交、登录活跃度。商家金只作升档礼与经营支出，不回流定级。
+> 配套文档：《等级玩法设计 v1.3.0》《BFF API 端点说明 v1.8.8》《Admin 功能需求与后端服务映射 v1.48.0》《移动端登录与商户入驻设计 v1.7.45》。
