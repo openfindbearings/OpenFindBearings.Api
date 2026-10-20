@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.DTOs;
 using OpenFindBearings.Application.Extensions;
+using OpenFindBearings.Application.Services;
 using OpenFindBearings.Domain.Repositories;
 using OpenFindBearings.Domain.Services;
 using OpenFindBearings.Domain.Specifications;
@@ -14,13 +15,19 @@ namespace OpenFindBearings.Application.Queries.Merchants.SearchMerchants
     public class SearchMerchantsQueryHandler : IRequestHandler<SearchMerchantsQuery, PagedResult<MerchantDto>>
     {
         private readonly IMerchantRepository _merchantRepository;
+        private readonly IMerchantBearingRepository _merchantBearingRepository;
+        private readonly ISystemConfigRepository _systemConfigRepository;
         private readonly ILogger<SearchMerchantsQueryHandler> _logger;
 
         public SearchMerchantsQueryHandler(
             IMerchantRepository merchantRepository,
+            IMerchantBearingRepository merchantBearingRepository,
+            ISystemConfigRepository systemConfigRepository,
             ILogger<SearchMerchantsQueryHandler> logger)
         {
             _merchantRepository = merchantRepository;
+            _merchantBearingRepository = merchantBearingRepository;
+            _systemConfigRepository = systemConfigRepository;
             _logger = logger;
         }
 
@@ -61,6 +68,17 @@ namespace OpenFindBearings.Application.Queries.Merchants.SearchMerchants
             var result = await _merchantRepository.SearchAsync(searchParams, cancellationToken);
 
             var items = result.Items.Select(m => m.ToPublicDto()).ToList();
+
+            // 改动说明（v2.19.0 审计修复）：管理列表补实时在售件数与阈值，避免页面用牌级反推在售状态；
+            //   仅本管理查询填充，公开搜索 DTO 不暴露该治理字段
+            var onSaleMin = await _systemConfigRepository.GetValueAsync(
+                MerchantGradeSettings.GradeOnSaleMinKey, MerchantGradeSettings.GradeOnSaleMinDefault, cancellationToken);
+            foreach (var (dto, merchant) in items.Zip(result.Items))
+            {
+                dto.OnSaleMin = onSaleMin;
+                dto.OnSaleCount = (await _merchantBearingRepository
+                    .GetMatchableByMerchantAsync(merchant.Id, cancellationToken)).Count();
+            }
 
             return new PagedResult<MerchantDto>
             {

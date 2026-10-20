@@ -320,10 +320,14 @@ namespace OpenFindBearings.Api.Endpoints
                     MerchantGradeSettings.SilverDealMinKey, null) ?? MerchantGradeSettings.SilverDealMinDefault;
                 var hintGoldMin = await configs.GetValueAsync<int?>(
                     MerchantGradeSettings.GoldDealMinKey, null) ?? MerchantGradeSettings.GoldDealMinDefault;
+                // 改动说明（v2.19.0 审计修复）：普通档已无任何成员加成，升级提示不再承诺签到/登录/纠错加成，
+                // 改为与规则页同口径的"认证 + 在售达标入铜牌"
+                var hintOnSaleMin = await configs.GetValueAsync<int?>(
+                    MerchantGradeSettings.GradeOnSaleMinKey, null) ?? MerchantGradeSettings.GradeOnSaleMinDefault;
                 string nextHint = rank switch
                 {
-                    0 => "完成商家认证即入铜牌：签到 +1、寻货应答 +1/日",
-                    1 => "商户通过认证后入铜牌：签到 +1、登录 +1、纠错 +10%、发布 +1/日",
+                    0 => $"完成商家认证且在售 ≥ {hintOnSaleMin} 件入铜牌：签到 +1、应答额度 +1/日、纠错 +10%",
+                    1 => $"完成商家认证且在售 ≥ {hintOnSaleMin} 件入铜牌：签到 +1、应答额度 +1/日、纠错 +10%",
                     2 => $"在售达标且本期成交 ≥ {hintSilverMin} 次升银牌：纠错 +20%、应答 +3/日、置顶 9 折",
                     3 => $"本期成交 ≥ {hintGoldMin} 次升金牌：纠错 +25%、应答 +5/日、置顶 8 折",
                     _ => "已达最高等级"
@@ -394,6 +398,7 @@ namespace OpenFindBearings.Api.Endpoints
                 // 改动说明（v2.19.0）：成交从有效期起点起算，不再是"最近 N 天"滚动窗口
                 var onSaleCount = (await bearingRepository.GetMatchableByMerchantAsync(merchantId, cancellationToken)).Count();
                 var periodDays = await ReadIntConfigAsync(configs, MerchantGradeSettings.WindowDaysKey, MerchantGradeSettings.WindowDaysDefault);
+                var graceDays = await ReadIntConfigAsync(configs, MerchantGradeSettings.GraceDaysKey, MerchantGradeSettings.GraceDaysDefault);
                 var periodStartAt = merchant.GradePeriodStartAt;
                 var periodEndAt = merchant.GradePeriodEndAt;
                 var dealCount = await responseRepository.GetCountedDealCountAsync(
@@ -455,6 +460,7 @@ namespace OpenFindBearings.Api.Endpoints
                     dealCount,
                     requiredDeals,
                     periodDays,
+                    graceDays,
                     periodStartAt,
                     periodEndAt,
                     onSaleMin,

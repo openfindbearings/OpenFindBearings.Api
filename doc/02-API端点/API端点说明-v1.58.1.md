@@ -1,10 +1,20 @@
 # API 端点说明文档
 
-**版本：** v1.58.0
+**版本：** v1.58.1
 **日期：** 2026-10-20
-**上一版：** v1.57.3
+**上一版：** v1.58.0
 **状态：** 与代码同步
 
+> v1.58.1 变更（有效期制审计修复，无新端点）：
+> 1. **回执计分时刻固化**：`SourcingResponse.CountedAt`（迁移 `AddSourcingCountedAt`，存量已计分行按 `FeedbackAt` 幂等回填）；本有效期成交统计按 `CountedAt`，重复提交回执不再把旧成交刷进新周期。
+> 2. **管理列表在售状态**：`GET /api/admin/merchants` 的 `MerchantDto` 新增 `onSaleCount`/`onSaleMin`（实时公域可见在售件数与阈值），Admin 牌级页据此判定"在售达标/不足"，不再以牌级反推。
+> 3. **退款口径**：积分退款只回冲余额与累计消耗，不计入 `TotalEarned`、不触发商家金上供与个人段位升档礼。
+> 4. **扣分幂等键隔离**：`PointsService.DebitAsync` 落库键加 `u:{userId}:` 前缀、`MerchantPointsService.SpendAsync` 加 `m:{merchantId}:` 前缀。
+> 5. **商家福利**：普通档不再有任何成员加成（签到/应答额度/纠错加成仅铜牌及以上），`/api/points/merchant-buff` 提示文案同步。
+> 6. **牌级到期提醒**：`MerchantGradeSweepJob` 在到期前 7 天发 `merchant_grade` 站内信给全部在职成员。
+> 7. **集体任务结算**：`MerchantTaskSettlementJob` 注册为后台服务，任务奖励（成员积分 + 商家金）恢复自动发放。
+> 8. **认证升档礼修复**：`Merchant.Verify()` 不再直接写铜牌，认证后由重算补档，普通→铜牌升档礼正常发放。
+>
 > v1.58.0 变更（商家牌级改 180 天有效期制）：
 > 1. **枚举换名**：`MerchantGrade.Registered` → `Ordinary`（值仍为 1，无数据库变更），显示名统一为普通/铜牌/银牌/金牌。
 > 2. **有效期**：`Merchant` 新增 `GradePeriodStartAt`/`GradePeriodEndAt`（迁移 `AddMerchantGradePeriod`，存量已定级商家幂等回填一期）；升级或续期即重发一期，到期按本期成交续期或降档，零成交降至铜牌。
@@ -49,6 +59,7 @@
 
 | 版本 | 日期 | 变更说明 |
 |------|------|----------|
+| v1.58.1 | 2026-10-20 | **有效期制审计修复（无新端点）**：① `SourcingResponse` 加 `CountedAt`（迁移 `AddSourcingCountedAt`，存量计分行按 `FeedbackAt` 幂等回填），本有效期成交统计按此口径；② `GET /api/admin/merchants` 的 `MerchantDto` 加 `onSaleCount`/`onSaleMin`（管理端实时在售件数与阈值）；③ 积分退款走独立入账（不计 `TotalEarned`、不触发商家金上供与段位升档礼）；④ 扣分幂等键加 `u:{userId}:`/`m:{merchantId}:` 命名空间；⑤ 普通档无成员加成（签到/应答额度/纠错加成仅铜牌及以上）；⑥ `MerchantGradeSweepJob` 到期前 7 天发 `merchant_grade` 站内信；⑦ `MerchantTaskSettlementJob` 注册为后台服务；⑧ `Merchant.Verify()` 不再直接写铜牌，认证后由重算补档，普通→铜牌升档礼修复。端点数量不变 |
 | v1.58.0 | 2026-10-20 | **商家牌级改有效期制**：`MerchantGrade.Registered` 换名 `Ordinary`（值仍 1）；`Merchant` 加 `GradePeriodStartAt`/`GradePeriodEndAt`（迁移 `AddMerchantGradePeriod`，存量已定级商户幂等回填一期）；`MerchantGradeService` 改按本期成交定级并在升级/续期时重发一期，到期按本期成交留档、零成交降至铜牌，在售连续不足超过保级期直接降普通；`GET /api/points/merchant-grade` 的 `windowDays` 拆为 `periodDays`，新增 `requiredDeals`/`periodStartAt`/`periodEndAt`/`downgradeTo`；新增匿名 `GET /api/points/merchant-grade/rules`；`MerchantDto` 增 `gradePeriodStartAt`/`gradePeriodEndAt`/`gradeGraceUntil`；新增每日巡检 `MerchantGradeSweepJob`。端点数量 +1 |
 | v1.57.3 | 2026-10-20 | **自交易封堵（无表结构变更）**：① `SourcingMatcher` 排除集合由"单个发布商户"扩为"发布人在职的全部商户 + 商户名义发布的商户"；② `POST /api/sourcing/demands/{id:guid}/respond` 新增三条守卫——发布人本人、发布商户本身、发布人是应答商户在职成员，一律拒绝；③ 邀请无候选人/勾选无效的错误文案区分"自家店铺不能邀请"与"均非在售认证商家"；④ `publish-public` 差集补发同口径排除，不给自己发通知。端点数量不变 |
 | v1.57.2 | 2026-10-20 | **寻货术语统一（无契约变更）**：发布方式文案「公开招标 / 邀标」→「公开 / 邀请」，删除"招投标、开标前撤标"等类比表述（平台不是招投标系统）。`SourcingVisibility` 枚举值、端点路径、请求/响应字段、权限键均不变；仅文档与注释措辞调整，不影响已对接客户端 |

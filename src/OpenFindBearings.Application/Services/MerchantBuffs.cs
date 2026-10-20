@@ -25,8 +25,8 @@ namespace OpenFindBearings.Application.Services
         /// 改动说明（v2.19.0 牌级制）：枚举名与展示名同步为"普通/铜牌/银牌/金牌"</summary>
         public static int Rank(int grade) => ((MerchantGrade)grade).Rank();
 
-        /// <summary>每日签到加数（Lv1+1 / Lv2+1 / Lv3+2 / Lv4+3）</summary>
-        public static int CheckinBonus(int grade) => Rank(grade) switch { >= 4 => CheckinBonusMax, 3 => 2, >= 1 => 1, _ => 0 };
+        /// <summary>每日签到加数（仅持牌商户：铜牌 +1 / 银牌 +2 / 金牌 +3；普通档无加成）</summary>
+        public static int CheckinBonus(int grade) => Rank(grade) switch { >= 4 => CheckinBonusMax, 3 => 2, >= 2 => 1, _ => 0 };
 
         /// <summary>每日登录加数（Lv2 起 +1）</summary>
         public static int LoginBonus(int grade) => Rank(grade) >= 2 ? LoginBonusMax : 0;
@@ -40,8 +40,8 @@ namespace OpenFindBearings.Application.Services
             _ => baseAmount
         };
 
-        /// <summary>寻货应答免费额度加数（Lv1+1 / Lv2+1 / Lv3+3 / Lv4+5）</summary>
-        public static int RespondQuotaBonus(int grade) => Rank(grade) switch { >= 4 => 5, 3 => 3, >= 1 => 1, _ => 0 };
+        /// <summary>寻货应答免费额度加数（仅持牌商户：铜牌 +1 / 银牌 +3 / 金牌 +5；普通档无加成）</summary>
+        public static int RespondQuotaBonus(int grade) => Rank(grade) switch { >= 4 => 5, 3 => 3, >= 2 => 1, _ => 0 };
 
         /// <summary>寻货发布免费额度加数（Lv2 起 +1）</summary>
         public static int PublishQuotaBonus(int grade) => Rank(grade) >= 2 ? 1 : 0;
@@ -62,7 +62,9 @@ namespace OpenFindBearings.Application.Services
         public static List<string> BuffLabels(int grade)
         {
             var r = Rank(grade);
-            if (r <= 0) return new List<string>();
+            // 改动说明（v2.19.0 审计修复）：普通档（未认证或在售不足）无任何商家加成，
+            // 与规则页"普通无等级权益"及"认证后在售达标解锁"口径一致
+            if (r <= 1) return new List<string>();
             var labels = new List<string> { $"每日签到：个人轴承币 +{CheckinBonus(grade)}" };
             if (r >= 2) labels.Add($"每日登录：个人轴承币 +{LoginBonusMax}");
             if (r >= 2) labels.Add($"纠错被采纳：个人轴承币 ×{CorrectionMultiplier(r)}");

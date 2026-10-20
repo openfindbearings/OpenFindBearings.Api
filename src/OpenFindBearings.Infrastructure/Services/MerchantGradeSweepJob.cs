@@ -2,6 +2,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.Services;
+using OpenFindBearings.Domain.Entities;
+using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Infrastructure.Services
@@ -89,6 +91,10 @@ namespace OpenFindBearings.Infrastructure.Services
         {
             var merchants = services.GetRequiredService<IMerchantRepository>();
             var grades = services.GetRequiredService<IMerchantGradeService>();
+            // 改动说明（v2.19.0 审计修复）：巡检同时承担到期前 7 天提醒，
+            // 在重算前判断原周期剩余天数，避免重算续期后错过提醒窗口
+            var notification = services.GetRequiredService<INotificationService>();
+            var members = services.GetRequiredService<IMerchantMemberRepository>();
 
             var ids = await merchants.GetActiveIdsAsync(ct);
             var failed = 0;
@@ -99,6 +105,7 @@ namespace OpenFindBearings.Infrastructure.Services
 
                 try
                 {
+                    await NotifyExpiringAsync(id, merchants, members, notification, ct);
                     await grades.RecomputeAsync(id, ct);
                 }
                 catch (Exception ex)
@@ -109,6 +116,30 @@ namespace OpenFindBearings.Infrastructure.Services
             }
 
             _logger.LogInformation("商家牌级巡检完成: Total={Total}, Failed={Failed}", ids.Count, failed);
+        }
+
+        /// <summary>
+        /// 到期前 7 天提醒：仅当原周期剩余落在 (6,7] 天时发一次站内信给全部在职成员，
+        /// 每日巡检只会命中一天，避免连续多日重复打扰；重算后周期续期则窗口自然关闭。
+        /// </summary>
+        private async Task NotifyExpiringAsync(Guid merchantId, IMerchantRepository merchants,
+            IMerchantMemberRepository members, INotificationService notification, CancellationToken ct)
+        {
+            var merchant = await merchants.GetByIdAsync(merchantId, ct);
+            if (merchant?.GradePeriodEndAt is not DateTime end || merchant.Grade == MerchantGrade.Ordinary)
+                return;
+
+            var daysLeft = (end - DateTime.UtcNow).TotalDays;
+            if (daysLeft <= 6 || daysLeft > 7)
+                return;
+
+            var recipients = await members.GetActiveByMerchantAsync(merchantId, ct);
+            var title = "牌级有效期临近";
+            var body = $"「{merchant.Name}」的{merchant.GetGradeDisplayName()}有效期将于 {end:yyyy.MM.dd} 到期，"
+                + "到期按本期成交保留能支撑的牌级；保持认证与在售达标可正常续期。";
+            foreach (var recipient in recipients)
+                await notification.AddInAppAsync(recipient.UserId, Notification.TypeMerchantGrade,
+                    title, body, Notification.BizMerchant, merchantId, ct);
         }
     }
 }

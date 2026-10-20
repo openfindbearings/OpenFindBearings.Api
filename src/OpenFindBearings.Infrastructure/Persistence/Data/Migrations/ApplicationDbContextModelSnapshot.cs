@@ -2243,6 +2243,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     b.Property<DateTime?>("AdoptedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTime?>("CountedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 

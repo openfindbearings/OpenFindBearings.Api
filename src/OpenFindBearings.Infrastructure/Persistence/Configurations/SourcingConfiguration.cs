@@ -88,6 +88,8 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             builder.Property(r => r.RespondedUserId).IsRequired();
             builder.Property(r => r.Remark).IsRequired().HasMaxLength(300);
             builder.Property(r => r.Status).IsRequired();
+            // 改动说明（v2.19.0 审计修复）：首次计分时刻（UTC），牌级成交按此归属有效期
+            builder.Property(r => r.CountedAt).HasColumnType("timestamp with time zone");
 
             // 应答型号行（级联删除：应答删除时行随删）
             builder.HasMany(r => r.Items)

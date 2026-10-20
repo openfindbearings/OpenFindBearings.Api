@@ -55,6 +55,20 @@ namespace OpenFindBearings.Domain.Entities
         }
 
         /// <summary>
+        /// 退款回冲（v2.19.0 审计修复）：余额加回、累计消耗相应减少，但**不增加累计获得**。
+        /// 改动说明：退款走 Credit 会把同一笔分重复计入 TotalEarned，反复退款可刷个人段位升档礼
+        /// </summary>
+        /// <param name="amount">退款分值（正数）</param>
+        public void Refund(int amount)
+        {
+            if (amount <= 0)
+                throw new ArgumentException("退款分值必须为正", nameof(amount));
+            Balance += amount;
+            TotalSpent = Math.Max(0, TotalSpent - amount);
+            UpdateTimestamp();
+        }
+
+        /// <summary>
         /// 出账：余额减、累计消耗增；余额不足抛业务异常（扣分场景守卫）
         /// </summary>
         /// <param name="amount">出账分值（正数）</param>

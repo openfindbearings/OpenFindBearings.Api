@@ -44,6 +44,13 @@ namespace OpenFindBearings.Domain.Entities
         public DateTime? FeedbackAt { get; private set; }
 
         /// <summary>
+        /// 首次计分时刻（UTC，v2.19.0 审计修复）：成交只在该时刻所属的牌级有效期内计一次。
+        /// 改动说明：原按 FeedbackAt 计数，而重复提交会刷新 FeedbackAt——
+        /// 上一期的旧成交可被搬进新有效期继续计分；计分时间一经确立不再随重复提交前移
+        /// </summary>
+        public DateTime? CountedAt { get; private set; }
+
+        /// <summary>
         /// 该回执是否计入商家卡级（v2.18.0 反刷）：仅"谈成 + 通过自关联/资格/异常校验"才为 true；
         /// 管理员撤销回执亦翻转为 false（留痕不改结果，便于审计）
         /// </summary>
@@ -104,6 +111,10 @@ Remark = remark.Trim(),
             FlagNote = string.IsNullOrWhiteSpace(flagNote) ? null : flagNote.Trim();
             FeedbackIp = string.IsNullOrWhiteSpace(ip) ? null : ip.Trim();
             FeedbackAt = DateTime.UtcNow;
+            // 改动说明（v2.19.0 审计修复）：计分时间只记一次，重复提交（含改判后再谈成）不前移，
+            // 防止把旧有效期内的成交刷新到当前有效期重新计分
+            if (isCounted)
+                CountedAt ??= FeedbackAt;
             UpdateTimestamp();
         }
 
@@ -115,6 +126,10 @@ Remark = remark.Trim(),
         public void SetFeedbackCounted(bool counted, string? note)
         {
             IsCounted = counted;
+            // 改动说明（v2.19.0 审计修复）：管理侧恢复计分时补设计分时间（仅首次），
+            // 已有计分时间的回执不再前移，保证成交仍归属原有效期
+            if (counted)
+                CountedAt ??= DateTime.UtcNow;
             if (!string.IsNullOrWhiteSpace(note))
                 FlagNote = note.Trim();
             UpdateTimestamp();

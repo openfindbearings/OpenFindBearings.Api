@@ -144,7 +144,10 @@ namespace OpenFindBearings.Infrastructure.Services
         public async Task<bool> SpendAsync(Guid merchantId, int amount, string bizId, string? remark,
             CancellationToken cancellationToken = default)
         {
-            if (await _transactions.ExistsBizIdAsync(bizId, cancellationToken))
+            // 改动说明（v2.19.0 审计修复）：幂等键按商户隔离，避免不同商户/不同用户
+            // 复用同一客户端 requestId 时误判"已消费"或串账
+            var scopedBizId = $"m:{merchantId:N}:{bizId}";
+            if (await _transactions.ExistsBizIdAsync(scopedBizId, cancellationToken))
                 return false; // 幂等命中：同笔消费不重复记账（调用方据此判重复提交）
 
             var account = await _accounts.GetByMerchantIdAsync(merchantId, cancellationToken)
@@ -154,7 +157,7 @@ namespace OpenFindBearings.Infrastructure.Services
             await _accounts.UpdateAsync(account, cancellationToken);
             await _transactions.AddAsync(new MerchantPointTransaction(
                 merchantId, MerchantPointTransaction.DirectionDebit, MerchantPointTransaction.TypeTreasurySpend,
-                amount, account.Balance, bizId, remark), cancellationToken);
+                amount, account.Balance, scopedBizId, remark), cancellationToken);
             // 不在此提交——由调用方（商城兑换）把"金库支出+订单"同批 SaveChanges 保原子
             return true;
         }

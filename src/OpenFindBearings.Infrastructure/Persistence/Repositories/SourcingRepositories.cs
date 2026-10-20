@@ -248,13 +248,13 @@ if (status.HasValue)
         /// <inheritdoc/>
         public Task<int> GetCountedDealCountAsync(Guid merchantId, DateTime sinceUtc,
             CancellationToken cancellationToken = default)
-            // 改动说明（v2.18.0 撮合成交链）：卡级"成功撮合"的唯一统计口——
-            // 计分（IsCounted）且谈成（Confirmed），按回执时刻落在滚动窗口内
+            // 改动说明（v2.19.0 审计修复）：按首次计分时刻归属牌级有效期，
+            // 不再用可被重复提交刷新的 FeedbackAt（旧成交搬进新周期的漏洞）
             => _context.Set<SourcingResponse>().CountAsync(r =>
                 r.MerchantId == merchantId
                 && r.IsCounted
                 && r.FeedbackOutcome == SourcingDealOutcome.Confirmed
-                && r.FeedbackAt >= sinceUtc, cancellationToken);
+                && r.CountedAt >= sinceUtc, cancellationToken);
 
         /// <inheritdoc/>
         public Task<bool> HasCountedDealAsync(Guid merchantId, Guid publisherUserId, DateTime sinceUtc,
@@ -268,7 +268,7 @@ if (status.HasValue)
                       && d.PublisherUserId == publisherUserId
                       && r.IsCounted
                       && r.FeedbackOutcome == SourcingDealOutcome.Confirmed
-                      && r.FeedbackAt >= sinceUtc
+                      && r.CountedAt >= sinceUtc
                       && (!excludeResponseId.HasValue || r.Id != excludeResponseId.Value)
                 select r.Id).AnyAsync(cancellationToken);
 

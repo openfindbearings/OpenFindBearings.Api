@@ -223,7 +223,7 @@ namespace OpenFindBearings.Domain.Aggregates
             Name = name;
             Type = type;
             Contact = contact ?? throw new ArgumentNullException(nameof(contact));
-            // 改动说明（v2.18.0 卡级重构）：初始档由"入驻商家"改为"注册商户"（未认证即无卡级）
+            // 改动说明（v2.18.0 卡级重构）：初始档由"入驻商家"改为档位底"普通"（未认证即无牌级）
             // 改动说明（v2.19.0 有效期制）：Registered 改名 Ordinary，展示为"普通"
             Grade = MerchantGrade.Ordinary;
             Status = MerchantStatus.Pending;  // 新商家默认待审核
@@ -424,10 +424,11 @@ namespace OpenFindBearings.Domain.Aggregates
             // 改动说明（v2.9.0）：认证完成即清除商户的待处理申请标记
             VerifyRequested = false;
 
-            // 改动说明（v2.18.0 卡级重构）：认证通过即达"铜卡"（银/金卡由重算服务按在售+成功撮合上修）；
-            // 认证是卡级门槛而非档位名——认证徽章独立展示（IsVerified）
-            Grade = MerchantGrade.Bronze;
-            // 改动说明（v2.12.0 等级玩法）：认证事件直接落级，历史保级钟作废
+            // 改动说明（v2.19.0 审计修复）：认证只解锁牌级门槛，不再在此直接写铜牌——
+            // 否则紧随其后的重算读到"原档已是铜牌"，铜牌升档礼永远不会发放；
+            // 且认证但在售不足时必须按规则落普通，不能先给铜牌再走保级
+            // 认证是在售门槛的解锁条件，档位一律由 IMerchantGradeService 重算决定（认证徽章独立展示 IsVerified）
+            // 改动说明（v2.12.0 等级玩法）：认证事件作废历史保级钟（有效期由重算起期）
             GradeGraceUntil = null;
 
             UpdateTimestamp();
@@ -445,7 +446,7 @@ namespace OpenFindBearings.Domain.Aggregates
 
             IsVerified = false;
             VerifiedAt = null;
-            // 改动说明（v2.18.0 卡级重构）：认证是卡级的硬前提，撤销认证卡级即回落"注册商户"
+            // 改动说明（v2.18.0 卡级重构）：认证是牌级的硬前提，撤销认证牌级即回落"普通"
             // （回 Ordinary，后续供给事件会按规则重新上修）。撤销认证属平台执法动作，
             // 不走 v2.12.0 保级缓冲——直接落级并作废保级钟与有效期
             Grade = MerchantGrade.Ordinary;

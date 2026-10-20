@@ -146,7 +146,10 @@ namespace OpenFindBearings.Infrastructure.Services
             if (amount <= 0)
                 throw new ArgumentException("扣减分值必须为正", nameof(amount));
 
-            if (bizId != null && await _transactionRepository.ExistsBizIdAsync(bizId, cancellationToken))
+            // 改动说明（v2.19.0 审计修复）：客户端幂等键只作为业务段，落库前统一加用户命名空间——
+            // 否则不同用户/不同场景复用同一 key 会命中全局幂等，出现"复用旧键免扣分"
+            var scopedBizId = string.IsNullOrWhiteSpace(bizId) ? null : $"u:{userId:N}:{bizId}";
+            if (scopedBizId != null && await _transactionRepository.ExistsBizIdAsync(scopedBizId, cancellationToken))
                 return 0; // 幂等：同笔扣减重复提交
 
             var account = await _accountRepository.GetByUserIdAsync(userId, cancellationToken)
@@ -155,7 +158,7 @@ namespace OpenFindBearings.Infrastructure.Services
             account.Debit(amount); // 余额不足在此抛出（调用方转 400 给用户）
             await _accountRepository.UpdateAsync(account, cancellationToken);
             var tx = new PointTransaction(
-                userId, PointTransaction.DirectionDebit, sceneType, amount, account.Balance, bizId, remark);
+                userId, PointTransaction.DirectionDebit, sceneType, amount, account.Balance, scopedBizId, remark);
             await _transactionRepository.AddAsync(tx, cancellationToken);
             // 改动说明（v2.3.1 登录修复）：扣分同样可能撞 23505（并发同 requestId）或 xmin 并发异常，
             // 失败后清理 tracker 再抛——调用方（商城兑换/寻货超额）要接着走退款或返回错误，脏账不能外溢
@@ -178,7 +181,9 @@ namespace OpenFindBearings.Infrastructure.Services
             string grantType = PointTransaction.TypeMallRefund, CancellationToken cancellationToken = default)
         {
             // 改动说明（v2.3.0 商城）：退款刻意不查规则表——退款额来自订单快照，
-            // 规则被停用/改值都不该影响用户拿回自己的分；仍走 GrantCore 保持流水与余额一致
+            // 规则被停用/改值都不该影响用户拿回自己的分
+            // 改动说明（v2.19.0 审计修复）：退款改走独立入账，只回冲余额与累计消耗，
+            // 不计入 TotalEarned、不触发商家金上供与段位升档礼，避免反复退款刷等级奖励
             try
             {
                 if (amount <= 0)
@@ -186,7 +191,34 @@ namespace OpenFindBearings.Infrastructure.Services
                 if (await _transactionRepository.ExistsBizIdAsync(bizId, cancellationToken))
                     return 0; // 幂等：同笔退款重复提交
 
-                await GrantCoreAsync(userId, grantType, amount, bizId, remark, cancellationToken);
+                var account = await _accountRepository.GetByUserIdAsync(userId, cancellationToken);
+                var accountWasNew = account == null;
+                if (account == null)
+                {
+                    account = new PointAccount(userId);
+                    await _accountRepository.AddAsync(account, cancellationToken);
+                }
+                else
+                {
+                    // 与 GrantCore 同款：写前 Reload 取最新 xmin，避免同请求链二次写撞并发令牌
+                    await _context.Entry(account).ReloadAsync(cancellationToken);
+                    await _accountRepository.UpdateAsync(account, cancellationToken);
+                }
+
+                account.Refund(amount);
+                var tx = new PointTransaction(
+                    userId, PointTransaction.DirectionCredit, grantType, amount, account.Balance, bizId, remark);
+                await _transactionRepository.AddAsync(tx, cancellationToken);
+                try
+                {
+                    await _unitOfWork.SaveChangesAsync(cancellationToken);
+                }
+                catch
+                {
+                    await CleanupFailedGrantAsync(account, tx, accountWasNew, cancellationToken);
+                    throw;
+                }
+
                 _logger.LogInformation("积分退款: UserId={UserId}, Amount={Amount}, BizId={BizId}", userId, amount, bizId);
                 return amount;
             }
@@ -221,7 +253,8 @@ namespace OpenFindBearings.Infrastructure.Services
             // 阶梯：按连续天数取档（[2,3,4,5,5] 第 6 天起恒取末档 5）；无阶梯配置回退基础分值
             var streak = account.MarkCheckedIn(today);
             var amount = PickLadderAmount(rule.LadderJson, streak) ?? rule.Amount;
-            // 改动说明（v2.5.0 商家经济）：签到加成为商家 Lv1~+1/Lv2+1/Lv3+2/Lv4+3（阶梯后叠加）
+            // 改动说明（v2.19.0 审计修复）：签到加成为商家牌级加成，仅铜牌及以上生效
+            //（铜牌 +1 / 银牌 +2 / 金牌 +3；普通档无加成，与"普通无牌级权益"一致）
             try
             {
                 var best = await _merchantGrades.GetBestForUserAsync(userId, cancellationToken);

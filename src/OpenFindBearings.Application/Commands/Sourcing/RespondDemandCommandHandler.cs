@@ -151,8 +151,8 @@ namespace OpenFindBearings.Application.Commands.Sourcing
             // 额度评估（商户维度）
             var today = await _responseRepository.CountRespondedTodayAsync(request.MerchantId, cancellationToken);
             var freeLimit = await SourcingConfigReader.GetIntAsync(_configRepository, "Sourcing.FreeRespondPerDay", 20);
-            // 改动说明（v2.5.0 商家经济）：应答免费额度按被经营商户自身等级加成
-            // （额度按商户维度计数，buff 口径与之对齐——Lv1+1/Lv3+3/Lv4+5）
+            // 改动说明（v2.19.0 审计修复）：应答免费额度按商户牌级加成，仅铜牌及以上生效
+            // （额度按商户维度计数，buff 口径与之对齐——铜牌 +1 / 银牌 +3 / 金牌 +5；普通档无加成）
             freeLimit += MerchantBuffs.RespondQuotaBonus((int)merchant.Grade);
             var rule = await _ruleRepository.GetEnabledByTypeAsync("sourcing_respond_bonus", cancellationToken);
             var hardLimit = rule?.DailyLimit ?? 50;
