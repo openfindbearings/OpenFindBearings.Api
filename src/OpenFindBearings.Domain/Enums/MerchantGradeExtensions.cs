@@ -8,8 +8,8 @@ namespace OpenFindBearings.Domain.Enums
     public static class MerchantGradeExtensions
     {
         /// <summary>
-        /// 将商家卡级映射为可比序数（越大卡级越高）：注册商户=1 / 铜卡=2 / 银卡=3 / 金卡=4 / 未知=0。
-        /// 口径须与 Taro `merchantGradeToRank` 保持一致
+        /// 把商家牌级映射为可比较序数（越大牌级越高）：普通=1 / 铜牌=2 / 银牌=3 / 金牌=4 / 未知=0；
+        /// 与前端 Taro `merchantGradeToRank` 保持一致
         /// </summary>
         /// <param name="grade">商家卡级</param>
         /// <returns>可比序数（0-4）</returns>

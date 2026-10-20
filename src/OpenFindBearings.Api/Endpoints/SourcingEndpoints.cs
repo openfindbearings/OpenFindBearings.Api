@@ -1083,7 +1083,8 @@ namespace OpenFindBearings.Api.Endpoints
                         counted = r.IsCounted,
                         flagNote = r.FlagNote,
                         adoptedAt = r.AdoptedAt,
-                        feedbackAt = r.FeedbackAt
+                        feedbackAt = r.FeedbackAt,
+                        countedAt = r.CountedAt
                     });
                 }
                 return ApiResponseHelper.Ok(new { items = list, total }, httpContext: httpContext);

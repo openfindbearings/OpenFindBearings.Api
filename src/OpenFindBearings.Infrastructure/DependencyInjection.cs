@@ -223,6 +223,11 @@ namespace OpenFindBearings.Infrastructure
         services.AddHostedService<UserDeactivationJob>();
         // v2.4.0 商家经济：礼品订单发货满 7 天自动确认收货并结算入金库
         services.AddHostedService<MallAutoConfirmJob>();
+        // 改动说明（v2.19.0 审计修复）：集体任务结算 Job 原漏注册，导致成员积分与金库奖励从不发放；
+        // 该类一直存在（每小时扫描达标任务），此处补注册使奖励真正自动化
+        services.AddHostedService<MerchantTaskSettlementJob>();
+        // v2.19.0 有效期制：商家牌级每日巡检（到期续期/降档、在售不足落普通）
+        services.AddHostedService<MerchantGradeSweepJob>();
 
             return services;
         }

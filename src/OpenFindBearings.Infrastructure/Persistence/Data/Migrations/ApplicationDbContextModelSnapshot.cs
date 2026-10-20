@@ -252,6 +252,12 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     b.Property<DateTime?>("GradeGraceUntil")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTime?>("GradePeriodEndAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("GradePeriodStartAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
@@ -2235,6 +2241,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<DateTime?>("AdoptedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("CountedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("CreatedAt")

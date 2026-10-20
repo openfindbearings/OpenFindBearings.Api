@@ -28,6 +28,8 @@ namespace OpenFindBearings.Domain.Entities
         /// 关店/解除归属通知（v2.17.0）：商户离场时发给全部在职成员
         /// </summary>
         public const string TypeMerchantClosed = "merchant_closed";
+        /// <summary>牌级到期提醒（v2.19.0）：一期结束前 7 天发给全部在职成员，避免静默掉档</summary>
+        public const string TypeMerchantGrade = "merchant_grade";
         /// <summary>寻货通知类型（v1.35.0）：收到新应答/被选定/需求关闭/已下架，前端图标映射同口径</summary>
         public const string TypeSourcing = "sourcing";
         // 改动说明（v2.13.2 常量收敛）：礼品订单四类通知原以裸字符串写在 MallService/MallAutoConfirmJob

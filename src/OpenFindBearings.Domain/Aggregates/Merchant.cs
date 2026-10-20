@@ -95,9 +95,21 @@ namespace OpenFindBearings.Domain.Aggregates
 
         /// <summary>
         /// 保级缓冲截止时刻（v2.12.0 等级玩法）：重算发现应降档时先挂此钟（now+宽限天数），
-        /// 期内维持原等级与成员 buff；到期后仍不达标才实际降档。升档或无需降级时清空
+        /// 期内维持原等级与成员 buff；到期后仍不达标才实际降档。升档或无需降级时清空。
+        /// 改动说明（v2.19.0 有效期制）：本钟只用于"在售不足"的缓冲，成交维度改由有效期到期结算
         /// </summary>
         public DateTime? GradeGraceUntil { get; private set; }
+
+        /// <summary>
+        /// 牌级有效期起（v2.19.0 有效期制）：升档、到期续期或降档时写入（UTC）
+        /// </summary>
+        public DateTime? GradePeriodStartAt { get; private set; }
+
+        /// <summary>
+        /// 牌级有效期止（v2.19.0 有效期制）：到期按本期成交与在售结算，续期则顺延一个周期。
+        /// 为空表示尚未起期（认证后由重算服务补起）
+        /// </summary>
+        public DateTime? GradePeriodEndAt { get; private set; }
 
         /// <summary>
         /// 商家状态
@@ -211,8 +223,9 @@ namespace OpenFindBearings.Domain.Aggregates
             Name = name;
             Type = type;
             Contact = contact ?? throw new ArgumentNullException(nameof(contact));
-            // 改动说明（v2.18.0 卡级重构）：初始档由"入驻商家"改为"注册商户"（未认证即无卡级）
-            Grade = MerchantGrade.Registered;
+            // 改动说明（v2.18.0 卡级重构）：初始档由"入驻商家"改为档位底"普通"（未认证即无牌级）
+            // 改动说明（v2.19.0 有效期制）：Registered 改名 Ordinary，展示为"普通"
+            Grade = MerchantGrade.Ordinary;
             Status = MerchantStatus.Pending;  // 新商家默认待审核
         }
 
@@ -411,10 +424,11 @@ namespace OpenFindBearings.Domain.Aggregates
             // 改动说明（v2.9.0）：认证完成即清除商户的待处理申请标记
             VerifyRequested = false;
 
-            // 改动说明（v2.18.0 卡级重构）：认证通过即达"铜卡"（银/金卡由重算服务按在售+成功撮合上修）；
-            // 认证是卡级门槛而非档位名——认证徽章独立展示（IsVerified）
-            Grade = MerchantGrade.Bronze;
-            // 改动说明（v2.12.0 等级玩法）：认证事件直接落级，历史保级钟作废
+            // 改动说明（v2.19.0 审计修复）：认证只解锁牌级门槛，不再在此直接写铜牌——
+            // 否则紧随其后的重算读到"原档已是铜牌"，铜牌升档礼永远不会发放；
+            // 且认证但在售不足时必须按规则落普通，不能先给铜牌再走保级
+            // 认证是在售门槛的解锁条件，档位一律由 IMerchantGradeService 重算决定（认证徽章独立展示 IsVerified）
+            // 改动说明（v2.12.0 等级玩法）：认证事件作废历史保级钟（有效期由重算起期）
             GradeGraceUntil = null;
 
             UpdateTimestamp();
@@ -432,11 +446,13 @@ namespace OpenFindBearings.Domain.Aggregates
 
             IsVerified = false;
             VerifiedAt = null;
-            // 改动说明（v2.18.0 卡级重构）：认证是卡级的硬前提，撤销认证卡级即回落"注册商户"
-            // （回 Registered，后续供给事件会按规则重新上修）。撤销认证属平台执法动作，
-            // 不走 v2.12.0 保级缓冲——直接落级并作废保级钟
-            Grade = MerchantGrade.Registered;
+            // 改动说明（v2.18.0 卡级重构）：认证是牌级的硬前提，撤销认证牌级即回落"普通"
+            // （回 Ordinary，后续供给事件会按规则重新上修）。撤销认证属平台执法动作，
+            // 不走 v2.12.0 保级缓冲——直接落级并作废保级钟与有效期
+            Grade = MerchantGrade.Ordinary;
             GradeGraceUntil = null;
+            GradePeriodStartAt = null;
+            GradePeriodEndAt = null;
             UpdateTimestamp();
 
             AddDomainEvent(new MerchantUnverifiedEvent(Id, Name));
@@ -455,9 +471,29 @@ namespace OpenFindBearings.Domain.Aggregates
             // 改动说明（v2.12.0 等级玩法）：等级一经落档，保级钟随之作废
             // （升档不需要缓冲；到期降档写回新等级后也应保持空钟等下一轮）
             GradeGraceUntil = null;
+            // 改动说明（v2.19.0 有效期制）：落档同时作废旧有效期，由重算服务按新档重新起期；
+            // 普通（未认证/在售不足）不再持有有效期
+            GradePeriodStartAt = null;
+            GradePeriodEndAt = null;
             UpdateTimestamp();
 
             AddDomainEvent(new MerchantGradeChangedEvent(Id, oldGrade, newGrade));
+        }
+
+        /// <summary>
+        /// 写入牌级有效期（v2.19.0 有效期制）：升档、降档或到期续期时由重算服务调用。
+        /// 续期允许起点取原到期日，因此不强制与当前时间相等
+        /// </summary>
+        /// <param name="startUtc">有效期起（UTC）</param>
+        /// <param name="endUtc">有效期止（UTC，必须晚于起点）</param>
+        public void SetGradePeriod(DateTime startUtc, DateTime endUtc)
+        {
+            if (endUtc <= startUtc)
+                throw new ArgumentException("有效期止必须晚于有效期起", nameof(endUtc));
+
+            GradePeriodStartAt = startUtc;
+            GradePeriodEndAt = endUtc;
+            UpdateTimestamp();
         }
 
         /// <summary>
@@ -556,10 +592,10 @@ namespace OpenFindBearings.Domain.Aggregates
                 VerifiedAt = null;
             }
             VerifyRequested = false;
-            // 改动说明（v2.18.0 卡级重构）：枚举单调后"高于注册商户"即持卡级，回海域一律落回注册商户
-            if (Grade > MerchantGrade.Registered)
+            // 改动说明（v2.18.0 卡级重构）：枚举单调后"高于普通"即持牌级，回海域一律落回普通
+            if (Grade > MerchantGrade.Ordinary)
             {
-                UpdateGrade(MerchantGrade.Registered);
+                UpdateGrade(MerchantGrade.Ordinary);
             }
 
             // 数据核验轴重置：上一任认领期留下的"已核验"标记与新互联网商户（天然 false）区分，必须清
@@ -739,12 +775,12 @@ namespace OpenFindBearings.Domain.Aggregates
         /// </summary>
         public string GetGradeDisplayName() => Grade switch
         {
-            // 改动说明（v2.18.0 卡级重构）：展示名改为卡级口径（注册商户/铜卡/银卡/金卡），
+            // 改动说明（v2.19.0 有效期制）：展示名由"卡"改"牌"（普通/铜牌/银牌/金牌），
             // 认证不再是档位名（认证徽章由 IsVerified 独立展示）
-            MerchantGrade.Registered => "注册商户",
-            MerchantGrade.Bronze => "铜卡",
-            MerchantGrade.Silver => "银卡",
-            MerchantGrade.Gold => "金卡",
+            MerchantGrade.Ordinary => "普通",
+            MerchantGrade.Bronze => "铜牌",
+            MerchantGrade.Silver => "银牌",
+            MerchantGrade.Gold => "金牌",
             _ => "未定级"
         };
     }

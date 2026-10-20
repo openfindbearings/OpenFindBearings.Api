@@ -36,6 +36,10 @@ TypeDisplay = merchant.GetMerchantTypeDisplayName(),
                 SubmittedAt = merchant.CreatedAt,
                 // 改动说明（v1.50.0 入驻时间）：下发入驻生效时间，供 Admin 商家列表展示与筛选
                 OnboardedAt = merchant.OnboardedAt,
+                // 改动说明（v2.19.0 有效期制）：下发牌级有效期与在售保级钟，供 Admin 牌级页展示
+                GradePeriodStartAt = merchant.GradePeriodStartAt,
+                GradePeriodEndAt = merchant.GradePeriodEndAt,
+                GradeGraceUntil = merchant.GradeGraceUntil,
                 RejectReason = merchant.SuspensionReason
             };
         }

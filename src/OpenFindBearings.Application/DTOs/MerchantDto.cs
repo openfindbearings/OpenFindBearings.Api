@@ -113,5 +113,31 @@ namespace OpenFindBearings.Application.DTOs
         /// 同渠道不同语义，仅靠渠道字段无法区分，与 DetachMerchant 守卫严格同口径
         /// </summary>
         public string? DataSource { get; set; }
+
+        /// <summary>
+        /// 牌级有效期起（UTC，v2.19.0 有效期制）。
+        /// 改动说明：Admin 牌级页展示"有效期至"与到期降档依据，仅管理端下发
+        /// </summary>
+        public DateTime? GradePeriodStartAt { get; set; }
+
+        /// <summary>
+        /// 牌级有效期止（UTC，v2.19.0 有效期制）；普通档为空
+        /// </summary>
+        public DateTime? GradePeriodEndAt { get; set; }
+
+        /// <summary>
+        /// 在售不足保级截止（UTC，v2.12.0 等级玩法）；为空表示当前在售达标或无缓冲
+        /// </summary>
+        public DateTime? GradeGraceUntil { get; set; }
+
+        /// <summary>
+        /// 公域可匹配在售件数（v2.19.0 审计修复，仅管理端下发）。
+        /// 改动说明：Admin 牌级页原以"当前牌级 &gt; 普通"推断在售达标，牌级未及时重算时会误报达标；
+        ///   改为下发实时件数与阈值，由页面直接显示"在售 N/M"并判定。
+        /// </summary>
+        public int? OnSaleCount { get; set; }
+
+        /// <summary>在售达标阈值（v2.19.0，仅管理端下发，取 SystemConfig 实时值）</summary>
+        public int? OnSaleMin { get; set; }
     }
 }

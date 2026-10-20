@@ -113,8 +113,9 @@ namespace OpenFindBearings.Domain.Repositories
         // ============ v2.18.0 撮合成交链（卡级"成功撮合"单一事实源） ============
 
         /// <summary>
-        /// 商家在窗口期内的"成功撮合"次数（卡级唯一规模指标）：
-        /// 计分回执（IsCounted）且结果为 Confirmed，按 FeedbackAt 落在窗口内统计
+        /// 商家在有效期内的"成功撮合"次数（牌级唯一规模指标）：
+        /// 计分回执（IsCounted）且结果为 Confirmed，按首次计分时刻 CountedAt 归属有效期统计
+        /// （改动说明 v2.19.0：不再用可被重复提交刷新的 FeedbackAt）
         /// </summary>
         Task<int> GetCountedDealCountAsync(Guid merchantId, DateTime sinceUtc, CancellationToken cancellationToken = default);
 
