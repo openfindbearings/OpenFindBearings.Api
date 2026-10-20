@@ -184,6 +184,9 @@ namespace OpenFindBearings.Api.Endpoints
                             merchantId = r.MerchantId,
                             merchantName = merchant?.Name,
                             isVerified = merchant?.IsVerified ?? false,
+                            // 改动说明（v1.57.1 双徽章并列）：应答摘要补商家卡级（与认证徽章并列，互不覆盖）
+                            merchantGrade = (int)(merchant?.Grade ?? MerchantGrade.Unknown),
+                            merchantGradeDisplay = merchant?.GetGradeDisplayName(),
                             companyName = merchant?.CompanyName,
                             onSaleCount,
                             completedTaskCount,
@@ -274,7 +277,10 @@ namespace OpenFindBearings.Api.Endpoints
                         outcome = (int)selectedResponse!.FeedbackOutcome!.Value,
                         reason = selectedResponse.FeedbackReason,
                         at = selectedResponse.FeedbackAt,
-                        counted = selectedResponse.IsCounted
+                        counted = selectedResponse.IsCounted,
+                        // 改动说明（v1.57.1）：回传未计分原因（反刷留痕），需求方据此知道"为什么没算"，
+                        //   而不是只看到一句"本次未计分"
+                        note = selectedResponse.FlagNote
                     }
                 }, httpContext: httpContext);
             })
@@ -919,6 +925,9 @@ namespace OpenFindBearings.Api.Endpoints
                 [FromServices] ISourcingResponseRepository responseRepository,
                 [FromServices] IMerchantRepository merchantRepository,
                 [FromServices] IUserRepository userRepository,
+                [FromServices] IAuditLogRepository auditLogRepository,
+                [FromServices] OpenFindBearings.Application.Shared.Interfaces.IUnitOfWork unitOfWork,
+                [FromServices] ILoggerFactory loggerFactory,
                 HttpContext httpContext) =>
             {
                 var demand = await demandRepository.GetByIdAsync(id, httpContext.RequestAborted);
@@ -926,6 +935,31 @@ namespace OpenFindBearings.Api.Endpoints
                     return ApiResponseHelper.NotFound("寻货不存在", httpContext: httpContext);
 
                 var publisher = await userRepository.GetByIdAsync(demand.PublisherUserId, httpContext.RequestAborted);
+                // 改动说明（v1.57.1 敏感字段留痕）：治理详情会下发发布人手机号，属敏感个人信息；
+                //   每次查看写一条审计（谁、何时、看哪张单），把"运营可取证"与"批量导出"的风险分开。
+                //   审计写入失败不影响详情返回（与审计中间件同样的容错口径）
+                if (!string.IsNullOrWhiteSpace(publisher?.Mobile))
+                {
+                    try
+                    {
+                        Guid? operatorId = httpContext.Items["UserId"] as Guid?;
+                        await auditLogRepository.AddAsync(new AuditLog(
+                            "ViewPublisherContact",
+                            "SourcingDemand",
+                            demand.Id,
+                            operatorId,
+                            remarks: "查看寻货发布人手机号（治理取证）",
+                            httpMethod: "GET",
+                            requestPath: httpContext.Request.Path.Value,
+                            statusCode: 200), httpContext.RequestAborted);
+                        await unitOfWork.SaveChangesAsync(httpContext.RequestAborted);
+                    }
+                    catch (Exception ex)
+                    {
+                        loggerFactory.CreateLogger("SourcingEndpoints")
+                            .LogWarning(ex, "写查看发布人手机号审计失败: DemandId={DemandId}", demand.Id);
+                    }
+                }
                 var responses = await responseRepository.GetByDemandAsync(demand.Id, httpContext.RequestAborted);
                 var list = new List<object>();
                 foreach (var r in responses)

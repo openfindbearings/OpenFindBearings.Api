@@ -65,6 +65,10 @@ public class GetMerchantsByBearingQueryHandler : IRequestHandler<GetMerchantsByB
                         RestockEta = best.RestockEta,
                         // 改动说明（v1.6.0 数据可信联动）：透出认证标记——行动门"询价只对认证商家开放"的判定依据
                         IsVerified = best.Merchant!.IsVerified,
+                        // 改动说明（v1.57.1 双徽章并列）：透出商家卡级与卡级展示名，
+                        //   认证（类型）与卡级（等级）在前端并列展示，互不覆盖
+                        Grade = (int)best.Merchant!.Grade,
+                        GradeDisplay = best.Merchant!.GetGradeDisplayName(),
                         IsPinned = pinnedUntil > DateTime.MinValue,
                         PinnedUntil = pinnedUntil > DateTime.MinValue ? pinnedUntil : null
                     },
@@ -116,6 +120,12 @@ public class BearingMerchantDto
 
     /// <summary>商家是否已认证（v1.6.0 数据可信联动；询价行动门只对认证商家开放）</summary>
     public bool IsVerified { get; set; }
+
+    /// <summary>商家卡级枚举值（v1.57.1 双徽章并列：1注册商户/2铜卡/3银卡/4金卡，与认证独立）</summary>
+    public int Grade { get; set; }
+
+    /// <summary>商家卡级展示名（v1.57.1：注册商户/铜卡/银卡/金卡）</summary>
+    public string GradeDisplay { get; set; } = string.Empty;
 
     /// <summary>是否处于置顶期（v2.3.0 商城置顶卡；前端渲染"置顶"角标）</summary>
     public bool IsPinned { get; set; }

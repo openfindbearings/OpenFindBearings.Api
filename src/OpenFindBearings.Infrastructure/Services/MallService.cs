@@ -373,10 +373,8 @@ namespace OpenFindBearings.Infrastructure.Services
                 : 0;
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            // 改动说明（v2.5.0 商家经济）：结算入金推高金库累计，可能达成金牌（Lv4）定级条件
-            if (settled > 0 && item.OwnerMerchantId.HasValue)
-                await _merchantGrades.RecomputeAsync(item.OwnerMerchantId.Value, cancellationToken);
-
+            // 改动说明（v1.57.1 僵尸清理）：金库已退出商家定级输入（卡级只看认证+在售+近 180 天计分撮合），
+            //   此处原"结算入金可能达成金牌"的重算已无意义，摘除以免每次结算白算一遍并多写一次库
             if (settled > 0 && item.OwnerMerchantId.HasValue)
             {
                 await NotifyMerchantAdminsAsync(item.OwnerMerchantId.Value, "礼品订单已结算",

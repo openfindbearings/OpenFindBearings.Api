@@ -60,7 +60,7 @@ namespace OpenFindBearings.Infrastructure.Services
 
                 var merchant = await _merchants.GetByIdAsync(merchantId, cancellationToken);
                 if (merchant == null || merchant.Status != MerchantStatus.Active)
-                    return; // 非在营商户不定级（释放路径已由域方法落 Standard）
+                    return; // 非在营商户不定级（释放路径已由域方法落 Registered）
 
                 // 改动说明（v2.13.2 配置收口）：阈值/默认值统一走 MerchantGradeSettings，与端点侧同源
                 // 改动说明（v2.18.0 卡级重构）：合并在售前置为单键，新增窗口天数与两档撮合次数，删除金库键

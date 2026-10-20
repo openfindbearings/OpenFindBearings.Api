@@ -1,10 +1,19 @@
 # API 端点说明文档
 
-**版本：** v1.57.0
-**日期：** 2026-10-19
-**上一版：** v1.56.0
+**版本：** v1.57.1
+**日期：** 2026-10-20
+**上一版：** v1.57.0
 **状态：** 与代码同步
 
+> v1.57.1 变更（寻货可见性/回执/会话的收口修复，均为向后兼容）：
+> 1. **回执幂等**：同一响应重复提交（含"谈成"→"没谈成"改判）不再被自身已计分行判为重复而误撤销；计分状态翻转即触发商家卡级重算。
+> 2. **回执原因回传**：`myFeedback` 新增 `note`（未计分原因，反刷留痕），需求方可看到"为什么没算"。
+> 3. **会话只读口径**：改用 `IsOpen`（含 `ExpiryAt` 过期），过期未惰性过期的单据不能再发消息；开聊要求商户为本单受邀或已应答（发布方同权），杜绝幽灵会话。
+> 4. **未读计数**：改为数据库聚合计数，去掉"只取前 200 个会话"的截断。
+> 5. **在售商家行**：`GET /api/bearings/{id}/merchants` 补 `grade`/`gradeDisplay`（认证与卡级并列）。
+> 6. **敏感字段留痕**：`GET /api/admin/sourcing/demands/{id}` 每次下发发布人手机号时写审计（`ViewPublisherContact` / `SourcingDemand`），审计失败不影响返回。
+> 7. **僵尸清理**：金库已退出定级，摘除商城结算/自动确认后的空转重算。
+>
 > v1.57.0 变更（卡级重构 + 撮合成交链 + T1 会话 + 电话单向 + 管理侧复核）：
 > 1. **卡级重构**：`MerchantGrade` 单调重排（Registered=1/Bronze=2/Silver=3/Gold=4，迁移 `AddMerchantCardTiers`）；
 >    `GET /api/points/merchant-grade` 改口径——入参判定去掉金库，新增 `dealCount`/`windowDays`/`onSaleMin`/`silverDealMin`/`goldDealMin`/`nextTier`；`/api/points/merchant-buff` 的等级名与提示文案同步。
@@ -21,6 +30,7 @@
 
 | 版本 | 日期 | 变更说明 |
 |------|------|----------|
+| v1.57.1 | 2026-10-20 | **寻货收口修复（向后兼容）**：① 回执幂等——配对去重查询排除当前响应自身，重复提交"谈成"不再被自己那条已计分行判为重复而把 `counted` 翻成 false；计分状态发生翻转（含谈成→没谈成）同样触发商家卡级重算。② `myFeedback` 增 `note`（未计分原因，反刷留痕），供需求方看到"为什么没算"。③ 会话只读改用 `IsOpen`（含 `ExpiryAt` 过期），开聊要求该商户为本单受邀或已应答（商户名义发布方成员同权），杜绝幽灵会话。④ 会话总未读改数据库聚合计数，去掉"只取前 200 个会话"的硬截断。⑤ `GET /api/bearings/{id:guid}/merchants` 补 `grade`/`gradeDisplay`（认证徽章与卡级彩牌并列）。⑥ `GET /api/admin/sourcing/demands/{id:guid}` 每次下发发布人手机号写审计 `ViewPublisherContact`（审计失败只记警告）。⑦ 金库已退出定级，摘除商城结算与自动确认后的空转重算。端点数量不变 |
 | v1.56.0 | 2026-10-19 | **寻货边界完整性收口（v1.55.0 之后的第二轮核查）**：① **转公开差集补发通知**——`POST /api/sourcing/demands/{id:guid}/publish-public` 放开后按"当前匹配集合 − 原邀标收件人"**差集补发** `SourcingDemandPublishedEvent`（新纳入的有货认证商家被告知、已通知过的原收件人绝不二次打扰；差集为空则一条不发），改正 v1.54.0"转公开不补通知"的口径；② **撤销应答改软取消**——`DELETE /api/sourcing/demands/{id:guid}/respond` 由物理删行改为置 `SourcingResponseStatus.Cancelled`（值 4），撤销后不参与比价与"是否已应答"判定、可重新应答，但**当日应答额度不回退**（一次应答即消耗，与限频注释一致），行留痕可审计；③ **发布幂等**——`POST /api/sourcing/demands` 读 `Idempotency-Key` 请求头（同一发布人同 key 重放返回原单，不重复建单/重复扣分）；`SourcingDemands.IdempotencyKey` 列 + `(PublisherUserId, IdempotencyKey)` 过滤唯一索引（迁移 `AddSourcingIdempotency`）；扣分 `bizId` 由 `null` 改 `sourcing_publish:{demandId}`；④ **治理可见性**——`GET /api/admin/sourcing/demands` 与治理详情显式包含软删单并输出 `isDeleted`（原列表硬排除 `IsDeleted`，发布人撤销的终态单从管理员视野消失）；⑤ **在售口径统一**——商家等级"在售商品数"由"仅出售中"改为"公域可见（出售中/补货中）"，与寻货匹配、应答实力摘要一致（成就仪表 `listing_count` 保持现货口径，避免历史进度凭空白送）。端点数量不变。明细见文末"本版增量"章节 |
 | v1.55.0 | 2026-10-19 | **邀标边界补全与契约纠正（公开招标/邀标 v1.54.0 的完整化）**：① **应答守卫**——`POST /api/sourcing/demands/{id}/respond` 对邀标单只允许收件商家应答（按发布时点快照判定，非收件商家报错，堵住"知 id 即插队应答"）；② **详情可见性放宽**——邀标单对"发布商户的在职成员"（原只认经办人本人）与"任一收件商户的在职成员"（原只认当前选中商户，一人多商户深链会误 404）可见；③ **通知免限频**——邀标单豁免 `Sourcing.NotifyMaxPerMerchantPerDay`（受邀是点名勾选、受众可控，"受邀必达"优先；公开招标保持限频）；④ **契约纠正**：发布响应 `notifiedMerchantCount` 更名 `recipientMerchantCount`（原名义暗示"实际投递家数"，实际还取决于收件商户是否有在职管理员）；`visibility` 做枚举范围校验、公开招标携带 `invitedMerchantIds` 直接 400（不再静默忽略）；匹配/额度顺序调整（"无人可邀"在 NEED_POINTS 确认框之前暴露）。⑤ **口径统一**：`SourcingMatcher` 复用实体 `IsPubliclyVisible` 与商户 `Status=Active`，商户名义发布排除发布商户自己；新增 `IMerchantBearingRepository.GetMatchableByMerchantAsync`（审核通过 且 出售中/补货中），`/opportunities`、`/matched` 与匹配口径一致（原只在售口径导致补货中商家被通知却在聚合面看不到）；`/matched` 邀标单优先参与截断（原按时间倒序取 50，较早邀标单可能被挤出）。⑥ **管理端点**：`GET /api/admin/sourcing/demands` 与详情补 `publisherMerchantId/publisherMerchantName/publisherType`。⑦ 撤回应答同步递减 `ResponseCount`（原撤标后计数残留，`/matched`、`/opportunities` 的"尚无人应答"判定失准）。端点数量不变。明细见文末"本版增量"章节 |
 | v1.54.0 | 2026-10-19 | **寻货公开招标 / 邀标两轴模型**：`SourcingDemand` 弃用 `TargetMerchantId`，改 `Visibility`（0公开招标/1邀标）+ `InvitedMerchantIds`（邀标收件人快照 `uuid[]`，空=全部匹配的认证在售商家）；邀标单不入公开大厅、仅发布人与收件商家可见（非收件商家取详情 404）。`POST /api/sourcing/demands` 请求体以 `visibility`+`invitedMerchantIds` 取代 `targetMerchantId`，响应 `matchedMerchantCount` 更名 `notifiedMerchantCount`（公开=匹配家数、邀标=勾选∩匹配家数）；`/demands`（大厅）仅列公开单；`/demands/{id}`、`/my/demands`、`/merchant/demands`、`/matched`、`/opportunities` 透出 `isPrivate`；新增 `POST /api/sourcing/demands/{id:guid}/publish-public`（发布人把进行中的邀标单放开为公开）。`SourcingDemandPublishedEvent` 改为携带**最终收件人集合**（订阅者不再自行匹配）。迁移 `AddSourcingVisibility`（加 `Visibility`/`InvitedMerchantIds` + gin 索引，存量 `TargetMerchantId` 非空行回填 `Visibility=1`、收件人=[该商户] 后删旧列）。寻货端点组 10→11（本版净 +1）。明细见文末"本版增量"章节 |
@@ -436,14 +446,14 @@ OpenFindBearings.Api（以下简称 API）共注册 **163** 个端点，按职�
 
 | 方法 | 路径 | 说明 | 鉴权 |
 |---|---|---|---|
-| GET（v1.46.0 同版追加：输出 publisherMerchantId/publisherMerchantName/publisherType） | 匿名 |
-| GET；v1.46.0 同版追加：透出发布方身份三字段，选定解锁的 publisherContact 分流——商户单=商户公开电话，个人单=注册手机 | 登录可选 |
+| GET | /demands | 寻货大厅分页（型号关键词 + 品牌/地区筛选；登录者带 isMine；v1.46.0 输出 publisherMerchantId/publisherMerchantName/publisherType；v1.54.0 输出 visibility 与 isPrivate） | 匿名 |
+| GET | /demands/{id:guid} | 寻货详情（v1.57.0 删除 `publisherContact`：商家任何情况下拿不到需求方号码；响应含 `contactUnlockedAt`/`selectedResponseId`/`canFeedback`/`myFeedback`；v1.57.1 `myFeedback` 增 `note`＝未计分原因。访客与非受邀非应答方只见应答数） | 登录可选 |
 | POST | /demands | 发布寻货（免费 3 条/日，超限 NEED_POINTS 协议 + usePoints 重提交，硬上限 10；v1.46.0 同版追加：请求体可选 merchantId=商户名义发布，在职成员校验前置不耗额度；v1.51.0：响应回传匹配家数，v1.54.0 更名为 `notifiedMerchantCount`=本次实际推送的认证商家家数，0=仅进大厅等应答；v1.54.0：请求体 `visibility`（0公开招标/1邀标）+ `invitedMerchantIds`（邀标收件人，空=全部匹配的认证在售商家）取代原 `targetMerchantId`；邀标勾选 ∩ 认证在售匹配，交集空则拒绝） | 登录 |
 | POST | /demands/{id:guid}/publish-public | 转为公开招标（v1.54.0：发布人把进行中的邀标单放开为公开，需求进大厅人人可见可应答；已是公开或已结束的不予受理；不追加通知） | 登录 |
 | POST | /demands/{id:guid}/respond | 商户应答（v1.45.0 多行标书：请求体 `items[]` 每行型号必填+可引在售商品，说明 remark 整份必填，至少一行；一商户一需求单条可更新=整份替换行；免费 20/日超限花积分，硬上限 50） | 登录+商户 |
 | DELETE | /demands/{id:guid}/respond | 撤销应答（同版本追加：招投标"开标前撤标"——仅待处理可撤，撤后需求回到未应答，行表 DB 级联删除；仅本人+在职成员，当日额度不退还） | 登录+商户 |
 | POST | /demands/batch-delete | 批量删除寻货（v2.12.0 列表多选：软删终态单，仅经办人本人，进行中拒删计 skipped） | 登录 |
-| POST | /demands/{id:guid}/select | 选定应答（关闭需求、其余置未选中、双方解锁联系方式） | 登录+发布人 |
+| POST | /demands/{id:guid}/select | 选定应答（关闭需求、其余置未选中；v1.57.0 起单向解锁——只向需求方下发商家联系方式并写 `ContactUnlockedAt`，商家永远拿不到需求方号码） | 登录+发布人 |
 | POST | /demands/{id:guid}/cancel | 取消寻货（软关闭，通知全体应答者） | 登录+发布人 |
 | GET | /my/demands | 我发布的寻货（v1.46.0 同版追加：只含个人名义单——商户名义归 merchant/demands） | 登录 |
 | GET | /merchant/demands | 商户名义发布的寻货列表（v1.46.0 同版追加：商户工作台"寻货管理-我发布的"，当前商户全状态单+经办人，在职成员均可见） | 登录+商户 |
@@ -743,6 +753,7 @@ OpenFindBearings.Api（以下简称 API）共注册 **163** 个端点，按职�
 | `GET /api/sourcing/demands/{id:guid}` | 邀标单仅发布人与收件商家可见（非收件商家 → 404）；输出加 `visibility`/`isPrivate`（`isTargeted` 弃用） |
 | `GET /api/sourcing/my/demands`、`/merchant/demands`、`/matched`、`/opportunities` | 输出加 `isPrivate`；`/matched` 增列"邀标给我的进行中单"（收件商家可见） |
 | `GET /api/admin/sourcing/demands`、`/demands/{id:guid}` | 治理视图输出加 `isPrivate`/`invitedCount`（详情含 `invitedMerchantIds`），Admin 寻货管理列表/详情展示「发布方式」 |
+| `GET /api/admin/sourcing/demands/{id:guid}`（v1.57.1） | 每次下发发布人手机号写审计 `Action=ViewPublisherContact`、`EntityType=SourcingDemand`、`EntityId=寻货单`；审计失败仅记警告，不影响详情返回。列表页不下发手机号，仅详情可见 |
 
 > 背景：原 `targetMerchantId` 单字段同时承担"曝光范围"与"收件人"两个语义，且把"询价"抬成与寻货平级的单据类型；实际领域模型中价格只是应答行的可选字段、**选定**才是终局动作。v1.54.0 拆成两个正交轴。
 > 领域事件：`SourcingDemandPublishedEvent` 改为携带**最终收件人集合**（`RecipientMerchantIds`），命令处理器解析一次（`SourcingMatcher` 匹配 ∩ 勾选），订阅者按集合逐户推送——从根上消除"回传家数"与"实际推送对象"漂移。

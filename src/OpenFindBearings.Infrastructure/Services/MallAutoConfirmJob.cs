@@ -83,9 +83,8 @@ namespace OpenFindBearings.Infrastructure.Services
                     if (owner != null && owner.Status == Domain.Enums.MerchantStatus.Active)
                     {
                         settled = await treasury.SettleOrderAsync(fresh, item.OwnerMerchantId.Value, ct);
-                        // v2.5.0 商家经济：自动结算同样可能触发金牌定级
-                        if (settled > 0)
-                            await scope.ServiceProvider.GetRequiredService<IMerchantGradeService>().RecomputeAsync(item.OwnerMerchantId.Value, ct);
+                        // 改动说明（v1.57.1 僵尸清理）：金库已不参与商家定级，原"自动结算可能触发金牌定级"
+                        //   的重算调用已无输入意义，摘除（在售变化与成交回执仍会正常触发重算）
                         if (settled > 0)
                         {
                             // 通知全体在职管理员（金库入账可见）

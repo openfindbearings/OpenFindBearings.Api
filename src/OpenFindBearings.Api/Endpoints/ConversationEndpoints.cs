@@ -93,7 +93,9 @@ namespace OpenFindBearings.Api.Endpoints
                         counterpartyName = counterparty,
                         partNumber = demand?.PartNumber,
                         demandStatus = demand == null ? null : (int?)demand.Status,
-                        demandReadOnly = demand == null || demand.Status != SourcingDemandStatus.Published,
+                        // 改动说明（v1.57.1 修 bug）：只读判定改用 IsOpen（含 ExpiryAt 时间过期），
+                        //   原仅看 Status 会把"已过有效期但尚未惰性过期"的单仍当进行中
+                        demandReadOnly = demand == null || !demand.IsOpen,
                         lastMessageAt = conv.LastMessageAt,
                         lastMessagePreview = conv.LastMessagePreview,
                         unreadCount = unread
@@ -129,14 +131,9 @@ namespace OpenFindBearings.Api.Endpoints
                     .Select(m => m.MerchantId).ToList();
 
                 var total = 0;
-                foreach (var conv in await conversations.GetForPublisherAsync(userId, 0, 200, httpContext.RequestAborted))
-                    total += await conversations.CountUnreadAsync(conv.Id, SourcingSenderSide.Publisher, conv.PublisherLastReadAt, httpContext.RequestAborted);
-                foreach (var conv in await conversations.GetForMerchantAsync(merchantIds, 0, 200, httpContext.RequestAborted))
-                {
-                    if (conv.PublisherUserId == userId)
-                        continue;
-                    total += await conversations.CountUnreadAsync(conv.Id, SourcingSenderSide.Merchant, conv.MerchantLastReadAt, httpContext.RequestAborted);
-                }
+                // 改动说明（v1.57.1 修 bug）：改用数据库聚合计数，去掉"只取前 200 个会话"的硬截断
+                total += await conversations.CountUnreadMessagesForPublisherAsync(userId, httpContext.RequestAborted);
+                total += await conversations.CountUnreadMessagesForMerchantAsync(merchantIds, userId, httpContext.RequestAborted);
                 return ApiResponseHelper.Ok(new { unreadCount = total }, httpContext: httpContext);
             })
             .WithName("GetSourcingConversationUnreadCount")
@@ -177,7 +174,8 @@ namespace OpenFindBearings.Api.Endpoints
                     merchantId,
                     role = side == SourcingSenderSide.Publisher ? "publisher" : "merchant",
                     // 单据非进行中时只读（v2.18.0：撮合完成即转线下履约，平台不再承载持续 IM）
-                    readOnly = demand == null || demand.Status != SourcingDemandStatus.Published,
+                    // 改动说明（v1.57.1 修 bug）：改用 IsOpen 一并覆盖 ExpiryAt 过期
+                    readOnly = demand == null || !demand.IsOpen,
                     hasMore = messages.Count == take,
                     messages = messages.Select(m => new
                     {
@@ -217,7 +215,7 @@ namespace OpenFindBearings.Api.Endpoints
                 var (demand, side) = await ResolveSideAsync(currentUser, demands, members, responses, demandId, merchantId, httpContext.RequestAborted);
                 if (side == null)
                     return ApiResponseHelper.NotFound("会话不存在", httpContext: httpContext);
-                if (demand == null || demand.Status != SourcingDemandStatus.Published)
+                if (demand == null || !demand.IsOpen)
                     return ApiResponseHelper.BadRequest("该寻货已结束，会话只读", httpContext: httpContext);
 
                 var conv = await conversations.GetByDemandAndMerchantAsync(demandId, merchantId, httpContext.RequestAborted);
@@ -300,11 +298,16 @@ namespace OpenFindBearings.Api.Endpoints
             if (demand == null)
                 return (null, null);
 
-            // 需求方方：发布人本人
-            if (demand.PublisherUserId == userId)
+            // 改动说明（v1.57.1 修 bug）：会话必须绑定"真实参与关系"——该商户须为受邀商家或已应答商家。
+            //   原逻辑只看"是否发布人"，发布人可对任意 merchantId 开幽灵会话（对方因非参与方反而进不去）
+            var merchantParticipates = demand.InvitedMerchantIds.Contains(merchantId)
+                || await responses.GetByDemandAndMerchantAsync(demandId, merchantId, cancellationToken) != null;
+
+            // 需求方方：发布人本人（需商户参与本单，防幽灵会话）
+            if (demand.PublisherUserId == userId && merchantParticipates)
                 return (demand, SourcingSenderSide.Publisher);
-            // 需求方方：商户名义发布时，发布商户的在职成员同权
-            if (demand.PublisherMerchantId.HasValue)
+            // 需求方方：商户名义发布时，发布商户的在职成员同权（同样需商户参与本单）
+            if (demand.PublisherMerchantId.HasValue && merchantParticipates)
             {
                 var pubMembership = await members.GetActiveByUserAndMerchantAsync(userId, demand.PublisherMerchantId.Value, cancellationToken);
                 if (pubMembership != null)
@@ -313,14 +316,8 @@ namespace OpenFindBearings.Api.Endpoints
 
             // 商家方：须为该商户在职成员，且是该单的受邀商户或已应答商户（防任意商户开聊骚扰）
             var membership = await members.GetActiveByUserAndMerchantAsync(userId, merchantId, cancellationToken);
-            if (membership != null)
-            {
-                if (demand.InvitedMerchantIds.Contains(merchantId))
-                    return (demand, SourcingSenderSide.Merchant);
-                var myResponse = await responses.GetByDemandAndMerchantAsync(demandId, merchantId, cancellationToken);
-                if (myResponse != null)
-                    return (demand, SourcingSenderSide.Merchant);
-            }
+            if (membership != null && merchantParticipates)
+                return (demand, SourcingSenderSide.Merchant);
 
             return (demand, null);
         }
