@@ -54,18 +54,30 @@ namespace OpenFindBearings.Application.Services
             _ => price
         };
 
-        /// <summary>buff 文案清单（任务中心商家福利卡展示用，按等级序数）</summary>
+        /// <summary>
+        /// buff 文案清单（任务中心商家福利卡、牌级页权益清单展示用，按等级序数）。
+        /// 改动说明（v2.19.0）：每条都写明"加什么"——个人轴承币、每日免费额度或置顶费折扣，
+        /// 避免"每日签到 +1"被误解为商家金或签到次数
+        /// </summary>
         public static List<string> BuffLabels(int grade)
         {
             var r = Rank(grade);
             if (r <= 0) return new List<string>();
-            var labels = new List<string> { $"每日签到 +{CheckinBonus(grade)}" };
-            if (r >= 2) labels.Add("每日登录 +1");
-            if (r >= 2) labels.Add($"纠错采纳 {ApplyCorrectionBonus(20, grade)}/20 分（+10%~25%）");
-            labels.Add($"寻货应答免费 +{RespondQuotaBonus(grade)}/日");
-            if (r >= 2) labels.Add("寻货发布免费 +1/日");
-            if (r >= 3) labels.Add(r >= 4 ? "置顶卡 8 折" : "置顶卡 9 折");
+            var labels = new List<string> { $"每日签到：个人轴承币 +{CheckinBonus(grade)}" };
+            if (r >= 2) labels.Add($"每日登录：个人轴承币 +{LoginBonusMax}");
+            if (r >= 2) labels.Add($"纠错被采纳：个人轴承币 ×{CorrectionMultiplier(r)}");
+            labels.Add($"寻货应答：每日免费额度 +{RespondQuotaBonus(grade)} 次");
+            if (r >= 2) labels.Add("寻货发布：每日免费额度 +1 条");
+            if (r >= 3) labels.Add($"商品置顶费：{(r >= 4 ? "8" : "9")} 折");
             return labels;
         }
+
+        /// <summary>纠错加成倍数的展示文本（1.1 / 1.2 / 1.25），与 ApplyCorrectionBonus 同口径</summary>
+        private static string CorrectionMultiplier(int rank) => rank switch
+        {
+            >= 4 => "1.25",
+            3 => "1.2",
+            _ => "1.1"
+        };
     }
 }
