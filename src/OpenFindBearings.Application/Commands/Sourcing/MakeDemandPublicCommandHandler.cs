@@ -7,10 +7,10 @@ using OpenFindBearings.Domain.Repositories;
 namespace OpenFindBearings.Application.Commands.Sourcing
 {
     /// <summary>
-    /// 转为公开招标命令（v1.8.0 公开招标/邀标）：邀标单进行中时由发布人放开为公开
-    /// （需求进公开大厅，人人可见可应答）。解决"邀标后无人应答只能取消重建"的损耗
+    /// 转为公开命令（v1.8.0 公开/邀请）：邀请单进行中时由发布人放开为公开
+    /// （需求进公开大厅，人人可见可应答）。解决"邀请后无人应答只能取消重建"的损耗
     /// （原定向单只能取消再发，发布额度与积分不退还）。
-    /// 改动说明（v1.8.2 转公开补发通知）：放开后按"匹配集合 − 原邀标收件人"差集补发通知——
+    /// 改动说明（v1.8.2 转公开补发通知）：放开后按"匹配集合 − 原邀请收件人"差集补发通知——
     ///   新纳入的认证在售商家也被告知（口径与发布即公开一致），而已被告知过的原收件人不再打扰（绝不二次）
     /// </summary>
     /// <param name="DemandId">寻货单 ID</param>
@@ -18,7 +18,7 @@ namespace OpenFindBearings.Application.Commands.Sourcing
     public record MakeDemandPublicCommand(Guid DemandId, Guid UserId) : IRequest;
 
     /// <summary>
-    /// 转为公开招标处理器（守卫在聚合内：已是公开/已非进行中一律拒绝）
+    /// 转为公开处理器（守卫在聚合内：已是公开/已非进行中一律拒绝）
     /// </summary>
     public class MakeDemandPublicCommandHandler : IRequestHandler<MakeDemandPublicCommand>
     {
@@ -53,7 +53,7 @@ namespace OpenFindBearings.Application.Commands.Sourcing
                 ?? throw new InvalidOperationException("寻货需求不存在");
             // 权限：仅发布人本人（商户名义单同样限经办人——与"商户寻货列表仅本人出管理按钮"口径一致）
             if (demand.PublisherUserId != request.UserId)
-                throw new UnauthorizedAccessException("只有发布人可以将寻货转为公开招标");
+                throw new UnauthorizedAccessException("只有发布人可以将寻货转为公开");
 
             // 改动说明（v1.8.2）：MakePublic 会清空收件人快照，故先留存原收件人集合，供差集补发判定
             var invitedBefore = demand.InvitedMerchantIds.ToList();
@@ -61,7 +61,7 @@ namespace OpenFindBearings.Application.Commands.Sourcing
             demand.MakePublic();
             await _demandRepository.UpdateAsync(demand, cancellationToken);
 
-            // 差集补发：只通知"本次放开后新纳入、且此前未被告知"的认证在售商家（原收件人已收到邀标通知，不二次打扰）
+            // 差集补发：只通知"本次放开后新纳入、且此前未被告知"的认证在售商家（原收件人已收到邀请通知，不二次打扰）
             var matched = await SourcingMatcher.GetMatchedMerchantIdsAsync(
                 _bearingRepository, _merchantBearingRepository, _merchantRepository,
                 demand.BearingId, demand.PartNumber, cancellationToken, demand.PublisherMerchantId);

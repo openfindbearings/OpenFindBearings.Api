@@ -35,22 +35,22 @@ namespace OpenFindBearings.Domain.Aggregates
         public Guid? BearingId { get; private set; }
 
         /// <summary>
-        /// 曝光范围（v1.8.0 公开招标/邀标）：Public=进公开大厅 + 推送匹配的认证在售商家；
+        /// 曝光范围（v1.8.0 公开/邀请）：Public=进公开大厅 + 推送匹配的认证在售商家；
         /// Invited=不进大厅，只推给 InvitedMerchantIds 里的商家，且仅这些商家与发布人可见。
         /// </summary>
         public SourcingVisibility Visibility { get; private set; } = SourcingVisibility.Public;
 
         /// <summary>
-        /// 邀标收件人商户 ID 快照（v1.8.0 邀标；仅 Visibility=Invited 时非空，不变量：Invited 等价于非空）。
+        /// 邀请收件人商户 ID 快照（v1.8.0 邀请；仅 Visibility=Invited 时非空，不变量：Invited 等价于非空）。
         /// 改动说明：存 uuid[] 一列而非新建明细表——语义是发布时点快照（无外键、无逐收件人状态），
         /// 可见性与"为你匹配"查询只需 ANY 判定；整体替换式赋值，不做原地增删（防 EF 变更追踪漏检）。
         /// </summary>
         public List<Guid> InvitedMerchantIds { get; private set; } = new();
 
-        /// <summary>是否邀标单（不进公开大厅，仅发布人与受邀商家可见）</summary>
+        /// <summary>是否邀请单（不进公开大厅，仅发布人与受邀商家可见）</summary>
         public bool IsPrivate => Visibility == SourcingVisibility.Invited;
 
-        /// <summary>该商户是否在本次邀标收件人快照内（详情可见性判定用）</summary>
+        /// <summary>该商户是否在本次邀请收件人快照内（详情可见性判定用）</summary>
         /// <param name="merchantId">待判定商户 ID</param>
         public bool IsInvitedTo(Guid merchantId) => InvitedMerchantIds.Contains(merchantId);
 
@@ -115,20 +115,20 @@ namespace OpenFindBearings.Domain.Aggregates
         /// <param name="description">补充说明</param>
         /// <param name="publisherMerchantId">发布商户（v2.12.0 商户名义发布，null=个人名义）</param>
         /// <param name="publisherMerchantName">商户名称快照（商户名义时必填）</param>
-        /// <param name="visibility">曝光范围（v1.8.0 公开招标/邀标，默认公开）</param>
-        /// <param name="invitedMerchantIds">邀标收件人（v1.8.0；仅邀标时有意义，调用方已按"在售匹配 ∩ 勾选"解析）</param>
+        /// <param name="visibility">曝光范围（v1.8.0 公开/邀请，默认公开）</param>
+        /// <param name="invitedMerchantIds">邀请收件人（v1.8.0；仅邀请时有意义，调用方已按"在售匹配 ∩ 勾选"解析）</param>
         /// <param name="idempotencyKey">客户端幂等键（v1.8.2 彻底幂等，可空=不去重）</param>
-        /// <exception cref="InvalidOperationException">邀标但收件人为空（调用方应先解析，此处兜底防脏数据）</exception>
+        /// <exception cref="InvalidOperationException">邀请但收件人为空（调用方应先解析，此处兜底防脏数据）</exception>
         public static SourcingDemand Create(Guid publisherUserId, string partNumber, Guid? bearingId,
             string? brand, string? quantity, string? expectedDelivery, string? region, string? description,
             Guid? publisherMerchantId = null, string? publisherMerchantName = null,
             SourcingVisibility visibility = SourcingVisibility.Public, IReadOnlyList<Guid>? invitedMerchantIds = null,
             string? idempotencyKey = null)
         {
-            // 不变量：邀标必须至少一位收件人，否则单子谁都看不见（发布处理器已按匹配口径解析，这里兜底）
+            // 不变量：邀请必须至少一位收件人，否则单子谁都看不见（发布处理器已按匹配口径解析，这里兜底）
             var invited = invitedMerchantIds?.Where(id => id != Guid.Empty).Distinct().ToList() ?? new List<Guid>();
             if (visibility == SourcingVisibility.Invited && invited.Count == 0)
-                throw new InvalidOperationException("邀标寻货至少需要一位在售该型号的认证商家");
+                throw new InvalidOperationException("邀请寻货至少需要一位在售该型号的认证商家");
 
             return new SourcingDemand
             {
@@ -139,7 +139,7 @@ namespace OpenFindBearings.Domain.Aggregates
                 BearingId = bearingId,
                 // 改动说明（v1.8.2 彻底幂等）：发布幂等键随单落库，重复提交（同发布人同 key）由唯一索引拦截并返回原单
                 IdempotencyKey = string.IsNullOrWhiteSpace(idempotencyKey) ? null : idempotencyKey.Trim(),
-                // 改动说明（v1.8.0 公开招标/邀标）：公开单不收件人（通知集合按在售匹配实时算），邀标单存收件人快照
+                // 改动说明（v1.8.0 公开/邀请）：公开单不收件人（通知集合按在售匹配实时算），邀请单存收件人快照
                 Visibility = visibility,
                 InvitedMerchantIds = visibility == SourcingVisibility.Invited ? invited : new List<Guid>(),
                 Brand = Truncate(brand, 50),
@@ -188,9 +188,9 @@ namespace OpenFindBearings.Domain.Aggregates
         }
 
         /// <summary>
-        /// 转为公开招标（v1.8.0）：邀标单进行中时，由发布人放开为公开（需求进大厅，人人可见可应答），
+        /// 转为公开（v1.8.0）：邀请单进行中时，由发布人放开为公开（需求进大厅，人人可见可应答），
         /// 收件人快照随之清空（不变量：邀请态等价于收件人非空）。
-        /// 改动说明：邀标后无人应答时不必取消重建——原"定向单"只能取消再发，额度白白损耗。
+        /// 改动说明：邀请后无人应答时不必取消重建——原"定向单"只能取消再发，额度白白损耗。
         /// 改动说明（v1.8.2 转公开补发通知）：清空快照前调用方需自行留存原收件人集合（差集补发用），
         /// 本方法职责不变，仅做状态与快照变更。
         /// </summary>
@@ -198,9 +198,9 @@ namespace OpenFindBearings.Domain.Aggregates
         public void MakePublic()
         {
             if (Visibility == SourcingVisibility.Public)
-                throw new InvalidOperationException("该寻货已是公开招标");
+                throw new InvalidOperationException("该寻货已是公开");
             if (!IsOpen)
-                throw new InvalidOperationException("仅进行中的寻货可转为公开招标");
+                throw new InvalidOperationException("仅进行中的寻货可转为公开");
             Visibility = SourcingVisibility.Public;
             InvitedMerchantIds = new List<Guid>();
         }
