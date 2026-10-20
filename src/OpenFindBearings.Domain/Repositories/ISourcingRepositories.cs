@@ -123,7 +123,7 @@ namespace OpenFindBearings.Domain.Repositories
         /// 同一对关系窗口内只计一次，防自刷/反复刷）
         /// </summary>
         Task<bool> HasCountedDealAsync(Guid merchantId, Guid publisherUserId, DateTime sinceUtc,
-            CancellationToken cancellationToken = default);
+            Guid? excludeResponseId = null, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// 统计某 IP 在时间窗内的回执提交数（v2.18.0 异常检测：同 IP 短时集中提交视为可疑）
@@ -185,5 +185,16 @@ namespace OpenFindBearings.Domain.Repositories
 
         /// <summary>商户方会话总数</summary>
         Task<int> CountForMerchantAsync(List<Guid> userMerchantIds, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 需求方身份的未读消息总数（v1.57.1：DB 侧聚合，替代"取前 200 条会话逐个计数"的硬截断）
+        /// </summary>
+        Task<int> CountUnreadMessagesForPublisherAsync(Guid publisherUserId, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 商户方身份的未读消息总数（v1.57.1）：本人作为需求方参与的同名会话不重复计入
+        /// </summary>
+        Task<int> CountUnreadMessagesForMerchantAsync(List<Guid> userMerchantIds, Guid excludePublisherUserId,
+            CancellationToken cancellationToken = default);
     }
 }

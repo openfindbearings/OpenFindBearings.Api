@@ -94,8 +94,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
             var totalCount = await query.CountAsync(cancellationToken);
 
             // 改动说明（v2.15.0 搜索权重批次）：主排序由"已认证优先（IsVerified）"升级为"商家等级序数优先"——
-            // 等级序数（Standard→Verified→Premium→Gold）已内含认证态并叠加在售供给/金库质量，认证商家自然靠前；
-            // 因枚举数值与推进路径不一致，SQL 侧按序数映射（三元 → CASE）排序，与 Domain.MerchantGradeExtensions.Rank 同口径。
+            // 等级序数（Registered→Bronze→Silver→Gold）以认证为门槛并叠加在售供给与计分撮合质量，认证商家自然靠前；
             // 改动说明（v2.15.0 搜索权重批次；v2.18.0 卡级重构收敛）：排序按卡级序数优先——
             // 卡级已内含认证门槛与在售/撮合质量；枚举数值现已单调，SQL 侧直接按数值排序
             // （与 Domain.MerchantGradeExtensions.Rank 同口径，无需再写三元 CASE 映射）

@@ -100,12 +100,16 @@ namespace OpenFindBearings.Application.Commands.Sourcing
                 (counted, note) = await EvaluateAntiFarmAsync(demand, response, request, windowDays, cancellationToken);
             }
 
+            // 改动说明（v1.57.1 修 bug）：记下更新前是否计分——重复提交改判（谈成→没谈成）时
+            //   需要把已计入的成交撤销并触发重算，否则库值与商家卡级不一致
+            var wasCounted = response.IsCounted;
             response.SubmitFeedback(outcome, request.Reason, counted, note, request.Ip);
             await _responses.UpdateAsync(response, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             // 计分变动可能改变成功撮合次数 → 触发商家卡级重算（服务内部吞失败，不影响回执落库）
-            if (counted)
+            // 改动说明（v1.57.1）：计分状态发生翻转（含撤销）也要重算，不再只在本次计分时才重算
+            if (counted || wasCounted != counted)
                 await _grades.RecomputeAsync(response.MerchantId, cancellationToken);
 
             return new DealFeedbackResult(counted, note);
@@ -168,8 +172,11 @@ namespace OpenFindBearings.Application.Commands.Sourcing
             }
 
             // 5 配对去重：同一（发布人, 商户）关系在窗口内只计一次，防反复刷
+            // 改动说明（v1.57.1 修 bug）：排除当前应答自身——否则重复提交"谈成了"会被自己这条已计分行
+            //   判为重复，把 counted 从 true 翻成 false，误撤销一次真实成交
             var duplicated = await _responses.HasCountedDealAsync(
-                response.MerchantId, demand.PublisherUserId, DateTime.UtcNow.AddDays(-windowDays), cancellationToken);
+                response.MerchantId, demand.PublisherUserId, DateTime.UtcNow.AddDays(-windowDays),
+                response.Id, cancellationToken);
             if (duplicated)
                 return (false, "该需求方与本商户在统计窗口内已有计分成交（去重）");
 

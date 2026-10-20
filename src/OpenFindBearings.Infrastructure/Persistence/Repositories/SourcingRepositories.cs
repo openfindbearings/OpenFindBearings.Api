@@ -258,9 +258,10 @@ if (status.HasValue)
 
         /// <inheritdoc/>
         public Task<bool> HasCountedDealAsync(Guid merchantId, Guid publisherUserId, DateTime sinceUtc,
-            CancellationToken cancellationToken = default)
-            // 改动说明（v2.18.0 配对去重）：同一（发布人, 商户）对在窗口内只允许一笔计分成交——
-            // SourcingResponse 不存发布人，经 DemandId 关联 SourcingDemand 取 PublisherUserId
+            Guid? excludeResponseId = null, CancellationToken cancellationToken = default)
+            // 改动说明（v1.57.1 修 bug）：增加 excludeResponseId——回执重复提交（更新同一条）时，
+            //   原逻辑会把"自己这条已计分"当成重复从而把 counted 翻成 false，误撤销一次成功撮合；
+            //   去重只应拦截"另一条"窗口内计分成交
             => (from r in _context.Set<SourcingResponse>()
                 join d in _context.Set<SourcingDemand>() on r.DemandId equals d.Id
                 where r.MerchantId == merchantId
@@ -268,6 +269,7 @@ if (status.HasValue)
                       && r.IsCounted
                       && r.FeedbackOutcome == SourcingDealOutcome.Confirmed
                       && r.FeedbackAt >= sinceUtc
+                      && (!excludeResponseId.HasValue || r.Id != excludeResponseId.Value)
                 select r.Id).AnyAsync(cancellationToken);
 
         /// <inheritdoc/>
@@ -391,5 +393,30 @@ if (status.HasValue)
             => userMerchantIds.Count == 0
                 ? Task.FromResult(0)
                 : _context.Set<SourcingConversation>().CountAsync(c => userMerchantIds.Contains(c.MerchantId), cancellationToken);
+
+        /// <inheritdoc/>
+        public Task<int> CountUnreadMessagesForPublisherAsync(Guid publisherUserId,
+            CancellationToken cancellationToken = default)
+            // 改动说明（v1.57.1）：未读聚合下推到数据库，避免"只取前 200 个会话"造成的角标截断
+            => (from c in _context.Set<SourcingConversation>()
+                join m in _context.Set<SourcingMessage>() on c.Id equals m.ConversationId
+                where c.PublisherUserId == publisherUserId
+                      && m.SenderSide == SourcingSenderSide.Merchant
+                      && (!c.PublisherLastReadAt.HasValue || m.CreatedAt > c.PublisherLastReadAt.Value)
+                select m.Id).CountAsync(cancellationToken);
+
+        /// <inheritdoc/>
+        public Task<int> CountUnreadMessagesForMerchantAsync(List<Guid> userMerchantIds, Guid excludePublisherUserId,
+            CancellationToken cancellationToken = default)
+            // 改动说明（v1.57.1）：同上；本人以需求方身份参与的会话已计入需求方视图，此处排除避免重复
+            => userMerchantIds.Count == 0
+                ? Task.FromResult(0)
+                : (from c in _context.Set<SourcingConversation>()
+                   join m in _context.Set<SourcingMessage>() on c.Id equals m.ConversationId
+                   where userMerchantIds.Contains(c.MerchantId)
+                         && c.PublisherUserId != excludePublisherUserId
+                         && m.SenderSide == SourcingSenderSide.Publisher
+                         && (!c.MerchantLastReadAt.HasValue || m.CreatedAt > c.MerchantLastReadAt.Value)
+                   select m.Id).CountAsync(cancellationToken);
     }
 }

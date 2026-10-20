@@ -8,8 +8,9 @@ namespace OpenFindBearings.Application.Services
     public interface IMerchantGradeService
     {
         /// <summary>
-        /// 商户等级重算（认证/在售变化/挂礼结算/释放等事件后调用）：
-        /// Standard=Active 即得；Verified=认证；Premium=认证+在售达阈值；Gold=Premium+金库累计达阈值。
+        /// 商户卡级重算（认证/在售变化/成交回执/释放等事件后调用）：
+        /// Registered=在营即得；Bronze=已认证；Silver=已认证+在售达阈值+窗口内计分撮合达阈值；
+        /// Gold=已认证+在售达阈值+窗口内计分撮合达更高阈值（金库不参与定级）。
         /// 吞一切异常（等级是附属计算值，绝不反噬主业务事务）
         /// </summary>
         Task RecomputeAsync(Guid merchantId, CancellationToken cancellationToken = default);
