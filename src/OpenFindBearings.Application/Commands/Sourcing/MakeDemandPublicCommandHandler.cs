@@ -27,22 +27,26 @@ namespace OpenFindBearings.Application.Commands.Sourcing
         private readonly IBearingRepository _bearingRepository;
         private readonly IMerchantBearingRepository _merchantBearingRepository;
         private readonly IMerchantRepository _merchantRepository;
+        // 改动说明（v1.57.3 自交易封堵）：转公开补发时同样排除发布人在职的全部商户，避免自家店铺收到通知
+        private readonly IMerchantMemberRepository _memberRepository;
         private readonly IPublisher _publisher;
 
         /// <summary>
-        /// 构造：需求仓储 + 匹配所需仓储（轴承/商家商品/商户）+ 事件发布器
+        /// 构造：需求仓储 + 匹配所需仓储（轴承/商家商品/商户/成员）+ 事件发布器
         /// </summary>
         public MakeDemandPublicCommandHandler(
             ISourcingDemandRepository demandRepository,
             IBearingRepository bearingRepository,
             IMerchantBearingRepository merchantBearingRepository,
             IMerchantRepository merchantRepository,
+            IMerchantMemberRepository memberRepository,
             IPublisher publisher)
         {
             _demandRepository = demandRepository;
             _bearingRepository = bearingRepository;
             _merchantBearingRepository = merchantBearingRepository;
             _merchantRepository = merchantRepository;
+            _memberRepository = memberRepository;
             _publisher = publisher;
         }
 
@@ -62,9 +66,16 @@ namespace OpenFindBearings.Application.Commands.Sourcing
             await _demandRepository.UpdateAsync(demand, cancellationToken);
 
             // 差集补发：只通知"本次放开后新纳入、且此前未被告知"的认证在售商家（原收件人已收到邀请通知，不二次打扰）
+            // 改动说明（v1.57.3）：排除集合=发布人在职的全部商户（含商户名义发布的那一家），自家店铺不补发
+            var myMerchantIds = (await _memberRepository.GetActiveByUserIdAsync(
+                    demand.PublisherUserId, cancellationToken))
+                .Select(m => m.MerchantId)
+                .ToHashSet();
+            if (demand.PublisherMerchantId.HasValue)
+                myMerchantIds.Add(demand.PublisherMerchantId.Value);
             var matched = await SourcingMatcher.GetMatchedMerchantIdsAsync(
                 _bearingRepository, _merchantBearingRepository, _merchantRepository,
-                demand.BearingId, demand.PartNumber, cancellationToken, demand.PublisherMerchantId);
+                demand.BearingId, demand.PartNumber, cancellationToken, myMerchantIds);
             var alreadyNotified = invitedBefore.ToHashSet();
             var fresh = matched.Where(id => !alreadyNotified.Contains(id)).ToList();
             if (fresh.Count > 0)

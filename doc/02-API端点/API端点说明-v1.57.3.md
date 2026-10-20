@@ -1,10 +1,16 @@
 # API 端点说明文档
 
-**版本：** v1.57.2
+**版本：** v1.57.3
 **日期：** 2026-10-20
-**上一版：** v1.57.1
+**上一版：** v1.57.2
 **状态：** 与代码同步
 
+> v1.57.3 变更（自交易封堵，无表结构变更）：
+> 1. **匹配排除集合扩大**：`SourcingMatcher` 由"排除单个发布商户"改为"排除发布人在职的全部商户 + 商户名义发布的商户"，个人名义发布与一人多商户不再把自家店铺纳入匹配、通知与邀请候选。
+> 2. **应答守卫**：`POST /api/sourcing/demands/{id}/respond` 拒绝"发布人本人应答"、"应答商户就是发布商户"、"发布人是应答商户在职成员"三种自交易，即使知道 demand id 也不行。
+> 3. **邀请提示精确化**：勾选里含自家店铺时返回"不能邀请自己所在的商户"，该型号只有自己在售时返回"当前没有可邀请的在售认证商家（自己的店铺不能邀请），请改为公开"。
+> 4. **转公开补发同口径**：`publish-public` 的差集补发同样排除发布人全部在职商户，不给自己发通知。
+>
 > v1.57.2 变更（术语统一，无接口/字段/枚举值变更）：寻货发布方式文案由「公开招标 / 邀标」统一为「公开 / 邀请」，并清理"招投标、开标撤标"等类比措辞——本平台不是招投标系统。
 > 1. 枚举 `SourcingVisibility` 仍为 `Public=0` / `Invited=1`，端点、请求体、响应字段与权限均不变。
 > 2. 文档与代码注释同步改词；历史版本归档保留原文，不改写。
@@ -35,6 +41,7 @@
 
 | 版本 | 日期 | 变更说明 |
 |------|------|----------|
+| v1.57.3 | 2026-10-20 | **自交易封堵（无表结构变更）**：① `SourcingMatcher` 排除集合由"单个发布商户"扩为"发布人在职的全部商户 + 商户名义发布的商户"；② `POST /api/sourcing/demands/{id:guid}/respond` 新增三条守卫——发布人本人、发布商户本身、发布人是应答商户在职成员，一律拒绝；③ 邀请无候选人/勾选无效的错误文案区分"自家店铺不能邀请"与"均非在售认证商家"；④ `publish-public` 差集补发同口径排除，不给自己发通知。端点数量不变 |
 | v1.57.2 | 2026-10-20 | **寻货术语统一（无契约变更）**：发布方式文案「公开招标 / 邀标」→「公开 / 邀请」，删除"招投标、开标前撤标"等类比表述（平台不是招投标系统）。`SourcingVisibility` 枚举值、端点路径、请求/响应字段、权限键均不变；仅文档与注释措辞调整，不影响已对接客户端 |
 | v1.57.1 | 2026-10-20 | **寻货收口修复（向后兼容）**：① 回执幂等——配对去重查询排除当前响应自身，重复提交"谈成"不再被自己那条已计分行判为重复而把 `counted` 翻成 false；计分状态发生翻转（含谈成→没谈成）同样触发商家卡级重算。② `myFeedback` 增 `note`（未计分原因，反刷留痕），供需求方看到"为什么没算"。③ 会话只读改用 `IsOpen`（含 `ExpiryAt` 过期），开聊要求该商户为本单受邀或已应答（商户名义发布方成员同权），杜绝幽灵会话。④ 会话总未读改数据库聚合计数，去掉"只取前 200 个会话"的硬截断。⑤ `GET /api/bearings/{id:guid}/merchants` 补 `grade`/`gradeDisplay`（认证徽章与卡级彩牌并列）。⑥ `GET /api/admin/sourcing/demands/{id:guid}` 每次下发发布人手机号写审计 `ViewPublisherContact`（审计失败只记警告）。⑦ 金库已退出定级，摘除商城结算与自动确认后的空转重算。端点数量不变 |
 | v1.56.0 | 2026-10-19 | **寻货边界完整性收口（v1.55.0 之后的第二轮核查）**：① **转公开差集补发通知**——`POST /api/sourcing/demands/{id:guid}/publish-public` 放开后按"当前匹配集合 − 原邀请收件人"**差集补发** `SourcingDemandPublishedEvent`（新纳入的有货认证商家被告知、已通知过的原收件人绝不二次打扰；差集为空则一条不发），改正 v1.54.0"转公开不补通知"的口径；② **撤销应答改软取消**——`DELETE /api/sourcing/demands/{id:guid}/respond` 由物理删行改为置 `SourcingResponseStatus.Cancelled`（值 4），撤销后不参与比价与"是否已应答"判定、可重新应答，但**当日应答额度不回退**（一次应答即消耗，与限频注释一致），行留痕可审计；③ **发布幂等**——`POST /api/sourcing/demands` 读 `Idempotency-Key` 请求头（同一发布人同 key 重放返回原单，不重复建单/重复扣分）；`SourcingDemands.IdempotencyKey` 列 + `(PublisherUserId, IdempotencyKey)` 过滤唯一索引（迁移 `AddSourcingIdempotency`）；扣分 `bizId` 由 `null` 改 `sourcing_publish:{demandId}`；④ **治理可见性**——`GET /api/admin/sourcing/demands` 与治理详情显式包含软删单并输出 `isDeleted`（原列表硬排除 `IsDeleted`，发布人撤销的终态单从管理员视野消失）；⑤ **在售口径统一**——商家等级"在售商品数"由"仅出售中"改为"公域可见（出售中/补货中）"，与寻货匹配、应答实力摘要一致（成就仪表 `listing_count` 保持现货口径，避免历史进度凭空白送）。端点数量不变。明细见文末"本版增量"章节 |
@@ -456,7 +463,7 @@ OpenFindBearings.Api（以下简称 API）共注册 **163** 个端点，按职�
 | GET | /demands/{id:guid} | 寻货详情（v1.57.0 删除 `publisherContact`：商家任何情况下拿不到需求方号码；响应含 `contactUnlockedAt`/`selectedResponseId`/`canFeedback`/`myFeedback`；v1.57.1 `myFeedback` 增 `note`＝未计分原因。访客与非受邀非应答方只见应答数） | 登录可选 |
 | POST | /demands | 发布寻货（免费 3 条/日，超限 NEED_POINTS 协议 + usePoints 重提交，硬上限 10；v1.46.0 同版追加：请求体可选 merchantId=商户名义发布，在职成员校验前置不耗额度；v1.51.0：响应回传匹配家数，v1.54.0 更名为 `notifiedMerchantCount`=本次实际推送的认证商家家数，0=仅进大厅等应答；v1.54.0：请求体 `visibility`（0公开/1邀请）+ `invitedMerchantIds`（邀请收件人，空=全部匹配的认证在售商家）取代原 `targetMerchantId`；邀请勾选 ∩ 认证在售匹配，交集空则拒绝） | 登录 |
 | POST | /demands/{id:guid}/publish-public | 转为公开（v1.54.0：发布人把进行中的邀请单放开为公开，需求进大厅人人可见可应答；已是公开或已结束的不予受理；不追加通知） | 登录 |
-| POST | /demands/{id:guid}/respond | 商户应答（v1.45.0 多行标书：请求体 `items[]` 每行型号必填+可引在售商品，说明 remark 整份必填，至少一行；一商户一需求单条可更新=整份替换行；免费 20/日超限花积分，硬上限 50） | 登录+商户 |
+| POST | /demands/{id:guid}/respond | 商户应答（v1.45.0 多行标书：请求体 `items[]` 每行型号必填+可引在售商品，说明 remark 整份必填，至少一行；一商户一需求单条可更新=整份替换行；免费 20/日超限花积分，硬上限 50；v1.57.3 自交易守卫：发布人本人、发布商户本身、发布人属应答商户在职成员一律 400） | 登录+商户 |
 | DELETE | /demands/{id:guid}/respond | 撤销应答（v1.8.2 起软取消：仅待处理可撤，撤后置 Cancelled 保留行、退出比价与"是否已应答"判定并可重新应答；仅本人+在职成员，当日额度不退还） | 登录+商户 |
 | POST | /demands/batch-delete | 批量删除寻货（v2.12.0 列表多选：软删终态单，仅经办人本人，进行中拒删计 skipped） | 登录 |
 | POST | /demands/{id:guid}/select | 选定应答（关闭需求、其余置未选中；v1.57.0 起单向解锁——只向需求方下发商家联系方式并写 `ContactUnlockedAt`，商家永远拿不到需求方号码） | 登录+发布人 |
@@ -812,3 +819,16 @@ OpenFindBearings.Api（以下简称 API）共注册 **163** 个端点，按职�
 | 端点/字段/权限 | 无变化；已对接客户端无需改动 |
 
 > 历史版本归档（v1.57.1 及更早）按规则保留原文，不改写术语。
+
+---
+
+## 本版增量（v1.57.3）：自交易封堵（无表结构变更）
+
+| 位置 | 变化 |
+|---|---|
+| `SourcingMatcher.GetMatchedMerchantIdsAsync` | 第 7 参数由 `Guid? excludeMerchantId` 改为 `IReadOnlyCollection<Guid>? excludeMerchantIds`；匹配集排除"发布人在职全部商户 + 商户名义发布的商户"，一人多商户不再互相通知 |
+| `POST /api/sourcing/demands` |  invite 分支错误文案区分两种：勾选含自家店铺 → "不能邀请自己所在的商户，请重新选择"；无可邀请商家 → "当前没有可邀请的在售认证商家（自己的店铺不能邀请），请改为公开" |
+| `POST /api/sourcing/demands/{id:guid}/respond` | 新增三条守卫：发布人本人（`PublisherUserId == 当前用户`）、发布商户本身（`PublisherMerchantId == 请求商户`）、发布人是应答商户在职成员 → 均 400，拒绝自交易 |
+| `POST /api/sourcing/demands/{id:guid}/publish-public` | 差集补发同口径排除发布人全部在职商户，不给自己发通知 |
+
+> 无迁移：仅匹配口径与守卫逻辑调整。存量已存在的自应答数据（历史脏数据）不回溯清理，选中与回执流程对其仍有反刷校验兜底。

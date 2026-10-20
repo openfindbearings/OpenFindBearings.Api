@@ -102,6 +102,14 @@ namespace OpenFindBearings.Application.Commands.Sourcing
             if (request.PartNumber.Trim().Length > 100)
                 throw new InvalidOperationException("型号过长（限 100 字）");
 
+            // 改动说明（v1.57.3 自交易封堵）：发布人在职的全部商户都要排除，而不只是本次名义发布的商户——
+            //   否则"个人名义发布"与"一人多商户"两种情形下，自家店铺会被匹配、被通知、可被邀请，形成自导自演闭环
+            var myMerchantIds = (await _memberRepository.GetActiveByUserIdAsync(request.UserId, cancellationToken))
+                .Select(m => m.MerchantId)
+                .ToHashSet();
+            if (request.MerchantId.HasValue)
+                myMerchantIds.Add(request.MerchantId.Value);
+
             // 改动说明（v1.8.2 彻底幂等）：幂等键先于一切副作用检查——重放（网络重试/双击）直接返回原单，
             //   既不重复建单、也不重复扣分；键为空则维持原行为（不去重）
             var idempotencyKey = string.IsNullOrWhiteSpace(request.IdempotencyKey) ? null : request.IdempotencyKey.Trim();
@@ -117,7 +125,7 @@ namespace OpenFindBearings.Application.Commands.Sourcing
                         : (await SourcingMatcher.GetMatchedMerchantIdsAsync(
                             _bearingRepository, _merchantBearingRepository, _merchantRepository,
                             replayed.BearingId, replayed.PartNumber, cancellationToken,
-                            replayed.PublisherMerchantId)).Count;
+                            myMerchantIds)).Count;
                     return new PublishDemandResult(replayed.Id, replayedCount);
                 }
             }
@@ -145,21 +153,31 @@ namespace OpenFindBearings.Application.Commands.Sourcing
             //   必须在扣积分之前算定（邀请无人可邀时不得先烧额度/积分），且匹配口径只此一处（SourcingMatcher）
             // 改动说明（v1.8.1）：解析顺序提到额度评估之前——"无人可邀/勾选无效"必须在弹"花积分发布"确认框之前暴露；
             //   商户名义发布时排除发布商户自己（不自邀、不给自己发提醒）
+            // 改动说明（v1.57.3 自交易封堵）：排除集合改为发布人在职的全部商户 + 名义发布商户，一人多商户同样不自邀
             var matched = await SourcingMatcher.GetMatchedMerchantIdsAsync(
                 _bearingRepository, _merchantBearingRepository, _merchantRepository,
-                request.BearingId, request.PartNumber, cancellationToken, publishMerchant?.Id);
+                request.BearingId, request.PartNumber, cancellationToken, myMerchantIds);
 
             IReadOnlyList<Guid> recipients;
             if (request.Visibility == SourcingVisibility.Invited)
             {
+                // 改动说明（v1.57.3 自交易封堵）：匹配集合已排除发布人在职的全部商户，
+                //   若"该型号只有自己在售"，此处无商家可邀，提示须点明原因而不是笼统说没有商家
                 if (matched.Count == 0)
-                    throw new InvalidOperationException("当前没有在售该型号的认证商家，无法邀请，请改为公开");
+                    throw new InvalidOperationException("当前没有可邀请的在售认证商家（自己的店铺不能邀请），请改为公开");
                 // 勾选为空=邀全部匹配商家；非空=勾选 ∩ 匹配（拦截未认证/无货的勾选，守住"只找有货的认证商家"口径）
                 recipients = request.InvitedMerchantIds is { Count: > 0 } picked
                     ? matched.Where(picked.Contains).ToList()
                     : matched.ToList();
                 if (recipients.Count == 0)
-                    throw new InvalidOperationException("所选商家均非该型号的在售认证商家，请重新选择");
+                {
+                    // 改动说明（v1.57.3）：勾选里含自家店铺时给出准确原因，避免"均非在售"的误导
+                    var pickedOwn = request.InvitedMerchantIds is { Count: > 0 } pickedIds
+                        && pickedIds.Any(myMerchantIds.Contains);
+                    throw new InvalidOperationException(pickedOwn
+                        ? "不能邀请自己所在的商户，请重新选择"
+                        : "所选商家均非该型号的在售认证商家，请重新选择");
+                }
             }
             else
             {
