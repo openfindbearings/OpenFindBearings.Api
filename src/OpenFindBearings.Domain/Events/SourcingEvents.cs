@@ -121,7 +121,7 @@ namespace OpenFindBearings.Domain.Events
 
     /// <summary>
     /// 寻货发布事件（v1.6.0 搜索寻货联动；v1.8.0 改为携带收件人集合）：发布成功后由命令处理器发布，
-    /// 处理器按"公开=在售匹配口径 / 邀标=勾选∩匹配"解析出最终收件人集合并随事件传入，
+    /// 处理器按"公开=在售匹配口径 / 邀请=勾选∩匹配"解析出最终收件人集合并随事件传入，
     /// 订阅者只按集合推送——收件人判定只有一处（SourcingMatcher 在处理器内调用），
     /// 避免"回传家数"与"实际推送集合"两处口径漂移。
     /// </summary>
@@ -137,7 +137,7 @@ namespace OpenFindBearings.Domain.Events
         public string PartNumber { get; }
         /// <summary>期望品牌（通知文案，可空）</summary>
         public string? Brand { get; }
-        /// <summary>曝光范围（决定通知文案口径：公开=匹配通知 / 邀标=邀请通知）</summary>
+        /// <summary>曝光范围（决定通知文案口径：公开=匹配通知 / 邀请=邀请通知）</summary>
         public SourcingVisibility Visibility { get; }
         /// <summary>本次实际推送的认证商家集合（发布处理器算定的快照；空=无人匹配，谁都不打扰）</summary>
         public IReadOnlyList<Guid> RecipientMerchantIds { get; }

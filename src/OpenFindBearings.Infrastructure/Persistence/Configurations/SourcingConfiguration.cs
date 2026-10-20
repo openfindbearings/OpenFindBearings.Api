@@ -42,9 +42,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             builder.Property(d => d.PinnedUntil);
             // 改动说明（v2.12.0 列表删除）：软删标记（仅发布方列表隐藏，数据与应答方视图保留）
             builder.Property(d => d.IsDeleted).IsRequired().HasDefaultValue(false);
-            // 改动说明（v1.8.0 公开招标/邀标）：曝光范围（0=公开招标为默认，存量与新建均落公开侧）
+            // 改动说明（v1.8.0 公开/邀请）：曝光范围（0=公开为默认，存量与新建均落公开侧）
             builder.Property(d => d.Visibility).IsRequired().HasDefaultValue(SourcingVisibility.Public);
-            // 改动说明（v1.8.0 邀标）：收件人快照以 uuid[] 一列承载（无外键、无逐收件人状态，只需 ANY 判定）
+            // 改动说明（v1.8.0 邀请）：收件人快照以 uuid[] 一列承载（无外键、无逐收件人状态，只需 ANY 判定）
             builder.Property(d => d.InvitedMerchantIds).IsRequired();
             // 改动说明（v1.8.2 彻底幂等）：发布幂等键（可空），配合下方过滤唯一索引实现"重放返回原单"
             builder.Property(d => d.IdempotencyKey).HasMaxLength(100);
@@ -58,7 +58,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             // 商户名义发布的单按商户查（v2.12.0）
             builder.HasIndex(d => d.PublisherMerchantId)
                 .HasDatabaseName("IX_SourcingDemands_PublisherMerchantId");
-            // 改动说明（v1.8.0 邀标）：收件人快照按"商户 ∈ 数组"查（商家侧"邀标给我的"），GIN 索引加速数组包含
+            // 改动说明（v1.8.0 邀请）：收件人快照按"商户 ∈ 数组"查（商家侧"点名邀请我的"），GIN 索引加速数组包含
             builder.HasIndex(d => d.InvitedMerchantIds)
                 .HasDatabaseName("IX_SourcingDemands_InvitedMerchantIds")
                 .HasMethod("gin");

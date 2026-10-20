@@ -23,13 +23,13 @@ namespace OpenFindBearings.Application.Services
         /// <param name="bearingId">关联平台轴承（搜索选中时有值）</param>
         /// <param name="partNumber">型号文本（无 bearingId 时兜底匹配）</param>
         /// <param name="cancellationToken">取消令牌</param>
-        /// <param name="excludeMerchantId">需排除的商户（v1.8.1：商户名义发布时排除发布商户自己，避免"自己通知自己"）</param>
+        /// <param name="excludeMerchantIds">需排除的商户集合（v1.57.3：发布人在职的全部商户 + 商户名义发布的商户，避免"自己通知自己"）</param>
         public static async Task<IReadOnlyList<Guid>> GetMatchedMerchantIdsAsync(
             IBearingRepository bearingRepository,
             IMerchantBearingRepository merchantBearingRepository,
             IMerchantRepository merchantRepository,
             Guid? bearingId, string? partNumber, CancellationToken cancellationToken = default,
-            Guid? excludeMerchantId = null)
+            IReadOnlyCollection<Guid>? excludeMerchantIds = null)
         {
             // 优先用关联轴承；无 bearingId 时按型号文本精确匹配主数据兜底
             var resolvedId = bearingId;
@@ -46,7 +46,9 @@ namespace OpenFindBearings.Application.Services
             var candidates = listings
                 .Where(mb => mb.IsPubliclyVisible)
                 .Select(mb => mb.MerchantId)
-                .Where(id => id != excludeMerchantId)
+                // 改动说明（v1.57.3 自交易封堵）：排除集合由"单个发布商户"扩为"发布人在职的全部商户"，
+                //   一人多商户时其余自家店铺同样不匹配、不通知、不可被邀请
+                .Where(id => excludeMerchantIds == null || !excludeMerchantIds.Contains(id))
                 .Distinct()
                 .ToList();
 

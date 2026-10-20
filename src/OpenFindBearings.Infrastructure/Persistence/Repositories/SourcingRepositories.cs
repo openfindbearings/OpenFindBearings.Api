@@ -48,7 +48,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
             if (!includeDeleted)
                 query = query.Where(d => !d.IsDeleted);
 
-            // 改动说明（v1.8.0 公开招标/邀标）：公开大厅/反向导购仅取公开招标单，邀标单只对收件人与发布人可见
+            // 改动说明（v1.8.0 公开/邀请）：公开大厅/反向导购仅取公开单，邀请单只对收件人与发布人可见
             if (publicOnly)
                 query = query.Where(d => d.Visibility == SourcingVisibility.Public);
 
@@ -122,7 +122,7 @@ if (status.HasValue)
         /// <inheritdoc/>
         public async Task<List<SourcingDemand>> GetOpenInvitedForMerchantAsync(Guid merchantId, CancellationToken cancellationToken = default)
             => await _context.Set<SourcingDemand>()
-                // 改动说明（v1.8.0 公开招标/邀标）：邀标给本商户的进行中需求（收件人快照 ANY 判定、未软删、未过期）
+                // 改动说明（v1.8.0 公开/邀请）：邀请给本商户的进行中需求（收件人快照 ANY 判定、未软删、未过期）
                 .Where(d => d.Visibility == SourcingVisibility.Invited
                     && d.InvitedMerchantIds.Contains(merchantId) && !d.IsDeleted
                     && d.Status == SourcingDemandStatus.Published && d.ExpiryAt > DateTime.UtcNow)

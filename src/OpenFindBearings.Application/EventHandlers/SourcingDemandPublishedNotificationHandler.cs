@@ -10,8 +10,8 @@ namespace OpenFindBearings.Application.EventHandlers
 {
     /// <summary>
     /// 寻货发布通知订阅者（v1.6.0 搜索寻货联动；v1.8.0 改为按事件携带的收件人集合推送）。
-    /// 收件人集合由发布处理器按"公开招标=在售匹配口径 / 邀标=勾选∩匹配"算定后随事件传入，
-    /// 本订阅者只负责扇出：公开=匹配文案，邀标=邀请文案；集合为空则谁都不打扰。
+    /// 收件人集合由发布处理器按"公开=在售匹配口径 / 邀请=勾选∩匹配"算定后随事件传入，
+    /// 本订阅者只负责扇出：公开=匹配文案，邀请=邀请文案；集合为空则谁都不打扰。
     /// 多方式提醒：站内信必发 + 外部通道（短信/微信/邮件，按偏好，网关预留）。
     /// 限频：同一管理员、同型号每日至多 N 条（SystemConfig Sourcing.NotifyMaxPerMerchantPerDay，默认 3），
     ///   超量不再弹信（该需求仍在商家侧"为你匹配的寻货"聚合面可见）。
@@ -41,7 +41,7 @@ namespace OpenFindBearings.Application.EventHandlers
         /// <inheritdoc/>
         public async Task Handle(SourcingDemandPublishedEvent notification, CancellationToken cancellationToken)
         {
-            // 改动说明（v1.8.0 公开招标/邀标）：匹配不再发生在本订阅者内——收件人集合已由发布处理器算定
+            // 改动说明（v1.8.0 公开/邀请）：匹配不再发生在本订阅者内——收件人集合已由发布处理器算定
             //   （SourcingMatcher 唯一调用处），此处只按集合推送，避免"回传家数"与"实际推送集合"口径漂移
             var isInvited = notification.Visibility == SourcingVisibility.Invited;
             foreach (var merchantId in notification.RecipientMerchantIds)
@@ -57,11 +57,11 @@ namespace OpenFindBearings.Application.EventHandlers
 
         /// <summary>
         /// 向商户全部在职管理员发提醒（站内信必发 + 外部通道按偏好外发）。
-        /// 限频：仅公开招标按"同型号每日上限"跳过超量管理员；邀标豁免（v1.8.1，见内注释）。
+        /// 限频：仅公开按"同型号每日上限"跳过超量管理员；邀请豁免（v1.8.1，见内注释）。
         /// </summary>
         /// <param name="merchantId">收件商户</param>
         /// <param name="e">发布事件（取需求 ID/型号）</param>
-        /// <param name="isInvited">是否邀标单（true=豁免日限频）</param>
+        /// <param name="isInvited">是否邀请单（true=豁免日限频）</param>
         /// <param name="title">通知标题</param>
         /// <param name="body">通知正文</param>
         /// <param name="cancellationToken">取消令牌</param>
@@ -71,8 +71,8 @@ namespace OpenFindBearings.Application.EventHandlers
             var admins = await _memberRepository.GetActiveByMerchantAsync(merchantId, cancellationToken);
             foreach (var admin in admins.Where(m => m.Role == MerchantMember.RoleMerchantAdmin))
             {
-                // 改动说明（v1.8.1）：邀标豁免"同型号每日上限"——受邀是发布人点名勾选的定向邀约（受众可控），
-                //   限频会让受邀商家收不到通知，直接违背"受邀必达"承诺；限频只保留给公开招标（匹配面广、易刷屏）
+                // 改动说明（v1.8.1）：邀请豁免"同型号每日上限"——受邀是发布人点名勾选的定向邀约（受众可控），
+                //   限频会让受邀商家收不到通知，直接违背"受邀必达"承诺；限频只保留给公开（匹配面广、易刷屏）
                 if (!isInvited)
                 {
                     var maxPerDay = await SourcingConfigReader.GetIntAsync(

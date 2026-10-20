@@ -92,11 +92,18 @@ namespace OpenFindBearings.Application.Commands.Sourcing
             if (!demand.IsOpen)
                 throw new InvalidOperationException("该寻货已结束，无法应答");
 
-            // 改动说明（v1.8.1 邀标边界）：邀标单只允许收件商家应答——详情端点已对非收件商户 404，
-            //   应答链路同样需要守卫，否则知道 id 的第三方可插队应答，邀标边界（只邀这几家）被击穿；
+            // 改动说明（v1.57.3 自交易封堵）：自己不能应答自己发布的寻货——个人名义发布、
+            //   商户名义发布与公开大厅应答三条路径统一在此拦截（邀请名单已在发布侧排除自家店铺）
+            if (demand.PublisherUserId == request.UserId)
+                throw new InvalidOperationException("不能应答自己发布的寻货");
+            if (demand.PublisherMerchantId == request.MerchantId)
+                throw new InvalidOperationException("不能应答自己商户发布的寻货");
+
+            // 改动说明（v1.8.1 邀请边界）：邀请单只允许收件商家应答——详情端点已对非收件商户 404，
+            //   应答链路同样需要守卫，否则知道 id 的第三方可插队应答，邀请边界（只邀这几家）被击穿；
             //   判定基于发布时点快照而非"当前是否仍有货"，避免受邀商家事后下架就被拒
             if (demand.IsPrivate && !demand.IsInvitedTo(request.MerchantId))
-                throw new InvalidOperationException("该寻货为邀标单，仅受邀商家可应答");
+                throw new InvalidOperationException("该寻货为邀请单，仅受邀商家可应答");
 
             // 应答资格：操作人须为该商户在职成员（员工可代商户应答），商户须生效
             var member = await _memberRepository.GetActiveByUserAndMerchantAsync(
@@ -106,6 +113,12 @@ namespace OpenFindBearings.Application.Commands.Sourcing
                 ?? throw new InvalidOperationException("商户不存在");
             if (merchant.Status != Domain.Enums.MerchantStatus.Active)
                 throw new InvalidOperationException("商户当前状态不允许应答");
+
+            // 改动说明（v1.57.3 自交易封堵）：发布人本人是应答商户在职成员时同样禁止——
+            //   堵住"同事用个人名义发布、本店接单"的绕行路径
+            if (await _memberRepository.GetActiveByUserAndMerchantAsync(
+                demand.PublisherUserId, request.MerchantId, cancellationToken) != null)
+                throw new InvalidOperationException("不能应答自己所在的商户");
 
             // 重复应答=更新既有（不占额度、不再发事件）
             // 改动说明（v1.8.2 撤销应答软取消）：已撤销（Cancelled）的既有行走"复活"而非新插一行——

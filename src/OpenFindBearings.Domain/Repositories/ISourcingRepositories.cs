@@ -21,7 +21,7 @@ namespace OpenFindBearings.Domain.Repositories
         /// <summary>
         /// feed 分页：状态过滤（null=进行中全部）+ 型号关键词（模糊）+ 品牌/地区筛选（包含匹配，v1.4.0 大厅筛选），
         /// newestFirst=发布时间降序（默认最新）/升序（最早）；pinFirst=true 时有效置顶排前（v2.10.0，仅公开大厅启用）；
-        /// publicOnly=true 时仅公开招标单（排除邀标单，v1.8.0 公开招标/邀标：邀标单不进公开大厅）；
+        /// publicOnly=true 时仅公开单（排除邀请单，v1.8.0 公开/邀请：邀请单不进公开大厅）；
         /// includeDeleted=true 时纳入软删单（v1.8.2：仅 Admin 治理列表使用，让管理员事后仍可审计已删单）
         /// </summary>
         Task<(List<SourcingDemand> Items, int Total)> GetListAsync(int? status, string? keyword, bool onlyOpen,
@@ -43,7 +43,7 @@ namespace OpenFindBearings.Domain.Repositories
         /// <summary>商户名义发布的单（v2.12.0 商户工作台"寻货管理-我发布的"，含全部状态，时间倒序）</summary>
         Task<List<SourcingDemand>> GetByPublisherMerchantAsync(Guid merchantId, CancellationToken cancellationToken = default);
 
-        /// <summary>邀标给某商户的进行中需求（v1.8.0 公开招标/邀标：商家侧"邀标给我的"，时间倒序）</summary>
+        /// <summary>邀请给某商户的进行中需求（v1.8.0 公开/邀请：商家侧"点名邀请我的"，时间倒序）</summary>
         Task<List<SourcingDemand>> GetOpenInvitedForMerchantAsync(Guid merchantId, CancellationToken cancellationToken = default);
 
         /// <summary>今日已发布数（免费额度判定；含取消单，防"发了删删了发"绕额度）</summary>
