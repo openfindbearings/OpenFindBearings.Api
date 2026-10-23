@@ -43,7 +43,8 @@ namespace OpenFindBearings.Application.Queries.MerchantBearings.GetMallFeed
                 IsOnSale = true,
                 SortBy = request.SortBy,
                 SortOrder = request.SortOrder,
-                IsAuthenticated = request.IsAuthenticated,
+                // 改动说明：IsAuthenticated 改为可空（避免被 [AsParameters] 判为必填），未赋值时按匿名处理
+                IsAuthenticated = request.IsAuthenticated ?? false,
                 Page = request.Page,
                 PageSize = request.PageSize
             };
