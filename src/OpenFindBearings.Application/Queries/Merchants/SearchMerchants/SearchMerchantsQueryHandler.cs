@@ -60,8 +60,9 @@ namespace OpenFindBearings.Application.Queries.Merchants.SearchMerchants
                     ? DateTime.SpecifyKind(request.OnboardedTo.Value.AddDays(1).ToDateTime(TimeOnly.MinValue) - BusinessClock.Offset, DateTimeKind.Utc)
                     : null,
                 InternetSource = request.InternetSource,
-                Page = request.Page,
-                PageSize = request.PageSize
+                // 改动说明：分页改可空后在此兜底第 1 页、20 条（与声明为非空 int 时的默认值一致）
+                Page = request.Page ?? 1,
+                PageSize = request.PageSize ?? 20
             };
 
             // 现在 SearchAsync 直接返回 PagedResult<Merchant>

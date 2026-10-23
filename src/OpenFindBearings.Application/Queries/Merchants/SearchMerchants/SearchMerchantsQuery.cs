@@ -83,12 +83,14 @@ namespace OpenFindBearings.Application.Queries.Merchants.SearchMerchants
 
         /// <summary>
         /// 页码
+        /// 改动说明：改可空，避免被 [AsParameters] 判为必填查询参数（缺省即 400），Handler 按 1 兜底
         /// </summary>
-        public int Page { get; set; } = 1;
+        public int? Page { get; set; }
 
         /// <summary>
         /// 每页条数
+        /// 改动说明：同上，Handler 按 20 兜底
         /// </summary>
-        public int PageSize { get; set; } = 20;
+        public int? PageSize { get; set; }
     }
 }
