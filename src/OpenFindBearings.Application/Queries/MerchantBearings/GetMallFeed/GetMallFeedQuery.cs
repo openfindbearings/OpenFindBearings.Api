@@ -49,13 +49,24 @@ namespace OpenFindBearings.Application.Queries.MerchantBearings.GetMallFeed
         /// <summary>排序方向（asc, desc）</summary>
         public string? SortOrder { get; set; } = "desc";
 
-        /// <summary>当前用户是否已登录（由 API 层传入）</summary>
-        public bool IsAuthenticated { get; set; }
+        /// <summary>
+        /// 当前用户是否已登录（由端点按登录态覆盖传入，客户端传入值无效）
+        /// 改动说明：声明为非空 bool 时，[AsParameters] 会把它当作必填查询参数，
+        ///   而 BFF 从不带 isAuthenticated 转发，导致该接口恒返回 400 空响应、商城货源流全站为空；
+        ///   改为可空后不再参与必填校验，业务侧按 ?? false 兜底，端点仍以登录态覆盖。
+        /// </summary>
+        public bool? IsAuthenticated { get; set; }
 
-        /// <summary>页码</summary>
-        public int Page { get; set; } = 1;
+        /// <summary>
+        /// 页码
+        /// 改动说明：改可空，避免被 [AsParameters] 判为必填查询参数（缺省即 400），Handler 按 1 兜底
+        /// </summary>
+        public int? Page { get; set; }
 
-        /// <summary>每页条数</summary>
-        public int PageSize { get; set; } = 20;
+        /// <summary>
+        /// 每页条数
+        /// 改动说明：同上，Handler 按 20 兜底
+        /// </summary>
+        public int? PageSize { get; set; }
     }
 }

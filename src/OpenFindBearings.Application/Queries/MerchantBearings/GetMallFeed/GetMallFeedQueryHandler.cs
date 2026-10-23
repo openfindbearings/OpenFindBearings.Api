@@ -43,14 +43,16 @@ namespace OpenFindBearings.Application.Queries.MerchantBearings.GetMallFeed
                 IsOnSale = true,
                 SortBy = request.SortBy,
                 SortOrder = request.SortOrder,
-                IsAuthenticated = request.IsAuthenticated,
-                Page = request.Page,
-                PageSize = request.PageSize
+                // 改动说明：IsAuthenticated 改为可空（避免被 [AsParameters] 判为必填），未赋值时按匿名处理
+                IsAuthenticated = request.IsAuthenticated ?? false,
+                // 改动说明：分页改可空后在此兜底第 1 页、20 条（与声明为非空 int 时的默认值一致）
+                Page = request.Page ?? 1,
+                PageSize = request.PageSize ?? 20
             };
 
             var result = await _merchantBearingRepository.SearchMallFeedAsync(searchParams, cancellationToken);
             _logger.LogInformation("商城货源流: Keyword={Keyword}, BrandId={BrandId}, Page={Page}, Total={Total}",
-                request.Keyword, request.BrandId, request.Page, result.TotalCount);
+                request.Keyword, request.BrandId, request.Page ?? 1, result.TotalCount);
 
             return new PagedResult<MerchantBearingDto>
             {
