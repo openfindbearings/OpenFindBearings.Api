@@ -65,6 +65,12 @@ public class GetMerchantsByBearingQueryHandler : IRequestHandler<GetMerchantsByB
                         RestockEta = best.RestockEta,
                         // 改动说明（v1.6.0 数据可信联动）：透出认证标记——行动门"询价只对认证商家开放"的判定依据
                         IsVerified = best.Merchant!.IsVerified,
+                        // 改动说明（v2.21.2 邀请候选口径）：透出"可邀请"判定（认证 + 生效 + 未软删），
+                        //   前端据此隐藏不可邀商家的邀请入口并把它排除出默认全选——否则停用/软删商户
+                        //   被勾进邀请单后会被服务端逐家校验拒绝，整单发不出去
+                        Invitable = best.Merchant!.IsVerified
+                            && best.Merchant.Status == MerchantStatus.Active
+                            && best.Merchant.IsActive,
                         // 改动说明（v1.57.1 双徽章并列）：透出商家卡级与卡级展示名，
                         //   认证（类型）与卡级（等级）在前端并列展示，互不覆盖
                         Grade = (int)best.Merchant!.Grade,
@@ -120,6 +126,12 @@ public class BearingMerchantDto
 
     /// <summary>商家是否已认证（v1.6.0 数据可信联动；询价行动门只对认证商家开放）</summary>
     public bool IsVerified { get; set; }
+
+    /// <summary>
+    /// 是否可被邀请（v2.21.2）：认证 + 生效（Status=Active）+ 未软删（IsActive）
+    /// 改动说明：邀请候选与邀请入口的唯一判定依据——未认证、已停用、已删除的商家收不到通知或无法应答
+    /// </summary>
+    public bool Invitable { get; set; }
 
     /// <summary>商家卡级枚举值（v1.57.1 双徽章并列：1注册商户/2铜卡/3银卡/4金卡，与认证独立）</summary>
     public int Grade { get; set; }

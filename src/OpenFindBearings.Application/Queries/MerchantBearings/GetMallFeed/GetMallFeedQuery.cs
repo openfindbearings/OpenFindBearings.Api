@@ -50,13 +50,6 @@ namespace OpenFindBearings.Application.Queries.MerchantBearings.GetMallFeed
         public string? SortOrder { get; set; } = "desc";
 
         /// <summary>
-        /// 是否只出认证商家货源（v2.21.1）
-        /// 改动说明：声明为可空，避免被 [AsParameters] 判为必填查询参数（缺省即 400），
-        ///   Handler 按 ?? true 兜底——商城默认只展示可联系、可报价的认证商家货源。
-        /// </summary>
-        public bool? VerifiedOnly { get; set; }
-
-        /// <summary>
         /// 当前用户是否已登录（由端点按登录态覆盖传入，客户端传入值无效）
         /// 改动说明：声明为非空 bool 时，[AsParameters] 会把它当作必填查询参数，
         ///   而 BFF 从不带 isAuthenticated 转发，导致该接口恒返回 400 空响应、商城货源流全站为空；
