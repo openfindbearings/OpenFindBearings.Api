@@ -1,9 +1,14 @@
 # API 端点说明文档
 
-**版本：** v1.58.1
-**日期：** 2026-10-20
-**上一版：** v1.58.0
+**版本：** v1.59.0
+**日期：** 2026-10-25
+**上一版：** v1.58.1
 **状态：** 与代码同步
+
+> v1.59.0 变更（型号线索 + 邀请放宽，+3 端点）：
+> 1. **新增管理端点**：`GET /api/admin/bearing-leads`（`bearing.view`）、`POST /api/admin/bearing-leads/{id:guid}/ignore`、`POST /api/admin/bearing-leads/{id:guid}/restore`（`bearing.edit`），承载"型号库未收录型号"的线索列表与忽略/恢复。
+> 2. **线索记录**：`POST /api/sourcing/demands` 与 `POST /api/sourcing/demands/{id:guid}/respond` 在"未关联 `bearingId` 且型号库无同型号"时累积 `BearingLead`（原子 upsert，失败只记日志，不影响主流程）。
+> 3. **邀请口径放宽**：邀请收件人不再与"该型号在售匹配集"取交集，改为逐家校验「已认证 + 启用 + 非发布人在职商户」，非法项一次性点名报错；勾选为空仍按全部匹配解析，空勾选且无匹配才 400。
 
 > v1.58.1 变更（有效期制审计修复，无新端点）：
 > 1. **回执计分时刻固化**：`SourcingResponse.CountedAt`（迁移 `AddSourcingCountedAt`，存量已计分行按 `FeedbackAt` 幂等回填）；本有效期成交统计按 `CountedAt`，重复提交回执不再把旧成交刷进新周期。
@@ -59,6 +64,7 @@
 
 | 版本 | 日期 | 变更说明 |
 |------|------|----------|
+| v1.59.0 | 2026-10-25 | **型号线索 + 邀请放宽**：新增 `GET /api/admin/bearing-leads`、`POST /api/admin/bearing-leads/{id}/ignore`、`POST /api/admin/bearing-leads/{id}/restore`（型号库未收录型号的线索三态管理）；发布/应答在未关联 `bearingId` 且型号库无同型号时原子 upsert `BearingLead`（迁移 `AddBearingPartNumberLeads`）；邀请收件人不再与在售匹配集取交集，改逐家校验认证/启用/非自家并点名报错。后台管理端点组 72→75 |
 | v1.58.1 | 2026-10-20 | **有效期制审计修复（无新端点）**：① `SourcingResponse` 加 `CountedAt`（迁移 `AddSourcingCountedAt`，存量计分行按 `FeedbackAt` 幂等回填），本有效期成交统计按此口径；② `GET /api/admin/merchants` 的 `MerchantDto` 加 `onSaleCount`/`onSaleMin`（管理端实时在售件数与阈值）；③ 积分退款走独立入账（不计 `TotalEarned`、不触发商家金上供与段位升档礼）；④ 扣分幂等键加 `u:{userId}:`/`m:{merchantId}:` 命名空间；⑤ 普通档无成员加成（签到/应答额度/纠错加成仅铜牌及以上）；⑥ `MerchantGradeSweepJob` 到期前 7 天发 `merchant_grade` 站内信；⑦ `MerchantTaskSettlementJob` 注册为后台服务；⑧ `Merchant.Verify()` 不再直接写铜牌，认证后由重算补档，普通→铜牌升档礼修复。端点数量不变 |
 | v1.58.0 | 2026-10-20 | **商家牌级改有效期制**：`MerchantGrade.Registered` 换名 `Ordinary`（值仍 1）；`Merchant` 加 `GradePeriodStartAt`/`GradePeriodEndAt`（迁移 `AddMerchantGradePeriod`，存量已定级商户幂等回填一期）；`MerchantGradeService` 改按本期成交定级并在升级/续期时重发一期，到期按本期成交留档、零成交降至铜牌，在售连续不足超过保级期直接降普通；`GET /api/points/merchant-grade` 的 `windowDays` 拆为 `periodDays`，新增 `requiredDeals`/`periodStartAt`/`periodEndAt`/`downgradeTo`；新增匿名 `GET /api/points/merchant-grade/rules`；`MerchantDto` 增 `gradePeriodStartAt`/`gradePeriodEndAt`/`gradeGraceUntil`；新增每日巡检 `MerchantGradeSweepJob`。端点数量 +1 |
 | v1.57.3 | 2026-10-20 | **自交易封堵（无表结构变更）**：① `SourcingMatcher` 排除集合由"单个发布商户"扩为"发布人在职的全部商户 + 商户名义发布的商户"；② `POST /api/sourcing/demands/{id:guid}/respond` 新增三条守卫——发布人本人、发布商户本身、发布人是应答商户在职成员，一律拒绝；③ 邀请无候选人/勾选无效的错误文案区分"自家店铺不能邀请"与"均非在售认证商家"；④ `publish-public` 差集补发同口径排除，不给自己发通知。端点数量不变 |
@@ -336,7 +342,7 @@ OpenFindBearings.Api（以下简称 API）共注册 **163** 个端点，按职�
 
 ---
 
-## 8. 后台管理端点 `/api/admin`（72 个）
+## 8. 后台管理端点 `/api/admin`（75 个）
 
 组授权：`RequireAuthorization("Admin")`。所有端点通过 `RequirePermission("bearing.xxx")` 或 `RequireRole("SuperAdmin,Admin")` 控制访问。
 
@@ -356,6 +362,9 @@ OpenFindBearings.Api（以下简称 API）共注册 **163** 个端点，按职�
 | DELETE | `/api/admin/bearings/{id:guid}` | `bearing.delete` |
 | PUT | `/api/admin/bearings/{id:guid}/restore` | `data.restore` |
 | DELETE | `/api/admin/bearings/{id:guid}/hard` | `data.harddelete` |
+| GET | `/api/admin/bearing-leads` | `bearing.view` |
+| POST | `/api/admin/bearing-leads/{id:guid}/ignore` | `bearing.edit` |
+| POST | `/api/admin/bearing-leads/{id:guid}/restore` | `bearing.edit` |
 
 ### 8.3 品牌管理
 
@@ -481,7 +490,7 @@ OpenFindBearings.Api（以下简称 API）共注册 **163** 个端点，按职�
 |---|---|---|---|
 | GET | /demands | 寻货大厅分页（型号关键词 + 品牌/地区筛选；登录者带 isMine；v1.46.0 输出 publisherMerchantId/publisherMerchantName/publisherType；v1.54.0 输出 visibility 与 isPrivate） | 匿名 |
 | GET | /demands/{id:guid} | 寻货详情（v1.57.0 删除 `publisherContact`：商家任何情况下拿不到需求方号码；响应含 `contactUnlockedAt`/`selectedResponseId`/`canFeedback`/`myFeedback`；v1.57.1 `myFeedback` 增 `note`＝未计分原因。访客与非受邀非应答方只见应答数） | 登录可选 |
-| POST | /demands | 发布寻货（免费 3 条/日，超限 NEED_POINTS 协议 + usePoints 重提交，硬上限 10；v1.46.0 同版追加：请求体可选 merchantId=商户名义发布，在职成员校验前置不耗额度；v1.51.0：响应回传匹配家数，v1.54.0 更名为 `notifiedMerchantCount`=本次实际推送的认证商家家数，0=仅进大厅等应答；v1.54.0：请求体 `visibility`（0公开/1邀请）+ `invitedMerchantIds`（邀请收件人，空=全部匹配的认证在售商家）取代原 `targetMerchantId`；邀请勾选 ∩ 认证在售匹配，交集空则拒绝） | 登录 |
+| POST | /demands | 发布寻货（免费 3 条/日，超限 NEED_POINTS 协议 + usePoints 重提交，硬上限 10；v1.46.0 同版追加：请求体可选 merchantId=商户名义发布，在职成员校验前置不耗额度；v1.51.0：响应回传匹配家数，v1.54.0 更名为 `notifiedMerchantCount`=本次实际推送的认证商家家数，0=仅进大厅等应答；v1.54.0：请求体 `visibility`（0公开/1邀请）+ `invitedMerchantIds`（邀请收件人，空=全部匹配的认证在售商家）取代原 `targetMerchantId`；邀请勾选 ∩ 认证在售匹配，交集空则拒绝；v1.59.0 起改为逐家校验「已认证 + 启用 + 非发布人在职商户」，不再要求在售，非法项点名报错） | 登录 |
 | POST | /demands/{id:guid}/publish-public | 转为公开（v1.54.0：发布人把进行中的邀请单放开为公开，需求进大厅人人可见可应答；已是公开或已结束的不予受理；不追加通知） | 登录 |
 | POST | /demands/{id:guid}/respond | 商户应答（v1.45.0 多行标书：请求体 `items[]` 每行型号必填+可引在售商品，说明 remark 整份必填，至少一行；一商户一需求单条可更新=整份替换行；免费 20/日超限花积分，硬上限 50；v1.57.3 自交易守卫：发布人本人、发布商户本身、发布人属应答商户在职成员一律 400） | 登录+商户 |
 | DELETE | /demands/{id:guid}/respond | 撤销应答（v1.8.2 起软取消：仅待处理可撤，撤后置 Cancelled 保留行、退出比价与"是否已应答"判定并可重新应答；仅本人+在职成员，当日额度不退还） | 登录+商户 |
@@ -870,3 +879,21 @@ OpenFindBearings.Api（以下简称 API）共注册 **163** 个端点，按职�
 > 定级规则：升级/续期即重发一期（续期起点取原到期日 + 180 天，巡检延迟不漂移）；期内成交达到下一档且认证、在售达标立即升级；到期按本期成交保留能支撑的牌级，零成交降至铜牌并续期；在售连续不足超过 `MerchantGradeGraceDays`（默认 15）直接降普通。
 > 不参与定级：商家金余额、终身累计成交、登录活跃度。商家金只作升档礼与经营支出，不回流定级。
 > 配套文档：《等级玩法设计 v1.3.0》《BFF API 端点说明 v1.8.8》《Admin 功能需求与后端服务映射 v1.48.0》《移动端登录与商户入驻设计 v1.7.45》。
+
+---
+
+## 本版增量（v1.59.0）：型号线索 + 邀请放宽（+3 端点）
+
+| 端点 / 位置 | 变化 |
+|---|---|
+| `GET /api/admin/bearing-leads` | **新增**（`bearing.view`）：参数 `status=pending\|ignored\|resolved`（缺省=全部）、`keyword`（型号模糊）、`page`/`pageSize`（兜底 1/20）。返回 `{ items[], totalCount, page, pageSize }`，item 字段：`id`/`partNumber`/`brand`/`occurrenceCount`/`source`/`sourceText`/`firstSeenAt`/`lastSeenAt`/`status`/`statusText`；`status=resolved` 为计算态（型号库存在同型号，含软删） |
+| `POST /api/admin/bearing-leads/{id:guid}/ignore` | **新增**（`bearing.edit`）：置 `IsIgnored=true` 并记录操作人与时间；忽略后不再出现在待建档列表，出现次数仍继续累加 |
+| `POST /api/admin/bearing-leads/{id:guid}/restore` | **新增**（`bearing.edit`）：取消忽略，回到待建档 |
+| `POST /api/sourcing/demands`（邀请分支） | **邀请口径放宽**：`invitedMerchantIds` 非空时不再与"该型号在售匹配集"取交集，改为逐家校验「已认证 + 启用 + 非发布人在职商户」，非法项一次性点名报错（`以下商家不可邀请：XX（未认证）、YY（自己所在的商户）`）；勾选为空仍按全部匹配解析，空勾选且匹配为 0 才 400 |
+| `POST /api/sourcing/demands`（发布） | **线索记录**：`bearingId` 为空且型号库无同型号时，原子 upsert `BearingLeads`（`ON CONFLICT (PartNumberKey)` 累加次数、刷新最近时间、补写品牌）；写入失败只记警告日志，不影响发布 |
+| `POST /api/sourcing/demands/{id:guid}/respond` | **线索记录**：型号行 `bearingId` 为空且型号库无同型号时同上（含新建、更新、复活三条路径） |
+| 新表 `BearingLeads` | `PartNumber`/`PartNumberKey`（唯一 `UX_BearingLeads_PartNumberKey`）/`Brand`/`Source`（0 发布 1 应答）/`OccurrenceCount`/`FirstSeenAt`/`LastSeenAt`/`IsIgnored`/`IgnoredAt`/`IgnoredByUserId`；索引 `LastSeenAt`、`OccurrenceCount` |
+
+> 迁移：`AddBearingPartNumberLeads`（仅 `db_api` 建表 + 索引，不触碰 `db_sync`/`db_raw`/`db_identity`）。
+> 兼容性：新增端点与新增表，既有请求/响应字段不变；旧客户端邀请提交的"有货商家集合"仍全部通过校验。
+> 配套文档：《寻货功能设计 v1.10.0》《数据状态字段设计 v1.7.0》《通知消息体系设计 v1.4.3》《BFF API 端点说明 v1.8.13》《Admin 功能需求与后端服务映射 v1.49.0》。

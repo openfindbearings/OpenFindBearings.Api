@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.Services;
 using OpenFindBearings.Domain.Aggregates;
 using OpenFindBearings.Domain.Entities;
@@ -49,6 +50,9 @@ namespace OpenFindBearings.Application.Commands.Sourcing
         private readonly IPointGrantRuleRepository _ruleRepository;
         private readonly IPointsService _pointsService;
         private readonly IMediator _mediator;
+        // 改动说明（v2.21.0 型号线索）：应答型号行未收录时累积线索，供管理员判断是否建档
+        private readonly IBearingLeadRepository _bearingLeadRepository;
+        private readonly ILogger<RespondDemandCommandHandler> _logger;
 
         /// <summary>
         /// 构造：寻货/商户/配置/积分仓储服务 + 事件派发
@@ -61,7 +65,9 @@ namespace OpenFindBearings.Application.Commands.Sourcing
             ISystemConfigRepository configRepository,
             IPointGrantRuleRepository ruleRepository,
             IPointsService pointsService,
-            IMediator mediator)
+            IMediator mediator,
+            IBearingLeadRepository bearingLeadRepository,
+            ILogger<RespondDemandCommandHandler> logger)
         {
             _demandRepository = demandRepository;
             _responseRepository = responseRepository;
@@ -71,6 +77,8 @@ namespace OpenFindBearings.Application.Commands.Sourcing
             _ruleRepository = ruleRepository;
             _pointsService = pointsService;
             _mediator = mediator;
+            _bearingLeadRepository = bearingLeadRepository;
+            _logger = logger;
         }
 
         /// <inheritdoc/>
@@ -137,6 +145,8 @@ namespace OpenFindBearings.Application.Commands.Sourcing
                         BuildItems(existing.Id, request.Items), cancellationToken);
                     demand.IncrementResponseCount();
                     await _demandRepository.UpdateAsync(demand, cancellationToken);
+                    // 改动说明（v2.21.0 型号线索）：复活应答同样记录未收录型号
+                    await RecordItemLeadsAsync(request.Items, cancellationToken);
                     return;
                 }
                 existing.UpdateContent(request.Remark);
@@ -145,6 +155,8 @@ namespace OpenFindBearings.Application.Commands.Sourcing
                 await _responseRepository.DeleteItemsAsync(existing.Id, cancellationToken);
                 await _responseRepository.AddItemsAsync(
                     BuildItems(existing.Id, request.Items), cancellationToken);
+                // 改动说明（v2.21.0 型号线索）：更新应答同样记录未收录型号
+                await RecordItemLeadsAsync(request.Items, cancellationToken);
                 return;
             }
 
@@ -196,6 +208,37 @@ namespace OpenFindBearings.Application.Commands.Sourcing
             // 改动说明（v2.7.0 G2 三件套）：应答成功（新增，非更新）是三项之一，
             // 触发补发判定——操作人（商户成员）当日已签到+纠错采纳时补齐 combo
             await _pointsService.TryGrantDailyComboAsync(request.UserId, cancellationToken);
+
+            // 改动说明（v2.21.0 型号线索）：新建应答记录未收录型号（自由文本行且型号库无此型号）
+            await RecordItemLeadsAsync(request.Items, cancellationToken);
+        }
+
+        /// <summary>
+        /// 记录应答型号行中的未收录型号线索
+        /// 改动说明（v2.21.0 型号线索）：只记录"平台型号库根本没有"的型号，型号存在但无人公域在售不算线索；
+        /// 线索写入失败只记日志，不影响应答主流程
+        /// </summary>
+        private async Task RecordItemLeadsAsync(IEnumerable<SourcingResponseItemInput> items, CancellationToken cancellationToken)
+        {
+            foreach (var item in items)
+            {
+                if (item.BearingId.HasValue || string.IsNullOrWhiteSpace(item.PartNumber))
+                    continue;
+
+                try
+                {
+                    var partNumberKey = BearingLead.NormalizeKey(item.PartNumber);
+                    if (!await _bearingLeadRepository.ExistsInLibraryAsync(partNumberKey, cancellationToken))
+                    {
+                        await _bearingLeadRepository.RecordAsync(
+                            item.PartNumber, null, BearingLeadSource.Response, cancellationToken);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "记录应答型号线索失败: {PartNumber}", item.PartNumber);
+                }
+            }
         }
 
         /// <summary>

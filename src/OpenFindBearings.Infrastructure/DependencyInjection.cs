@@ -41,6 +41,8 @@ namespace OpenFindBearings.Infrastructure
             services.AddScoped<IMerchantRepository, MerchantRepository>();
             services.AddScoped<IMerchantBearingRepository, MerchantBearingRepository>();
             services.AddScoped<IBearingInterchangeRepository, BearingInterchangeRepository>();
+            // v2.21.0 型号线索：记录型号库未收录型号，供管理员判断是否建档
+            services.AddScoped<IBearingLeadRepository, BearingLeadRepository>();
             services.AddScoped<ICorrectionRequestRepository, CorrectionRequestRepository>();
             services.AddScoped<IMerchantDocumentRepository, MerchantDocumentRepository>();
 

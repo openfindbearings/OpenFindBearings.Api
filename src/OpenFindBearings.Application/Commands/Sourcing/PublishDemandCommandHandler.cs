@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.Services;
 using OpenFindBearings.Domain.Aggregates;
 using OpenFindBearings.Domain.Entities;
@@ -63,6 +64,9 @@ namespace OpenFindBearings.Application.Commands.Sourcing
         // 改动说明（v1.7.0 两条路径可见化）：回传"已匹配认证商家家数"，与推送订阅者共用 SourcingMatcher 口径
         private readonly IBearingRepository _bearingRepository;
         private readonly IMerchantBearingRepository _merchantBearingRepository;
+        // 改动说明（v2.21.0 型号线索）：发布未收录型号时累积线索，供管理员判断是否建档
+        private readonly IBearingLeadRepository _bearingLeadRepository;
+        private readonly ILogger<PublishDemandCommandHandler> _logger;
 
         /// <summary>
         /// 构造：需求仓储 + 配置/规则仓储 + 积分服务（加量扣分）+ 商家等级（额度 buff）+ 成就引擎（发布计数）
@@ -79,7 +83,9 @@ namespace OpenFindBearings.Application.Commands.Sourcing
             IMerchantRepository merchantRepository,
             IPublisher publisher,
             IBearingRepository bearingRepository,
-            IMerchantBearingRepository merchantBearingRepository)
+            IMerchantBearingRepository merchantBearingRepository,
+            IBearingLeadRepository bearingLeadRepository,
+            ILogger<PublishDemandCommandHandler> logger)
         {
             _demandRepository = demandRepository;
             _configRepository = configRepository;
@@ -92,6 +98,8 @@ namespace OpenFindBearings.Application.Commands.Sourcing
             _publisher = publisher;
             _bearingRepository = bearingRepository;
             _merchantBearingRepository = merchantBearingRepository;
+            _bearingLeadRepository = bearingLeadRepository;
+            _logger = logger;
         }
 
         /// <inheritdoc/>
@@ -161,22 +169,52 @@ namespace OpenFindBearings.Application.Commands.Sourcing
             IReadOnlyList<Guid> recipients;
             if (request.Visibility == SourcingVisibility.Invited)
             {
-                // 改动说明（v1.57.3 自交易封堵）：匹配集合已排除发布人在职的全部商户，
-                //   若"该型号只有自己在售"，此处无商家可邀，提示须点明原因而不是笼统说没有商家
-                if (matched.Count == 0)
-                    throw new InvalidOperationException("当前没有可邀请的在售认证商家（自己的店铺不能邀请），请改为公开");
-                // 勾选为空=邀全部匹配商家；非空=勾选 ∩ 匹配（拦截未认证/无货的勾选，守住"只找有货的认证商家"口径）
-                recipients = request.InvitedMerchantIds is { Count: > 0 } picked
-                    ? matched.Where(picked.Contains).ToList()
-                    : matched.ToList();
-                if (recipients.Count == 0)
+                if (request.InvitedMerchantIds is { Count: > 0 } picked)
                 {
-                    // 改动说明（v1.57.3）：勾选里含自家店铺时给出准确原因，避免"均非在售"的误导
-                    var pickedOwn = request.InvitedMerchantIds is { Count: > 0 } pickedIds
-                        && pickedIds.Any(myMerchantIds.Contains);
-                    throw new InvalidOperationException(pickedOwn
-                        ? "不能邀请自己所在的商户，请重新选择"
-                        : "所选商家均非该型号的在售认证商家，请重新选择");
+                    // 改动说明（v2.21.0 邀请放宽）：认证商家即可邀——不再要求"该型号有在售"，
+                    //   以支持"请熟悉的商家帮忙找货"；逐家校验认证/启用/非自家，非法项点名报错，不再静默剔除
+                    var distinctPicked = picked.Distinct().ToList();
+                    var pickedMerchants = await _merchantRepository.GetByIdsAsync(distinctPicked, cancellationToken);
+                    var invalid = new List<string>();
+                    var valid = new List<Guid>();
+                    foreach (var merchantId in distinctPicked)
+                    {
+                        var target = pickedMerchants.FirstOrDefault(m => m.Id == merchantId);
+                        if (target == null)
+                        {
+                            invalid.Add("已不存在的商家");
+                            continue;
+                        }
+                        if (myMerchantIds.Contains(merchantId))
+                        {
+                            invalid.Add($"{target.Name}（自己所在的商户）");
+                            continue;
+                        }
+                        if (!target.IsVerified)
+                        {
+                            invalid.Add($"{target.Name}（未认证）");
+                            continue;
+                        }
+                        if (!target.IsActive)
+                        {
+                            invalid.Add($"{target.Name}（已停用）");
+                            continue;
+                        }
+                        valid.Add(merchantId);
+                    }
+
+                    if (invalid.Count > 0)
+                        throw new InvalidOperationException($"以下商家不可邀请：{string.Join("、", invalid)}");
+
+                    recipients = valid;
+                }
+                else
+                {
+                    // 勾选为空=邀全部匹配商家；改动说明（v2.21.0）：匹配集合已排除发布人在职的全部商户，
+                    //   无匹配时提示改为公开或手动选择认证商家
+                    if (matched.Count == 0)
+                        throw new InvalidOperationException("当前没有可邀请的在售认证商家（自己的店铺不能邀请），请改为公开或手动选择认证商家");
+                    recipients = matched.ToList();
                 }
             }
             else
@@ -230,6 +268,25 @@ namespace OpenFindBearings.Application.Commands.Sourcing
             await _publisher.Publish(new SourcingDemandPublishedEvent(
                 demand.Id, request.UserId, request.BearingId, demand.PartNumber, request.Brand,
                 request.Visibility, recipients), cancellationToken);
+
+            // 改动说明（v2.21.0 型号线索）：未关联平台型号且型号库确无此型号时记一次线索（只累加证据，不建型号）；
+            //   线索写入失败只记日志，绝不影响已完成的发布结果
+            if (request.BearingId == null)
+            {
+                try
+                {
+                    var partNumberKey = BearingLead.NormalizeKey(request.PartNumber);
+                    if (!await _bearingLeadRepository.ExistsInLibraryAsync(partNumberKey, cancellationToken))
+                    {
+                        await _bearingLeadRepository.RecordAsync(
+                            request.PartNumber, request.Brand, BearingLeadSource.Demand, cancellationToken);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "记录型号线索失败: {PartNumber}", request.PartNumber);
+                }
+            }
 
             // 回传收件人集合大小，供前端区分"已通知 N 家认证商家"与"进入大厅等应答"
             return new PublishDemandResult(demand.Id, recipients.Count);
