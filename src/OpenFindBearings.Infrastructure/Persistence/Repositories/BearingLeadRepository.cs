@@ -84,8 +84,10 @@ ON CONFLICT (""PartNumberKey"") DO UPDATE SET
 
             if (!string.IsNullOrWhiteSpace(searchParams.Keyword))
             {
-                var keyword = searchParams.Keyword.Trim();
-                query = query.Where(l => l.PartNumber.Contains(keyword));
+                // 改动说明（v2.21.2）：改按去重键（已小写）匹配——原实现对 PartNumber 原文 Contains，
+                //   PG 下大小写敏感，输入小写型号搜不到库里大写的线索
+                var keyword = BearingLead.NormalizeKey(searchParams.Keyword);
+                query = query.Where(l => l.PartNumberKey.Contains(keyword));
             }
 
             var bearingKeys = _context.Bearings.IgnoreQueryFilters().Select(b => b.PartNumber.ToLower());

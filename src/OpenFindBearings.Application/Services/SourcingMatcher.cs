@@ -57,7 +57,9 @@ namespace OpenFindBearings.Application.Services
             {
                 var merchant = await merchantRepository.GetByIdAsync(merchantId, cancellationToken);
                 // 仅生效且已认证商家（可信数据）计入匹配；未认证/已停用商家不打扰、也不计入推送家数
-                if (merchant is { IsVerified: true, Status: MerchantStatus.Active })
+                // 改动说明（v2.21.2 口径统一）：补 IsActive——软删（DeleteMerchant）只置 IsActive=false 且不清成员行，
+                //   此前软删的认证商家仍会被匹配并收到通知，但应答链路按状态拒绝，通知了却做不了事
+                if (merchant is { IsVerified: true, Status: MerchantStatus.Active, IsActive: true })
                     matched.Add(merchantId);
             }
             return matched;

@@ -69,6 +69,11 @@ namespace OpenFindBearings.Application.Commands.Sourcing
         private readonly ILogger<PublishDemandCommandHandler> _logger;
 
         /// <summary>
+        /// 单张邀请单的收件人上限（改动说明 v2.21.2）：邀请通知豁免每日限频，故用数量上限约束群发面
+        /// </summary>
+        private const int MaxInvitedMerchants = 50;
+
+        /// <summary>
         /// 构造：需求仓储 + 配置/规则仓储 + 积分服务（加量扣分）+ 商家等级（额度 buff）+ 成就引擎（发布计数）
         /// + 成员/商户仓储（v2.12.0 商户名义发布校验）
         /// </summary>
@@ -174,6 +179,10 @@ namespace OpenFindBearings.Application.Commands.Sourcing
                     // 改动说明（v2.21.0 邀请放宽）：认证商家即可邀——不再要求"该型号有在售"，
                     //   以支持"请熟悉的商家帮忙找货"；逐家校验认证/启用/非自家，非法项点名报错，不再静默剔除
                     var distinctPicked = picked.Distinct().ToList();
+                    // 改动说明（v2.21.2 邀请防滥用）：邀请单豁免每日通知限频（受邀必达），若收件人不设上限，
+                    //   一次请求即可点名全平台认证商户，形成群发骚扰面；故对单次收件人数量设硬上限
+                    if (distinctPicked.Count > MaxInvitedMerchants)
+                        throw new InvalidOperationException($"一次最多邀请 {MaxInvitedMerchants} 家商家，请分批发布或改为公开");
                     var pickedMerchants = await _merchantRepository.GetByIdsAsync(distinctPicked, cancellationToken);
                     var invalid = new List<string>();
                     var valid = new List<Guid>();
@@ -196,6 +205,14 @@ namespace OpenFindBearings.Application.Commands.Sourcing
                             continue;
                         }
                         if (!target.IsActive)
+                        {
+                            // 改动说明（v2.21.2 文案区分）：IsActive=false 是商户被软删（关店），与"停用"是两回事
+                            invalid.Add($"{target.Name}（已关闭）");
+                            continue;
+                        }
+                        // 改动说明（v2.21.2）：补商户状态校验——此前只查认证与软删标记，
+                        //   已停用（Suspended）的认证商家仍会被邀请，但应答链路按状态拒绝，等于发出必死的邀请
+                        if (target.Status != Domain.Enums.MerchantStatus.Active)
                         {
                             invalid.Add($"{target.Name}（已停用）");
                             continue;

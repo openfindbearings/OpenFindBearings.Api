@@ -121,6 +121,9 @@ namespace OpenFindBearings.Application.Commands.Sourcing
                 ?? throw new InvalidOperationException("商户不存在");
             if (merchant.Status != Domain.Enums.MerchantStatus.Active)
                 throw new InvalidOperationException("商户当前状态不允许应答");
+            // 改动说明（v2.21.2）：补软删校验——DeleteMerchant 只置 IsActive=false，状态仍是 Active
+            if (!merchant.IsActive)
+                throw new InvalidOperationException("商户当前状态不允许应答");
 
             // 改动说明（v1.57.3 自交易封堵）：发布人本人是应答商户在职成员时同样禁止——
             //   堵住"同事用个人名义发布、本店接单"的绕行路径
@@ -155,8 +158,8 @@ namespace OpenFindBearings.Application.Commands.Sourcing
                 await _responseRepository.DeleteItemsAsync(existing.Id, cancellationToken);
                 await _responseRepository.AddItemsAsync(
                     BuildItems(existing.Id, request.Items), cancellationToken);
-                // 改动说明（v2.21.0 型号线索）：更新应答同样记录未收录型号
-                await RecordItemLeadsAsync(request.Items, cancellationToken);
+                // 改动说明（v2.21.2 线索去重）：更新既有应答不再记录线索——同一商家反复改价/改型号
+                //   会把冷门型号的 OccurrenceCount 刷到列表首位，污染"最该建档"的排序证据
                 return;
             }
 
