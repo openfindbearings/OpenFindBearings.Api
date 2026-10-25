@@ -1,9 +1,14 @@
 # API 端点说明文档
 
-**版本：** v1.59.0
+**版本：** v1.59.1
 **日期：** 2026-10-25
-**上一版：** v1.58.1
+**上一版：** v1.59.0
 **状态：** 与代码同步
+
+> v1.59.1 变更（商城货源口径收敛，无新端点）：
+> 1. **`GET /api/mall/feed` 新增 `verifiedOnly`**（缺省 `true`）：只出认证商家的出售中商品，未认证与互联网来源数据不再进商城瀑布流，只在型号详情"参考在售"段出现。
+> 2. **补商家维度过滤（缺陷修复）**：原实现只过滤商品，未认证商家、爬虫商家（创建即 `Pending`）乃至已停用/已关店商家的商品都会出现在商城；现要求商家 `Status=Active` 且未停用。
+> 3. 不变：商品侧条件（未删 + 审核通过 + 出售中）、排序、分页、响应结构与匿名访问均不变。
 
 > v1.59.0 变更（型号线索 + 邀请放宽，+3 端点）：
 > 1. **新增管理端点**：`GET /api/admin/bearing-leads`（`bearing.view`）、`POST /api/admin/bearing-leads/{id:guid}/ignore`、`POST /api/admin/bearing-leads/{id:guid}/restore`（`bearing.edit`），承载"型号库未收录型号"的线索列表与忽略/恢复。
@@ -64,6 +69,7 @@
 
 | 版本 | 日期 | 变更说明 |
 |------|------|----------|
+| v1.59.1 | 2026-10-25 | **商城货源口径收敛**：`GET /api/mall/feed` 新增 `verifiedOnly`（缺省 `true`）并补商家维度过滤（`Status=Active` 且未停用）——原实现只过滤商品，未认证商家、爬虫商家（创建即 `Pending`）、已停用/关店商家的商品都会进商城；现商城只出可联系、可报价的认证商家出售中货源，未认证与互联网来源数据只在型号详情"参考在售"段出现。无新端点 |
 | v1.59.0 | 2026-10-25 | **型号线索 + 邀请放宽**：新增 `GET /api/admin/bearing-leads`、`POST /api/admin/bearing-leads/{id}/ignore`、`POST /api/admin/bearing-leads/{id}/restore`（型号库未收录型号的线索三态管理）；发布/应答在未关联 `bearingId` 且型号库无同型号时原子 upsert `BearingLead`（迁移 `AddBearingPartNumberLeads`）；邀请收件人不再与在售匹配集取交集，改逐家校验认证/启用/非自家并点名报错。后台管理端点组 72→75 |
 | v1.58.1 | 2026-10-20 | **有效期制审计修复（无新端点）**：① `SourcingResponse` 加 `CountedAt`（迁移 `AddSourcingCountedAt`，存量计分行按 `FeedbackAt` 幂等回填），本有效期成交统计按此口径；② `GET /api/admin/merchants` 的 `MerchantDto` 加 `onSaleCount`/`onSaleMin`（管理端实时在售件数与阈值）；③ 积分退款走独立入账（不计 `TotalEarned`、不触发商家金上供与段位升档礼）；④ 扣分幂等键加 `u:{userId}:`/`m:{merchantId}:` 命名空间；⑤ 普通档无成员加成（签到/应答额度/纠错加成仅铜牌及以上）；⑥ `MerchantGradeSweepJob` 到期前 7 天发 `merchant_grade` 站内信；⑦ `MerchantTaskSettlementJob` 注册为后台服务；⑧ `Merchant.Verify()` 不再直接写铜牌，认证后由重算补档，普通→铜牌升档礼修复。端点数量不变 |
 | v1.58.0 | 2026-10-20 | **商家牌级改有效期制**：`MerchantGrade.Registered` 换名 `Ordinary`（值仍 1）；`Merchant` 加 `GradePeriodStartAt`/`GradePeriodEndAt`（迁移 `AddMerchantGradePeriod`，存量已定级商户幂等回填一期）；`MerchantGradeService` 改按本期成交定级并在升级/续期时重发一期，到期按本期成交留档、零成交降至铜牌，在售连续不足超过保级期直接降普通；`GET /api/points/merchant-grade` 的 `windowDays` 拆为 `periodDays`，新增 `requiredDeals`/`periodStartAt`/`periodEndAt`/`downgradeTo`；新增匿名 `GET /api/points/merchant-grade/rules`；`MerchantDto` 增 `gradePeriodStartAt`/`gradePeriodEndAt`/`gradeGraceUntil`；新增每日巡检 `MerchantGradeSweepJob`。端点数量 +1 |

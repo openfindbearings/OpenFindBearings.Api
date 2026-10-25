@@ -243,7 +243,17 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                     .ThenInclude(b => b.BearingTypeNavigation)
                 .AsNoTracking()
                 // v2.15.0 状态统一：商城货源流仅出"审核通过"的商品（未审/驳回不进公域）
-                .Where(mb => mb.IsActive && mb.ReviewStatus == ListingReviewStatus.Approved);
+                .Where(mb => mb.IsActive && mb.ReviewStatus == ListingReviewStatus.Approved)
+                // 改动说明（v2.21.1 商城口径收敛）：补商家维度过滤——此前只过滤商品，导致未认证商家、
+                //   爬虫商家（创建即 Pending、从不认证）乃至已停用/已关店商家的商品都会出现在商城。
+                //   商城定位"可联系、可报价"的成交型货源，故商家必须有效（Active + 未停用）；
+                //   是否进一步限定"已认证"由 VerifiedOnly 控制，默认 true。
+                .Where(mb => mb.Merchant != null && mb.Merchant.IsActive
+                    && mb.Merchant.Status == MerchantStatus.Active);
+
+            // 认证过滤：商城默认只出认证商家货源，互联网来源/未认证数据只在型号详情参考段出现
+            if (p.VerifiedOnly)
+                query = query.Where(mb => mb.Merchant!.IsVerified);
 
             // 在售过滤（商城货源流默认 true：仅出售中）
             if (p.IsOnSale == true)
