@@ -67,6 +67,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
         public DbSet<SourcingConversation> SourcingConversations { get; set; }
         public DbSet<SourcingMessage> SourcingMessages { get; set; }
 
+        // v2.21.0 型号线索：记录型号库未收录型号的出现次数，供管理员判断是否建档
+        public DbSet<BearingLead> BearingLeads { get; set; }
+
         // v2.1.0 成就子系统：成就定义目录 + 一表双轨解锁进度（个人/商户）
         public DbSet<AchievementDefinition> AchievementDefinitions { get; set; }
         public DbSet<AchievementUnlock> AchievementUnlocks { get; set; }

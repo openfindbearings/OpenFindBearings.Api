@@ -41,6 +41,8 @@ namespace OpenFindBearings.Application.Queries.MerchantBearings.GetMallFeed
                 MinWidth = request.MinWidth,
                 MaxWidth = request.MaxWidth,
                 IsOnSale = true,
+                // 改动说明（v2.21.1）：货源流只出认证商家货源；客户端未传时按 true 兜底
+                VerifiedOnly = request.VerifiedOnly ?? true,
                 SortBy = request.SortBy,
                 SortOrder = request.SortOrder,
                 // 改动说明：IsAuthenticated 改为可空（避免被 [AsParameters] 判为必填），未赋值时按匿名处理

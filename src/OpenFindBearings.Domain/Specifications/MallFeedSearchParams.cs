@@ -65,6 +65,14 @@ namespace OpenFindBearings.Domain.Specifications
         public bool? IsOnSale { get; set; } = true;
 
         /// <summary>
+        /// 是否只出认证商家的货源（v2.21.1 商城口径收敛）
+        /// 改动说明：商城定位是"可联系、可报价"的成交型货源入口，与详情页"未认证/互联网来源只作参考、
+        ///   不提供联系"的口径保持一致——不可成交的数据不再进商城瀑布流，只留在型号详情的参考在售段。
+        /// 缺省 true；false 仅留给运营/排查用途（需要看全量供给时显式传入）。
+        /// </summary>
+        public bool VerifiedOnly { get; set; } = true;
+
+        /// <summary>
         /// 排序字段（price, created, viewcount；缺省=创建时间倒序）
         /// </summary>
         public string? SortBy { get; set; }

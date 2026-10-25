@@ -50,6 +50,9 @@ using OpenFindBearings.Application.Commands.Roles.RemoveRoleFromUser;
 using OpenFindBearings.Application.Commands.Roles.UpdateRole;
 using OpenFindBearings.Application.Commands.SystemConfig.UpdateSystemConfig;
 using OpenFindBearings.Application.Queries.Admin.GetAuditLogs;
+// 改动说明（v2.21.0 型号线索）：管理端线索列表与忽略/恢复
+using OpenFindBearings.Application.Queries.Admin.GetBearingLeads;
+using OpenFindBearings.Application.Commands.Admin.BearingLeads;
 using OpenFindBearings.Application.Queries.Admin.GetDashboardStats;
 using OpenFindBearings.Application.Queries.Admin.GetPendingDocuments;
 using OpenFindBearings.Application.Queries.Admin.GetMerchantDocuments;
@@ -362,6 +365,78 @@ namespace OpenFindBearings.Api.Endpoints
             .WithSummary("获取轴承列表")
             .WithDescription("管理端轴承列表，支持搜索和显示已删除")
             .RequirePermission("bearing.view");
+
+            /// <summary>
+            /// 型号线索列表
+            /// 改动说明（v2.21.0 型号线索）：发布寻货/商家应答中出现但型号库未收录的型号，
+            /// 按出现次数累积，供管理员判断是否建档；状态为计算态（待建档/已忽略/已入库）
+            /// </summary>
+            group.MapGet("/bearing-leads", async (
+                [FromServices] IMediator mediator,
+                HttpContext httpContext,
+                string? status,
+                string? keyword,
+                int? page,
+                int? pageSize) =>
+            {
+                var statusFilter = !string.IsNullOrWhiteSpace(status)
+                    && Enum.TryParse<OpenFindBearings.Domain.Enums.BearingLeadStatus>(status, true, out var parsed)
+                        ? parsed
+                        : (OpenFindBearings.Domain.Enums.BearingLeadStatus?)null;
+
+                var result = await mediator.Send(new GetBearingLeadsQuery
+                {
+                    Status = statusFilter,
+                    Keyword = keyword,
+                    Page = page ?? 1,
+                    PageSize = pageSize ?? 20
+                });
+
+                return ApiResponseHelper.Paged(
+                    result.Items.ToList(),
+                    result.TotalCount,
+                    result.Page,
+                    result.PageSize,
+                    httpContext
+                );
+            })
+            .WithName("AdminGetBearingLeads")
+            .WithSummary("获取型号线索列表")
+            .WithDescription("型号库未收录型号的累积线索，支持按状态与关键词筛选")
+            .RequirePermission("bearing.view");
+
+            /// <summary>
+            /// 忽略型号线索
+            /// 改动说明（v2.21.0 型号线索）：忽略只影响待建档列表展示，线索仍继续累积次数，可恢复
+            /// </summary>
+            group.MapPost("/bearing-leads/{id:guid}/ignore", async (
+                Guid id,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                await mediator.Send(new IgnoreBearingLeadCommand(id, httpContext.GetUserId()));
+                return ApiResponseHelper.Ok("已忽略该型号线索", httpContext);
+            })
+            .WithName("AdminIgnoreBearingLead")
+            .WithSummary("忽略型号线索")
+            .WithDescription("管理员确认无需建档时忽略该线索，可随时恢复")
+            .RequirePermission("bearing.edit");
+
+            /// <summary>
+            /// 恢复型号线索
+            /// </summary>
+            group.MapPost("/bearing-leads/{id:guid}/restore", async (
+                Guid id,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                await mediator.Send(new RestoreBearingLeadCommand(id));
+                return ApiResponseHelper.Ok("已恢复该型号线索", httpContext);
+            })
+            .WithName("AdminRestoreBearingLead")
+            .WithSummary("恢复型号线索")
+            .WithDescription("取消忽略，使线索重新回到待建档列表")
+            .RequirePermission("bearing.edit");
 
             /// <summary>
             /// 创建轴承

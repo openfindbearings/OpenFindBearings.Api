@@ -109,6 +109,8 @@ namespace OpenFindBearings.Api.Endpoints
             /// <summary>
             /// 商城货源流（v2.14.0 商城导购）
             /// 全站在售货源分页，供商城 Tab 商品瀑布流；匿名可访问，图片/型号/品牌/商家公开
+            /// 改动说明（v2.21.1）：默认只出认证商家的出售中商品（可联系、可报价），
+            ///   未认证/互联网来源数据只在型号详情的参考在售段出现；运营排查可传 verifiedOnly=false 看全量
             /// </summary>
             group.MapGet("/mall/feed", async (
                 [AsParameters] GetMallFeedQuery query,

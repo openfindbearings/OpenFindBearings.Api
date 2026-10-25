@@ -929,6 +929,69 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     b.ToTable("BearingInterchanges", (string)null);
                 });
 
+            modelBuilder.Entity("OpenFindBearings.Domain.Entities.BearingLead", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Brand")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("FirstSeenAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("IgnoredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("IgnoredByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsIgnored")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("LastSeenAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("OccurrenceCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("PartNumber")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("PartNumberKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("Source")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LastSeenAt");
+
+                    b.HasIndex("OccurrenceCount");
+
+                    b.HasIndex("PartNumberKey")
+                        .IsUnique()
+                        .HasDatabaseName("UX_BearingLeads_PartNumberKey");
+
+                    b.ToTable("BearingLeads", (string)null);
+                });
+
             modelBuilder.Entity("OpenFindBearings.Domain.Entities.BearingType", b =>
                 {
                     b.Property<Guid>("Id")
