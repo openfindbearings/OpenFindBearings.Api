@@ -52,6 +52,8 @@ namespace OpenFindBearings.Application.Queries.Admin.GetPendingMerchantBearings
                     StockDescription = item.StockDescription,
                     MinOrderDescription = item.MinOrderDescription,
                     Remarks = item.Remarks,
+                    // v2.22.0 商家实拍图：后台审核时需看到商家自己拍的图，不能只看型号主图
+                    MerchantImageUrls = item.ImageUrls.ToList(),
                     CreatedAt = item.CreatedAt,
                     SubmitterName = "待实现"
                 });

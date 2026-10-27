@@ -42,6 +42,11 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             builder.Property(mp => mp.DataSourceType)
                 .HasConversion<int>();
 
+            // v2.22.0 商家商品实拍图：text[] 数组列，首个元素为首图；默认空数组便于存量行无需回填
+            builder.Property(mp => mp.ImageUrls)
+                .HasColumnType("text[]")
+                .HasDefaultValue(Array.Empty<string>());
+
             // 关系配置
             builder.HasOne(mp => mp.Merchant)
                 .WithMany(m => m.MerchantBearings)

@@ -1,9 +1,18 @@
 # API 端点说明文档
 
-**版本：** v1.59.3
+**版本：** v1.59.4
 **日期：** 2026-10-27
-**上一版：** v1.59.2
+**上一版：** v1.59.3
 **状态：** 与代码同步
+
+> v1.59.4 变更（商家商品实拍图，+3 端点）：
+> 1. **新增商家商品图三端点**（`/api/merchant/bearings/{id:guid}/images`，商户成员鉴权）：
+>    - `POST`（multipart，字段名 `file`）：追加一张实拍图，最多 3 张、单张 ≤5MB、JPG/PNG/WEBP，写入 `uploads/merchant-bearings/{merchantBearingId}/{时间戳}.{ext}`；
+>    - `DELETE ?url=`：按地址删除列表中的图（不删对象存储文件）；
+>    - `PUT /images/order`（body `{ "urls": [...] }`）：重排，首项即首图，集合必须与现有图片完全一致。
+>    三者返回 `{ imageUrls: [...] }`；商品 `ReviewStatus=Approved` 时改图/删图/换首图会自动 `SubmitForApproval`（重新送审，通过前商城不可见）。
+> 2. **DTO 扩展**：`MerchantBearingDto` 新增 `merchantImageUrls`、`coverImageUrl`（商家首图优先，无商家图回退轴承 3D/2D 主图）；`BearingMerchantDto`（型号在售商家列表）新增 `coverImageUrl`（仅商家自有图，无图不返回）；后台 `PendingMerchantBearingDto` 新增 `merchantImageUrls` 供审核看图。
+> 3. **口径**：商家图只属于该商家的这件商品，不写入 `Bearing.Image2DUrl/Image3DUrl`，与型号主图互不覆盖。
 
 > v1.59.3 变更（图片维护收口，+1 端点）：
 > 1. **新增 `POST /api/admin/bearings/{id:guid}/images`**（`bearing.edit`，multipart）：运营直接上传/替换/清空轴承 3D、2D 主图（单张 ≤5MB，JPG/PNG/WEBP），写入 `uploads/bearings/{bearingId}/{slot}_{时间戳}.{ext}` 并标记 `DataSource=Manual`，互联网同步不再覆盖。图片纠错（UGC）不开放——型号主图属平台资产，商家实拍图后续由商品资料维护，两者互不覆盖。
@@ -645,6 +654,12 @@ OpenFindBearings.Api（以下简称 API）共注册 **163** 个端点，按职�
 | 方法 | 路径 | 说明 |
 |---|---|---|
 | DELETE | /api/merchant/bearings/{id:guid} | 商家删除商品：出售中/补货中禁删（须先下架），其余状态物理删除 |
+| POST | /api/merchant/bearings/{id:guid}/images | 追加实拍图（multipart `file`，≤3 张、单张 ≤5MB） |
+| DELETE | /api/merchant/bearings/{id:guid}/images?url= | 删除指定实拍图（不删对象存储文件） |
+| PUT | /api/merchant/bearings/{id:guid}/images/order | 重排实拍图（首项即首图，集合须与现有图片一致） |
+
+> 图片口径（v1.59.4）：实拍图存 `MerchantBearings.ImageUrls`（`text[]`），只属于该商家的这件商品，不写型号主图；
+> 商品已通过审核时改图/删图/换首图自动重新送审。DTO 的 `coverImageUrl` 为展示值：商家首图优先，回退 `Bearing.Image3DUrl → Image2DUrl`。
 
 > 字段变更：`MerchantBearingDto` 由 `isOnSale`/`isRestocking`/`isPendingApproval`/`isFeatured`（后者僵尸字段，已删）收敛为
 > `saleState`（0已下架/1出售中/2补货中）+ `reviewStatus`（0仓库中/1审核中/2已通过/3已驳回）。

@@ -39,6 +39,11 @@ namespace OpenFindBearings.Application.Extensions
                 // 改动说明（v2.14.0 商城导购）：商品卡需主图，从关联轴承带出（匿名也可见，图为公开信息）
                 Image3DUrl = mb.Bearing?.Image3DUrl,
                 Image2DUrl = mb.Bearing?.Image2DUrl,
+                // v2.22.0 商家实拍图：商城/商品卡优先展示商家自己的图，无图回退型号主图
+                MerchantImageUrls = mb.ImageUrls.ToList(),
+                CoverImageUrl = mb.CoverImageUrl
+                    ?? mb.Bearing?.Image3DUrl
+                    ?? mb.Bearing?.Image2DUrl,
                 PriceDescription = mb.PriceDescription,
                 PriceVisibility = mb.PriceVisibility,
                 NumericPrice = mb.NumericPrice,

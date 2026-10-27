@@ -120,6 +120,12 @@ namespace OpenFindBearings.Domain.Entities
         public DataSourceType? DataSourceType { get; private set; }
 
         /// <summary>
+        /// 商家商品实拍图 URL 列表（v2.22.0 新增）：最多 3 张，首个为首图。
+        /// 只属于本商家的这件商品，不写入轴承主数据图，商城与商家卡片优先展示此图。
+        /// </summary>
+        public string[] ImageUrls { get; private set; } = [];
+
+        /// <summary>
         /// 无参构造函数，仅供EF Core使用
         /// </summary>
         private MerchantBearing() { }
@@ -324,6 +330,63 @@ namespace OpenFindBearings.Domain.Entities
         public void SetDataSourceType(DataSourceType type)
         {
             DataSourceType = type;
+            UpdateTimestamp();
+        }
+
+        /// <summary>
+        /// 商家商品图数量上限（v2.22.0）：够看清实物即可，避免图片墙与审核负担
+        /// </summary>
+        public const int MaxImageCount = 3;
+
+        /// <summary>
+        /// 当前首图（v2.22.0）：无商家图时为 null，由展示层回退到轴承主数据图
+        /// </summary>
+        public string? CoverImageUrl => ImageUrls.Length > 0 ? ImageUrls[0] : null;
+
+        /// <summary>
+        /// 追加一张商家商品实拍图（v2.22.0）：地址为空或已达上限时抛业务异常
+        /// </summary>
+        /// <param name="url">图片访问地址（对象存储返回）</param>
+        public void AddImage(string url)
+        {
+            if (string.IsNullOrWhiteSpace(url))
+                throw new InvalidOperationException("图片地址不能为空");
+            if (ImageUrls.Length >= MaxImageCount)
+                throw new InvalidOperationException($"最多只能上传 {MaxImageCount} 张商品图片");
+
+            ImageUrls = [.. ImageUrls, url.Trim()];
+            UpdateTimestamp();
+        }
+
+        /// <summary>
+        /// 按地址移除一张商家商品实拍图（v2.22.0）：地址不在列表中时抛业务异常
+        /// </summary>
+        /// <param name="url">要移除的图片地址</param>
+        public void RemoveImage(string url)
+        {
+            var target = (url ?? string.Empty).Trim();
+            if (!ImageUrls.Contains(target))
+                throw new InvalidOperationException("图片不存在或已被删除");
+
+            ImageUrls = ImageUrls.Where(u => u != target).ToArray();
+            UpdateTimestamp();
+        }
+
+        /// <summary>
+        /// 重排商家商品图（v2.22.0）：首项即首图；传入集合必须与现有图片完全一致，
+        /// 防止前端用旧列表覆盖掉后上传的图片
+        /// </summary>
+        /// <param name="orderedUrls">按目标顺序排列的图片地址</param>
+        public void SetImageOrder(IReadOnlyList<string> orderedUrls)
+        {
+            var incoming = orderedUrls?.Select(u => (u ?? string.Empty).Trim()).ToList() ?? [];
+            if (incoming.Count != ImageUrls.Length || incoming.Distinct().Count() != incoming.Count ||
+                !incoming.All(ImageUrls.Contains))
+            {
+                throw new InvalidOperationException("图片列表已变化，请刷新后重试");
+            }
+
+            ImageUrls = [.. incoming];
             UpdateTimestamp();
         }
 

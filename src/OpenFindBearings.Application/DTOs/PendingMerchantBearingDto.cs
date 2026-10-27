@@ -41,6 +41,11 @@
         public string? Remarks { get; set; }
 
         /// <summary>
+        /// 商家上传的商品实拍图地址列表（v2.22.0，最多 3 张，首个为首图）
+        /// </summary>
+        public List<string> MerchantImageUrls { get; set; } = [];
+
+        /// <summary>
         /// 提交时间
         /// </summary>
         public DateTime CreatedAt { get; set; }

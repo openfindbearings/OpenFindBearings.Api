@@ -102,6 +102,18 @@ namespace OpenFindBearings.Application.DTOs
         /// </summary>
         public string? Image2DUrl { get; set; }
 
+        // ============ 商家商品实拍图（v2.22.0：属于本商家的这件商品，不改主数据） ============
+
+        /// <summary>
+        /// 商家上传的商品实拍图地址列表（最多 3 张，首个为首图）
+        /// </summary>
+        public List<string> MerchantImageUrls { get; set; } = [];
+
+        /// <summary>
+        /// 展示用封面图：商家首图优先，无商家图时回退到轴承 3D/2D 主图；前端直接用它，不再自行拼接
+        /// </summary>
+        public string? CoverImageUrl { get; set; }
+
         // ============ 价格相关 ============
 
         /// <summary>

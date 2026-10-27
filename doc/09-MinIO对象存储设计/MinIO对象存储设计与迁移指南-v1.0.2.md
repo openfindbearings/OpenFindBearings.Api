@@ -1,9 +1,11 @@
 # MinIO 对象存储设计与迁移指南
 
-- 版本：v1.0.1
+- 版本：v1.0.2
 - 日期：2026-10-27
 - 状态：已实施（待集群部署）
 - 适用：OpenFindBearings.Api / Sync / 媒体服务 的图片与文件存储统一改造
+
+> v1.0.2 变更：新增商家商品实拍图写入路径 `uploads/merchant-bearings/{merchantBearingId}/{时间戳}.{ext}`（`POST /api/merchant/bearings/{id}/images`，最多 3 张、单张 ≤5MB、JPG/PNG/WEBP），同样走 `IObjectStorageService`；删除商品图只移除数据库地址，不即时删除对象文件（历史审核可能引用）。
 
 > v1.0.1 变更：新增管理端轴承主图写入路径 `uploads/bearings/{bearingId}/{slot}_{时间戳}.{ext}`（`POST /api/admin/bearings/{id}/images`），与用户头像、商家 Logo、证照材料同走 `IObjectStorageService`；替换图片时保留旧文件，不做即时删除。
 

@@ -1,9 +1,10 @@
-using MediatR;
+﻿using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using OpenFindBearings.Api.Helpers;
 using OpenFindBearings.Api.Services;
 using OpenFindBearings.Application.Commands.MerchantBearings.Commands;
+using OpenFindBearings.Application.Commands.MerchantBearings.ManageImages;
 using OpenFindBearings.Application.Commands.MerchantBearings.PutOnShelf;
 using OpenFindBearings.Application.Commands.MerchantBearings.RemoveMerchantBearing;
 using OpenFindBearings.Application.Commands.MerchantBearings.Restock;
@@ -715,6 +716,94 @@ namespace OpenFindBearings.Api.Endpoints
             .WithDescription("更新店铺中轴承的信息（需要审核）");
 
             /// <summary>
+            /// 上传商品实拍图（v2.22.0）：最多 3 张、单张不超过 5MB，首个上传即首图。
+            /// 图片只属于本商家的这件商品，不写入轴承主数据图；已通过审核的商品改图后重新送审。
+            /// </summary>
+            group.MapPost("/bearings/{id:guid}/images", async (
+                Guid id,
+                IFormFile file,
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+                if (file is null || file.Length == 0)
+                    return ApiResponseHelper.BadRequest("请选择要上传的图片", httpContext: httpContext);
+
+                using var buffer = new MemoryStream();
+                await file.CopyToAsync(buffer);
+
+                var imageUrls = await mediator.Send(new AddMerchantBearingImageCommand
+                {
+                    Id = id,
+                    UserId = currentUser.UserId.Value,
+                    Content = buffer.ToArray(),
+                    Extension = FileUploadHelper.GetSafeExtension(file)
+                });
+
+                return ApiResponseHelper.Ok(new { imageUrls }, "图片已上传", httpContext);
+            })
+            .WithName("AddMerchantBearingImage")
+            .WithSummary("上传商品实拍图")
+            .WithDescription("为当前商家的商品上传实拍图（最多 3 张，已上架商品改图需重新审核）")
+            .DisableAntiforgery();
+
+            /// <summary>
+            /// 删除商品实拍图（v2.22.0）：按图片地址删除，已通过审核的商品删图后重新送审
+            /// </summary>
+            group.MapDelete("/bearings/{id:guid}/images", async (
+                Guid id,
+                [FromQuery] string url,
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+                if (string.IsNullOrWhiteSpace(url))
+                    return ApiResponseHelper.BadRequest("请提供要删除的图片地址", httpContext: httpContext);
+
+                var imageUrls = await mediator.Send(new RemoveMerchantBearingImageCommand
+                {
+                    Id = id,
+                    UserId = currentUser.UserId.Value,
+                    Url = url
+                });
+
+                return ApiResponseHelper.Ok(new { imageUrls }, "图片已删除", httpContext);
+            })
+            .WithName("RemoveMerchantBearingImage")
+            .WithSummary("删除商品实拍图")
+            .WithDescription("删除当前商家商品的指定实拍图（已上架商品删图需重新审核）");
+
+            /// <summary>
+            /// 调整商品实拍图顺序（v2.22.0）：首项即首图，集合必须与现有图片完全一致
+            /// </summary>
+            group.MapPut("/bearings/{id:guid}/images/order", async (
+                Guid id,
+                ReorderMerchantBearingImagesRequest body,
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                var imageUrls = await mediator.Send(new ReorderMerchantBearingImagesCommand
+                {
+                    Id = id,
+                    UserId = currentUser.UserId.Value,
+                    Urls = body?.Urls ?? []
+                });
+
+                return ApiResponseHelper.Ok(new { imageUrls }, "图片顺序已更新", httpContext);
+            })
+            .WithName("ReorderMerchantBearingImages")
+            .WithSummary("调整商品实拍图顺序")
+            .WithDescription("调整当前商家商品实拍图顺序，首项即首图（已上架商品改序需重新审核）");
+
+            /// <summary>
             /// 设置价格可见性
             /// </summary>
             group.MapPut("/bearings/{id:guid}/price-visibility", async (
@@ -873,4 +962,7 @@ namespace OpenFindBearings.Api.Endpoints
 
     /// <summary>置为补货中请求体（v1.36.0）：预计到货时间自由文本可空</summary>
     public record RestockBearingRequest(string? RestockEta);
+
+/// <summary>调整商品实拍图顺序请求（v2.22.0）：Urls 按目标顺序排列，首项即首图</summary>
+public record ReorderMerchantBearingImagesRequest(List<string>? Urls);
 }

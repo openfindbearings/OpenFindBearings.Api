@@ -1347,6 +1347,12 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     b.Property<int?>("DataSourceType")
                         .HasColumnType("integer");
 
+                    b.PrimitiveCollection<string[]>("ImageUrls")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text[]")
+                        .HasDefaultValue(new string[0]);
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
