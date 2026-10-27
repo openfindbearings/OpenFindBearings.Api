@@ -76,7 +76,10 @@ public class GetMerchantsByBearingQueryHandler : IRequestHandler<GetMerchantsByB
                         Grade = (int)best.Merchant!.Grade,
                         GradeDisplay = best.Merchant!.GetGradeDisplayName(),
                         IsPinned = pinnedUntil > DateTime.MinValue,
-                        PinnedUntil = pinnedUntil > DateTime.MinValue ? pinnedUntil : null
+                        PinnedUntil = pinnedUntil > DateTime.MinValue ? pinnedUntil : null,
+                        // 改动说明（v2.22.0 商家商品图）：透出该商家此型号的实拍首图，
+                        //   型号详情「在售商家」行用它代替统一主图，让买家看到各家真实货物
+                        CoverImageUrl = best.CoverImageUrl
                     },
                     // 改动说明（v2.15.0 搜索权重批次）：携带商家等级序数用于排序（与商家搜索同口径）
                     GradeRank = best.Merchant!.Grade.Rank()
@@ -144,4 +147,10 @@ public class BearingMerchantDto
 
     /// <summary>置顶到期时间（UTC，可空；前端可做剩余时长提示）</summary>
     public DateTime? PinnedUntil { get; set; }
+
+    /// <summary>
+    /// 该商家此型号的实拍首图（v2.22.0）：商家商品自己的图，未上传时为 null，
+    /// 此时前端不显示缩略图（型号主图已在页面顶部，无需重复）
+    /// </summary>
+    public string? CoverImageUrl { get; set; }
 }
