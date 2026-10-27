@@ -16,6 +16,7 @@ using OpenFindBearings.Application.Commands.Bearings.DeleteBearing;
 using OpenFindBearings.Application.Commands.Bearings.HardDeleteBearing;
 using OpenFindBearings.Application.Commands.Bearings.RestoreBearing;
 using OpenFindBearings.Application.Commands.Bearings.UpdateBearing;
+using OpenFindBearings.Application.Commands.Bearings.UpdateBearingImages;
 using OpenFindBearings.Application.Commands.BearingTypes.CreateBearingType;
 using OpenFindBearings.Application.Commands.BearingTypes.DeleteBearingType;
 using OpenFindBearings.Application.Commands.BearingTypes.HardDeleteBearingType;
@@ -474,6 +475,61 @@ namespace OpenFindBearings.Api.Endpoints
             .WithSummary("更新轴承")
             .WithDescription("更新轴承信息")
             .RequirePermission("bearing.edit");
+
+            /// <summary>
+            /// 上传/替换/清空轴承图片（v2.21.3）：运营直接维护型号主图，不走纠错审核。
+            /// 型号主图属平台资产，用于认型号；商家实拍图由商家商品资料维护，两者互不覆盖。
+            /// </summary>
+            group.MapPost("/bearings/{id:guid}/images", async (
+                Guid id,
+                IFormFile? image3D,
+                IFormFile? image2D,
+                [FromForm] bool? clearImage3D,
+                [FromForm] bool? clearImage2D,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                var command = new UpdateBearingImagesCommand
+                {
+                    Id = id,
+                    ClearImage3D = clearImage3D == true,
+                    ClearImage2D = clearImage2D == true
+                };
+
+                // 文件读取放到端点层：Application 不感知 IFormFile，扩展名缺失时按 MIME 兜底推断
+                if (image3D is { Length: > 0 })
+                {
+                    using var stream3D = new MemoryStream();
+                    await image3D.CopyToAsync(stream3D);
+                    command = command with
+                    {
+                        Image3D = stream3D.ToArray(),
+                        Image3DExtension = FileUploadHelper.GetSafeExtension(image3D)
+                    };
+                }
+
+                if (image2D is { Length: > 0 })
+                {
+                    using var stream2D = new MemoryStream();
+                    await image2D.CopyToAsync(stream2D);
+                    command = command with
+                    {
+                        Image2D = stream2D.ToArray(),
+                        Image2DExtension = FileUploadHelper.GetSafeExtension(image2D)
+                    };
+                }
+
+                var result = await mediator.Send(command);
+                return ApiResponseHelper.Ok(
+                    new { image3DUrl = result.Image3DUrl, image2DUrl = result.Image2DUrl },
+                    "图片已更新",
+                    httpContext);
+            })
+            .WithName("AdminUpdateBearingImages")
+            .WithSummary("更新轴承图片")
+            .WithDescription("上传/替换/清空轴承 3D、2D 主图（运营维护，不走纠错审核）")
+            .RequirePermission("bearing.edit")
+            .DisableAntiforgery();
 
             /// <summary>
             /// 删除轴承

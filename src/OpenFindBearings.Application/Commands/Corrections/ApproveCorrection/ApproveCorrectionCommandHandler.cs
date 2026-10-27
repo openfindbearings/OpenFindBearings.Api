@@ -71,7 +71,9 @@ namespace OpenFindBearings.Application.Commands.Corrections.ApproveCorrection
                     bearing.UpdateDetails(correction.SuggestedValue, bearing.Weight);
                     break;
                 case "weight":
-                    bearing.UpdateDetails(bearing.Description, ParseDec(correction.SuggestedValue));
+                    // 改动说明（v2.21.3）：解析失败时保留原重量——原实现直接把 ParseDec 结果传入，
+                    //   用户填非数字会在审批后静默把重量清空（尺寸分支有 ?? 旧值兜底，重量漏了）
+                    bearing.UpdateDetails(bearing.Description, ParseDec(correction.SuggestedValue) ?? bearing.Weight);
                     break;
                 case "innerdiameter":
                 case "outerdiameter":
