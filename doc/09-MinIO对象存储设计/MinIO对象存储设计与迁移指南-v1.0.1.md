@@ -1,9 +1,11 @@
 # MinIO 对象存储设计与迁移指南
 
-- 版本：v1.0.0
-- 日期：2026-09-20
+- 版本：v1.0.1
+- 日期：2026-10-27
 - 状态：已实施（待集群部署）
 - 适用：OpenFindBearings.Api / Sync / 媒体服务 的图片与文件存储统一改造
+
+> v1.0.1 变更：新增管理端轴承主图写入路径 `uploads/bearings/{bearingId}/{slot}_{时间戳}.{ext}`（`POST /api/admin/bearings/{id}/images`），与用户头像、商家 Logo、证照材料同走 `IObjectStorageService`；替换图片时保留旧文件，不做即时删除。
 
 ---
 
@@ -156,7 +158,7 @@ kubectl exec -n openfindbearings deploy/openfindbearings-media -- \
 
 ## 5. 约定与约束
 
-- key 规范：`uploads/avatars|merchants/logo|documents/...`（API）、`images/bearings|...`（Sync），
+- key 规范：`uploads/avatars|merchants/logo|documents|bearings/...`（API，v1.0.1 增轴承主图）、`images/bearings|...`（Sync），
   均含 UTC 时间戳或 sha256，内容不可变 → 媒体层 1 年强缓存
 - MinIO 单副本 + RWO PVC：与改造前 hostPath 同受"单节点"约束（当前集群单节点，成立）；
   多节点时升级 MinIO 分布式模式（4 节点纠删码）或换云 OSS，应用侧仅改 Endpoint

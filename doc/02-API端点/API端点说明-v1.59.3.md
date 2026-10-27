@@ -1,9 +1,13 @@
 # API 端点说明文档
 
-**版本：** v1.59.2
-**日期：** 2026-10-25
-**上一版：** v1.59.1
+**版本：** v1.59.3
+**日期：** 2026-10-27
+**上一版：** v1.59.2
 **状态：** 与代码同步
+
+> v1.59.3 变更（图片维护收口，+1 端点）：
+> 1. **新增 `POST /api/admin/bearings/{id:guid}/images`**（`bearing.edit`，multipart）：运营直接上传/替换/清空轴承 3D、2D 主图（单张 ≤5MB，JPG/PNG/WEBP），写入 `uploads/bearings/{bearingId}/{slot}_{时间戳}.{ext}` 并标记 `DataSource=Manual`，互联网同步不再覆盖。图片纠错（UGC）不开放——型号主图属平台资产，商家实拍图后续由商品资料维护，两者互不覆盖。
+> 2. **修复重量纠错静默清空**：`ApproveCorrectionCommandHandler` 的 `weight` 分支在解析失败时保留原值（与尺寸分支的 `?? 旧值` 兜底同口径）。
 
 > v1.59.2 变更（审查收口，无新端点）：
 > 1. **`GET /api/mall/feed` 移除 `verifiedOnly` 参数**：认证过滤固定生效（口径不可由客户端绕过）；`GET /api/bearings/{id}/merchants` 的 `BearingMerchantDto` 新增 `invitable`（认证 + 生效 + 未软删）。
@@ -75,6 +79,7 @@
 
 | 版本 | 日期 | 变更说明 |
 |------|------|----------|
+| v1.59.3 | 2026-10-27 | **图片维护收口（+1 端点）**：① 新增 `POST /api/admin/bearings/{id:guid}/images`（`bearing.edit`，multipart，`image3D`/`image2D` 可空 + `clearImage3D`/`clearImage2D`，单张 ≤5MB、JPG/PNG/WEBP），运营直接维护型号主图并标记 `DataSource=Manual`；② 图片 UGC 纠错不开放，纠错体系仍只处理文本字段；③ 修复重量纠错解析失败静默清空（改为保留原值）。后台管理端点组 75→76 |
 | v1.59.2 | 2026-10-25 | **审查收口（无新端点）**：① `GET /api/mall/feed` 移除 `verifiedOnly`，认证过滤固定生效；② `GET /api/bearings/{id:guid}/merchants` 的 `BearingMerchantDto` 新增 `invitable`（认证 + 生效 + 未软删）；③ 邀请校验补 `Status=Active` 与单次收件人上限 50；④ `SourcingMatcher` 补 `IsActive`（软删商家不再被匹配/通知）；⑤ 应答线索只在新建与复活时记录；⑥ 线索 `keyword` 改按小写去重键匹配 |
 | v1.59.1 | 2026-10-25 | **商城货源口径收敛**：`GET /api/mall/feed` 补商家维度过滤（`Status=Active` 且未停用）——原实现只过滤商品，未认证商家、爬虫商家（创建即 `Pending`）、已停用/关店商家的商品都会进商城；现商城只出可联系、可报价的认证商家出售中货源，未认证与互联网来源数据只在型号详情"参考在售"段出现。无新端点 |
 | v1.59.0 | 2026-10-25 | **型号线索 + 邀请放宽**：新增 `GET /api/admin/bearing-leads`、`POST /api/admin/bearing-leads/{id}/ignore`、`POST /api/admin/bearing-leads/{id}/restore`（型号库未收录型号的线索三态管理）；发布/应答在未关联 `bearingId` 且型号库无同型号时原子 upsert `BearingLead`（迁移 `AddBearingPartNumberLeads`）；邀请收件人不再与在售匹配集取交集，改逐家校验认证/启用/非自家并点名报错。后台管理端点组 72→75 |
@@ -372,6 +377,7 @@ OpenFindBearings.Api（以下简称 API）共注册 **163** 个端点，按职�
 | GET | `/api/admin/bearings` | `bearing.view` |
 | POST | `/api/admin/bearings` | `bearing.create` |
 | PUT | `/api/admin/bearings/{id:guid}` | `bearing.edit` |
+| POST | `/api/admin/bearings/{id:guid}/images` | `bearing.edit` |
 | DELETE | `/api/admin/bearings/{id:guid}` | `bearing.delete` |
 | PUT | `/api/admin/bearings/{id:guid}/restore` | `data.restore` |
 | DELETE | `/api/admin/bearings/{id:guid}/hard` | `data.harddelete` |
@@ -753,6 +759,16 @@ OpenFindBearings.Api（以下简称 API）共注册 **163** 个端点，按职�
 | `createdFrom` / `createdTo` | 创建时间区间（业务日历 `yyyy-MM-dd`，两端含；同商家口径换算为 UTC 区间） |
 | `internetSource` | `true`=仅互联网来源；`false`=仅非互联网来源；不传=不限 |
 | `BearingDto.createdAt` | 新增：创建时间（UTC），轴承列表展示"创建时间"列 |
+
+### 轴承图片维护（`POST /api/admin/bearings/{id:guid}/images`，`bearing.edit`，v1.59.3）
+`multipart/form-data`，用于运营维护型号主图（认型号）；商家实拍图不在本端点范围，后续由商家商品资料维护。
+
+| 表单字段 | 说明 |
+|---|---|
+| `image3D` / `image2D` | 可空；提供文件即替换对应槽位（JPG/PNG/WEBP，单张 ≤5MB） |
+| `clearImage3D` / `clearImage2D` | `true` 清空对应槽位；与同槽位文件同时提交时以文件为准 |
+
+> 至少提交一项变更，否则 400。文件写入 `uploads/bearings/{bearingId}/{slot}_{时间戳}.{ext}`（旧文件保留），成功后 `SetImages` 并标记 `DataSource=Manual`，互联网同步不会覆盖；响应返回两个槽位更新后的 URL（清空为 `null`）。
 
 ### 替代品列表查询参数（`GET /api/admin/interchanges`，`interchange.view`）
 | 参数 | 说明 |
