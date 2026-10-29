@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Domain.Aggregates;
@@ -131,6 +131,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
                 new("system.manage", "修改系统配置"),
                 new("points.manage", "配置积分任务"),
                 new("audit.view", "查看审计日志"),
+                // 改动说明（v2.22.1 意见反馈）：用户提交的建议/问题/举报，查看与处理回复分开成键
+                new("feedback.view", "查看意见反馈"),
+                new("feedback.edit", "处理与回复意见反馈"),
             };
             await context.Permissions.AddRangeAsync(permissions);
             await context.SaveChangesAsync();
@@ -183,6 +186,8 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
                 "merchant.grade.manage",
                 
                 "correction.review", "sourcing.view", "sourcing.manage",
+                // 改动说明（v2.22.1 意见反馈）：客服日常处置角色给查看与回复权
+                "feedback.view", "feedback.edit",
                 "user.view", "user.ban",
             ];
             foreach (var name in operatorPerms)
@@ -196,6 +201,8 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
                 "dashboard.view", "bearing.view", "brand.view", "type.view", "merchant.view",
                 "interchange.view",
                  "correction.review", "sourcing.view",
+                // 改动说明（v2.22.1 意见反馈）：审计员只读，可查看不可回复
+                "feedback.view",
                 "user.view", "permission.view", "system.view", "audit.view",
             ];
             foreach (var name in auditorPerms)
@@ -495,6 +502,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
             // 分别消费下列两键（空=该行隐藏）；网站备案沿用 Site.BeiAn
             ("Mobile.BeiAnApp", "", "Mobile", "App 备案号（RN 端关于页展示）", "string", true),
             ("Mobile.BeiAnMini", "", "Mobile", "小程序备案号（微信端关于页展示）", "string", true),
+
+            // 改动说明（v2.22.1 意见反馈）：每日提交上限，0=不限制；业务日界按 BusinessClock 计算
+            ("Business.FeedbackDailyLimit", "5", "Business", "意见反馈每日提交上限（按业务日界计算，0=不限制）", "int", true),
         ];
 
         /// <summary>

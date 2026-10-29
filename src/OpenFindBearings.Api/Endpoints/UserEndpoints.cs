@@ -15,6 +15,7 @@ using OpenFindBearings.Application.Commands.History.DeleteBearingHistory;
 using OpenFindBearings.Application.Commands.History.DeleteMerchantHistory;
 using OpenFindBearings.Application.Commands.History.RecordBearingView;
 using OpenFindBearings.Application.Commands.History.RecordMerchantView;
+using OpenFindBearings.Application.Commands.Feedback.SubmitFeedback;
 using OpenFindBearings.Application.Commands.Users.UpdateUserProfile;
 using OpenFindBearings.Application.Commands.Users.DeactivateUser;
 using OpenFindBearings.Application.Queries.Corrections.GetCorrectableFields;
@@ -22,6 +23,7 @@ using OpenFindBearings.Application.Queries.Corrections.GetMyCorrectionDetail;
 using OpenFindBearings.Application.Queries.Corrections.Queries;
 using OpenFindBearings.Application.Queries.Favorites.CheckBearingFavorite;
 using OpenFindBearings.Application.Queries.Favorites.GetMyFavoriteBearings;
+using OpenFindBearings.Application.Queries.Feedback.GetMyFeedbacks;
 using OpenFindBearings.Application.Queries.Follows.CheckMerchantFollow;
 using OpenFindBearings.Application.Queries.Follows.GetMyFollowedMerchants;
 using OpenFindBearings.Application.Queries.History.GetMyMerchantHistory;
@@ -793,6 +795,107 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("SubmitMerchantCorrection")
             .WithSummary("提交商家纠错")
             .WithDescription("对商家信息提交纠错请求");
+
+            // ============ 意见反馈（v2.22.1） ============
+
+            #region 意见反馈
+
+            /// <summary>
+            /// 上传反馈附件图片
+            /// 先上传拿到相对媒体键，再随反馈一起提交；只允许图片格式，单张不超过 5MB
+            /// </summary>
+            group.MapPost("/feedback/images", async (
+                IFormFile file,
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IObjectStorageService storage,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                if (file == null || file.Length == 0)
+                    return ApiResponseHelper.BadRequest("请上传文件", httpContext: httpContext);
+
+                var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
+                var fileExtension = FileUploadHelper.GetSafeExtension(file);
+                if (!allowedExtensions.Contains(fileExtension))
+                    return ApiResponseHelper.BadRequest("只支持 JPG、PNG、WEBP 格式", httpContext: httpContext);
+
+                if (file.Length > 5 * 1024 * 1024)
+                    return ApiResponseHelper.BadRequest("图片大小不能超过 5MB", httpContext: httpContext);
+
+                using var buffer = new MemoryStream();
+                await file.CopyToAsync(buffer);
+                // 改动说明（v2.22.1）：按用户分目录，路径前缀用于提交时校验图片确实来自本端点
+                var fileName = $"{DateTime.UtcNow:yyyyMMddHHmmssfff}{fileExtension}";
+                var fileUrl = await storage.UploadAsync(
+                    $"uploads/feedback/{currentUser.UserId.Value:N}/{fileName}", buffer.ToArray(),
+                    FileUploadHelper.ContentTypeFromExtension(fileExtension));
+                return ApiResponseHelper.Ok(new { url = fileUrl }, httpContext: httpContext);
+            })
+            .DisableAntiforgery()
+            .WithName("UploadFeedbackImage")
+            .WithSummary("上传反馈附件图片")
+            .WithDescription("上传意见反馈附件（jpg/png/webp，≤5MB），返回相对访问 URL");
+
+            /// <summary>
+            /// 提交意见反馈
+            /// 分类必选、内容 5 到 1000 字、图片最多 3 张；客户端信息取请求头，避免前端伪造
+            /// </summary>
+            group.MapPost("/feedback", async (
+                SubmitFeedbackCommand command,
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                var submitCommand = command with
+                {
+                    UserId = currentUser.UserId.Value,
+                    ClientInfo = httpContext.Request.Headers.UserAgent.ToString()
+                };
+
+                var id = await mediator.Send(submitCommand);
+                return ApiResponseHelper.Ok(new { id, message = "感谢反馈，我们会尽快查看" }, httpContext: httpContext);
+            })
+            .WithName("SubmitFeedback")
+            .WithSummary("提交意见反馈")
+            .WithDescription("提交功能建议、问题反馈、内容举报或其他意见（每人每日有限额）");
+
+            /// <summary>
+            /// 我的意见反馈列表（含处理状态与管理员回复）
+            /// </summary>
+            group.MapGet("/feedback", async (
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext,
+                [FromQuery] int page = 1,
+                [FromQuery] int pageSize = 20) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                var result = await mediator.Send(new GetMyFeedbacksQuery
+                {
+                    UserId = currentUser.UserId.Value,
+                    Page = page,
+                    PageSize = pageSize
+                });
+
+                return ApiResponseHelper.Paged(
+                    result.Items.ToList(),
+                    result.TotalCount,
+                    result.Page,
+                    result.PageSize,
+                    httpContext);
+            })
+            .WithName("GetMyFeedbacks")
+            .WithSummary("获取我的意见反馈")
+            .WithDescription("查看本人提交的反馈及其处理状态与回复");
+
+            #endregion
 
             /// <summary>
             /// 获取当前用户角色与权限清单（v1.31.0）
