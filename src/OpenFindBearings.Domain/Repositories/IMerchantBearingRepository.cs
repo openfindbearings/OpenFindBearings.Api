@@ -46,6 +46,18 @@ namespace OpenFindBearings.Domain.Repositories
         Task<int> CountPubliclyVisibleAsync(Guid merchantId, CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// 批量统计各轴承"认证商家有货"家数（v2.22.3 搜索结果分流）：
+        /// 口径与寻货匹配器一致——商品公域可见（审核通过 + 出售中/补货中 + 未停用）、
+        /// 商家已认证 + 生效（Status=Active）+ 未软删，按轴承分组去重计数。
+        /// 搜索结果据此决定"向认证商家寻货"还是"仅公布互联网数据"
+        /// </summary>
+        /// <param name="bearingIds">待统计的轴承 ID 集合（通常为当前页）</param>
+        /// <param name="cancellationToken">取消令牌</param>
+        /// <returns>轴承 ID → 认证商家家数；无认证商家的轴承不在字典中</returns>
+        Task<IReadOnlyDictionary<Guid, int>> GetVerifiedMerchantCountsAsync(
+            IReadOnlyCollection<Guid> bearingIds, CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// 获取待审核的关联列表
         /// </summary>
         Task<IEnumerable<MerchantBearing>> GetPendingApprovalAsync(CancellationToken cancellationToken = default);

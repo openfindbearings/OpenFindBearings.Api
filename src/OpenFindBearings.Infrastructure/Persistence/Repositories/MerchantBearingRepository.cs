@@ -76,6 +76,39 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                     && mb.IsActive, cancellationToken);
 
         /// <summary>
+        /// 批量统计各轴承"认证商家有货"家数（v2.22.3 搜索结果分流）。
+        /// 口径与 SourcingMatcher 完全一致：商品公域可见 + 商家已认证 + 生效 + 未软删；
+        /// 单次分组查询完成当前页统计，避免逐条轴承往返
+        /// </summary>
+        public async Task<IReadOnlyDictionary<Guid, int>> GetVerifiedMerchantCountsAsync(
+            IReadOnlyCollection<Guid> bearingIds, CancellationToken cancellationToken = default)
+        {
+            // 空集合直接返回，避免生成 IN () 空列表 SQL
+            if (bearingIds.Count == 0)
+                return new Dictionary<Guid, int>();
+
+            var ids = bearingIds.ToList();
+
+            // 改动说明：这里显式写出公域可见条件（IsPubliclyVisible 是计算属性，无法翻译成 SQL）；
+            //   商家侧补 IsVerified/Status/IsActive 三条件，与寻货匹配、邀请候选保持同一口径
+            var rows = await _context.MerchantBearings
+                .Where(mb => ids.Contains(mb.BearingId)
+                    && mb.IsActive
+                    && mb.ReviewStatus == ListingReviewStatus.Approved
+                    && (mb.SaleState == SaleState.OnSale || mb.SaleState == SaleState.Restocking)
+                    && mb.Merchant != null
+                    && mb.Merchant.IsVerified
+                    && mb.Merchant.Status == MerchantStatus.Active
+                    && mb.Merchant.IsActive)
+                .GroupBy(mb => mb.BearingId)
+                // 同一商家可能有多条关联，按商家去重后再计数（与匹配器 Distinct 口径一致）
+                .Select(g => new { BearingId = g.Key, Count = g.Select(mb => mb.MerchantId).Distinct().Count() })
+                .ToListAsync(cancellationToken);
+
+            return rows.ToDictionary(r => r.BearingId, r => r.Count);
+        }
+
+        /// <summary>
         /// 获取商家"可匹配寻货"的关联列表（v1.8.1 寻货聚合口径统一）
         /// 口径 = 审核通过 且（出售中 或 补货中）且未停用，与 SourcingMatcher 匹配口径一致
         /// </summary>

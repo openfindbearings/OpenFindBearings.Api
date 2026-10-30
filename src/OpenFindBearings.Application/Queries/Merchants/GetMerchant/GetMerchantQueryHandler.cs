@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.DTOs;
 using OpenFindBearings.Application.Extensions;
+using OpenFindBearings.Application.Shared;
 using OpenFindBearings.Domain.Repositories;
 
 namespace OpenFindBearings.Application.Queries.Merchants.GetMerchant
@@ -75,6 +76,21 @@ namespace OpenFindBearings.Application.Queries.Merchants.GetMerchant
                         Address = merchant.Contact?.Address
                     };
                 }
+            }
+
+            // 改动说明（v2.22.3 互联网数据展示）：互联网来源商家（无账号、未认证）的联系方式属公开抓取数据，
+            //   对非成员查看者按"如实公布"口径下发——固话原样、手机号脱敏，并配合 IsInternetSource 提示
+            //   "数据来源互联网、未经核实"；认证商家与其他未认证商家仍保持 Contact=null（走寻货撮合互给）
+            if (dto.Contact == null && dto.IsInternetSource)
+            {
+                dto.Contact = new MerchantContactDto
+                {
+                    ContactPerson = merchant.Contact?.ContactPerson,
+                    Phone = ContactMasker.KeepLandline(merchant.Contact?.Phone),
+                    Mobile = ContactMasker.MaskMobile(merchant.Contact?.Mobile),
+                    Email = merchant.Contact?.Email,
+                    Address = merchant.Contact?.Address
+                };
             }
             return dto;
         }
