@@ -1,5 +1,6 @@
-using OpenFindBearings.Application.DTOs;
+﻿using OpenFindBearings.Application.DTOs;
 using OpenFindBearings.Domain.Aggregates;
+using OpenFindBearings.Domain.Enums;
 
 namespace OpenFindBearings.Application.Extensions
 {
@@ -33,6 +34,8 @@ TypeDisplay = merchant.GetMerchantTypeDisplayName(),
                 ApplicationMode = merchant.ApplicationMode.ToString().ToLowerInvariant(),
             // v1.31.0：Admin 解除归属按钮可用性判定（None+Manual=提名已有 vs None+Internet=公海）
             DataSource = merchant.DataSource?.ToString(),
+                // 改动说明（v2.22.3 互联网数据展示）：前端据此把无账号的抓取商家标为「互联网数据」并走脱敏联系方式口径
+                IsInternetSource = merchant.DataSource?.SourceType == DataSourceType.Internet,
                 SubmittedAt = merchant.CreatedAt,
                 // 改动说明（v1.50.0 入驻时间）：下发入驻生效时间，供 Admin 商家列表展示与筛选
                 OnboardedAt = merchant.OnboardedAt,
@@ -77,6 +80,8 @@ TypeDisplay = merchant.GetMerchantTypeDisplayName(),
                 ApplicationMode = merchant.ApplicationMode.ToString().ToLowerInvariant(),
             // v1.31.0：Admin 解除归属按钮可用性判定（None+Manual=提名已有 vs None+Internet=公海）
             DataSource = merchant.DataSource?.ToString(),
+                // 改动说明（v2.22.3 互联网数据展示）：前端据此把无账号的抓取商家标为「互联网数据」并走脱敏联系方式口径
+                IsInternetSource = merchant.DataSource?.SourceType == DataSourceType.Internet,
                 SubmittedAt = merchant.CreatedAt,
                 RejectReason = merchant.SuspensionReason,
                 UnifiedSocialCreditCode = merchant.UnifiedSocialCreditCode
@@ -115,6 +120,8 @@ public static MerchantDetailDto ToDetailDto(this Merchant merchant, List<Merchan
                 ApplicationMode = merchant.ApplicationMode.ToString().ToLowerInvariant(),
             // v1.31.0：Admin 解除归属按钮可用性判定（None+Manual=提名已有 vs None+Internet=公海）
             DataSource = merchant.DataSource?.ToString(),
+                // 改动说明（v2.22.3 互联网数据展示）：前端据此把无账号的抓取商家标为「互联网数据」并走脱敏联系方式口径
+                IsInternetSource = merchant.DataSource?.SourceType == DataSourceType.Internet,
                 SubmittedAt = merchant.CreatedAt,
                 RejectReason = merchant.SuspensionReason,
                 UnifiedSocialCreditCode = merchant.UnifiedSocialCreditCode,

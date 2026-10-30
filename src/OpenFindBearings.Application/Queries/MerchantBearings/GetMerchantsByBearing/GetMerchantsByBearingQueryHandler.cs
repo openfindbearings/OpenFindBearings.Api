@@ -1,7 +1,8 @@
-using MediatR;
+﻿using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.DTOs;
 using OpenFindBearings.Application.Extensions;
+using OpenFindBearings.Application.Shared;
 using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
 
@@ -79,7 +80,15 @@ public class GetMerchantsByBearingQueryHandler : IRequestHandler<GetMerchantsByB
                         PinnedUntil = pinnedUntil > DateTime.MinValue ? pinnedUntil : null,
                         // 改动说明（v2.22.0 商家商品图）：透出该商家此型号的实拍首图，
                         //   型号详情「在售商家」行用它代替统一主图，让买家看到各家真实货物
-                        CoverImageUrl = best.CoverImageUrl
+                        CoverImageUrl = best.CoverImageUrl,
+                        // 改动说明（v2.22.3 互联网数据展示）：标记互联网来源商家，
+                        //   前端在"其他在售"段给它加「互联网数据」小标，并把联系方式按公开数据口径展示
+                        IsInternetSource = best.Merchant!.DataSource?.SourceType == DataSourceType.Internet,
+                        // 互联网来源商家展示脱敏手机（无手机回退固话原样）；认证/其他商家恒 null，号码走寻货撮合互给
+                        ContactPhone = best.Merchant!.DataSource?.SourceType == DataSourceType.Internet
+                            ? (ContactMasker.MaskMobile(best.Merchant!.Contact?.Mobile)
+                                ?? ContactMasker.KeepLandline(best.Merchant!.Contact?.Phone))
+                            : null
                     },
                     // 改动说明（v2.15.0 搜索权重批次）：携带商家等级序数用于排序（与商家搜索同口径）
                     GradeRank = best.Merchant!.Grade.Rank()
@@ -153,4 +162,16 @@ public class BearingMerchantDto
     /// 此时前端不显示缩略图（型号主图已在页面顶部，无需重复）
     /// </summary>
     public string? CoverImageUrl { get; set; }
+
+    /// <summary>
+    /// 是否互联网来源商家（v2.22.3）：无账号、未认证的公开抓取数据，
+    /// 前端在"其他在售"段标注「互联网数据」，不提供邀请入口
+    /// </summary>
+    public bool IsInternetSource { get; set; }
+
+    /// <summary>
+    /// 互联网来源商家的可公开联系电话（v2.22.3）：手机号已脱敏、固话原样；
+    /// 非互联网来源商家恒为 null（认证商家号码在寻货撮合达成后互给）
+    /// </summary>
+    public string? ContactPhone { get; set; }
 }

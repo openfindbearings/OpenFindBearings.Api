@@ -68,5 +68,12 @@
         /// 改动说明（v1.50.0 下钻筛选）：Admin 轴承列表展示"创建时间"列并支持按下钻起点核对。
         /// </summary>
         public DateTime CreatedAt { get; set; }
+
+        /// <summary>
+        /// 该型号"认证商家有货"家数（v2.22.3 搜索结果分流）。
+        /// 口径与寻货匹配器一致（公域可见商品 + 已认证 + 生效 + 未软删，按商家去重）。
+        /// 大于 0 时搜索结果提供「寻货」入口定向邀请；为 0 时仅按互联网数据公布，不提供寻货入口。
+        /// </summary>
+        public int VerifiedMerchantCount { get; set; }
     }
 }

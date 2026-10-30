@@ -115,6 +115,13 @@ namespace OpenFindBearings.Application.DTOs
         public string? DataSource { get; set; }
 
         /// <summary>
+        /// 是否互联网来源商家（v2.22.3 互联网数据展示）。
+        /// 判定为 DataSource.SourceType=Internet：这类商家无账号、未认证，属公开互联网数据，
+        /// 前端据此标注「互联网数据」并按脱敏口径展示联系方式；认证商家走寻货邀请互给号码
+        /// </summary>
+        public bool IsInternetSource { get; set; }
+
+        /// <summary>
         /// 牌级有效期起（UTC，v2.19.0 有效期制）。
         /// 改动说明：Admin 牌级页展示"有效期至"与到期降档依据，仅管理端下发
         /// </summary>

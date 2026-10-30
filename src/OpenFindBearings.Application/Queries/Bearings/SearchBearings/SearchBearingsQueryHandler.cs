@@ -11,13 +11,17 @@ namespace OpenFindBearings.Application.Queries.Bearings.SearchBearings
     public class SearchBearingsQueryHandler : IRequestHandler<SearchBearingsQuery, PagedResult<BearingDto>>
     {
         private readonly IBearingRepository _bearingRepository;
+        // 改动说明（v2.22.3 搜索结果分流）：认证商家有货家数由商家轴承关联仓储统一统计
+        private readonly IMerchantBearingRepository _merchantBearingRepository;
         private readonly ILogger<SearchBearingsQueryHandler> _logger;
 
         public SearchBearingsQueryHandler(
             IBearingRepository bearingRepository,
+            IMerchantBearingRepository merchantBearingRepository,
             ILogger<SearchBearingsQueryHandler> logger)
         {
             _bearingRepository = bearingRepository;
+            _merchantBearingRepository = merchantBearingRepository;
             _logger = logger;
         }
 
@@ -62,6 +66,18 @@ namespace OpenFindBearings.Application.Queries.Bearings.SearchBearings
             var result = await _bearingRepository.SearchAsync(searchParams, cancellationToken);
 
             var items = result.Items.Select(b => b.ToDto()).ToList();
+
+            // 改动说明（v2.22.3 搜索结果分流）：按当前页轴承批量统计"认证商家有货"家数，
+            //   前端据此决定展示「寻货」入口（定向邀请认证商家）还是仅标注「互联网数据」；
+            //   单次分组查询，不随页内条数增加往返
+            if (items.Count > 0)
+            {
+                var counts = await _merchantBearingRepository.GetVerifiedMerchantCountsAsync(
+                    items.Select(i => i.Id).ToList(), cancellationToken);
+
+                foreach (var item in items)
+                    item.VerifiedMerchantCount = counts.TryGetValue(item.Id, out var count) ? count : 0;
+            }
 
             return new PagedResult<BearingDto>
             {

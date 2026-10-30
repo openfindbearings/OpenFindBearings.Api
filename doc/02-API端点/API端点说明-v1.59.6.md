@@ -1,10 +1,15 @@
 ﻿# API 端点说明文档
 
-**版本：** v1.59.5
-**日期：** 2026-10-29
-**上一版：** v1.59.4
+**版本：** v1.59.6
+**日期：** 2026-10-30
+**上一版：** v1.59.5
 **状态：** 与代码同步
 
+> v1.59.6 变更（互联网数据如实公布 + 搜索结果分流，无新端点）：
+> 1. **`GET /api/merchants/{id}` 互联网来源商家下发联系方式**：`MerchantDto`/`MerchantDetailDto` 新增 `isInternetSource`（`DataSource.SourceType=Internet`）；非成员查看互联网来源商家时 `contact` 不再为 null——固话原样、**手机号脱敏**（`138****1234`）、联系人/邮箱/地址原样。认证商家与其他未认证商家仍不下发（号码在寻货撮合达成后互给）。
+> 2. **`GET /api/bearings/search` 新增 `verifiedMerchantCount`**：当前页按型号批量统计"认证商家有货"家数，口径与 `SourcingMatcher` 一致（商品公域可见 + 商家已认证 + `Status=Active` + `IsActive`，按商家去重）。前端据 0/非 0 决定展示「寻货」入口还是仅标注互联网数据。
+> 3. **`GET /api/bearings/{id}/merchants` 补 `isInternetSource` 与 `contactPhone`**：互联网来源行给出脱敏手机（无手机回退固话原样），认证/其他商家 `contactPhone` 恒 null。
+> 4. **口径**：只有商家自己在商品管理里维护并上架的商品才走寻货与商城；互联网来源数据只作公开信息展示，不参与邀请、不进商城。
 > v1.59.5 变更（意见反馈，+6 端点）：
 > 1. **用户侧三端点**（`/api/me/feedback`，`Authenticated`）：`POST /images`（multipart，jpg/png/webp、单张 ≤5MB，落 `uploads/feedback/{userId}/`）、`POST /feedback`（分类 + 内容 5–1000 字 + 图片 ≤3 张 + 联系方式选填，按 `Business.FeedbackDailyLimit` 每日限频）、`GET /feedback`（本人反馈分页，含状态与回复）。
 > 2. **管理侧三端点**（`/api/admin/feedbacks`）：`GET`（`feedback.view`，状态/分类/关键词筛选，提交人手机号脱敏）、`POST /{id}/reply`（`feedback.edit`，回复并置为已处理 + 站内信）、`POST /{id}/status`（`feedback.edit`，仅分诊流转）。
@@ -94,6 +99,7 @@
 
 | 版本 | 日期 | 变更说明 |
 |------|------|----------|
+| v1.59.6 | 2026-10-30 | **互联网数据如实公布 + 搜索结果分流（无新端点）**：`MerchantDto`/`MerchantDetailDto` 加 `isInternetSource`，互联网来源商家向非成员下发脱敏联系方式（固话原样、手机 `138****1234`）；`BearingDto` 加 `verifiedMerchantCount`（口径同 `SourcingMatcher`），搜索结果据此决定是否提供「寻货」入口；`BearingMerchantDto` 加 `isInternetSource`/`contactPhone`。不新增端点、无迁移 |
 | v1.59.5 | 2026-10-29 | **意见反馈（+6 端点）**：用户侧 `POST /api/me/feedback/images`、`POST /api/me/feedback`、`GET /api/me/feedback`（24→27）；管理侧 `GET /api/admin/feedbacks`（`feedback.view`）、`POST .../reply`、`POST .../status`（`feedback.edit`，75→78）。新增 `UserFeedbacks` 表（迁移 `AddUserFeedbacks`，`ImageUrls` 为 `text[]`）、权限键 `feedback.view`/`feedback.edit`、配置 `Business.FeedbackDailyLimit=5`；回复后发 `feedback_replied` 站内信，已回复不可退回待处理。端点总数 +6 |
 | v1.59.3 | 2026-10-27 | **图片维护收口（+1 端点）**：① 新增 `POST /api/admin/bearings/{id:guid}/images`（`bearing.edit`，multipart，`image3D`/`image2D` 可空 + `clearImage3D`/`clearImage2D`，单张 ≤5MB、JPG/PNG/WEBP），运营直接维护型号主图并标记 `DataSource=Manual`；② 图片 UGC 纠错不开放，纠错体系仍只处理文本字段；③ 修复重量纠错解析失败静默清空（改为保留原值）。后台管理端点组 75→76 |
 | v1.59.2 | 2026-10-25 | **审查收口（无新端点）**：① `GET /api/mall/feed` 移除 `verifiedOnly`，认证过滤固定生效；② `GET /api/bearings/{id:guid}/merchants` 的 `BearingMerchantDto` 新增 `invitable`（认证 + 生效 + 未软删）；③ 邀请校验补 `Status=Active` 与单次收件人上限 50；④ `SourcingMatcher` 补 `IsActive`（软删商家不再被匹配/通知）；⑤ 应答线索只在新建与复活时记录；⑥ 线索 `keyword` 改按小写去重键匹配 |
@@ -815,6 +821,15 @@ OpenFindBearings.Api（以下简称 API）共注册 **169** 个端点，按职�
 
 > 至少提交一项变更，否则 400。文件写入 `uploads/bearings/{bearingId}/{slot}_{时间戳}.{ext}`（旧文件保留），成功后 `SetImages` 并标记 `DataSource=Manual`，互联网同步不会覆盖；响应返回两个槽位更新后的 URL（清空为 `null`）。
 
+### 互联网数据与搜索结果分流（v1.59.6）
+| 字段/端点 | 说明 |
+|---|---|
+| `MerchantDto.isInternetSource` / `MerchantDetailDto.isInternetSource` | `DataSource.SourceType=Internet` 即 true：无账号、未认证的公开抓取商家 |
+| `MerchantDetailDto.contact`（互联网来源） | 非成员查看时下发；手机号由服务端脱敏（`138****1234`），固话原样，联系人/邮箱/地址原样 |
+| `BearingDto.verifiedMerchantCount`（`GET /api/bearings/search`） | 当前页按型号统计认证商家有货家数，口径同 `SourcingMatcher`；>0 前端给「寻货」，=0 仅标互联网数据 |
+| `BearingMerchantDto.isInternetSource` / `contactPhone`（`GET /api/bearings/{id}/merchants`） | 互联网来源行标记 + 脱敏手机（无手机回退固话）；认证商家 `contactPhone` 恒 null |
+
+> 展示口径：认证商家货源走寻货/邀请，撮合达成后互给号码；互联网来源数据如实公布但明确标注"互联网数据 · 未经平台核实"，不提供邀请入口，也不进商城。
 ### 替代品列表查询参数（`GET /api/admin/interchanges`，`interchange.view`）
 | 参数 | 说明 |
 |---|---|
