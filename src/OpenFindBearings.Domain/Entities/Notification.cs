@@ -24,6 +24,9 @@ namespace OpenFindBearings.Domain.Entities
         /// <summary>纠错审核结果通知类型（v2.14.0）</summary>
         public const string TypeCorrectionProcessed = "correction_processed";
 
+        /// <summary>意见反馈回复通知类型（v2.22.1）：管理员回复后发给提交人</summary>
+        public const string TypeFeedbackReplied = "feedback_replied";
+
         /// <summary>
         /// 关店/解除归属通知（v2.17.0）：商户离场时发给全部在职成员
         /// </summary>
@@ -43,6 +46,8 @@ namespace OpenFindBearings.Domain.Entities
         public const string TypeGiftSettlement = "gift_settlement";
         /// <summary>纠错业务对象类型（bizType，跳转定位纠错详情）</summary>
         public const string BizCorrection = "correction";
+        /// <summary>意见反馈业务对象类型（bizType，跳转定位反馈详情）</summary>
+        public const string BizFeedback = "feedback";
         /// <summary>商城订单业务对象类型（bizType，跳转定位订单）</summary>
         public const string BizMallOrder = "mall_order";
 

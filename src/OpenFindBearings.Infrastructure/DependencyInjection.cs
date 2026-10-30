@@ -44,6 +44,8 @@ namespace OpenFindBearings.Infrastructure
             // v2.21.0 型号线索：记录型号库未收录型号，供管理员判断是否建档
             services.AddScoped<IBearingLeadRepository, BearingLeadRepository>();
             services.AddScoped<ICorrectionRequestRepository, CorrectionRequestRepository>();
+            // v2.22.1 意见反馈：用户提交 + 管理端分诊与一次性回复
+            services.AddScoped<IUserFeedbackRepository, UserFeedbackRepository>();
             services.AddScoped<IMerchantDocumentRepository, MerchantDocumentRepository>();
 
             // 品牌和类型字典仓储

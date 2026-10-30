@@ -53,6 +53,8 @@ using OpenFindBearings.Application.Commands.SystemConfig.UpdateSystemConfig;
 using OpenFindBearings.Application.Queries.Admin.GetAuditLogs;
 // 改动说明（v2.21.0 型号线索）：管理端线索列表与忽略/恢复
 using OpenFindBearings.Application.Queries.Admin.GetBearingLeads;
+using OpenFindBearings.Application.Queries.Admin.GetFeedbacks;
+using OpenFindBearings.Application.Commands.Admin.Feedback;
 using OpenFindBearings.Application.Commands.Admin.BearingLeads;
 using OpenFindBearings.Application.Queries.Admin.GetDashboardStats;
 using OpenFindBearings.Application.Queries.Admin.GetPendingDocuments;
@@ -438,6 +440,97 @@ namespace OpenFindBearings.Api.Endpoints
             .WithSummary("恢复型号线索")
             .WithDescription("取消忽略，使线索重新回到待建档列表")
             .RequirePermission("bearing.edit");
+
+            /// <summary>
+            /// 意见反馈列表
+            /// 改动说明（v2.22.1 意见反馈）：按状态/分类/关键词筛选，返回提交人昵称与脱敏手机号
+            /// </summary>
+            group.MapGet("/feedbacks", async (
+                [FromServices] IMediator mediator,
+                HttpContext httpContext,
+                string? status,
+                string? category,
+                string? keyword,
+                int? page,
+                int? pageSize) =>
+            {
+                var statusFilter = !string.IsNullOrWhiteSpace(status)
+                    && Enum.TryParse<OpenFindBearings.Domain.Enums.FeedbackStatus>(status, true, out var parsedStatus)
+                        ? parsedStatus
+                        : (OpenFindBearings.Domain.Enums.FeedbackStatus?)null;
+
+                var categoryFilter = !string.IsNullOrWhiteSpace(category)
+                    && Enum.TryParse<OpenFindBearings.Domain.Enums.FeedbackCategory>(category, true, out var parsedCategory)
+                        ? parsedCategory
+                        : (OpenFindBearings.Domain.Enums.FeedbackCategory?)null;
+
+                var result = await mediator.Send(new GetFeedbacksQuery
+                {
+                    Status = statusFilter,
+                    Category = categoryFilter,
+                    Keyword = keyword,
+                    Page = page ?? 1,
+                    PageSize = pageSize ?? 20
+                });
+
+                return ApiResponseHelper.Paged(
+                    result.Items.ToList(),
+                    result.TotalCount,
+                    result.Page,
+                    result.PageSize,
+                    httpContext);
+            })
+            .WithName("AdminGetFeedbacks")
+            .WithSummary("获取意见反馈列表")
+            .WithDescription("用户提交的意见反馈，支持按处理状态、分类与关键词筛选")
+            .RequirePermission("feedback.view");
+
+            /// <summary>
+            /// 回复意见反馈
+            /// 改动说明（v2.22.1）：回复后状态置为已处理，并向提交人发站内信
+            /// </summary>
+            group.MapPost("/feedbacks/{id:guid}/reply", async (
+                Guid id,
+                ReplyFeedbackRequest request,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                var adminUserId = httpContext.GetUserId();
+                if (adminUserId == null)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                await mediator.Send(new ReplyFeedbackCommand(id, adminUserId.Value, request?.Reply ?? string.Empty));
+                return ApiResponseHelper.Ok("已回复并通知提交人", httpContext);
+            })
+            .WithName("AdminReplyFeedback")
+            .WithSummary("回复意见反馈")
+            .WithDescription("填写回复内容，回复后状态置为已处理并通知提交人")
+            .RequirePermission("feedback.edit");
+
+            /// <summary>
+            /// 变更意见反馈处理状态（分诊流转，不发通知）
+            /// </summary>
+            group.MapPost("/feedbacks/{id:guid}/status", async (
+                Guid id,
+                UpdateFeedbackStatusRequest request,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                var statusFilter = Enum.TryParse<OpenFindBearings.Domain.Enums.FeedbackStatus>(
+                    request?.Status, true, out var parsedStatus)
+                        ? parsedStatus
+                        : (OpenFindBearings.Domain.Enums.FeedbackStatus?)null;
+
+                if (statusFilter == null)
+                    return ApiResponseHelper.BadRequest("处理状态不正确", httpContext: httpContext);
+
+                await mediator.Send(new UpdateFeedbackStatusCommand(id, statusFilter.Value));
+                return ApiResponseHelper.Ok("状态已更新", httpContext);
+            })
+            .WithName("AdminUpdateFeedbackStatus")
+            .WithSummary("变更意见反馈处理状态")
+            .WithDescription("分诊流转：待处理/处理中/已处理/已关闭，不向用户发通知")
+            .RequirePermission("feedback.edit");
 
             /// <summary>
             /// 创建轴承
@@ -1804,4 +1897,16 @@ namespace OpenFindBearings.Api.Endpoints
     /// <param name="Grade">目标卡级枚举值（1=注册商户/2=铜卡/3=银卡/4=金卡）</param>
     /// <param name="Reason">调整原因（复核/申诉依据）</param>
     public record AdjustMerchantGradeRequest(int Grade, string? Reason);
+
+    /// <summary>
+    /// 意见反馈回复请求体（v2.22.1）
+    /// </summary>
+    /// <param name="Reply">回复内容（1 到 500 字）</param>
+    public record ReplyFeedbackRequest(string? Reply);
+
+    /// <summary>
+    /// 意见反馈状态变更请求体（v2.22.1）
+    /// </summary>
+    /// <param name="Status">目标状态枚举名（Pending/Processing/Resolved/Closed）</param>
+    public record UpdateFeedbackStatusRequest(string? Status);
 }

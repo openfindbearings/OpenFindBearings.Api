@@ -1,9 +1,15 @@
-# API 端点说明文档
+﻿# API 端点说明文档
 
-**版本：** v1.59.4
-**日期：** 2026-10-27
-**上一版：** v1.59.3
+**版本：** v1.59.5
+**日期：** 2026-10-29
+**上一版：** v1.59.4
 **状态：** 与代码同步
+
+> v1.59.5 变更（意见反馈，+6 端点）：
+> 1. **用户侧三端点**（`/api/me/feedback`，`Authenticated`）：`POST /images`（multipart，jpg/png/webp、单张 ≤5MB，落 `uploads/feedback/{userId}/`）、`POST /feedback`（分类 + 内容 5–1000 字 + 图片 ≤3 张 + 联系方式选填，按 `Business.FeedbackDailyLimit` 每日限频）、`GET /feedback`（本人反馈分页，含状态与回复）。
+> 2. **管理侧三端点**（`/api/admin/feedbacks`）：`GET`（`feedback.view`，状态/分类/关键词筛选，提交人手机号脱敏）、`POST /{id}/reply`（`feedback.edit`，回复并置为已处理 + 站内信）、`POST /{id}/status`（`feedback.edit`，仅分诊流转）。
+> 3. **迁移 `AddUserFeedbacks`**：新建 `UserFeedbacks` 表（`ImageUrls` 为 `text[]`），补插权限键 `feedback.view`/`feedback.edit` 与配置 `Business.FeedbackDailyLimit=5`。
+> 4. **口径**：只收集与一次性回复，不做工单内对话；已回复的反馈不可退回待处理。
 
 > v1.59.4 变更（商家商品实拍图，+3 端点）：
 > 1. **新增商家商品图三端点**（`/api/merchant/bearings/{id:guid}/images`，商户成员鉴权）：
@@ -88,6 +94,7 @@
 
 | 版本 | 日期 | 变更说明 |
 |------|------|----------|
+| v1.59.5 | 2026-10-29 | **意见反馈（+6 端点）**：用户侧 `POST /api/me/feedback/images`、`POST /api/me/feedback`、`GET /api/me/feedback`（24→27）；管理侧 `GET /api/admin/feedbacks`（`feedback.view`）、`POST .../reply`、`POST .../status`（`feedback.edit`，75→78）。新增 `UserFeedbacks` 表（迁移 `AddUserFeedbacks`，`ImageUrls` 为 `text[]`）、权限键 `feedback.view`/`feedback.edit`、配置 `Business.FeedbackDailyLimit=5`；回复后发 `feedback_replied` 站内信，已回复不可退回待处理。端点总数 +6 |
 | v1.59.3 | 2026-10-27 | **图片维护收口（+1 端点）**：① 新增 `POST /api/admin/bearings/{id:guid}/images`（`bearing.edit`，multipart，`image3D`/`image2D` 可空 + `clearImage3D`/`clearImage2D`，单张 ≤5MB、JPG/PNG/WEBP），运营直接维护型号主图并标记 `DataSource=Manual`；② 图片 UGC 纠错不开放，纠错体系仍只处理文本字段；③ 修复重量纠错解析失败静默清空（改为保留原值）。后台管理端点组 75→76 |
 | v1.59.2 | 2026-10-25 | **审查收口（无新端点）**：① `GET /api/mall/feed` 移除 `verifiedOnly`，认证过滤固定生效；② `GET /api/bearings/{id:guid}/merchants` 的 `BearingMerchantDto` 新增 `invitable`（认证 + 生效 + 未软删）；③ 邀请校验补 `Status=Active` 与单次收件人上限 50；④ `SourcingMatcher` 补 `IsActive`（软删商家不再被匹配/通知）；⑤ 应答线索只在新建与复活时记录；⑥ 线索 `keyword` 改按小写去重键匹配 |
 | v1.59.1 | 2026-10-25 | **商城货源口径收敛**：`GET /api/mall/feed` 补商家维度过滤（`Status=Active` 且未停用）——原实现只过滤商品，未认证商家、爬虫商家（创建即 `Pending`）、已停用/关店商家的商品都会进商城；现商城只出可联系、可报价的认证商家出售中货源，未认证与互联网来源数据只在型号详情"参考在售"段出现。无新端点 |
@@ -154,17 +161,17 @@
 
 ## 1. 概述
 
-OpenFindBearings.Api（以下简称 API）共注册 **163** 个端点，按职责划分为 7 组。
+OpenFindBearings.Api（以下简称 API）共注册 **169** 个端点，按职责划分为 7 组。
 
 | 组 | 路由前缀 | 端点数量 | 认证策略 |
 |---|---------|---------|---------|
 | 公共 | `/api` | 13 | 全部匿名 |
 | 移动端 | `/api/mobile` | 2 | 全部匿名 |
-| 用户 | `/api/me` | 24 | Bearer（Authenticated 策略） |
+| 用户 | `/api/me` | 27 | Bearer（Authenticated 策略） |
 | 站内信 | `/api/notifications` | 6 | Bearer（Authenticated 策略） |
 | 入驻 | `/api/merchant` | 10 | Bearer（任意已登录用户） |
 | 商家 | `/api/merchant` | 19 | Bearer（Merchant 策略，分组限流） |
-| 后台管理 | `/api/admin` | 61 | Bearer（Admin 策略）+ RequirePermission |
+| 后台管理 | `/api/admin` | 64 | Bearer（Admin 策略）+ RequirePermission |
 
 ---
 
@@ -238,7 +245,7 @@ OpenFindBearings.Api（以下简称 API）共注册 **163** 个端点，按职�
 
 ---
 
-## 5. 用户端点 `/api/me`（24 个）
+## 5. 用户端点 `/api/me`（27 个）
 
 组授权：`RequireAuthorization("Authenticated")`
 
@@ -289,6 +296,17 @@ OpenFindBearings.Api（以下简称 API）共注册 **163** 个端点，按职�
 | GET | `/api/me/corrections/{id:guid}` | 获取纠错详情 |
 | POST | `/api/me/bearings/{bearingId:guid}/corrections` |
 | POST | `/api/me/merchants/{merchantId:guid}/corrections` |
+
+### 5.5 意见反馈（v1.59.5）
+
+| 方法 | 路由 | 说明 |
+|------|------|------|
+| POST | `/api/me/feedback/images` | 上传反馈附件（multipart，字段名 `file`，jpg/png/webp、≤5MB），返回相对媒体键 |
+| POST | `/api/me/feedback` | 提交反馈：`category`（0 建议/1 问题/2 举报/3 其他）、`content`（5–1000 字）、`imageUrls`（≤3，须为本端点上产出的路径）、`contact`（选填） |
+| GET | `/api/me/feedback` | 我的反馈分页（含状态与管理员回复） |
+
+- 每日提交上限取 `Business.FeedbackDailyLimit`（默认 5，0=不限），按业务日界（`BusinessClock`）统计。
+- 提交时 `ClientInfo` 由服务端取 `User-Agent` 写入，前端不传，避免伪造。
 
 ---
 
@@ -369,7 +387,7 @@ OpenFindBearings.Api（以下简称 API）共注册 **163** 个端点，按职�
 
 ---
 
-## 8. 后台管理端点 `/api/admin`（75 个）
+## 8. 后台管理端点 `/api/admin`（78 个）
 
 组授权：`RequireAuthorization("Admin")`。所有端点通过 `RequirePermission("bearing.xxx")` 或 `RequireRole("SuperAdmin,Admin")` 控制访问。
 
@@ -509,6 +527,18 @@ OpenFindBearings.Api（以下简称 API）共注册 **163** 个端点，按职�
 | PUT | `/api/admin/config/{key}` | `system.manage` |
 | POST | `/api/admin/cache/refresh-rate-limit` | `system.manage` |
 | GET | `/api/admin/config/price` | `system.view` |
+
+### 8.13 意见反馈（v1.59.5）
+
+| 方法 | 路由 | RequirePermission |
+|------|------|-------------------|
+| GET | `/api/admin/feedbacks` | `feedback.view` |
+| POST | `/api/admin/feedbacks/{id:guid}/reply` | `feedback.edit` |
+| POST | `/api/admin/feedbacks/{id:guid}/status` | `feedback.edit` |
+
+- `GET /api/admin/feedbacks`：`status`（Pending/Processing/Resolved/Closed）、`category`（Suggestion/Bug/ContentReport/Other）、`keyword`（内容或联系方式）、`page`、`pageSize`；返回提交人昵称与**脱敏手机号**（前 3 后 4）。
+- `POST .../reply`（body `{ "reply": "..." }`，1–500 字）：写入回复并把状态置为 `Resolved`，同时发 `feedback_replied` 站内信；已回复的反馈不能再退回 `Pending`。
+- `POST .../status`（body `{ "status": "Processing" }`）：仅分诊流转，不发通知。
 
 ---
 
