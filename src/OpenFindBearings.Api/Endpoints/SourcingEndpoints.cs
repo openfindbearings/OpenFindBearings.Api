@@ -334,7 +334,9 @@ namespace OpenFindBearings.Api.Endpoints
                 if (!currentUser.UserId.HasValue)
                     return ApiResponseHelper.Unauthorized(httpContext: httpContext);
 
-                await mediator.Send(new MakeDemandPublicCommand(id, currentUser.UserId.Value), httpContext.RequestAborted);
+                // 改动说明（v2.23.0）：透传当前商户上下文，使发布商户在职管理员可代办转公开（防经办人离职死单）
+                await mediator.Send(new MakeDemandPublicCommand(id, currentUser.UserId.Value, currentUser.CurrentMerchantId),
+                    httpContext.RequestAborted);
                 return ApiResponseHelper.Ok("已转为公开", httpContext: httpContext);
             })
             .RequireAuthorization()
@@ -401,7 +403,9 @@ namespace OpenFindBearings.Api.Endpoints
                 if (!currentUser.UserId.HasValue)
                     return ApiResponseHelper.Unauthorized(httpContext: httpContext);
 
-                await mediator.Send(new SelectResponseCommand(currentUser.UserId.Value, id, request.ResponseId),
+                // 改动说明（v2.23.0）：透传当前商户上下文，使发布商户在职管理员可代办选定应答
+                await mediator.Send(new SelectResponseCommand(currentUser.UserId.Value, id, request.ResponseId,
+                        currentUser.CurrentMerchantId),
                     httpContext.RequestAborted);
                 return ApiResponseHelper.Ok("已选定，商家联系方式已解锁", httpContext: httpContext);
             })
@@ -453,7 +457,9 @@ namespace OpenFindBearings.Api.Endpoints
                 if (!currentUser.UserId.HasValue)
                     return ApiResponseHelper.Unauthorized(httpContext: httpContext);
 
-                await mediator.Send(new CancelDemandCommand(currentUser.UserId.Value, id), httpContext.RequestAborted);
+                // 改动说明（v2.23.0）：透传当前商户上下文，使发布商户在职管理员可代办取消
+                await mediator.Send(new CancelDemandCommand(currentUser.UserId.Value, id, currentUser.CurrentMerchantId),
+                    httpContext.RequestAborted);
                 return ApiResponseHelper.Ok("寻货已取消", httpContext: httpContext);
             })
             .RequireAuthorization()
@@ -504,7 +510,7 @@ namespace OpenFindBearings.Api.Endpoints
             /// <summary>
             /// 商户名义发布的寻货列表（v2.12.0 商户工作台"寻货管理-我发布的"）：
             /// 按当前商户（X-Merchant-Id）查 PublisherMerchantId=该商户 的全状态单，
-            /// 在职成员均可见（含经办人标记，管理操作仍限经办人本人——前端按 isMine 出按钮）
+            /// 在职成员均可见（含经办人标记，管理操作限经办人或本店管理员——前端按 canManage 出按钮）
             /// </summary>
             group.MapGet("/merchant/demands", async (
                 [FromServices] ICurrentUserService currentUser,
@@ -543,9 +549,12 @@ namespace OpenFindBearings.Api.Endpoints
                         expiryAt = d.ExpiryAt,
                         isPinned = d.PinnedUntil.HasValue && d.PinnedUntil.Value > nowPinned,
                         pinnedUntil = d.PinnedUntil,
-                        // 经办人信息：管理按钮仅本人可见，其他成员提示"由发布人操作"
+                        // 经办人信息：管理按钮仅经办人可见，其他成员提示"由发布人操作"
                         publisherName = publisher?.Nickname ?? "已注销用户",
                         isMine = d.PublisherUserId == currentUser.UserId.Value,
+                        // 改动说明（v2.23.0）：管理权由"仅经办人"放宽为"经办人或本店在职管理员"，
+                        //   单独下发 canManage 供前端出/藏管理按钮（isMine 仍保留用于展示"由我发布"）
+                        canManage = d.PublisherUserId == currentUser.UserId.Value || member.IsAdmin,
                         // 改动说明（v1.8.0 公开/邀请）：本店寻货卡片显示曝光范围与收件人家数
                         isPrivate = d.IsPrivate,
                         invitedCount = d.InvitedMerchantIds.Count
@@ -558,7 +567,7 @@ namespace OpenFindBearings.Api.Endpoints
             .WithSummary("商户名义发布的寻货列表");
 
             /// <summary>
-            /// 批量删除寻货需求（v2.12.0 列表删除）：经办人软删自己的终态单（左滑单删=ids 传一个）；
+            /// 批量删除寻货需求（v2.12.0 列表删除）：经办人或本店管理员软删终态单（左滑单删=ids 传一个）；
             /// 进行中拒删计入 skipped（须先取消走通知流程）；数据与应答方视图保留
             /// </summary>
             group.MapPost("/demands/batch-delete", async (
@@ -570,7 +579,8 @@ namespace OpenFindBearings.Api.Endpoints
                 if (!currentUser.UserId.HasValue)
                     return ApiResponseHelper.Unauthorized(httpContext: httpContext);
 
-                var (deleted, skipped) = await mediator.Send(new BatchDeleteDemandsCommand(currentUser.UserId.Value, request.Ids), httpContext.RequestAborted);
+                var (deleted, skipped) = await mediator.Send(new BatchDeleteDemandsCommand(
+                    currentUser.UserId.Value, request.Ids, currentUser.CurrentMerchantId), httpContext.RequestAborted);
                 return ApiResponseHelper.Ok(new { deleted, skipped }, httpContext: httpContext);
             })
             .RequireAuthorization()

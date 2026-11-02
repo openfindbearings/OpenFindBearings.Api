@@ -1,4 +1,5 @@
 using MediatR;
+using OpenFindBearings.Application.Services;
 using OpenFindBearings.Application.Shared.Interfaces;
 using OpenFindBearings.Domain.Aggregates;
 using OpenFindBearings.Domain.Entities;
@@ -14,10 +15,11 @@ namespace OpenFindBearings.Application.Commands.Sourcing
     /// （改动说明 v2.18.0 电话单向：只解锁"需求方查看商家联系方式"，需求方号码不下发商家，防胁迫回执；
     ///  解锁的读取判定在详情查询：SelectedResponseId 关联才返回 contact 字段）
     /// </summary>
-    /// <param name="UserId">发布人（仅本人可操作）</param>
+    /// <param name="UserId">操作人（经办人本人，或该商户在职管理员）</param>
     /// <param name="DemandId">寻货需求</param>
     /// <param name="ResponseId">被选定的应答</param>
-    public record SelectResponseCommand(Guid UserId, Guid DemandId, Guid ResponseId) : IRequest;
+    /// <param name="ActorMerchantId">操作时的当前商户上下文（商户名义单代办判定用，无则空）</param>
+    public record SelectResponseCommand(Guid UserId, Guid DemandId, Guid ResponseId, Guid? ActorMerchantId = null) : IRequest;
 
     /// <summary>
     /// 选定应答处理器
@@ -27,22 +29,26 @@ namespace OpenFindBearings.Application.Commands.Sourcing
         private readonly ISourcingDemandRepository _demandRepository;
         private readonly ISourcingResponseRepository _responseRepository;
         private readonly IMerchantRepository _merchantRepository;
+        // 改动说明（v2.23.0）：代办判定需校验操作人是否为发布商户的在职管理员
+        private readonly IMerchantMemberRepository _memberRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMediator _mediator;
 
         /// <summary>
-        /// 构造：寻货/商户仓储 + 工作单元 + 事件派发
+        /// 构造：寻货/商户/成员仓储 + 工作单元 + 事件派发
         /// </summary>
         public SelectResponseCommandHandler(
             ISourcingDemandRepository demandRepository,
             ISourcingResponseRepository responseRepository,
             IMerchantRepository merchantRepository,
+            IMerchantMemberRepository memberRepository,
             IUnitOfWork unitOfWork,
             IMediator mediator)
         {
             _demandRepository = demandRepository;
             _responseRepository = responseRepository;
             _merchantRepository = merchantRepository;
+            _memberRepository = memberRepository;
             _unitOfWork = unitOfWork;
             _mediator = mediator;
         }
@@ -52,8 +58,10 @@ namespace OpenFindBearings.Application.Commands.Sourcing
         {
             var demand = await _demandRepository.GetByIdAsync(request.DemandId, cancellationToken)
                 ?? throw new InvalidOperationException("寻货需求不存在");
-            if (demand.PublisherUserId != request.UserId)
-                throw new UnauthorizedAccessException("只有发布人可以选定应答");
+            // 改动说明（v2.23.0）：权限由"仅发布人"放宽为"经办人或发布商户在职管理员"，员工离职后仍可处理遗留单
+            if (!await DemandAccessGuard.CanManageAsync(
+                    demand, request.UserId, request.ActorMerchantId, _memberRepository, cancellationToken))
+                throw new UnauthorizedAccessException("只有经办人或该商户管理员可以选定应答");
             demand.TryExpire();
             if (demand.Status != SourcingDemandStatus.Published)
                 throw new InvalidOperationException("该寻货已结束，无法选定");
@@ -98,9 +106,10 @@ namespace OpenFindBearings.Application.Commands.Sourcing
     /// <summary>
     /// 取消寻货命令（v1.35.0）：发布人主动关闭进行中的需求（通知全体应答者）
     /// </summary>
-    /// <param name="UserId">发布人</param>
+    /// <param name="UserId">操作人（经办人本人，或该商户在职管理员）</param>
     /// <param name="DemandId">寻货需求</param>
-    public record CancelDemandCommand(Guid UserId, Guid DemandId) : IRequest;
+    /// <param name="ActorMerchantId">操作时的当前商户上下文（商户名义单代办判定用，无则空）</param>
+    public record CancelDemandCommand(Guid UserId, Guid DemandId, Guid? ActorMerchantId = null) : IRequest;
 
     /// <summary>
     /// 取消寻货处理器
@@ -108,18 +117,22 @@ namespace OpenFindBearings.Application.Commands.Sourcing
     public class CancelDemandCommandHandler : IRequestHandler<CancelDemandCommand>
     {
         private readonly ISourcingDemandRepository _demandRepository;
+        // 改动说明（v2.23.0）：代办判定需校验操作人是否为发布商户的在职管理员
+        private readonly IMerchantMemberRepository _memberRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMediator _mediator;
 
         /// <summary>
-        /// 构造：需求仓储 + 工作单元 + 事件派发
+        /// 构造：需求仓储 + 成员仓储 + 工作单元 + 事件派发
         /// </summary>
         public CancelDemandCommandHandler(
             ISourcingDemandRepository demandRepository,
+            IMerchantMemberRepository memberRepository,
             IUnitOfWork unitOfWork,
             IMediator mediator)
         {
             _demandRepository = demandRepository;
+            _memberRepository = memberRepository;
             _unitOfWork = unitOfWork;
             _mediator = mediator;
         }
@@ -129,8 +142,10 @@ namespace OpenFindBearings.Application.Commands.Sourcing
         {
             var demand = await _demandRepository.GetByIdAsync(request.DemandId, cancellationToken)
                 ?? throw new InvalidOperationException("寻货需求不存在");
-            if (demand.PublisherUserId != request.UserId)
-                throw new UnauthorizedAccessException("只有发布人可以取消");
+            // 改动说明（v2.23.0）：权限由"仅发布人"放宽为"经办人或发布商户在职管理员"
+            if (!await DemandAccessGuard.CanManageAsync(
+                    demand, request.UserId, request.ActorMerchantId, _memberRepository, cancellationToken))
+                throw new UnauthorizedAccessException("只有经办人或该商户管理员可以取消");
             if (demand.Status != SourcingDemandStatus.Published)
                 throw new InvalidOperationException("仅进行中的寻货可以取消");
 
