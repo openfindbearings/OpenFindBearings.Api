@@ -1,10 +1,14 @@
 ﻿# API 端点说明文档
 
-**版本：** v1.59.6
-**日期：** 2026-10-30
-**上一版：** v1.59.5
+**版本：** v1.59.7
+**日期：** 2026-11-02
+**上一版：** v1.59.6
 **状态：** 与代码同步
 
+> v1.59.7 变更（寻货单管理权代办，无新端点）：
+> 1. **管理权口径放宽**：商户名义单的取消（`POST /api/sourcing/demands/{id}/cancel`）、转公开（`.../publish-public`）、选定应答（`.../select`）、批量删除（`POST /api/sourcing/demands/batch-delete`）由"仅经办人本人"放宽为"经办人本人 或 该单发布商户的在职管理员"；代办判定统一走 `DemandAccessGuard`，要求请求头 `X-Merchant-Id` 恰为发布商户，个人名义单不适用。修复经办人离职/停用后单据无人可管（删不掉、转不了公开、选不了应答）的死单问题。
+> 2. **`GET /api/sourcing/merchant/demands` 新增 `canManage`**：`isMine` 仍表示"当前用户是经办人"（用于展示"由我发布"），新增 `canManage` 由服务端计算"经办人或本店在职管理员"，前端据此出/藏管理按钮。店铺单的可见范围不变（本店在职成员全部可见）。
+> 3. **寻货置顶仍限本人**：`POST /api/mall/redeem` 的需求置顶卡属于个人积分权益（`PublisherUserId` 判定不变），不做商户管理员代办。
 > v1.59.6 变更（互联网数据如实公布 + 搜索结果分流，无新端点）：
 > 1. **`GET /api/merchants/{id}` 互联网来源商家下发联系方式**：`MerchantDto`/`MerchantDetailDto` 新增 `isInternetSource`（`DataSource.SourceType=Internet`）；非成员查看互联网来源商家时 `contact` 不再为 null——固话原样、**手机号脱敏**（`138****1234`）、联系人/邮箱/地址原样。认证商家与其他未认证商家仍不下发（号码在寻货撮合达成后互给）。
 > 2. **`GET /api/bearings/search` 新增 `verifiedMerchantCount`**：当前页按型号批量统计"认证商家有货"家数，口径与 `SourcingMatcher` 一致（商品公域可见 + 商家已认证 + `Status=Active` + `IsActive`，按商家去重）。前端据 0/非 0 决定展示「寻货」入口还是仅标注互联网数据。

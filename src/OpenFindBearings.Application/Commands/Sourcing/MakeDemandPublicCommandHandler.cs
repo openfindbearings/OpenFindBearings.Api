@@ -14,8 +14,9 @@ namespace OpenFindBearings.Application.Commands.Sourcing
     ///   新纳入的认证在售商家也被告知（口径与发布即公开一致），而已被告知过的原收件人不再打扰（绝不二次）
     /// </summary>
     /// <param name="DemandId">寻货单 ID</param>
-    /// <param name="UserId">操作人（仅发布人本人可操作，与列表管理按钮口径一致）</param>
-    public record MakeDemandPublicCommand(Guid DemandId, Guid UserId) : IRequest;
+    /// <param name="UserId">操作人（经办人本人，或该商户在职管理员）</param>
+    /// <param name="ActorMerchantId">操作时的当前商户上下文（商户名义单代办判定用，无则空）</param>
+    public record MakeDemandPublicCommand(Guid DemandId, Guid UserId, Guid? ActorMerchantId = null) : IRequest;
 
     /// <summary>
     /// 转为公开处理器（守卫在聚合内：已是公开/已非进行中一律拒绝）
@@ -55,9 +56,11 @@ namespace OpenFindBearings.Application.Commands.Sourcing
         {
             var demand = await _demandRepository.GetByIdAsync(request.DemandId, cancellationToken)
                 ?? throw new InvalidOperationException("寻货需求不存在");
-            // 权限：仅发布人本人（商户名义单同样限经办人——与"商户寻货列表仅本人出管理按钮"口径一致）
-            if (demand.PublisherUserId != request.UserId)
-                throw new UnauthorizedAccessException("只有发布人可以将寻货转为公开");
+            // 改动说明（v2.23.0）：权限由"仅发布人"放宽为"经办人或发布商户在职管理员"，
+            //   避免经办人离职后邀请单无人可转公开（只能等过期）
+            if (!await DemandAccessGuard.CanManageAsync(
+                    demand, request.UserId, request.ActorMerchantId, _memberRepository, cancellationToken))
+                throw new UnauthorizedAccessException("只有经办人或该商户管理员可以将寻货转为公开");
 
             // 改动说明（v1.8.2）：MakePublic 会清空收件人快照，故先留存原收件人集合，供差集补发判定
             var invitedBefore = demand.InvitedMerchantIds.ToList();
