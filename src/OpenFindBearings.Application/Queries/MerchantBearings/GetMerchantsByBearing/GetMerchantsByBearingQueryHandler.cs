@@ -2,7 +2,6 @@
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.DTOs;
 using OpenFindBearings.Application.Extensions;
-using OpenFindBearings.Application.Shared;
 using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
 
@@ -84,10 +83,10 @@ public class GetMerchantsByBearingQueryHandler : IRequestHandler<GetMerchantsByB
                         // 改动说明（v2.22.3 互联网数据展示）：标记互联网来源商家，
                         //   前端在"其他在售"段给它加「互联网数据」小标，并把联系方式按公开数据口径展示
                         IsInternetSource = best.Merchant!.DataSource?.SourceType == DataSourceType.Internet,
-                        // 互联网来源商家展示脱敏手机（无手机回退固话原样）；认证/其他商家恒 null，号码走寻货撮合互给
+                        // 改动说明（v1.59.8 互联网数据公开口径）：互联网来源商家属公开抓取数据，手机与固话都原样下发，
+                        //   前端可直接拨打；认证/其他商家仍恒 null，号码走寻货撮合互给
                         ContactPhone = best.Merchant!.DataSource?.SourceType == DataSourceType.Internet
-                            ? (ContactMasker.MaskMobile(best.Merchant!.Contact?.Mobile)
-                                ?? ContactMasker.KeepLandline(best.Merchant!.Contact?.Phone))
+                            ? (best.Merchant!.Contact?.Mobile ?? best.Merchant!.Contact?.Phone)
                             : null
                     },
                     // 改动说明（v2.15.0 搜索权重批次）：携带商家等级序数用于排序（与商家搜索同口径）

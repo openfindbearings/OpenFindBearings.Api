@@ -78,16 +78,16 @@ namespace OpenFindBearings.Application.Queries.Merchants.GetMerchant
                 }
             }
 
-            // 改动说明（v2.22.3 互联网数据展示）：互联网来源商家（无账号、未认证）的联系方式属公开抓取数据，
-            //   对非成员查看者按"如实公布"口径下发——固话原样、手机号脱敏，并配合 IsInternetSource 提示
-            //   "数据来源互联网、未经核实"；认证商家与其他未认证商家仍保持 Contact=null（走寻货撮合互给）
+            // 改动说明（v1.59.8 互联网数据公开口径）：互联网来源商家（无账号、未认证）的联系方式属公开抓取数据，
+            //   对非成员查看者按"如实公布"口径下发——手机、固话、联系人、邮箱、地址全部原样，
+            //   前端可直接拨打；认证商家与其他未认证商家仍保持 Contact=null（走寻货撮合互给）
             if (dto.Contact == null && dto.IsInternetSource)
             {
                 dto.Contact = new MerchantContactDto
                 {
                     ContactPerson = merchant.Contact?.ContactPerson,
-                    Phone = ContactMasker.KeepLandline(merchant.Contact?.Phone),
-                    Mobile = ContactMasker.MaskMobile(merchant.Contact?.Mobile),
+                    Phone = merchant.Contact?.Phone,
+                    Mobile = merchant.Contact?.Mobile,
                     Email = merchant.Contact?.Email,
                     Address = merchant.Contact?.Address
                 };

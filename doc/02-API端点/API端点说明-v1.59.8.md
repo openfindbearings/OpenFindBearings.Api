@@ -1,10 +1,14 @@
 ﻿# API 端点说明文档
 
-**版本：** v1.59.7
-**日期：** 2026-11-02
-**上一版：** v1.59.6
+**版本：** v1.59.8
+**日期：** 2026-11-03
+**上一版：** v1.59.7
 **状态：** 与代码同步
 
+> v1.59.8 变更（互联网来源联系方式回归公开口径，无新端点）：
+> 1. **手机号不再脱敏**：`GET /api/merchants/{id}` 与 `GET /api/bearings/{id}/merchants` 对互联网来源商家（`DataSource.SourceType=Internet`）原样下发手机号，与固话、联系人、邮箱、地址一致；前端可直接一键拨号。原 `ContactMasker`（手机 `138****1234`）随之下线删除。
+> 2. **口径依据**：只有商家自管并上架的商品才走寻货与商城，其余互联网数据本就是公开抓取信息；号码带星既无法拨打、也与"如实公布"矛盾。
+> 3. **边界不变**：认证商家与其他未认证商家仍不下发联系方式，号码只在寻货撮合达成后互给。
 > v1.59.7 变更（寻货单管理权代办，无新端点）：
 > 1. **管理权口径放宽**：商户名义单的取消（`POST /api/sourcing/demands/{id}/cancel`）、转公开（`.../publish-public`）、选定应答（`.../select`）、批量删除（`POST /api/sourcing/demands/batch-delete`）由"仅经办人本人"放宽为"经办人本人 或 该单发布商户的在职管理员"；代办判定统一走 `DemandAccessGuard`，要求请求头 `X-Merchant-Id` 恰为发布商户，个人名义单不适用。修复经办人离职/停用后单据无人可管（删不掉、转不了公开、选不了应答）的死单问题。
 > 2. **`GET /api/sourcing/merchant/demands` 新增 `canManage`**：`isMine` 仍表示"当前用户是经办人"（用于展示"由我发布"），新增 `canManage` 由服务端计算"经办人或本店在职管理员"，前端据此出/藏管理按钮。店铺单的可见范围不变（本店在职成员全部可见）。
@@ -103,6 +107,7 @@
 
 | 版本 | 日期 | 变更说明 |
 |------|------|----------|
+| v1.59.8 | 2026-11-03 | **互联网来源联系方式回归公开口径（无新端点）**：`MerchantDetailDto.contact` 与 `BearingMerchantDto.contactPhone` 对互联网来源商家原样下发手机号（不再 `138****1234` 脱敏），前端可一键拨号；删除 `ContactMasker`。认证/其他商家仍不下发 |
 | v1.59.6 | 2026-10-30 | **互联网数据如实公布 + 搜索结果分流（无新端点）**：`MerchantDto`/`MerchantDetailDto` 加 `isInternetSource`，互联网来源商家向非成员下发脱敏联系方式（固话原样、手机 `138****1234`）；`BearingDto` 加 `verifiedMerchantCount`（口径同 `SourcingMatcher`），搜索结果据此决定是否提供「寻货」入口；`BearingMerchantDto` 加 `isInternetSource`/`contactPhone`。不新增端点、无迁移 |
 | v1.59.5 | 2026-10-29 | **意见反馈（+6 端点）**：用户侧 `POST /api/me/feedback/images`、`POST /api/me/feedback`、`GET /api/me/feedback`（24→27）；管理侧 `GET /api/admin/feedbacks`（`feedback.view`）、`POST .../reply`、`POST .../status`（`feedback.edit`，75→78）。新增 `UserFeedbacks` 表（迁移 `AddUserFeedbacks`，`ImageUrls` 为 `text[]`）、权限键 `feedback.view`/`feedback.edit`、配置 `Business.FeedbackDailyLimit=5`；回复后发 `feedback_replied` 站内信，已回复不可退回待处理。端点总数 +6 |
 | v1.59.3 | 2026-10-27 | **图片维护收口（+1 端点）**：① 新增 `POST /api/admin/bearings/{id:guid}/images`（`bearing.edit`，multipart，`image3D`/`image2D` 可空 + `clearImage3D`/`clearImage2D`，单张 ≤5MB、JPG/PNG/WEBP），运营直接维护型号主图并标记 `DataSource=Manual`；② 图片 UGC 纠错不开放，纠错体系仍只处理文本字段；③ 修复重量纠错解析失败静默清空（改为保留原值）。后台管理端点组 75→76 |
@@ -829,9 +834,9 @@ OpenFindBearings.Api（以下简称 API）共注册 **169** 个端点，按职�
 | 字段/端点 | 说明 |
 |---|---|
 | `MerchantDto.isInternetSource` / `MerchantDetailDto.isInternetSource` | `DataSource.SourceType=Internet` 即 true：无账号、未认证的公开抓取商家 |
-| `MerchantDetailDto.contact`（互联网来源） | 非成员查看时下发；手机号由服务端脱敏（`138****1234`），固话原样，联系人/邮箱/地址原样 |
+| `MerchantDetailDto.contact`（互联网来源） | 非成员查看时下发；手机号、固话、联系人/邮箱/地址全部原样（v1.59.8 起手机不再脱敏），前端可直接拨打 |
 | `BearingDto.verifiedMerchantCount`（`GET /api/bearings/search`） | 当前页按型号统计认证商家有货家数，口径同 `SourcingMatcher`；>0 前端给「寻货」，=0 仅标互联网数据 |
-| `BearingMerchantDto.isInternetSource` / `contactPhone`（`GET /api/bearings/{id}/merchants`） | 互联网来源行标记 + 脱敏手机（无手机回退固话）；认证商家 `contactPhone` 恒 null |
+| `BearingMerchantDto.isInternetSource` / `contactPhone`（`GET /api/bearings/{id}/merchants`） | 互联网来源行标记 + 原样号码（无手机回退固话，v1.59.8 起不脱敏）；认证商家 `contactPhone` 恒 null |
 
 > 展示口径：认证商家货源走寻货/邀请，撮合达成后互给号码；互联网来源数据如实公布但明确标注"互联网数据 · 未经平台核实"，不提供邀请入口，也不进商城。
 ### 替代品列表查询参数（`GET /api/admin/interchanges`，`interchange.view`）
