@@ -66,9 +66,12 @@ namespace OpenFindBearings.Api.Extensions
             return services;
         }
 
-        public static IServiceCollection AddHealthChecksService(this IServiceCollection services, IConfiguration configuration)
+        public static IServiceCollection AddHealthChecksService(this IServiceCollection services)
         { 
             // 添加健康检查
+            // 改动说明（v2.22.4）：移除指向 Identity /health 的 external_api 检查。跨服务依赖不应由
+            //   API 的探针承担——Identity 重启期间该项会挂住 HTTP 请求，拖到探针超时后 liveness 判死
+            //   API，形成"Identity 抖一下就整站重启"的连锁故障。Identity 可用性由它自己的探针暴露。
             services.AddHealthChecks()
                  // 1. 数据库检查（必须）
                  .AddDbContextCheck<ApplicationDbContext>(
@@ -83,13 +86,7 @@ namespace OpenFindBearings.Api.Extensions
                 // 3. 磁盘空间检查（可选）
                 .AddCheck<DiskSpaceHealthCheck>(
                     name: "disk",
-                    failureStatus: HealthStatus.Degraded)
-
-                 // 4. 外部依赖检查（可选）
-                 .AddUrlGroup(
-                     new Uri($"{configuration["Authentication:Authority"] ?? "https://localhost:7201"}/health"),
-                     name: "external_api",
-                     failureStatus: HealthStatus.Degraded);
+                    failureStatus: HealthStatus.Degraded);
 
             return services;
         }

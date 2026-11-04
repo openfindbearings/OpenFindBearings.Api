@@ -1,10 +1,14 @@
 ﻿# API 端点说明文档
 
-**版本：** v1.59.8
-**日期：** 2026-11-03
-**上一版：** v1.59.7
+**版本：** v1.59.9
+**日期：** 2026-11-04
+**上一版：** v1.59.8
 **状态：** 与代码同步
 
+> v1.59.9 变更（健康检查去跨服务依赖，端点集合不变）：
+> 1. **移除 `external_api` 检查**：`/health` 不再探测 Identity `/health`。跨服务依赖挂在 API 探针上会把 Identity 的抖动放大成 API 重启——检查卡住时 `/health` 迟迟不返回，探针超时后 liveness 直接杀进程，形成"Identity 重启 → API 反复重启"的连锁。Identity 可用性由它自己的探针暴露。
+> 2. **探针分层不再全打 `/health`**：`startupProbe` 与 `livenessProbe` 改指 `/health/live`（只判进程存活，不跑任何检查项），只有 `readinessProbe` 打 `/health`（含数据库等完整检查），并把 `timeoutSeconds` 放宽到 10、`failureThreshold` 放宽到 6。`/health`、`/healthz`、`/health/live`、`/health/ready` 四个端点本身不变。
+> 3. **口径**：健康检查只负责本进程与本地依赖（数据库/内存/磁盘），跨服务状态交给各自的探针与监控，不进聚合健康检查。
 > v1.59.8 变更（互联网来源联系方式回归公开口径，无新端点）：
 > 1. **手机号不再脱敏**：`GET /api/merchants/{id}` 与 `GET /api/bearings/{id}/merchants` 对互联网来源商家（`DataSource.SourceType=Internet`）原样下发手机号，与固话、联系人、邮箱、地址一致；前端可直接一键拨号。原 `ContactMasker`（手机 `138****1234`）随之下线删除。
 > 2. **口径依据**：只有商家自管并上架的商品才走寻货与商城，其余互联网数据本就是公开抓取信息；号码带星既无法拨打、也与"如实公布"矛盾。
@@ -597,12 +601,14 @@ OpenFindBearings.Api（以下简称 API）共注册 **169** 个端点，按职�
 
 ## 12. 健康检查端点
 
-| 端点 | 说明 |
-|------|------|
-| `/health` | 详细 JSON 健康检查 |
-| `/healthz` | 纯文本健康检查 |
-| `/health/live` | K8s 存活探针 |
-| `/health/ready` | K8s 就绪探针 |
+| 端点 | 说明 | 检查项 |
+|------|------|--------|
+| `/health` | 详细 JSON 健康检查，K8s 就绪探针使用 | 数据库（含）+ 内存 + 磁盘 |
+| `/healthz` | 纯文本健康检查 | 同上 |
+| `/health/live` | K8s 启动与存活探针 | 无（只判进程是否可响应） |
+| `/health/ready` | K8s 就绪探针（排除数据库标签） | 内存 + 磁盘 |
+
+> v1.59.9 起 `/health` 不再包含跨服务检查项 `external_api`（原探测 Identity）；探针分层见文档头部变更说明。
 
 ---
 
