@@ -1,10 +1,13 @@
 ﻿# API 端点说明文档
 
-**版本：** v1.59.9
+**版本：** v1.59.10
 **日期：** 2026-11-04
-**上一版：** v1.59.8
+**上一版：** v1.59.9
 **状态：** 与代码同步
 
+> v1.59.10 变更（管理端商家认证筛选修正，无新端点）：
+> 1. **`GET /api/admin/merchants` 的 `verifiedOnly` 改为双向过滤**：`true` 仅已认证、`false` 仅未认证、不传不过滤。原实现只在 `true` 时生效，传 `false` 等于不过滤，导致 Admin「未认证」页签混入已认证商家。
+> 2. **影响面**：`MerchantSearchParams.VerifiedOnly` 由三态语义（true/不过滤）补全为三态过滤，公开搜索接口 `GET /api/merchants/search` 传 `false` 同样收窄为未认证，与参数名语义一致。
 > v1.59.9 变更（健康检查去跨服务依赖，端点集合不变）：
 > 1. **移除 `external_api` 检查**：`/health` 不再探测 Identity `/health`。跨服务依赖挂在 API 探针上会把 Identity 的抖动放大成 API 重启——检查卡住时 `/health` 迟迟不返回，探针超时后 liveness 直接杀进程，形成"Identity 重启 → API 反复重启"的连锁。Identity 可用性由它自己的探针暴露。
 > 2. **探针分层不再全打 `/health`**：`startupProbe` 与 `livenessProbe` 改指 `/health/live`（只判进程存活，不跑任何检查项），只有 `readinessProbe` 打 `/health`（含数据库等完整检查），并把 `timeoutSeconds` 放宽到 10、`failureThreshold` 放宽到 6。`/health`、`/healthz`、`/health/live`、`/health/ready` 四个端点本身不变。
@@ -111,6 +114,8 @@
 
 | 版本 | 日期 | 变更说明 |
 |------|------|----------|
+| v1.59.10 | 2026-11-04 | **管理端商家认证筛选修正（无新端点）**：`GET /api/admin/merchants` 的 `verifiedOnly` 改双向过滤（`true` 仅已认证、`false` 仅未认证、不传不限）；原实现只在 `true` 时过滤，`false` 等于不过滤，导致 Admin「未认证」页签混入已认证商家 |
+| v1.59.9 | 2026-11-04 | **健康检查去跨服务依赖（无新端点）**：`/health` 移除探测 Identity 的 `external_api`（该检查卡住会让 API 探针超时并被 liveness 杀进程，形成重启连锁）；探针分层为 startup/liveness→`/health/live`、readiness→`/health`，端点集合不变 |
 | v1.59.8 | 2026-11-03 | **互联网来源联系方式回归公开口径（无新端点）**：`MerchantDetailDto.contact` 与 `BearingMerchantDto.contactPhone` 对互联网来源商家原样下发手机号（不再 `138****1234` 脱敏），前端可一键拨号；删除 `ContactMasker`。认证/其他商家仍不下发 |
 | v1.59.6 | 2026-10-30 | **互联网数据如实公布 + 搜索结果分流（无新端点）**：`MerchantDto`/`MerchantDetailDto` 加 `isInternetSource`，互联网来源商家向非成员下发脱敏联系方式（固话原样、手机 `138****1234`）；`BearingDto` 加 `verifiedMerchantCount`（口径同 `SourcingMatcher`），搜索结果据此决定是否提供「寻货」入口；`BearingMerchantDto` 加 `isInternetSource`/`contactPhone`。不新增端点、无迁移 |
 | v1.59.5 | 2026-10-29 | **意见反馈（+6 端点）**：用户侧 `POST /api/me/feedback/images`、`POST /api/me/feedback`、`GET /api/me/feedback`（24→27）；管理侧 `GET /api/admin/feedbacks`（`feedback.view`）、`POST .../reply`、`POST .../status`（`feedback.edit`，75→78）。新增 `UserFeedbacks` 表（迁移 `AddUserFeedbacks`，`ImageUrls` 为 `text[]`）、权限键 `feedback.view`/`feedback.edit`、配置 `Business.FeedbackDailyLimit=5`；回复后发 `feedback_replied` 站内信，已回复不可退回待处理。端点总数 +6 |
@@ -807,6 +812,7 @@ OpenFindBearings.Api（以下简称 API）共注册 **169** 个端点，按职�
 ### 商品/商家列表查询参数（`GET /api/admin/merchants`，`merchant.view`）
 | 参数 | 说明 |
 |---|---|
+| `verifiedOnly` | 认证筛选（v1.59.10 起双向）：`true`=仅已认证；`false`=仅未认证；不传=不限 |
 | `registeredFrom` / `registeredTo` | 注册时间区间（业务日历 `yyyy-MM-dd`，两端含；按 `BusinessClock` 日界换算为 UTC 区间，上限取"次日零点不含"） |
 | `onboardedFrom` / `onboardedTo` | 入驻时间区间（同上口径，过滤 `OnboardedAt`） |
 | `internetSource` | 来源筛选：`true`=仅互联网来源；`false`=仅非互联网来源；不传=不限（来源拆分行下钻用） |
