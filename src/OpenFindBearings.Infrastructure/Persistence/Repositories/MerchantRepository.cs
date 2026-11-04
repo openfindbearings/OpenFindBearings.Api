@@ -56,8 +56,10 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                     m.Contact.Address != null &&
                     m.Contact.Address.Contains(searchParams.City));
 
-            if (searchParams.VerifiedOnly.HasValue && searchParams.VerifiedOnly.Value)
-                query = query.Where(m => m.IsVerified);
+            // 改动说明（v2.22.5）：认证筛选改为双向过滤——true 仅已认证、false 仅未认证。
+            //   原实现只在 true 时过滤，传 false 等于不过滤，导致 Admin「未认证」页签混入已认证商家。
+            if (searchParams.VerifiedOnly.HasValue)
+                query = query.Where(m => m.IsVerified == searchParams.VerifiedOnly.Value);
 
             if (searchParams.Status.HasValue)
                 query = query.Where(m => m.Status == searchParams.Status.Value);
