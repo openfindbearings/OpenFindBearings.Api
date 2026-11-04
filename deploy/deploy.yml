@@ -47,33 +47,41 @@ spec:
         # 改动说明（v1.31.0）：启动探针——迁移+Seed 在端口监听前同步执行，慢迁移期 liveness 会误杀
         #   （杀→重迁→恶性循环直到 rollout 超时回滚，API 发版高失败率根因）。startupProbe 给最长
         #   5 分钟启动预算，成功前 liveness/readiness 不生效；成功后 60s 判定窗口接管
+        # 改动说明（v2.22.4 探针分层）：存活只看进程（/health/live），就绪才看完整检查（/health）。
+        #   原三段全打 /health，依赖变慢会把时间耗在健康检查里，探针超时后 liveness 杀进程，形成重启循环。
         startupProbe:
           httpGet:
-            path: /health
+            path: /health/live
             port: 8080
           initialDelaySeconds: 5
           periodSeconds: 5
-          timeoutSeconds: 3
+          timeoutSeconds: 5
           failureThreshold: 60
 
         livenessProbe:
           httpGet:
-            path: /health
+            path: /health/live
             port: 8080
           initialDelaySeconds: 30
           periodSeconds: 10
           timeoutSeconds: 5
-          failureThreshold: 3
-        
+          failureThreshold: 5
+
         readinessProbe:
           httpGet:
             path: /health
             port: 8080
           initialDelaySeconds: 5
-          periodSeconds: 5
-          timeoutSeconds: 3
+          periodSeconds: 10
+          timeoutSeconds: 10
           successThreshold: 1
-          failureThreshold: 3
+          failureThreshold: 6
+
+        # 改动说明（v2.22.4）：补 requests 让 API 从 BestEffort 变 Burstable，避免内存紧张时被优先挤压
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
 ---
 apiVersion: v1
 kind: Service

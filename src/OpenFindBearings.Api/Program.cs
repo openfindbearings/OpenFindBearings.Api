@@ -36,7 +36,7 @@ if (builder.Environment.IsDevelopment())
 }
 
 // 添加健康检查
-builder.Services.AddHealthChecksService(builder.Configuration);
+        builder.Services.AddHealthChecksService();
 
 // ============ 构建应用 ============
 var app = builder.Build();
