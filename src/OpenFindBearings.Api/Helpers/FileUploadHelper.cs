@@ -18,7 +18,8 @@ namespace OpenFindBearings.Api.Helpers
                 return ext;
             }
 
-            // 改动说明：无扩展名回退 MIME 推断（与端点白名单口径一致：图片 + PDF + Excel）
+            // 改动说明：无扩展名回退 MIME 推断（与端点白名单口径一致：图片 + PDF）；
+            // 表格文件映射已移除——开源端不再提供文件批量导入，无上传端点会收到该类型
             var mime = file.ContentType?.ToLowerInvariant();
             return mime switch
             {
@@ -26,8 +27,6 @@ namespace OpenFindBearings.Api.Helpers
                 "image/png" => ".png",
                 "image/webp" => ".webp",
                 "application/pdf" => ".pdf",
-                "application/vnd.ms-excel" => ".xls",
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" => ".xlsx",
                 _ => string.Empty
             };
         }
@@ -42,8 +41,6 @@ namespace OpenFindBearings.Api.Helpers
             ".webp" => "image/webp",
             ".gif" => "image/gif",
             ".pdf" => "application/pdf",
-            ".xls" => "application/vnd.ms-excel",
-            ".xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             _ => "application/octet-stream"
         };
     }

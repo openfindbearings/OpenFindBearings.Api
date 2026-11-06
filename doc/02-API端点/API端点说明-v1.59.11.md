@@ -1,10 +1,12 @@
 ﻿# API 端点说明文档
 
-**版本：** v1.59.10
-**日期：** 2026-11-04
-**上一版：** v1.59.9
+**版本：** v1.59.11
+**日期：** 2026-11-06
+**上一版：** v1.59.10
 **状态：** 与代码同步
 
+> v1.59.11 变更（术语清理，无新端点）：
+> 1. 商家库存批量维护端点说明改为通用表述，不再绑定具体文件格式。
 > v1.59.10 变更（管理端商家认证筛选修正，无新端点）：
 > 1. **`GET /api/admin/merchants` 的 `verifiedOnly` 改为双向过滤**：`true` 仅已认证、`false` 仅未认证、不传不过滤。原实现只在 `true` 时生效，传 `false` 等于不过滤，导致 Admin「未认证」页签混入已认证商家。
 > 2. **影响面**：`MerchantSearchParams.VerifiedOnly` 由三态语义（true/不过滤）补全为三态过滤，公开搜索接口 `GET /api/merchants/search` 传 `false` 同样收窄为未认证，与参数名语义一致。
@@ -159,7 +161,7 @@
 | v1.11.0 | 2026-08-29 | 新增 GET /api/config/reliability（可信度阈值，供 Sync 运行时从 SystemConfigs 拉取，替代其 appsettings 默认值）；系统配置章节补充该内部端点 |
 | v1.12.0 | 2026-09-08 | GET /api/bearings/search 移除"至少一个搜索条件"强校验（原抛 InvalidOperationException 被映射为 400），无条件时返回空/全量分页，与商家搜索一致；限流中间件新增内部服务间调用豁免（X-Internal-Token，见《系统配置与限流设计 v1.1.0》） |
 | v1.13.0 | 2026-09-11 | 代码审查对齐：① 公共端点组补充 GET /api/login-methods（13→14）；② 用户端点组补充 POST /api/me/avatar、GET /api/me/corrections、GET /api/me/corrections/{id}（21→24）；③ 管理端点 6.2 轴承管理补充 DELETE /api/admin/bearings/{id:guid}/hard；④ 总端点数 114→118 |
-| v1.14.0 | 2026-09-12 | 商户入驻整体落地：① 新增"商户入驻"端点组（6 个）：POST /api/merchant/apply（预留转正式实现）、GET /api/merchant/application、POST /api/merchant/nominate、POST /api/merchant/nominate/{code}/accept、GET /api/merchant/claimable、GET /api/merchant/nominations/pending；② 商家端点组 12→16：新增 POST /api/merchant/members/{userId:guid}/suspend、POST /api/merchant/members/{userId:guid}/activate、PUT /api/merchant/members/{userId:guid}/role、POST /api/merchant/inventory/import（Excel 批量导入，仅商户管理员），并补成员管理小节；③ Admin 商家管理 58→60：新增 POST /api/admin/merchants/{id}/approve（审核通过入驻申请，Pending→Active，与 verify 认证分离）、POST /api/admin/merchants/{id}/members（平台指定成员兜底，复用 merchant.verify）；④ 总端点数 118→129，引导表格分组同步更新 |
+| v1.14.0 | 2026-09-12 | 商户入驻整体落地：① 新增"商户入驻"端点组（6 个）：POST /api/merchant/apply（预留转正式实现）、GET /api/merchant/application、POST /api/merchant/nominate、POST /api/merchant/nominate/{code}/accept、GET /api/merchant/claimable、GET /api/merchant/nominations/pending；② 商家端点组 12→16：新增 POST /api/merchant/members/{userId:guid}/suspend、POST /api/merchant/members/{userId:guid}/activate、PUT /api/merchant/members/{userId:guid}/role、POST /api/merchant/inventory/import（商户库存批量维护，仅商户管理员），并补成员管理小节；③ Admin 商家管理 58→60：新增 POST /api/admin/merchants/{id}/approve（审核通过入驻申请，Pending→Active，与 verify 认证分离）、POST /api/admin/merchants/{id}/members（平台指定成员兜底，复用 merchant.verify）；④ 总端点数 118→129，引导表格分组同步更新 |
 | v1.15.0 | 2026-09-14 | 商户信息维护与 Logo + 新建撞名引导认领：① 商家端点组 16→17，新增 POST /api/merchant/logo（上传商户 Logo，仅商户管理员，返回相对 URL，落 wwwroot/uploads/merchants/logo，.DisableAntiforgery）；② GET /api/merchant/profile 改按 X-Merchant-Id 当前商户上下文定位（原按"首个在职成员"，多商户读写错位），PUT /api/merchant/profile 补 IsMerchantAdmin 校验（原仅成员即可）；③ POST /api/merchant/apply（mode=self）新增撞名查重：命中可认领商户返回 HTTP 409 + ProblemDetails code=MERCHANT_CLAIMABLE_EXISTS/existingMerchantId/existingName（新增 MerchantClaimableConflictException + 中间件映射），命中已认证/已认领返回 400；④ MerchantApplicationDto 与 MerchantDetailDto 新增字段（LogoUrl；Detail 补 Website/UnifiedSocialCreditCode），MerchantExtensions.ToDetailDto 补齐 LogoUrl 等映射。总端点数 129→130 |
 | v1.16.0 | 2026-09-14 | 申请人自助撤回入驻申请：① 入驻端点组 6→7，新增 `POST /api/merchant/{merchantId:guid}/withdraw`（仅 Pending 且调用者是该商户在职 MerchantAdmin 即申请人本人可撤回；按 `Merchant.ApplicationMode` 分支清理——self 新建硬删商户及成员、claim 认领软移除认领人成员并把来源退回 Crawler 重新进入认领池、nomination/None 拒绝）。② Merchant 新增 `ApplicationMode` 列（None/Self/Claim/Nomination，默认 None 兼容存量），迁移 `AddMerchantApplicationMode`。总端点数 130→131 |
 | v1.18.0 | 2026-09-15 | 版本分发机制改为集群拉取：Taro CI 删除跨境 `kubectl cp` 推包与 psql 写库步骤（上行 ~50KB/s 阻塞发布且需集群凭据），发布动作纯 GitHub 化；K3s 侧新增 CronJob `openfindbearings-apk-sync`（Taro 仓库 `deploy/apk-server/apk-server.yml`，每晚 4 点北京时间）从 GitHub Release 拉最新规范版本分包（资产 sha256 校验 + `wget -c` 断点续传），两包齐备才改写 `Mobile.AppVersion`/`Mobile.UpdateMessage`，拉不完不宣告；端点行为与 `Mobile.*` 键族语义不变 |

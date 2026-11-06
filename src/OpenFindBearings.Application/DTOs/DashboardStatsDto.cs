@@ -81,7 +81,7 @@
         /// <summary>改动说明（v1.50.0 来源拆分）：互联网来源新增（爬虫/Sync），按今日/本周/本月</summary>
         public PeriodCountDto InternetAdded { get; set; } = new();
 
-        /// <summary>改动说明（v1.50.0 来源拆分）：非互联网来源新增（平台手工/Excel/OCR 等），按今日/本周/本月</summary>
+        /// <summary>改动说明（v1.50.0 来源拆分）：非互联网来源新增（平台手工/文件导入/OCR 等），按今日/本周/本月</summary>
         public PeriodCountDto ManualAdded { get; set; } = new();
 
         public List<BrandDistributionDto> TopBrands { get; set; } = new();
