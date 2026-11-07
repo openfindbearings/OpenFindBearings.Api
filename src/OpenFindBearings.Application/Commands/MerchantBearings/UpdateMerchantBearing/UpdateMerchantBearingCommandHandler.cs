@@ -1,7 +1,9 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
+using OpenFindBearings.Application.Services;
 using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Repositories;
+using OpenFindBearings.Domain.Services;
 
 namespace OpenFindBearings.Application.Commands.MerchantBearings.UpdateMerchantBearing
 {
@@ -12,15 +14,18 @@ namespace OpenFindBearings.Application.Commands.MerchantBearings.UpdateMerchantB
     {
         private readonly IMerchantBearingRepository _merchantBearingRepository;
         private readonly IMerchantMemberRepository _merchantMemberRepository;
+        private readonly IPriceConfigProvider _priceConfigProvider;
         private readonly ILogger<UpdateMerchantBearingCommandHandler> _logger;
 
         public UpdateMerchantBearingCommandHandler(
             IMerchantBearingRepository merchantBearingRepository,
             IMerchantMemberRepository merchantMemberRepository,
+            IPriceConfigProvider priceConfigProvider,
             ILogger<UpdateMerchantBearingCommandHandler> logger)
         {
             _merchantBearingRepository = merchantBearingRepository;
             _merchantMemberRepository = merchantMemberRepository;
+            _priceConfigProvider = priceConfigProvider;
             _logger = logger;
         }
 
@@ -61,6 +66,15 @@ namespace OpenFindBearings.Application.Commands.MerchantBearings.UpdateMerchantB
                 request.StockDescription,
                 request.MinOrderDescription,
                 request.Remarks);
+
+            // 改动说明（v2.23.0 批量改价排查时发现）：原实现只改价格文本、不重算 NumericPrice，
+            //   改价后价格排序与筛选用的一直是旧值；这里与批量调价保持同一口径重新解析数值价，
+            //   价格可见性沿用商家原有设置
+            var priceConfig = await _priceConfigProvider.GetAsync(cancellationToken);
+            merchantBearing.SetPrice(
+                request.PriceDescription,
+                PriceParser.ExtractNumericPrice(request.PriceDescription, priceConfig.ExtractPattern),
+                merchantBearing.PriceVisibility);
 
             // v2.15.0 状态统一：仅"已通过"的商品改动重要字段才重审（重新变审核中、公域暂隐）；
             //   仓库中/已驳回保持原态（本就未公开，无需重审）

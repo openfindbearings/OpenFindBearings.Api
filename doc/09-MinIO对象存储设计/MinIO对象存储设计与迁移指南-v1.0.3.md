@@ -1,7 +1,7 @@
 # MinIO 对象存储设计与迁移指南
 
-- 版本：v1.0.2
-- 日期：2026-10-27
+- 版本：v1.0.3
+- 日期：2026-11-06
 - 状态：已实施（待集群部署）
 - 适用：OpenFindBearings.Api / Sync / 媒体服务 的图片与文件存储统一改造
 
@@ -59,7 +59,7 @@
 | 部署 | `OpenFindBearings.Api/deploy/k3s/minio.yml` | MinIO 本体（Secret 模板 + PVC + Deployment + Service） |
 | 部署 | `media-server.yml` | 两段 alias 改 proxy_pass MinIO |
 | 部署 | API/Sync configMap + secret-template | Provider=Minio + Endpoint/Bucket + 应用凭据 |
-| 部署 | API deploy.yml / Sync api-deployment / job-transform / job-images | hostPath images/uploads 卷与对应 initContainer hack 废弃（Sync 仅保留 Excel temp 卷） |
+| 部署 | API deploy.yml / Sync api-deployment / job-transform / job-images | hostPath images/uploads 卷与对应 initContainer hack 废弃（Sync 仅保留临时文件卷） |
 
 ## 3. 部署步骤（服务器执行）
 
@@ -172,4 +172,5 @@ kubectl exec -n openfindbearings deploy/openfindbearings-media -- \
 
 | 版本 | 日期 | 说明 |
 |---|---|---|
+| v1.0.3 | 2026-11-06 | 术语清理：同步侧临时文件卷说明去除具体文件格式表述 |
 | v1.0.0 | 2026-09-20 | 首版：MinIO 统一对象存储改造（API v1.5.0 / Sync v17.6.0 周期），含部署、迁移、回滚与验证全流程 |

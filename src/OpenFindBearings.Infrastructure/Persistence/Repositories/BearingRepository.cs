@@ -360,7 +360,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         public async Task<int> GetCountSinceBySourceAsync(DateTime since, bool isInternet, CancellationToken cancellationToken = default)
         {
             // 改动说明（v1.50.0 来源拆分统计）：互联网=DataSource.SourceType 为 Internet
-            //   （经 DataSourceTypeValueConverter 落库为 "Crawler"），非互联网=其余来源（手工/Excel/OCR/API/种子）；
+            //   （经 DataSourceTypeValueConverter 落库为 "Crawler"），非互联网=其余来源（手工/文件导入/OCR/API/种子）；
             //   比较经 LINQ 表达，值转换器由 EF 自动套用，不写库内字面量
             var query = _context.Bearings.Where(b => b.IsActive && b.CreatedAt >= since);
             query = isInternet

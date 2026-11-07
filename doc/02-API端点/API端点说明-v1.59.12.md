@@ -1,10 +1,17 @@
 ﻿# API 端点说明文档
 
-**版本：** v1.59.10
-**日期：** 2026-11-04
-**上一版：** v1.59.9
+**版本：** v1.59.12
+**日期：** 2026-11-06
+**上一版：** v1.59.11
 **状态：** 与代码同步
 
+> v1.59.12 变更（商品批量维护，+1 端点）：
+> 1. **新增 `POST /api/merchant/bearings/batch`**（商户成员鉴权，`X-Merchant-Id` 上下文）：请求体 `{ action, ids, percent?, restockEta? }`，`action` 取 `onshelf` / `offshelf` / `restock` / `pricePercent` / `delete`，单次最多 100 件；逐件判定后返回 `{ succeeded, skipped, results[] }`（每项 `id` / `success` / `message` / `oldPriceDescription` / `newPriceDescription`），不因个别失败回滚整批。
+> 2. **批量改价按百分比**（`pricePercent`，`percent` 取值 -80～200）：只改带货币单位（`¥`/`￥`/`元`/`块`）的数字或纯数字文本，`电议`/`面议`/纯文字跳过并回报原因；改动幅度默认保留两位小数并去掉多余零，数值价 `numericPrice` 同步重算，已通过审核的商品重新送审。
+> 3. **修复单条编辑不重算数值价**：`PUT /api/merchant/bearings/{id}` 在价格文本变化时同步更新 `numericPrice`，价格排序与价格区间筛选恢复生效。
+> 4. **清理陈旧条目**：删除文档中已不存在的 `GET /api/merchant/inventory/import-context` 行。
+> v1.59.11 变更（术语清理，无新端点）：
+> 1. 商家库存批量维护端点说明改为通用表述，不再绑定具体文件格式。
 > v1.59.10 变更（管理端商家认证筛选修正，无新端点）：
 > 1. **`GET /api/admin/merchants` 的 `verifiedOnly` 改为双向过滤**：`true` 仅已认证、`false` 仅未认证、不传不过滤。原实现只在 `true` 时生效，传 `false` 等于不过滤，导致 Admin「未认证」页签混入已认证商家。
 > 2. **影响面**：`MerchantSearchParams.VerifiedOnly` 由三态语义（true/不过滤）补全为三态过滤，公开搜索接口 `GET /api/merchants/search` 传 `false` 同样收窄为未认证，与参数名语义一致。
@@ -114,6 +121,7 @@
 
 | 版本 | 日期 | 变更说明 |
 |------|------|----------|
+| v1.59.12 | 2026-11-06 | **商品批量维护（+1 端点）**：新增 `POST /api/merchant/bearings/batch`（上架/下架/补货/按百分比改价/删除，单次 ≤100 件，逐件返回成功或跳过原因）；批量改价只处理可解析为价格的文本（带 `¥`/`￥`/`元`/`块` 或纯数字），`电议`/`面议` 跳过；修复 `PUT /api/merchant/bearings/{id}` 改价后数值价不重算；删除已下线端点与外部导入流程的陈旧描述 |
 | v1.59.10 | 2026-11-04 | **管理端商家认证筛选修正（无新端点）**：`GET /api/admin/merchants` 的 `verifiedOnly` 改双向过滤（`true` 仅已认证、`false` 仅未认证、不传不限）；原实现只在 `true` 时过滤，`false` 等于不过滤，导致 Admin「未认证」页签混入已认证商家 |
 | v1.59.9 | 2026-11-04 | **健康检查去跨服务依赖（无新端点）**：`/health` 移除探测 Identity 的 `external_api`（该检查卡住会让 API 探针超时并被 liveness 杀进程，形成重启连锁）；探针分层为 startup/liveness→`/health/live`、readiness→`/health`，端点集合不变 |
 | v1.59.8 | 2026-11-03 | **互联网来源联系方式回归公开口径（无新端点）**：`MerchantDetailDto.contact` 与 `BearingMerchantDto.contactPhone` 对互联网来源商家原样下发手机号（不再 `138****1234` 脱敏），前端可一键拨号；删除 `ContactMasker`。认证/其他商家仍不下发 |
@@ -159,7 +167,7 @@
 | v1.11.0 | 2026-08-29 | 新增 GET /api/config/reliability（可信度阈值，供 Sync 运行时从 SystemConfigs 拉取，替代其 appsettings 默认值）；系统配置章节补充该内部端点 |
 | v1.12.0 | 2026-09-08 | GET /api/bearings/search 移除"至少一个搜索条件"强校验（原抛 InvalidOperationException 被映射为 400），无条件时返回空/全量分页，与商家搜索一致；限流中间件新增内部服务间调用豁免（X-Internal-Token，见《系统配置与限流设计 v1.1.0》） |
 | v1.13.0 | 2026-09-11 | 代码审查对齐：① 公共端点组补充 GET /api/login-methods（13→14）；② 用户端点组补充 POST /api/me/avatar、GET /api/me/corrections、GET /api/me/corrections/{id}（21→24）；③ 管理端点 6.2 轴承管理补充 DELETE /api/admin/bearings/{id:guid}/hard；④ 总端点数 114→118 |
-| v1.14.0 | 2026-09-12 | 商户入驻整体落地：① 新增"商户入驻"端点组（6 个）：POST /api/merchant/apply（预留转正式实现）、GET /api/merchant/application、POST /api/merchant/nominate、POST /api/merchant/nominate/{code}/accept、GET /api/merchant/claimable、GET /api/merchant/nominations/pending；② 商家端点组 12→16：新增 POST /api/merchant/members/{userId:guid}/suspend、POST /api/merchant/members/{userId:guid}/activate、PUT /api/merchant/members/{userId:guid}/role、POST /api/merchant/inventory/import（Excel 批量导入，仅商户管理员），并补成员管理小节；③ Admin 商家管理 58→60：新增 POST /api/admin/merchants/{id}/approve（审核通过入驻申请，Pending→Active，与 verify 认证分离）、POST /api/admin/merchants/{id}/members（平台指定成员兜底，复用 merchant.verify）；④ 总端点数 118→129，引导表格分组同步更新 |
+| v1.14.0 | 2026-09-12 | 商户入驻整体落地：① 新增"商户入驻"端点组（6 个）：POST /api/merchant/apply（预留转正式实现）、GET /api/merchant/application、POST /api/merchant/nominate、POST /api/merchant/nominate/{code}/accept、GET /api/merchant/claimable、GET /api/merchant/nominations/pending；② 商家端点组 12→16：新增 POST /api/merchant/members/{userId:guid}/suspend、POST /api/merchant/members/{userId:guid}/activate、PUT /api/merchant/members/{userId:guid}/role、POST /api/merchant/inventory/import（商户库存批量维护，仅商户管理员），并补成员管理小节；③ Admin 商家管理 58→60：新增 POST /api/admin/merchants/{id}/approve（审核通过入驻申请，Pending→Active，与 verify 认证分离）、POST /api/admin/merchants/{id}/members（平台指定成员兜底，复用 merchant.verify）；④ 总端点数 118→129，引导表格分组同步更新 |
 | v1.15.0 | 2026-09-14 | 商户信息维护与 Logo + 新建撞名引导认领：① 商家端点组 16→17，新增 POST /api/merchant/logo（上传商户 Logo，仅商户管理员，返回相对 URL，落 wwwroot/uploads/merchants/logo，.DisableAntiforgery）；② GET /api/merchant/profile 改按 X-Merchant-Id 当前商户上下文定位（原按"首个在职成员"，多商户读写错位），PUT /api/merchant/profile 补 IsMerchantAdmin 校验（原仅成员即可）；③ POST /api/merchant/apply（mode=self）新增撞名查重：命中可认领商户返回 HTTP 409 + ProblemDetails code=MERCHANT_CLAIMABLE_EXISTS/existingMerchantId/existingName（新增 MerchantClaimableConflictException + 中间件映射），命中已认证/已认领返回 400；④ MerchantApplicationDto 与 MerchantDetailDto 新增字段（LogoUrl；Detail 补 Website/UnifiedSocialCreditCode），MerchantExtensions.ToDetailDto 补齐 LogoUrl 等映射。总端点数 129→130 |
 | v1.16.0 | 2026-09-14 | 申请人自助撤回入驻申请：① 入驻端点组 6→7，新增 `POST /api/merchant/{merchantId:guid}/withdraw`（仅 Pending 且调用者是该商户在职 MerchantAdmin 即申请人本人可撤回；按 `Merchant.ApplicationMode` 分支清理——self 新建硬删商户及成员、claim 认领软移除认领人成员并把来源退回 Crawler 重新进入认领池、nomination/None 拒绝）。② Merchant 新增 `ApplicationMode` 列（None/Self/Claim/Nomination，默认 None 兼容存量），迁移 `AddMerchantApplicationMode`。总端点数 130→131 |
 | v1.18.0 | 2026-09-15 | 版本分发机制改为集群拉取：Taro CI 删除跨境 `kubectl cp` 推包与 psql 写库步骤（上行 ~50KB/s 阻塞发布且需集群凭据），发布动作纯 GitHub 化；K3s 侧新增 CronJob `openfindbearings-apk-sync`（Taro 仓库 `deploy/apk-server/apk-server.yml`，每晚 4 点北京时间）从 GitHub Release 拉最新规范版本分包（资产 sha256 校验 + `wget -c` 断点续传），两包齐备才改写 `Mobile.AppVersion`/`Mobile.UpdateMessage`，拉不完不宣告；端点行为与 `Mobile.*` 键族语义不变 |
@@ -397,7 +405,7 @@ OpenFindBearings.Api（以下简称 API）共注册 **169** 个端点，按职�
 
 > v1.25.0 说明（员工邀请确认制）：`POST /api/merchant/staff` 对已注册用户不再静默拉入，改为创建 `StaffInvitation(Type=Staff)` 待确认邀请并发站内信（响应 message 透传"邀请已发送，对方同意后加入"或"该用户已是…在职成员"）；未注册用户走原邀请码+短信/邮件通道。被邀人侧三端点（pending/accept/decline）以 JWT `phone_number`/`email` claim 服务端匹配"非空且相等"（不接受自报联系方式，排除 null==null 穿透），accept 建成员行并通知发起人；revoke 限该商户在职管理员。`GET /api/merchant/staff` 合并 `Status=Invited` 邀请行（`invitationId` 供撤销，成员行 `id` 为 Guid.Empty）。依赖 Identity 新增服务间端点 `GET /api/users/by-phone|by-email`（此前恒 404 是"添加成员无反应"根因）。
 
-### 7.3 库存管理
+### 7.3 商品管理
 
 | 方法 | 路由 | 管理员 | 员工 |
 |------|------|--------|------|
@@ -407,7 +415,7 @@ OpenFindBearings.Api（以下简称 API）共注册 **169** 个端点，按职�
 | POST | `/api/merchant/bearings/{id:guid}/onshelf` | 可操作 | 可操作 |
 | POST | `/api/merchant/bearings/{id:guid}/offshelf` | 可操作 | 可操作 |
 | PUT | `/api/merchant/bearings/{id:guid}/price-visibility` | 可操作 | 可操作 |
-| GET | `/api/merchant/inventory/import-context` | 可判权 | 拒绝 |
+| POST | `/api/merchant/bearings/batch` | 可操作 | 可操作 |
 
 ---
 

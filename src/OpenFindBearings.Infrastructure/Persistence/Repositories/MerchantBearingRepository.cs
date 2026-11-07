@@ -158,6 +158,26 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                 .AnyAsync(mb => mb.BearingId == bearingId && mb.MerchantId == merchantId, cancellationToken);
         }
 
+        /// <summary>
+        /// 按主键集合批量获取指定商户的关联（批量操作使用；同时带出轴承以便返回型号文案）
+        /// </summary>
+        public async Task<IReadOnlyList<MerchantBearing>> GetByIdsAsync(
+            Guid merchantId,
+            IReadOnlyCollection<Guid> ids,
+            CancellationToken cancellationToken = default)
+        {
+            if (ids.Count == 0)
+            {
+                return [];
+            }
+
+            var idList = ids.ToList();
+            return await _context.MerchantBearings
+                .Include(mb => mb.Bearing)
+                .Where(mb => mb.MerchantId == merchantId && idList.Contains(mb.Id))
+                .ToListAsync(cancellationToken);
+        }
+
         public async Task AddAsync(MerchantBearing merchantBearing, CancellationToken cancellationToken = default)
         {
             await _context.MerchantBearings.AddAsync(merchantBearing, cancellationToken);
@@ -189,6 +209,22 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                 _context.MerchantBearings.Remove(merchantBearing);
                 
             }
+        }
+
+        /// <summary>
+        /// 批量删除关联（批量操作使用；只标记删除，不提交事务）
+        /// </summary>
+        public Task DeleteRangeAsync(
+            IReadOnlyCollection<MerchantBearing> merchantBearings,
+            CancellationToken cancellationToken = default)
+        {
+            if (merchantBearings.Count == 0)
+            {
+                return Task.CompletedTask;
+            }
+
+            _context.MerchantBearings.RemoveRange(merchantBearings);
+            return Task.CompletedTask;
         }
 
         public async Task<PagedResult<MerchantBearing>> GetMerchantBearingsPagedAsync(

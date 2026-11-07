@@ -11,7 +11,7 @@
         Manual = 0,
 
         /// <summary>
-        /// Excel/CSV 批量导入
+        /// 文件批量导入（CSV 等）
         /// </summary>
         FileImport = 1,
 

@@ -125,7 +125,7 @@ namespace OpenFindBearings.Infrastructure.Services
             catch (Exception ex)
             {
                 // 改动说明：配置读取失败（数据库不可用、配置行缺失等）不应阻断商品创建主流程，
-                //           此处降级为代码默认值并记警告日志，保证 ETL 与 Excel 导入链路可用
+                //           此处降级为代码默认值并记警告日志，保证 ETL 与批量导入链路可用
                 _logger.LogWarning(ex, "读取价格配置失败，回退使用代码默认值");
                 return new PriceConfigDto();
             }

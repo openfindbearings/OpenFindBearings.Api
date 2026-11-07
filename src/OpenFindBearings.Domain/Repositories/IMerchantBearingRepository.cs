@@ -73,6 +73,14 @@ namespace OpenFindBearings.Domain.Repositories
         Task<bool> IsOwnedByMerchantAsync(Guid bearingId, Guid merchantId, CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// 按主键集合批量获取指定商户的关联（批量操作用，非本商户的记录不会返回）
+        /// </summary>
+        Task<IReadOnlyList<MerchantBearing>> GetByIdsAsync(
+            Guid merchantId,
+            IReadOnlyCollection<Guid> ids,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// 添加关联
         /// </summary>
         Task AddAsync(MerchantBearing merchantBearing, CancellationToken cancellationToken = default);
@@ -91,6 +99,13 @@ namespace OpenFindBearings.Domain.Repositories
         /// 删除关联
         /// </summary>
         Task DeleteAsync(Guid id, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 批量删除关联（批量操作用，只标记删除，由工作单元统一提交）
+        /// </summary>
+        Task DeleteRangeAsync(
+            IReadOnlyCollection<MerchantBearing> merchantBearings,
+            CancellationToken cancellationToken = default);
 
         /// <summary>
         /// 获取待审核关联数量
