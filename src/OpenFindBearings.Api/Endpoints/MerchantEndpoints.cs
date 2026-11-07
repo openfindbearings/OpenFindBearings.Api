@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using OpenFindBearings.Api.Helpers;
 using OpenFindBearings.Api.Services;
+using OpenFindBearings.Application.Commands.MerchantBearings.Batch;
 using OpenFindBearings.Application.Commands.MerchantBearings.Commands;
 using OpenFindBearings.Application.Commands.MerchantBearings.ManageImages;
 using OpenFindBearings.Application.Commands.MerchantBearings.PutOnShelf;
@@ -927,9 +928,78 @@ namespace OpenFindBearings.Api.Endpoints
             .WithSummary("删除轴承商品")
             .WithDescription("删除自家商品；出售中/补货中需先下架，其余状态物理删除");
 
+            /// <summary>
+            /// 批量操作商品（v2.23.0）：上架/下架/补货中/按百分比调价/删除，单次最多 100 件。
+            /// 逐件返回成功或跳过原因，只有归属不符等整体性问题才整单失败。
+            /// pricePreview 为调价预演（不落库），供前端确认前展示调整前后文本。
+            /// </summary>
+            group.MapPost("/bearings/batch", async (
+                BatchMerchantBearingRequest body,
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                var merchantId = currentUser.CurrentMerchantId;
+                if (!merchantId.HasValue)
+                    return ApiResponseHelper.BadRequest("未确定当前商户，请先切换商户", httpContext: httpContext);
+
+                if (!TryParseBatchAction(body.Action, out var action))
+                    return ApiResponseHelper.BadRequest("不支持的批量操作类型", httpContext: httpContext);
+
+                var command = new BatchMerchantBearingCommand
+                {
+                    MerchantId = merchantId.Value,
+                    UserId = currentUser.UserId.Value,
+                    Action = action,
+                    Ids = body.Ids ?? [],
+                    Percent = body.Percent,
+                    RestockEta = body.RestockEta
+                };
+
+                var result = await mediator.Send(command, httpContext.RequestAborted);
+                return ApiResponseHelper.Ok(result, httpContext: httpContext);
+            })
+            .WithName("BatchMerchantBearings")
+            .WithSummary("批量操作商品")
+            .WithDescription("批量上架/下架/补货中/按百分比调价/删除，逐件返回结果；单次最多 100 件");
+
             // 改动说明（v2.17.0 替代品字典化）：删除原"商家报候选"两个端点（POST/GET /merchant/interchanges）——
             //   替代关系回归平台维护的字典；商家参与方式改为对源轴承提交"替代关系"纠错（/api/me/corrections）
 
+        }
+
+        /// <summary>
+        /// 解析批量操作动作字符串（大小写不敏感），未知动作返回 false 由端点回 400
+        /// </summary>
+        private static bool TryParseBatchAction(string? action, out BatchMerchantBearingAction parsed)
+        {
+            switch (action?.Trim().ToLowerInvariant())
+            {
+                case "onshelf":
+                    parsed = BatchMerchantBearingAction.PutOnShelf;
+                    return true;
+                case "offshelf":
+                    parsed = BatchMerchantBearingAction.TakeOffShelf;
+                    return true;
+                case "restock":
+                    parsed = BatchMerchantBearingAction.Restock;
+                    return true;
+                case "pricepercent":
+                    parsed = BatchMerchantBearingAction.AdjustPrice;
+                    return true;
+                case "pricepreview":
+                    parsed = BatchMerchantBearingAction.PreviewPrice;
+                    return true;
+                case "delete":
+                    parsed = BatchMerchantBearingAction.Delete;
+                    return true;
+                default:
+                    parsed = default;
+                    return false;
+            }
         }
 
         /// <summary>
@@ -965,4 +1035,18 @@ namespace OpenFindBearings.Api.Endpoints
 
 /// <summary>调整商品实拍图顺序请求（v2.22.0）：Urls 按目标顺序排列，首项即首图</summary>
 public record ReorderMerchantBearingImagesRequest(List<string>? Urls);
+
+/// <summary>
+/// 商品批量操作请求（v2.23.0）
+/// Action 取值：onshelf / offshelf / restock / pricePercent / pricePreview / delete
+/// </summary>
+/// <param name="Action">批量动作字符串</param>
+/// <param name="Ids">商品关联ID集合（最多 100 件）</param>
+/// <param name="Percent">调价幅度（百分比，正数涨、负数降，仅调价动作使用）</param>
+/// <param name="RestockEta">补货预计到货时间（仅补货动作使用）</param>
+public record BatchMerchantBearingRequest(
+    string? Action,
+    List<Guid>? Ids,
+    decimal? Percent,
+    string? RestockEta);
 }

@@ -1,10 +1,15 @@
 ﻿# API 端点说明文档
 
-**版本：** v1.59.11
+**版本：** v1.59.12
 **日期：** 2026-11-06
-**上一版：** v1.59.10
+**上一版：** v1.59.11
 **状态：** 与代码同步
 
+> v1.59.12 变更（商品批量维护，+1 端点）：
+> 1. **新增 `POST /api/merchant/bearings/batch`**（商户成员鉴权，`X-Merchant-Id` 上下文）：请求体 `{ action, ids, percent?, restockEta? }`，`action` 取 `onshelf` / `offshelf` / `restock` / `pricePercent` / `delete`，单次最多 100 件；逐件判定后返回 `{ succeeded, skipped, results[] }`（每项 `id` / `success` / `message` / `oldPriceDescription` / `newPriceDescription`），不因个别失败回滚整批。
+> 2. **批量改价按百分比**（`pricePercent`，`percent` 取值 -80～200）：只改带货币单位（`¥`/`￥`/`元`/`块`）的数字或纯数字文本，`电议`/`面议`/纯文字跳过并回报原因；改动幅度默认保留两位小数并去掉多余零，数值价 `numericPrice` 同步重算，已通过审核的商品重新送审。
+> 3. **修复单条编辑不重算数值价**：`PUT /api/merchant/bearings/{id}` 在价格文本变化时同步更新 `numericPrice`，价格排序与价格区间筛选恢复生效。
+> 4. **清理陈旧条目**：删除文档中已不存在的 `GET /api/merchant/inventory/import-context` 行。
 > v1.59.11 变更（术语清理，无新端点）：
 > 1. 商家库存批量维护端点说明改为通用表述，不再绑定具体文件格式。
 > v1.59.10 变更（管理端商家认证筛选修正，无新端点）：
@@ -116,6 +121,7 @@
 
 | 版本 | 日期 | 变更说明 |
 |------|------|----------|
+| v1.59.12 | 2026-11-06 | **商品批量维护（+1 端点）**：新增 `POST /api/merchant/bearings/batch`（上架/下架/补货/按百分比改价/删除，单次 ≤100 件，逐件返回成功或跳过原因）；批量改价只处理可解析为价格的文本（带 `¥`/`￥`/`元`/`块` 或纯数字），`电议`/`面议` 跳过；修复 `PUT /api/merchant/bearings/{id}` 改价后数值价不重算；删除已下线端点与外部导入流程的陈旧描述 |
 | v1.59.10 | 2026-11-04 | **管理端商家认证筛选修正（无新端点）**：`GET /api/admin/merchants` 的 `verifiedOnly` 改双向过滤（`true` 仅已认证、`false` 仅未认证、不传不限）；原实现只在 `true` 时过滤，`false` 等于不过滤，导致 Admin「未认证」页签混入已认证商家 |
 | v1.59.9 | 2026-11-04 | **健康检查去跨服务依赖（无新端点）**：`/health` 移除探测 Identity 的 `external_api`（该检查卡住会让 API 探针超时并被 liveness 杀进程，形成重启连锁）；探针分层为 startup/liveness→`/health/live`、readiness→`/health`，端点集合不变 |
 | v1.59.8 | 2026-11-03 | **互联网来源联系方式回归公开口径（无新端点）**：`MerchantDetailDto.contact` 与 `BearingMerchantDto.contactPhone` 对互联网来源商家原样下发手机号（不再 `138****1234` 脱敏），前端可一键拨号；删除 `ContactMasker`。认证/其他商家仍不下发 |
@@ -399,7 +405,7 @@ OpenFindBearings.Api（以下简称 API）共注册 **169** 个端点，按职�
 
 > v1.25.0 说明（员工邀请确认制）：`POST /api/merchant/staff` 对已注册用户不再静默拉入，改为创建 `StaffInvitation(Type=Staff)` 待确认邀请并发站内信（响应 message 透传"邀请已发送，对方同意后加入"或"该用户已是…在职成员"）；未注册用户走原邀请码+短信/邮件通道。被邀人侧三端点（pending/accept/decline）以 JWT `phone_number`/`email` claim 服务端匹配"非空且相等"（不接受自报联系方式，排除 null==null 穿透），accept 建成员行并通知发起人；revoke 限该商户在职管理员。`GET /api/merchant/staff` 合并 `Status=Invited` 邀请行（`invitationId` 供撤销，成员行 `id` 为 Guid.Empty）。依赖 Identity 新增服务间端点 `GET /api/users/by-phone|by-email`（此前恒 404 是"添加成员无反应"根因）。
 
-### 7.3 库存管理
+### 7.3 商品管理
 
 | 方法 | 路由 | 管理员 | 员工 |
 |------|------|--------|------|
@@ -409,7 +415,7 @@ OpenFindBearings.Api（以下简称 API）共注册 **169** 个端点，按职�
 | POST | `/api/merchant/bearings/{id:guid}/onshelf` | 可操作 | 可操作 |
 | POST | `/api/merchant/bearings/{id:guid}/offshelf` | 可操作 | 可操作 |
 | PUT | `/api/merchant/bearings/{id:guid}/price-visibility` | 可操作 | 可操作 |
-| GET | `/api/merchant/inventory/import-context` | 可判权 | 拒绝 |
+| POST | `/api/merchant/bearings/batch` | 可操作 | 可操作 |
 
 ---
 
