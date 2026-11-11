@@ -34,6 +34,10 @@
         public int? ReliabilityScore { get; set; }
         public bool IsDataVerified { get; set; }
 
+        // 改动说明（品牌与类型资料完善）：详情页展示品牌资料与类型说明
+        public BrandDto? BrandProfile { get; set; }
+        public BearingTypeDto? TypeProfile { get; set; }
+
         // 在售商家列表
         public List<MerchantBearingDto> Merchants { get; set; } = [];
 

@@ -1,10 +1,15 @@
 ﻿# API 端点说明文档
 
-**版本：** v1.59.12
-**日期：** 2026-11-06
-**上一版：** v1.59.11
+**版本：** v1.59.13
+**日期：** 2026-11-11
+**上一版：** v1.59.12
 **状态：** 与代码同步
 
+> v1.59.13 变更（品牌与类型档案，无新端点）：
+> 1. **品牌与类型补档案字段**：`Brands` 新增 `Description`（简介）/ `FoundedYear`（成立年份）/ `ParentCompany`（母公司）/ `Website`（官网）/ `Advantages`（优势产品）/ `SuffixNotes`（型号后缀说明）/ `MainApplications`（主要应用）；`BearingTypes` 新增 `EnglishName`（英文名）/ `StructureFeatures`（结构特征）/ `LoadCharacteristics`（承载特性）/ `TypicalPrefixes`（常用前置代号）/ `MainApplications`（主要应用）/ `IsSeparable`（是否可分离）/ `ImageUrl`（结构图）。全部可空、人工维护，不影响既有数据与 ETL。
+> 2. **品牌与类型端点同步收发新字段**：`GET /api/brands`、`GET /api/brands/{id}`、`GET /api/bearing-types`、`GET /api/bearing-types/{id}` 下发；`POST` / `PUT` 接收，未传即保持原值。
+> 3. **型号详情携带档案对象**：`GET /api/bearings/{id}` 与 `GET /api/bearings/by-code/{code}` 的 `BearingDetailDto` 新增 `brandProfile` / `typeProfile`（字段同上），供详情页折叠卡展示；任一为空时前端不渲染对应卡片。
+> 4. **迁移 `AddBrandProfileAndBearingTypeDetails`**：加列 + 对已有品牌与类型按 `Code` 回填档案，仅在档案字段为空时写入，不覆盖人工内容。
 > v1.59.12 变更（商品批量维护，+1 端点）：
 > 1. **新增 `POST /api/merchant/bearings/batch`**（商户成员鉴权，`X-Merchant-Id` 上下文）：请求体 `{ action, ids, percent?, restockEta? }`，`action` 取 `onshelf` / `offshelf` / `restock` / `pricePercent` / `delete`，单次最多 100 件；逐件判定后返回 `{ succeeded, skipped, results[] }`（每项 `id` / `success` / `message` / `oldPriceDescription` / `newPriceDescription`），不因个别失败回滚整批。
 > 2. **批量改价按百分比**（`pricePercent`，`percent` 取值 -80～200）：只改带货币单位（`¥`/`￥`/`元`/`块`）的数字或纯数字文本，`电议`/`面议`/纯文字跳过并回报原因；改动幅度默认保留两位小数并去掉多余零，数值价 `numericPrice` 同步重算，已通过审核的商品重新送审。

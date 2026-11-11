@@ -33,6 +33,16 @@ namespace OpenFindBearings.Application.Commands.BearingTypes.CreateBearingType
             }
 
             var bearingType = new BearingType(request.Code, request.Name, request.Description);
+
+            // 改动说明（类型资料完善）：新建类型同时写入资料字段
+            bearingType.UpdateProfile(
+                request.EnglishName,
+                request.StructureFeatures,
+                request.LoadCharacteristics,
+                request.TypicalPrefixes,
+                request.MainApplications,
+                request.IsSeparable,
+                request.ImageUrl);
             await _bearingTypeRepository.AddAsync(bearingType, cancellationToken);
 
             _logger.LogInformation("轴承类型创建成功: Id={Id}, Code={Code}", bearingType.Id, bearingType.Code);

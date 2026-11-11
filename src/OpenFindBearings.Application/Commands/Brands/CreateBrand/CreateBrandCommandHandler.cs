@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Repositories;
+using OpenFindBearings.Domain.ValueObjects;
 
 namespace OpenFindBearings.Application.Commands.Brands.CreateBrand
 {
@@ -35,6 +36,18 @@ namespace OpenFindBearings.Application.Commands.Brands.CreateBrand
 
             var brand = new Brand(request.Code, request.Name, request.Level);
             brand.UpdateDetails(request.Country, request.LogoUrl);
+
+            // 改动说明（品牌资料完善）：新建品牌同时写入资料字段并标记为人工维护，
+            // 避免后续同步任务把人工录入的资料当作爬虫数据覆盖
+            brand.UpdateProfile(
+                request.Description,
+                request.FoundedYear,
+                request.ParentCompany,
+                request.Website,
+                request.Advantages,
+                request.SuffixNotes,
+                request.MainApplications);
+            brand.SetDataSource(DataSource.FromManual());
 
             await _brandRepository.AddAsync(brand, cancellationToken);
 

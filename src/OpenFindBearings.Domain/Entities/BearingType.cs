@@ -28,6 +28,27 @@ namespace OpenFindBearings.Domain.Entities
         /// </summary>
         public string? Description { get; private set; }
 
+        /// <summary>英文名称（如 Deep Groove Ball Bearing）</summary>
+        public string? EnglishName { get; private set; }
+
+        /// <summary>结构特点（人工维护）</summary>
+        public string? StructureFeatures { get; private set; }
+
+        /// <summary>载荷特性（径向为主 / 可承受轴向 / 联合载荷等）</summary>
+        public string? LoadCharacteristics { get; private set; }
+
+        /// <summary>典型型号前缀（如 60/62/63）</summary>
+        public string? TypicalPrefixes { get; private set; }
+
+        /// <summary>主要应用领域（逗号分隔）</summary>
+        public string? MainApplications { get; private set; }
+
+        /// <summary>是否可分离结构</summary>
+        public bool? IsSeparable { get; private set; }
+
+        /// <summary>结构示意图 URL</summary>
+        public string? ImageUrl { get; private set; }
+
         /// <summary>
         /// 数据来源
         /// </summary>
@@ -73,6 +94,30 @@ namespace OpenFindBearings.Domain.Entities
         public void SetDataSource(DataSource dataSource)
         {
             DataSource = dataSource ?? throw new ArgumentNullException(nameof(dataSource));
+            UpdateTimestamp();
+        }
+
+        /// <summary>
+        /// 更新类型资料（英文名、结构特点、载荷特性、典型前缀、主要应用、是否可分离、示意图）
+        /// 改动说明（类型资料完善）：新增字段全部可空，Admin 保存时整表单覆盖，
+        /// 人工维护后 DataSource 标记为 Manual，同步任务不会覆盖
+        /// </summary>
+        public void UpdateProfile(
+            string? englishName,
+            string? structureFeatures,
+            string? loadCharacteristics,
+            string? typicalPrefixes,
+            string? mainApplications,
+            bool? isSeparable,
+            string? imageUrl)
+        {
+            EnglishName = englishName;
+            StructureFeatures = structureFeatures;
+            LoadCharacteristics = loadCharacteristics;
+            TypicalPrefixes = typicalPrefixes;
+            MainApplications = mainApplications;
+            IsSeparable = isSeparable;
+            ImageUrl = imageUrl;
             UpdateTimestamp();
         }
     }
