@@ -12,6 +12,9 @@ namespace OpenFindBearings.Application.Queries.Bearings.GetBearingQuery
         private readonly IBearingRepository _bearingRepository;
         private readonly IMerchantBearingRepository _merchantBearingRepository;
         private readonly IBearingInterchangeRepository _interchangeRepository;
+        // 改动说明（品牌与类型资料完善）：详情页需要品牌/类型档案，补两个仓储查询
+        private readonly IBrandRepository _brandRepository;
+        private readonly IBearingTypeRepository _bearingTypeRepository;
         private readonly IMediator _mediator;
         private readonly ILogger<GetBearingQueryHandler> _logger;
 
@@ -19,12 +22,16 @@ namespace OpenFindBearings.Application.Queries.Bearings.GetBearingQuery
             IBearingRepository bearingRepository,
             IMerchantBearingRepository merchantBearingRepository,
             IBearingInterchangeRepository interchangeRepository,
+            IBrandRepository brandRepository,
+            IBearingTypeRepository bearingTypeRepository,
             IMediator mediator,
             ILogger<GetBearingQueryHandler> logger)
         {
             _bearingRepository = bearingRepository;
             _merchantBearingRepository = merchantBearingRepository;
             _interchangeRepository = interchangeRepository;
+            _brandRepository = brandRepository;
+            _bearingTypeRepository = bearingTypeRepository;
             _mediator = mediator;
             _logger = logger;
         }
@@ -40,6 +47,14 @@ namespace OpenFindBearings.Application.Queries.Bearings.GetBearingQuery
             // 发布浏览次数增加事件
             bearing.IncrementViewCount(request.UserId, request.SessionId);
             await _bearingRepository.UpdateAsync(bearing, cancellationToken);
+
+            // 改动说明（品牌与类型资料完善）：取型号所属品牌与类型的资料档案，供详情页展示
+            var brandProfile = bearing.BrandId == Guid.Empty
+                ? null
+                : (await _brandRepository.GetByIdAsync(bearing.BrandId, cancellationToken))?.ToDto();
+            var typeProfile = bearing.BearingTypeId == Guid.Empty
+                ? null
+                : (await _bearingTypeRepository.GetByIdAsync(bearing.BearingTypeId, cancellationToken))?.ToDto();
 
             // 获取在售商家列表
             var merchantBearings = await _merchantBearingRepository.GetByBearingAsync(bearing.Id, cancellationToken);
@@ -72,6 +87,8 @@ namespace OpenFindBearings.Application.Queries.Bearings.GetBearingQuery
                 Weight = bearing.Weight,
                 BrandId = bearing.BrandId,
                 BrandName = bearing.Brand?.Name ?? string.Empty,
+                BrandProfile = brandProfile,
+                TypeProfile = typeProfile,
                 BearingTypeId = bearing.BearingTypeId,
                 // 改动说明（v2.13.2 映射对齐）：详情此前只填 BearingTypeName，BearingType 落空串，
                 //   与列表映射（BearingExtensions.ToDto 两者同填）不一致，前端详情页类型显示为空

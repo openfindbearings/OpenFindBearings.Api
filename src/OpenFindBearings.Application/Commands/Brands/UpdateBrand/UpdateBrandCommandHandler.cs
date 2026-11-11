@@ -40,6 +40,16 @@ namespace OpenFindBearings.Application.Commands.Brands.UpdateBrand
             // 更新详细信息
             brand.UpdateDetails(request.Country, request.LogoUrl);
 
+            // 改动说明（品牌资料完善）：整表单覆盖品牌资料字段
+            brand.UpdateProfile(
+                request.Description,
+                request.FoundedYear,
+                request.ParentCompany,
+                request.Website,
+                request.Advantages,
+                request.SuffixNotes,
+                request.MainApplications);
+
             if (!string.IsNullOrWhiteSpace(request.Name))
             {
                 brand.UpdateName(request.Name);

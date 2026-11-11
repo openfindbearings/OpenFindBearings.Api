@@ -30,6 +30,21 @@
         /// </summary>
         public string? LogoUrl { get; set; }
 
+        /// <summary>品牌简介/特点</summary>
+        public string? Description { get; set; }
+        /// <summary>成立年份</summary>
+        public int? FoundedYear { get; set; }
+        /// <summary>母公司或所属集团</summary>
+        public string? ParentCompany { get; set; }
+        /// <summary>官网地址</summary>
+        public string? Website { get; set; }
+        /// <summary>优势产品线</summary>
+        public string? Advantages { get; set; }
+        /// <summary>型号后缀体系说明</summary>
+        public string? SuffixNotes { get; set; }
+        /// <summary>主要应用领域</summary>
+        public string? MainApplications { get; set; }
+
         /// <summary>
         /// 品牌档次
         /// </summary>

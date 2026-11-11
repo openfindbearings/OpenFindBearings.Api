@@ -25,6 +25,13 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
 
             builder.Property(b => b.LogoUrl)
                 .HasColumnType("text");
+            // 改动说明（品牌资料完善）：新增可空资料字段，人工维护，长度与展示场景对齐
+            builder.Property(b => b.Description).HasColumnType("text");
+            builder.Property(b => b.ParentCompany).HasMaxLength(100);
+            builder.Property(b => b.Website).HasMaxLength(200);
+            builder.Property(b => b.Advantages).HasColumnType("text");
+            builder.Property(b => b.SuffixNotes).HasColumnType("text");
+            builder.Property(b => b.MainApplications).HasMaxLength(200);
 
             builder.HasIndex(b => b.Code)
                 .IsUnique();

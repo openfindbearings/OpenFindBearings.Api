@@ -33,6 +33,27 @@ namespace OpenFindBearings.Domain.Entities
         /// </summary>
         public string? LogoUrl { get; private set; }
 
+        /// <summary>品牌简介/特点（人工维护，爬虫不覆盖）</summary>
+        public string? Description { get; private set; }
+
+        /// <summary>成立年份</summary>
+        public int? FoundedYear { get; private set; }
+
+        /// <summary>母公司或所属集团</summary>
+        public string? ParentCompany { get; private set; }
+
+        /// <summary>官网地址</summary>
+        public string? Website { get; private set; }
+
+        /// <summary>优势产品线（自由文本）</summary>
+        public string? Advantages { get; private set; }
+
+        /// <summary>型号后缀体系说明（如 SKF 2RS1=接触密封、ECP=玻纤保持架）</summary>
+        public string? SuffixNotes { get; private set; }
+
+        /// <summary>主要应用领域（逗号分隔）</summary>
+        public string? MainApplications { get; private set; }
+
         /// <summary>
         /// 品牌档次（国际一线、国际标准、国产一线等）
         /// 用于价格参考和筛选
@@ -105,6 +126,30 @@ namespace OpenFindBearings.Domain.Entities
         public void SetDataSource(DataSource dataSource)
         {
             DataSource = dataSource ?? throw new ArgumentNullException(nameof(dataSource));
+            UpdateTimestamp();
+        }
+
+        /// <summary>
+        /// 更新品牌资料（简介、成立年份、母公司、官网、优势产品、后缀体系、主要应用）
+        /// 改动说明（品牌资料完善）：新增字段全部可空，Admin 保存时整表单覆盖，
+        /// 人工维护后 DataSource 标记为 Manual，同步任务不会覆盖
+        /// </summary>
+        public void UpdateProfile(
+            string? description,
+            int? foundedYear,
+            string? parentCompany,
+            string? website,
+            string? advantages,
+            string? suffixNotes,
+            string? mainApplications)
+        {
+            Description = description;
+            FoundedYear = foundedYear;
+            ParentCompany = parentCompany;
+            Website = website;
+            Advantages = advantages;
+            SuffixNotes = suffixNotes;
+            MainApplications = mainApplications;
             UpdateTimestamp();
         }
     }
