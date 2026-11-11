@@ -1,10 +1,14 @@
 ﻿# API 端点说明文档
 
-**版本：** v1.59.13
+**版本：** v1.59.14
 **日期：** 2026-11-11
-**上一版：** v1.59.12
+**上一版：** v1.59.13
 **状态：** 与代码同步
 
+> v1.59.14 变更（商家粉丝数修复与禁止自关注，无新端点）：
+> 1. **商家粉丝数恢复真实值**：关注与取关（含批量取消关注）在写入/删除 `UserMerchantFollows` 的同一事务内调整 `Merchants.FollowerCount`；`MerchantDto.FollowerCount` 与商家详情、Admin 商家列表、移动端店铺页同源。原实现只写连接表、从不更新该列，粉丝数恒为 0。
+> 2. **数据迁移 `BackfillMerchantFollowerCount`**：按 `UserMerchantFollows` 一次性重算既有商家的 `FollowerCount`，无关注记录的残留值清零。
+> 3. **禁止关注自己的商户**：`POST /api/me/follows/merchants/{merchantId}` 对「当前用户是该商户在职成员」直接返回 400「不能关注自己的商户」，避免刷高自家粉丝数与污染「我关注的商家」。商家详情 `MerchantDetailDto.IsMerchantMember` 供前端隐藏关注入口。
 > v1.59.13 变更（品牌与类型档案，无新端点）：
 > 1. **品牌与类型补档案字段**：`Brands` 新增 `Description`（简介）/ `FoundedYear`（成立年份）/ `ParentCompany`（母公司）/ `Website`（官网）/ `Advantages`（优势产品）/ `SuffixNotes`（型号后缀说明）/ `MainApplications`（主要应用）；`BearingTypes` 新增 `EnglishName`（英文名）/ `StructureFeatures`（结构特征）/ `LoadCharacteristics`（承载特性）/ `TypicalPrefixes`（常用前置代号）/ `MainApplications`（主要应用）/ `IsSeparable`（是否可分离）/ `ImageUrl`（结构图）。全部可空、人工维护，不影响既有数据与 ETL。
 > 2. **品牌与类型端点同步收发新字段**：`GET /api/brands`、`GET /api/brands/{id}`、`GET /api/bearing-types`、`GET /api/bearing-types/{id}` 下发；`POST` / `PUT` 接收，未传即保持原值。

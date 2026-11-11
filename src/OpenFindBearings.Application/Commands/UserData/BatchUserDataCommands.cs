@@ -58,11 +58,15 @@ namespace OpenFindBearings.Application.Commands.UserData
     public class BatchRemoveFollowsCommandHandler : IRequestHandler<BatchRemoveFollowsCommand, int>
     {
         private readonly IUserMerchantFollowRepository _followRepository;
+        private readonly IMerchantRepository _merchantRepository;
 
-        /// <summary>构造：关注仓储</summary>
-        public BatchRemoveFollowsCommandHandler(IUserMerchantFollowRepository followRepository)
+        /// <summary>构造：关注仓储 + 商家仓储（用于同步粉丝计数）</summary>
+        public BatchRemoveFollowsCommandHandler(
+            IUserMerchantFollowRepository followRepository,
+            IMerchantRepository merchantRepository)
         {
             _followRepository = followRepository;
+            _merchantRepository = merchantRepository;
         }
 
         /// <inheritdoc/>
@@ -71,8 +75,21 @@ namespace OpenFindBearings.Application.Commands.UserData
             var count = 0;
             foreach (var merchantId in request.MerchantIds.Distinct())
             {
+                // 改动说明（粉丝数恒 0 修复）：先确认关注行存在再删，仅实际删除的商家递减计数，
+                //   避免对未关注商家误减；与单条取关处理器口径一致，同一 UnitOfWork 提交
+                var exists = await _followRepository.ExistsAsync(request.UserId, merchantId, cancellationToken);
+                if (!exists)
+                    continue;
+
                 await _followRepository.DeleteAsync(request.UserId, merchantId, cancellationToken);
                 count++;
+
+                var merchant = await _merchantRepository.GetByIdAsync(merchantId, cancellationToken);
+                if (merchant != null)
+                {
+                    merchant.AdjustFollowerCount(-1);
+                    await _merchantRepository.UpdateAsync(merchant, cancellationToken);
+                }
             }
             return count;
         }
