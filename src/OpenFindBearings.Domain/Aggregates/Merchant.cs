@@ -658,37 +658,22 @@ namespace OpenFindBearings.Domain.Aggregates
             ProductCount = _merchantBearings.Count(mb => mb.ReviewStatus == ListingReviewStatus.Approved && mb.SaleState == SaleState.OnSale);
         }
 
-        // ============ 关注管理 ============
+        // ============ 关注计数 ============
 
         /// <summary>
-        /// 增加关注者
+        /// 关注/取关时维护粉丝计数（对外展示的店铺热度指标）。
+        /// 改动说明：原 AddFollower/RemoveFollower 依赖已加载的 _followedByUsers 导航集合重算计数，
+        ///   但两者自引入起从未被任何命令调用（关注只写连接表），导致 FollowerCount 恒为 0；
+        ///   改为按增量调整，由关注/取关处理器加载商户后调用，随同一 UnitOfWork 落库，避免读写分叉。
         /// </summary>
-        internal void AddFollower(UserMerchantFollow follow)
+        /// <param name="delta">增量：关注 +1，取关 -1</param>
+        public void AdjustFollowerCount(int delta)
         {
-            if (!_followedByUsers.Any(f => f.UserId == follow.UserId))
-            {
-                _followedByUsers.Add(follow);
-                FollowerCount = _followedByUsers.Count;
-                UpdateTimestamp();
+            if (delta == 0)
+                return;
 
-                AddDomainEvent(new MerchantFollowedEvent(follow.UserId, Id));
-            }
-        }
-
-        /// <summary>
-        /// 移除关注者
-        /// </summary>
-        internal void RemoveFollower(Guid userId)
-        {
-            var follow = _followedByUsers.FirstOrDefault(f => f.UserId == userId);
-            if (follow != null)
-            {
-                _followedByUsers.Remove(follow);
-                FollowerCount = _followedByUsers.Count;
-                UpdateTimestamp();
-
-                AddDomainEvent(new MerchantUnfollowedEvent(userId, Id));
-            }
+            FollowerCount = Math.Max(0, FollowerCount + delta);
+            UpdateTimestamp();
         }
 
         // ============ 统计更新 ============

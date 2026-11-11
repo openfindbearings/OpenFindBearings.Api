@@ -549,19 +549,8 @@ namespace OpenFindBearings.Domain.Aggregates
             UpdateTimestamp();
         }
 
-        /// <summary>
-        /// 取消关注商家
-        /// </summary>
-        public void UnfollowMerchant(Guid merchantId)
-        {
-            var follow = _followedMerchants.FirstOrDefault(f => f.MerchantId == merchantId);
-            if (follow != null)
-            {
-                _followedMerchants.Remove(follow);
-                AddDomainEvent(new MerchantUnfollowedEvent(Id, merchantId));
-                UpdateTimestamp();
-            }
-        }
+        // 改动说明（僵尸方法清理）：原 UnfollowMerchant 只从未加载的导航集合移除，
+        //   取关早已改走仓储 DeleteAsync，本方法无任何调用方，故删除。
 
         /// <summary>
         /// 是否已关注商家
