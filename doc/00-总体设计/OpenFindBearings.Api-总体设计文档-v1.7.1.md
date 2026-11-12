@@ -1,12 +1,12 @@
-## OpenFindBearings.Api 总体设计文档 v1.6.0
+## OpenFindBearings.Api 总体设计文档 v1.7.1
 
 **文档信息**
 
 | 项目 | 内容 |
 |------|------|
 | 文档名称 | OpenFindBearings.Api 总体设计文档 |
-| 版本 | v1.6.0 |
-| 最后更新 | 2026-09-21 |
+| 版本 | v1.7.1 |
+| 最后更新 | 2026-11-12 |
 
 ---
 
@@ -146,6 +146,22 @@ dotnet ef database update --project src/OpenFindBearings.Infrastructure \
 
 **权限前提**：API 连库用户需具备 DDL 权限（CREATE/ALTER）；目标库 `db_api` 各表 owner 为 `u_api`，符合。
 
+**手写迁移必须标 `[DbContext]`（v1.7.1 补充，硬规则）**：EF Core 的 `MigrationsAssembly.Migrations` 只收集满足
+`IsSubclassOf(Migration) && GetDbContextType(t) == 当前 DbContext` 的类型（`GetDbContextType` 沿继承链找
+`DbContextAttribute`，找不到即返回 null 并被过滤掉）。自动生成的迁移靠 `.Designer.cs` 里的
+`[DbContext(typeof(ApplicationDbContext))]` 命中；手写数据迁移没有 Designer，若只标 `[Migration("...")]`
+就会**被运行时静默忽略**——文件在、镜像里类在、库里 `__EFMigrationsHistory` 永远没有记录，且不影响启动，
+只能靠数据现象反推。历史事故：`20261010120000_RenamePremiumMerchantGradeLabel`、
+`20261010130000_BackfillAchievementProgress`、`20261111093000_BackfillMerchantFollowerCount` 三条手写迁移
+全部因此从未执行（商家粉丝数恒 0 即由此暴露）。规则：
+
+1. 手写迁移必须同时标注 `[Migration("时间戳_名称")]` 与 `[DbContext(typeof(ApplicationDbContext))]`，
+   并 `using Microsoft.EntityFrameworkCore.Infrastructure;`；
+2. `Program.cs` 启动时反射自检，发现「是 `Migration` 子类但继承链无 `DbContextAttribute`」即
+   `LogWarning` 列出类型名（只告警不阻断启动）；
+3. 手写迁移的 SQL 若引用列，必须对照**当前** schema（跨版本补跑尤甚），并尽量写成幂等（如
+   `DROP COLUMN IF EXISTS`、`ON CONFLICT`），避免补跑时因 schema 漂移启动失败。
+
 ### 9. 版本历史
 
 | 版本 | 日期 | 变更说明 |
@@ -155,5 +171,6 @@ dotnet ef database update --project src/OpenFindBearings.Infrastructure \
 | v1.3.0 | 2026-09-11 | 代码审查对齐：修正中间件管道顺序（UserContextMiddleware 已实现并注册、ApiLogging 与 RateLimiting 顺序与代码对齐、补充 ResponseCompression 和 UseStaticFiles）；值对象 ContactInfo 补充 QQ 字段；领域模型概览与实际代码对齐 |
 | v1.4.0 | 2026-09-13 | 新增"数据库迁移策略"章节并升为第 8 节（版本历史顺延为第 9 节）：记录生产库停在 InitialCreate、缺 MerchantMembers 表导致认领搜索 500 的事故根因（SeedData 吞异常）；迁移改为 Program.cs 启动统一自动应用、失败即崩（fail-fast），SeedData 不再迁移只留种子；关键设计决策补第 8 项"启动自动迁移"；构建运行第 6 节标注 ef 命令仅本地/排障用；领域模型概览补充 MerchantMember 实体；注明多副本下需 advisory lock 或部署前一次性迁移 Job 的加固方案 |
 | v1.5.0 | 2026-09-20 | MinIO 统一对象存储落地：用户上传（头像/Logo/证照）经 `IObjectStorageService` 抽象写 MinIO（S3 协议，`FileStorage:Provider` 切换本地盘），媒体 nginx 反代 MinIO 直出，URL 形态不变；删除死代码 `IFileService/LocalFileService/FileStorageSettings`；详见《09-MinIO对象存储设计与迁移指南 v1.0.0》 |
-| v1.7.0 | 2026-09-24 | 域模型补积分聚合（PointAccount/PointTransaction/PointGrantRule 三表，PointsService 唯一写入口，赚端 5 场景+扣分入口就位）；详见《11-积分体系设计 v1.0.0》。 |
 | v1.6.0 | 2026-09-21 | 商户入驻域扩展对齐（细节见《06-商户入驻与认证体系 v2.11.0》）：① Merchant 加 ApplicationMode/VerifyRequested，Active 后企业名称/信用代码/商家类型锁定（信用代码空可一次性补录）；② LicenseVerification 泛化为 MerchantDocument 多证照材料体系（类型矩阵：执照全必备、授权经销商加品牌授权书、厂家选传厂房照）；③ StaffInvitation 员工邀请确认制（添加已注册用户=待确认邀请+站内信，accept 才落成员行；Identity 侧配套 UsersApiController 服务间查询，S9 闭环）；④ Notification 站内信（审批结果/撤回/邀请事件驱动，未读计数供移动端角标，accept/decline 服务端核销）；⑤ User 加 Mobile 缓存列（登录中间件按 claim JIT 同步，迁移 AddUserMobile）；⑥ 上传扩展名 MIME 兜底 `FileUploadHelper.GetSafeExtension` |
+| v1.7.0 | 2026-09-24 | 域模型补积分聚合（PointAccount/PointTransaction/PointGrantRule 三表，PointsService 唯一写入口，赚端 5 场景+扣分入口就位）；详见《11-积分体系设计 v1.0.0》。 |
+| v1.7.1 | 2026-11-12 | 迁移机制缺陷修复：查明手写迁移因缺 `[DbContext]` 被 EF 运行时静默忽略（粉丝数回填、Lv3 等级文案改名、成就进度回填三条从未执行），三条迁移补标注并适配当前 schema（`IsOnSale`→`SaleState`、`RewardPoints` 改 `DROP COLUMN IF EXISTS`）；`Program.cs` 新增迁移特性启动自检告警；第 8 节新增「手写迁移必须标 `[DbContext]`」硬规则；文档版本号与文件名对齐 |

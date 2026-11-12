@@ -5,6 +5,7 @@ using OpenFindBearings.Application;
 using OpenFindBearings.Infrastructure;
 using OpenFindBearings.Infrastructure.Persistence.Data;
 using Microsoft.EntityFrameworkCore;
+using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -41,6 +42,53 @@ if (builder.Environment.IsDevelopment())
 // ============ 构建应用 ============
 var app = builder.Build();
 app.Logger.LogInformation("启动 OpenFindBearings API");
+
+// ============ 启动自检：手写迁移必须标 [DbContext] ============
+// 改动说明（粉丝数迁移从未生效的根因）：EF Core 的 MigrationsAssembly.Migrations 只收集
+//   "继承链上带 DbContextAttribute 且 ContextType 等于当前 DbContext" 的迁移类型
+//   （见 MigrationsAssembly.GetDbContextType），手写迁移若只标 [Migration] 而漏
+//   [DbContext(typeof(ApplicationDbContext))]，会被运行时静默忽略——文件在、镜像在、库里永远没有记录，
+//   极难从现象反推。这里启动时反射扫一遍，命中即告警，让"写了没跑"立刻可见。
+//   自检失败只告警不阻断启动（迁移正确性由 EF 自身保证）。
+try
+{
+    var migrationSubclasses = typeof(ApplicationDbContext).Assembly
+        ?.GetTypes()
+        .Where(t => !t.IsAbstract && t.IsSubclassOf(typeof(Microsoft.EntityFrameworkCore.Migrations.Migration)))
+        ?? Enumerable.Empty<Type>();
+
+    var missingDbContextAttribute = migrationSubclasses
+        .Where(t => FindDbContextAttribute(t) == null)
+        .Select(t => t.Name)
+        .ToList();
+
+    if (missingDbContextAttribute.Count > 0)
+    {
+        app.Logger.LogWarning(
+            "检测到 {Count} 个迁移类型缺少 [DbContext] 特性，EF 将忽略它们（迁移不会执行）：{Types}",
+            missingDbContextAttribute.Count,
+            string.Join(", ", missingDbContextAttribute));
+    }
+}
+catch (Exception reflectionEx)
+{
+    app.Logger.LogWarning(reflectionEx, "迁移特性自检失败（不影响启动）");
+}
+
+// 沿继承链查找 DbContextAttribute，与 EF Core MigrationsAssembly.GetDbContextType 的判定口径一致
+static Microsoft.EntityFrameworkCore.Infrastructure.DbContextAttribute? FindDbContextAttribute(Type type)
+{
+    for (var current = type; current != null && current != typeof(object); current = current.BaseType)
+    {
+        var attribute = current.GetCustomAttribute<Microsoft.EntityFrameworkCore.Infrastructure.DbContextAttribute>(inherit: false);
+        if (attribute != null)
+        {
+            return attribute;
+        }
+    }
+
+    return null;
+}
 
 // ============ 启动时自动迁移数据库 ============
 // 改动说明：此前 schema 靠手工/CI 应用，生产库曾停留在 InitialCreate，导致 MerchantMembers 等

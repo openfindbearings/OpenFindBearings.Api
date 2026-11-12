@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -9,8 +10,11 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
     /// 商家 Lv3 改名"活跃供给"→"口碑商家"（v2.13.0 等级玩法：四档统一"XX商家"格式）。
     /// 展示名硬编码在 Merchant.GetGradeDisplayName（代码改），本迁移只同步配置库描述文案
     /// （SystemConfigs.Description 展示在 Admin 系统配置页，避免旧名误导运营）；纯数据无 schema 变更。
-    /// 手写迁移无 Designer，显式 MigrationAttribute 固定 Id 保证排序在 AddLevelGameplay 之后
+    /// 手写迁移无 Designer，显式 MigrationAttribute 固定 Id 保证排序在 AddLevelGameplay 之后。
+    /// 改动说明：补 [DbContext]——此前只有 [Migration]，EF 运行时按上下文过滤迁移类型时把本类丢掉，
+    ///   导致该文案改名从未执行。
     /// </summary>
+    [DbContext(typeof(ApplicationDbContext))]
     [Migration("20261010120000_RenamePremiumMerchantGradeLabel")]
     public partial class RenamePremiumMerchantGradeLabel : Migration
     {
