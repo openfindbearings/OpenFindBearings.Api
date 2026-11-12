@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -9,7 +10,12 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
     /// 背景：关注命令历史上只写 UserMerchantFollows 连接表，从未更新 Merchants.FollowerCount，
     /// 导致该列在所有商家上恒为 0；本迁移以关注表为事实来源重算一次，并清零无关注记录的残留值。
     /// 手写迁移无 Designer，显式 MigrationAttribute 固定 Id 保证排序在 AddBrandProfileAndBearingTypeDetails 之后。
+    /// 改动说明（迁移从未生效根因）：EF Core 的 MigrationsAssembly.Migrations 只收集
+    ///   "继承链上带 DbContextAttribute 且 ContextType 等于当前 DbContext" 的迁移类型，
+    ///   手写迁移缺 [DbContext] 会被静默忽略（文件在、镜像在、库里永远没有记录）。
+    ///   故此处必须与自动生成迁移的 Designer 一样显式标注 [DbContext]。
     /// </summary>
+    [DbContext(typeof(ApplicationDbContext))]
     [Migration("20261111093000_BackfillMerchantFollowerCount")]
     public partial class BackfillMerchantFollowerCount : Migration
     {

@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -15,20 +16,29 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
     ///   checkin_streak = PointAccounts.ConsecutiveCheckinDays
     ///   sourcing_selected/merchant_selected = SourcingResponses.Status=2（已采纳）
     ///   sourcing_publish_total = SourcingDemands 按发布人计数；register_total = Users 每人 1
-    ///   listing_count = MerchantBearings.IsOnSale 按商户计数
+    ///   listing_count = MerchantBearings 状态为出售中（SaleState=1）且未删的按商户计数
     /// 冲突策略：ON CONFLICT 保 GREATEST（进度只增不减）、COALESCE（已点亮不熄），重复执行不劣化。
     /// 同时清理僵尸列 AchievementDefinitions.RewardPoints——实体已于 v2.12.0 删除该字段，
     /// 但当时未出迁移，DB 中残留无任何读写路径引用的死列。
-    /// 手写迁移无 Designer，显式 MigrationAttribute 固定 Id 保证排序在 RenamePremiumMerchantGradeLabel 之后
+    /// 手写迁移无 Designer，显式 MigrationAttribute 固定 Id 保证排序在 RenamePremiumMerchantGradeLabel 之后。
+    /// 改动说明（迁移从未生效根因 + 补跑适配）：
+    ///   一、补 [DbContext]——此前只有 [Migration]，EF 运行时按上下文过滤迁移类型时把本类丢掉，
+    ///      导致成就回填与僵尸列清理从未执行；
+    ///   二、本迁移写于 2026-10-10，其后 AddBearingSaleReviewState 已删除 MerchantBearings.IsOnSale，
+    ///      改为 SaleState 枚举，故 listing_count 来源同步改为 SaleState = 1；
+    ///   三、RewardPoints 列在部分库可能已被其他途径删除，DropColumn 改为 DROP COLUMN IF EXISTS，
+    ///      保证幂等补跑不会因列不存在而启动失败。
     /// </summary>
+    [DbContext(typeof(ApplicationDbContext))]
     [Migration("20261010130000_BackfillAchievementProgress")]
     public partial class BackfillAchievementProgress : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            // 僵尸列清理：RewardPoints 已从实体删除，DB 残留死列一并移除
-            migrationBuilder.DropColumn(name: "RewardPoints", table: "AchievementDefinitions");
+            // 僵尸列清理：RewardPoints 已从实体删除，DB 残留死列一并移除。
+            // 改动说明：改用原生 SQL + IF EXISTS，避免列已被其他途径清理时补跑报错（见类注释第三点）
+            migrationBuilder.Sql(@"ALTER TABLE ""AchievementDefinitions"" DROP COLUMN IF EXISTS ""RewardPoints"";");
 
             // 历史进度回填：按 metricKey 聚合事实源，JOIN 定义表算出应点亮的成就行
             migrationBuilder.Sql(@"
@@ -60,7 +70,7 @@ WITH progress AS (
     FROM ""Users"" u
     UNION ALL
     SELECT 2, m.""MerchantId"", 'listing_count', COUNT(*)::int
-    FROM ""MerchantBearings"" m WHERE m.""IsOnSale""
+    FROM ""MerchantBearings"" m WHERE m.""SaleState"" = 1 AND m.""IsActive""
     GROUP BY m.""MerchantId""
     UNION ALL
     SELECT 2, r.""MerchantId"", 'merchant_selected', COUNT(*)::int
