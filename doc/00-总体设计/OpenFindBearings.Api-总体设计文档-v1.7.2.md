@@ -1,11 +1,11 @@
-## OpenFindBearings.Api 总体设计文档 v1.7.1
+## OpenFindBearings.Api 总体设计文档 v1.7.2
 
 **文档信息**
 
 | 项目 | 内容 |
 |------|------|
 | 文档名称 | OpenFindBearings.Api 总体设计文档 |
-| 版本 | v1.7.1 |
+| 版本 | v1.7.2 |
 | 最后更新 | 2026-11-12 |
 
 ---
@@ -162,6 +162,16 @@ dotnet ef database update --project src/OpenFindBearings.Infrastructure \
 3. 手写迁移的 SQL 若引用列，必须对照**当前** schema（跨版本补跑尤甚），并尽量写成幂等（如
    `DROP COLUMN IF EXISTS`、`ON CONFLICT`），避免补跑时因 schema 漂移启动失败。
 
+**按编码回填必须先核对线上真实编码（v1.7.2 补充，硬规则）**：迁移 `20261111013233_AddBrandProfileAndBearingTypeDetails`
+的品牌与类型档案回填按 18 个品牌编码、4 个类型编码书写，但线上库实际只有 14 个品牌、`BearingTypes` 当时为空
+（类型数据由同步管线后导入），`UPDATE ... WHERE "Code" = 'X'` 匹配不到即写 0 行且不抛错，表现为
+「迁移执行成功、档案仍然全空」。规则：
+
+1. 按业务编码回填前，先查线上真实清单（如 `select "Code","Name" from "Brands"`），不得按文档或经验假设编码；
+2. 回填 SQL 必须写入可识别来源标记（`ImportedBy`/`ImportedAt`），事后用一条 `count(*)` 即可核对命中数与预期是否一致；
+3. 已进入 `__EFMigrationsHistory` 的迁移不能靠改文件补数据（EF 不会重跑），漏回填只能新增迁移补跑，
+   参考 `20261112120000_BackfillBrandAndTypeProfiles`。
+
 ### 9. 版本历史
 
 | 版本 | 日期 | 变更说明 |
@@ -174,3 +184,4 @@ dotnet ef database update --project src/OpenFindBearings.Infrastructure \
 | v1.6.0 | 2026-09-21 | 商户入驻域扩展对齐（细节见《06-商户入驻与认证体系 v2.11.0》）：① Merchant 加 ApplicationMode/VerifyRequested，Active 后企业名称/信用代码/商家类型锁定（信用代码空可一次性补录）；② LicenseVerification 泛化为 MerchantDocument 多证照材料体系（类型矩阵：执照全必备、授权经销商加品牌授权书、厂家选传厂房照）；③ StaffInvitation 员工邀请确认制（添加已注册用户=待确认邀请+站内信，accept 才落成员行；Identity 侧配套 UsersApiController 服务间查询，S9 闭环）；④ Notification 站内信（审批结果/撤回/邀请事件驱动，未读计数供移动端角标，accept/decline 服务端核销）；⑤ User 加 Mobile 缓存列（登录中间件按 claim JIT 同步，迁移 AddUserMobile）；⑥ 上传扩展名 MIME 兜底 `FileUploadHelper.GetSafeExtension` |
 | v1.7.0 | 2026-09-24 | 域模型补积分聚合（PointAccount/PointTransaction/PointGrantRule 三表，PointsService 唯一写入口，赚端 5 场景+扣分入口就位）；详见《11-积分体系设计 v1.0.0》。 |
 | v1.7.1 | 2026-11-12 | 迁移机制缺陷修复：查明手写迁移因缺 `[DbContext]` 被 EF 运行时静默忽略（粉丝数回填、Lv3 等级文案改名、成就进度回填三条从未执行），三条迁移补标注并适配当前 schema（`IsOnSale`→`SaleState`、`RewardPoints` 改 `DROP COLUMN IF EXISTS`）；`Program.cs` 新增迁移特性启动自检告警；第 8 节新增「手写迁移必须标 `[DbContext]`」硬规则；文档版本号与文件名对齐 |
+| v1.7.2 | 2026-11-12 | 品牌/类型基础档案补齐：新增迁移 `20261112120000_BackfillBrandAndTypeProfiles`，按线上真实编码回填 9 个已有品牌、补录 15 个基础品牌（12 国际 + 3 国内，`ON CONFLICT ("Code") DO NOTHING`）、写全 16 个轴承类型档案；修正旧迁移中 `SRB`（调心球）被误写成调心滚子的语义错配；第 8 节新增「按编码回填必须先核对线上真实编码」硬规则 |
