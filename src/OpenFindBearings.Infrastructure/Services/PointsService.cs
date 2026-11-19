@@ -1,6 +1,8 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
+using Npgsql;
 using OpenFindBearings.Application.Shared.Interfaces;
 using OpenFindBearings.Application.Services;
 using OpenFindBearings.Domain.Entities;
@@ -110,11 +112,36 @@ namespace OpenFindBearings.Infrastructure.Services
             }
             catch (Exception ex)
             {
+                // 改动说明（2026-11-19 并发幂等收尾）：advisory 锁已挡住绝大多数同键并发，
+                // 这里保留最后一道兜底——真撞唯一键说明是"已发放"，不是故障，降为 Information，
+                // 避免老版本客户端一次性并发多请求时刷出 fail 级日志
+                if (IsDuplicateBizId(ex))
+                {
+                    _logger.LogInformation("积分同键重复发放已按幂等跳过: UserId={UserId}, Type={Type}, BizId={BizId}",
+                        userId, grantType, bizId);
+                    return 0;
+                }
                 // 发放失败不阻塞业务主流程（登录/审批/事件链路与积分解耦）
                 _logger.LogWarning(ex, "积分发放失败: UserId={UserId}, Type={Type}, BizId={BizId}",
                     userId, grantType, bizId);
                 return 0;
             }
+        }
+
+        /// <summary>
+        /// 判断异常链中是否包含「BizId 唯一键冲突」（23505 + UX_PointTransactions_BizId）。
+        /// 该冲突语义是"同键已发过"，属幂等命中，不应按故障告警
+        /// </summary>
+        private static bool IsDuplicateBizId(Exception ex)
+        {
+            for (Exception? cur = ex; cur != null; cur = cur.InnerException)
+            {
+                if (cur is PostgresException pg
+                    && pg.SqlState == PostgresErrorCodes.UniqueViolation
+                    && pg.ConstraintName == "UX_PointTransactions_BizId")
+                    return true;
+            }
+            return false;
         }
 
         /// <inheritdoc/>
@@ -333,36 +360,83 @@ namespace OpenFindBearings.Infrastructure.Services
         private async Task GrantCoreAsync(Guid userId, string grantType, int amount, string? bizId,
             string? remark, CancellationToken cancellationToken)
         {
-            var account = await _accountRepository.GetByUserIdAsync(userId, cancellationToken);
-            var accountWasNew = account == null;
-            if (account == null)
-            {
-                account = new PointAccount(userId);
-                await _accountRepository.AddAsync(account, cancellationToken);
-            }
-            else
-            {
-                // 改动说明（xmin 并发令牌）：PointAccounts 映射 PG 系统列 xmin 为并发令牌。
-                // 同一请求链（如成就"一键多规则"连续发放）对同一账户多次 Grant 时，
-                // ChangeTracker 缓存的是上次 SaveChanges 提交前的旧 xmin，二次 UPDATE WHERE xmin
-                // 不命中报 DbUpdateConcurrencyException（实测 expected 1 / affected 0）。
-                // 写前 Reload 强制取最新令牌，保证每次入账都以当前 xmin 竞争，提交后内存值随之刷新
-                await _context.Entry(account).ReloadAsync(cancellationToken);
-                await _accountRepository.UpdateAsync(account, cancellationToken);
-            }
-
-            account.Credit(amount);
-            var tx = new PointTransaction(
-                userId, PointTransaction.DirectionCredit, grantType, amount, account.Balance, bizId, remark);
-            await _transactionRepository.AddAsync(tx, cancellationToken);
+            // 改动说明（2026-11-19 并发幂等）：bizId 非空时先取事务级 advisory 锁再复查。
+            // 此前只有"先查后插"，App 冷启动时多个带登录态请求同时触发 daily_login，
+            // 双双查到不存在后同时插入，输者撞 UX_PointTransactions_BizId——异常虽被吞掉，
+            // 但 EF 在 SaveChanges 抛错时会打 fail 级日志，每次启动必刷。
+            // 改为同键串行：后来的请求在锁内复查直接返回，全程不产生异常。
+            // 锁随本方法自开的短事务释放；若调用链已有外层事务，则随外层事务结束。
+            IDbContextTransaction? lockTx = null;
+            PointAccount? account;
+            bool accountWasNew;
+            PointTransaction tx;
+            int totalEarnedAfter;
             try
             {
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                if (!string.IsNullOrWhiteSpace(bizId))
+                {
+                    if (_context.Database.CurrentTransaction == null)
+                        lockTx = await _context.Database.BeginTransactionAsync(cancellationToken);
+                    // hashtext 结果在库内稳定，锁粒度=业务键；不同 bizId 互不阻塞
+                    await _context.Database.ExecuteSqlInterpolatedAsync(
+                        $"SELECT pg_advisory_xact_lock(hashtext(({bizId})::text))", cancellationToken);
+                    if (await _transactionRepository.ExistsBizIdAsync(bizId, cancellationToken))
+                    {
+                        // 同键已被前一个请求发放：回滚空事务后由 finally 释放，幂等跳过
+                        if (lockTx != null)
+                            await lockTx.RollbackAsync(cancellationToken);
+                        return;
+                    }
+                }
+
+                account = await _accountRepository.GetByUserIdAsync(userId, cancellationToken);
+                accountWasNew = account == null;
+                if (account == null)
+                {
+                    account = new PointAccount(userId);
+                    await _accountRepository.AddAsync(account, cancellationToken);
+                }
+                else
+                {
+                    // 改动说明（xmin 并发令牌）：PointAccounts 映射 PG 系统列 xmin 为并发令牌。
+                    // 同一请求链（如成就"一键多规则"连续发放）对同一账户多次 Grant 时，
+                    // ChangeTracker 缓存的是上次 SaveChanges 提交前的旧 xmin，二次 UPDATE WHERE xmin
+                    // 不命中报 DbUpdateConcurrencyException（实测 expected 1 / affected 0）。
+                    // 写前 Reload 强制取最新令牌，保证每次入账都以当前 xmin 竞争，提交后内存值随之刷新
+                    await _context.Entry(account).ReloadAsync(cancellationToken);
+                    await _accountRepository.UpdateAsync(account, cancellationToken);
+                }
+
+                account.Credit(amount);
+                totalEarnedAfter = account.TotalEarned;
+                tx = new PointTransaction(
+                    userId, PointTransaction.DirectionCredit, grantType, amount, account.Balance, bizId, remark);
+                await _transactionRepository.AddAsync(tx, cancellationToken);
+                try
+                {
+                    await _unitOfWork.SaveChangesAsync(cancellationToken);
+                    if (lockTx != null)
+                        await lockTx.CommitAsync(cancellationToken);
+                }
+                catch
+                {
+                    await CleanupFailedGrantAsync(account, tx, accountWasNew, cancellationToken);
+                    throw;
+                }
             }
             catch
             {
-                await CleanupFailedGrantAsync(account, tx, accountWasNew, cancellationToken);
+                if (lockTx != null)
+                {
+                    try { await lockTx.RollbackAsync(cancellationToken); }
+                    catch { /* 提交已失败时回滚可能再抛，忽略以免掩盖原始异常 */ }
+                }
                 throw;
+            }
+            finally
+            {
+                if (lockTx != null)
+                    await lockTx.DisposeAsync();
             }
 
             // 改动说明（v2.4.0 商家经济）：入账成功后尝试向成员所属商户金库上供——
@@ -372,7 +446,7 @@ namespace OpenFindBearings.Infrastructure.Services
 
             // 改动说明（v2.12.0 等级玩法）：入账成功后结算段位跨档——凡已达档且未领过的
             // 升档礼一次性补发（跳档合并到账）；吞失败不反噬本次赚分主流程
-            await TryGrantLevelUpBonusesAsync(userId, account.TotalEarned, cancellationToken);
+            await TryGrantLevelUpBonusesAsync(userId, totalEarnedAfter, cancellationToken);
         }
 
         /// <summary>
