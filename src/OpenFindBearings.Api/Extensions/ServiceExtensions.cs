@@ -249,7 +249,15 @@ namespace OpenFindBearings.Api.Extensions
         {
             try
             {
-                var driveInfo = new DriveInfo(_path);
+                // 改动说明（v2.22.5）：容器内路径为 "/"，但 Windows 上 new DriveInfo("/") 会抛异常，
+                //   导致本机调试时该检查恒为 Unhealthy、/health 恒 503。改为按当前运行平台取盘符根路径。
+                var root = _path;
+                if (OperatingSystem.IsWindows())
+                {
+                    root = Path.GetPathRoot(AppContext.BaseDirectory) ?? "C:\\";
+                }
+
+                var driveInfo = new DriveInfo(root);
                 var freeSpace = driveInfo.AvailableFreeSpace;
 
                 if (freeSpace < _thresholdBytes)
