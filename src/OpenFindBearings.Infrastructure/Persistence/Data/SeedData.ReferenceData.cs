@@ -16,6 +16,11 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
         /// 先插入默认行，再执行术语与启用状态的收敛更新，最终状态与存量库一致。
         /// </summary>
         private const string ReferenceDataSql = """
+-- 勋章解锁规则：成就已纯荣誉化，保留规则行但停用（与存量库最终状态一致）
+INSERT INTO "PointGrantRules" ("Id", "GrantType", "DisplayName", "Amount", "DailyLimit", "LadderJson", "IsEnabled", "Description", "CreatedAt", "IsActive")
+SELECT gen_random_uuid(), 'achievement_unlock', '勋章解锁奖励', 5, 0, NULL, false, '勋章点亮一次性可花积分甜头（实际分值按勋章定义覆盖）', now(), true
+WHERE NOT EXISTS (SELECT 1 FROM "PointGrantRules" WHERE "GrantType" = 'achievement_unlock');
+
 -- ===== rules.基础五条 =====
 INSERT INTO "PointGrantRules" ("Id", "GrantType", "DisplayName", "Amount", "DailyLimit", "LadderJson", "IsEnabled", "Description", "CreatedAt", "IsActive")
 SELECT gen_random_uuid(), 'daily_login', '每日登录', 1, 0, NULL, true, '当日首次业务请求自动发放（被动保底）', now(), true
@@ -34,7 +39,9 @@ SELECT gen_random_uuid(), 'merchant_approved', '商户入驻通过', 100, 0, NUL
 WHERE NOT EXISTS (SELECT 1 FROM "PointGrantRules" WHERE "GrantType" = 'merchant_approved');
 
 -- ===== rules.户与商品首单 =====
-INSERT INTO "PointGrantRules" ("Id", "GrantType", "DisplayName", "Amount", "DailyLimit", "LadderJson", "IsEnabled", "Description", "CreatedAt", "IsActive")
+
+                
+                INSERT INTO "PointGrantRules" ("Id", "GrantType", "DisplayName", "Amount", "DailyLimit", "LadderJson", "IsEnabled", "Description", "CreatedAt", "IsActive")
                 SELECT gen_random_uuid(), v.g, v.n, v.a, 0, NULL, true, v.d, now(), true
                 FROM (VALUES
                     ('merchant_profile_complete', '完善商户资料', 50, '联系人/电话/简介/地址首次齐全（同执照仅一次）'),
@@ -107,6 +114,16 @@ UPDATE "PointGrantRules" SET "DoubleChance" = 10, "LegendChance" = 2, "UpdatedAt
                 WHERE NOT EXISTS (SELECT 1 FROM "AchievementDefinitions" WHERE "Key" = 'founder_elder');
 
 -- ===== rules.术语收敛 =====
+UPDATE "SystemConfigs" SET "Key" = 'Business.MerchantPremiumOnSaleMin'
+ WHERE "Key" = 'Business.GuildPremiumOnSaleMin'
+   AND NOT EXISTS (SELECT 1 FROM "SystemConfigs" s WHERE s."Key" = 'Business.MerchantPremiumOnSaleMin');
+UPDATE "SystemConfigs" SET "Key" = 'Business.MerchantGoldOnSaleMin'
+ WHERE "Key" = 'Business.GuildGoldOnSaleMin'
+   AND NOT EXISTS (SELECT 1 FROM "SystemConfigs" s WHERE s."Key" = 'Business.MerchantGoldOnSaleMin');
+UPDATE "SystemConfigs" SET "Key" = 'Business.MerchantGoldTreasuryMin'
+ WHERE "Key" = 'Business.GuildGoldTreasuryMin'
+   AND NOT EXISTS (SELECT 1 FROM "SystemConfigs" s WHERE s."Key" = 'Business.MerchantGoldTreasuryMin');
+DELETE FROM "SystemConfigs" WHERE "Key" IN ('Business.GuildPremiumOnSaleMin', 'Business.GuildGoldOnSaleMin', 'Business.GuildGoldTreasuryMin');
 UPDATE "PointGrantRules" SET "GrantType" = 'merchant_task', "DisplayName" = '商家集体任务奖励', "Description" = '商家集体任务达标结算发放（分值按任务定义覆盖，Job 自动发放）'
  WHERE "GrantType" = 'guild_task';
 
@@ -167,7 +184,7 @@ WHERE p."Level" = v.lv;
 
 -- ===== achievements.数据共创与成就 =====
 INSERT INTO "AchievementDefinitions" ("Id", "Key", "Name", "Description", "Icon", "Scope", "Category", "MetricKey", "ProgressTarget", "MetaPoints", "TitleReward", "Rare", "Hidden", "Enabled", "CreatedAt", "IsActive")
-SELECT gen_random_uuid(), v."Key", v."Name", v."Description", v."Icon", v."Scope", v."Category", v."MetricKey", v."Target", v."Meta", v."Reward", v."Title", v."Rare", v."Hidden", true, now(), true
+SELECT gen_random_uuid(), v."Key", v."Name", v."Description", v."Icon", v."Scope", v."Category", v."MetricKey", v."Target", v."Meta", v."Title", v."Rare", v."Hidden", true, now(), true
 FROM (VALUES
     ('correction_first','初次纠错','首条纠错被平台采纳','edit',1,'数据共创','correction_adopted',1,10,NULL,false,false),
     ('correction_10','火眼金睛','累计 10 条纠错被采纳','search',1,'数据共创','correction_adopted',10,30,NULL,false,false),
@@ -184,12 +201,12 @@ FROM (VALUES
     ('merchant_verified','认证商家','通过平台资质认证','badge-check',2,'商户','merchant_verified',1,40,'认证商家',false,false),
     ('merchant_selected_first','首单中选','应答首次被发布人选定','handshake',2,'商户','merchant_selected',1,20,NULL,false,false),
     ('merchant_selected_10','金牌供应商','累计 10 次应答被选定','trophy',2,'商户','merchant_selected',10,60,NULL,true,false)
-) AS v("Key","Name","Description","Icon","Scope","Category","MetricKey","Target","Meta","Reward","Title","Rare","Hidden")
-WHERE NOT EXISTS (SELECT 1 FROM "AchievementDefinitions" a WHERE a."Key" = v."Key"
+) AS v("Key", "Name", "Description", "Icon", "Scope", "Category", "MetricKey", "Target", "Meta", "Title", "Rare", "Hidden")
+WHERE NOT EXISTS (SELECT 1 FROM "AchievementDefinitions" a WHERE a."Key" = v."Key");
 
 -- ===== achievements.新手旅程 =====
 INSERT INTO "AchievementDefinitions" ("Id", "Key", "Name", "Description", "Icon", "Scope", "Category", "MetricKey", "ProgressTarget", "MetaPoints", "TitleReward", "Rare", "Hidden", "Enabled", "CreatedAt", "IsActive")
-SELECT gen_random_uuid(), v."Key", v."Name", v."Description", v."Icon", v."Scope", v."Category", v."MetricKey", v."Target", v."Meta", v."Reward", v."Title", v."Rare", v."Hidden", true, now(), true
+SELECT gen_random_uuid(), v."Key", v."Name", v."Description", v."Icon", v."Scope", v."Category", v."MetricKey", v."Target", v."Meta", v."Title", v."Rare", v."Hidden", true, now(), true
 FROM (VALUES
     ('checkin_first','初次签到','完成首次每日签到','check',1,'新手旅程','checkin_total',1,5,NULL,false,false),
     ('checkin_3','三日之约','连续签到 3 天','calendar',1,'新手旅程','checkin_streak',3,10,NULL,false,false),
@@ -197,34 +214,34 @@ FROM (VALUES
     ('register_first','初来乍到','注册加入平台','sparkles',1,'新手旅程','register_total',1,5,NULL,false,false),
     ('login_7','七日陪伴','累计登录 7 天','flame',1,'新手旅程','login_total',7,20,NULL,false,false),
     ('sourcing_first','旗开得胜','发布首条寻货需求','flag',1,'新手旅程','sourcing_publish_total',1,15,NULL,false,false)
-) AS v("Key","Name","Description","Icon","Scope","Category","MetricKey","Target","Meta","Reward","Title","Rare","Hidden")
-WHERE NOT EXISTS (SELECT 1 FROM "AchievementDefinitions" a WHERE a."Key" = v."Key"
+) AS v("Key", "Name", "Description", "Icon", "Scope", "Category", "MetricKey", "Target", "Meta", "Title", "Rare", "Hidden")
+WHERE NOT EXISTS (SELECT 1 FROM "AchievementDefinitions" a WHERE a."Key" = v."Key");
 
 -- ===== achievements.创站元老 =====
 UPDATE "PointGrantRules" SET "DoubleChance" = 10, "LegendChance" = 2, "UpdatedAt" = now()
                 WHERE "GrantType" = 'daily_checkin';
 
                 INSERT INTO "AchievementDefinitions" ("Id", "Key", "Name", "Description", "Icon", "ImageKey", "Scope", "Category", "MetricKey", "ProgressTarget", "MetaPoints", "TitleReward", "Rare", "Hidden", "IsLimited", "LimitedOrdinal", "Enabled", "CreatedAt", "UpdatedAt", "IsActive")
-                SELECT gen_random_uuid(), 'founder_elder', '创站元老', '平台前 100 位注册用户专属徽章，窗口已关闭，绝版不返场', 'medal', NULL, 1, '元老', 'founder_ordinal', 1, 60, 0, '创站元老', true, true, true, 100, true, now(), now(), true
+SELECT gen_random_uuid(), 'founder_elder', '创站元老', '平台前 100 位注册用户专属徽章，窗口已关闭，绝版不返场', 'medal', NULL, 1, '元老', 'founder_ordinal', 1, 60, '创站元老', true, true, true, 100, true, now(), now(), true
                 WHERE NOT EXISTS (SELECT 1 FROM "AchievementDefinitions" WHERE "Key" = 'founder_elder');
 
 -- ===== mall.商品置顶卡 =====
-INSERT INTO "MallItems" ("Id", "Key", "Name", "Description", "Icon", "Category", "PointPrice", "FlashPrice", "FlashStart", "FlashEnd", "DurationHours", "Stock", "SoldCount", "Enabled", "SortOrder", "CreatedAt", "IsActive")
-SELECT gen_random_uuid(), v."Key", v."Name", v."Description", v."Icon", v."Category", v."Price", NULL, NULL, NULL, v."Hours", v."Stock", 0, true, v."Sort", now(), true
+INSERT INTO "MallItems" ("Id", "Key", "Name", "Description", "Icon", "Category", "PointPrice", "FlashPrice", "FlashStart", "FlashEnd", "DurationHours", "Stock", "SoldCount", "Enabled", "SortOrder", "AuditState", "CreatedAt", "IsActive")
+SELECT gen_random_uuid(), v."Key", v."Name", v."Description", v."Icon", v."Category", v."Price", NULL, NULL, NULL, v."Hours", v."Stock", 0, true, v."Sort", 0, now(), true
 FROM (VALUES
  ('pin_24h', '24小时置顶卡', '把一件在售商品在该型号商家列表置顶 24 小时，买家一眼先看到你', 'arrow-up-circle', 1, 120, 24, -1, 10),
  ('pin_72h', '72小时置顶卡', '把一件在售商品在该型号商家列表置顶 72 小时，长曝光更划算', 'rocket', 1, 320, 72, -1, 20)
 ) AS v("Key", "Name", "Description", "Icon", "Category", "Price", "Hours", "Stock", "Sort")
-WHERE NOT EXISTS (SELECT 1 FROM "MallItems" m WHERE m."Key" = v."Key"
+WHERE NOT EXISTS (SELECT 1 FROM "MallItems" m WHERE m."Key" = v."Key");
 
 -- ===== mall.寻货置顶卡与改名 =====
-INSERT INTO "MallItems" ("Id", "Key", "Name", "Description", "Icon", "Category", "PointPrice", "DurationHours", "Stock", "SoldCount", "Enabled", "SortOrder", "TargetKind", "CreatedAt", "IsActive")
-SELECT gen_random_uuid(), v."Key", v."Name", v."Description", v."Icon", 1, v."PointPrice", v."DurationHours", -1, 0, true, v."SortOrder", 2, (now() at time zone 'utc'), true
+INSERT INTO "MallItems" ("Id", "Key", "Name", "Description", "Icon", "Category", "PointPrice", "DurationHours", "Stock", "SoldCount", "Enabled", "SortOrder", "TargetKind", "AuditState", "CreatedAt", "IsActive")
+SELECT gen_random_uuid(), v."Key", v."Name", v."Description", v."Icon", 1, v."PointPrice", v."DurationHours", -1, 0, true, v."SortOrder", 2, 0, (now() at time zone 'utc'), true
 FROM (VALUES
     ('demand_pin_24h', '24小时寻货置顶卡', '把你发布的一条寻货需求在公开大厅置顶 24 小时，商家优先看到（个人积分支付）', 'pin', 60, 24, 30),
     ('demand_pin_72h', '72小时寻货置顶卡', '把你发布的一条寻货需求在公开大厅置顶 72 小时，曝光拉满（个人积分支付）', 'rocket', 160, 72, 40)
 ) AS v("Key", "Name", "Description", "Icon", "PointPrice", "DurationHours", "SortOrder")
-WHERE NOT EXISTS (SELECT 1 FROM "MallItems" m WHERE m."Key" = v."Key"
+WHERE NOT EXISTS (SELECT 1 FROM "MallItems" m WHERE m."Key" = v."Key");
 
 -- ===== mall.寻货置顶卡与改名 =====
 UPDATE "MallItems" SET "Name" = '24小时商品置顶卡',

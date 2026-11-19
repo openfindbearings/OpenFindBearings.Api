@@ -84,6 +84,48 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
         }
 
         /// <summary>
+        /// 补齐演示轴承所需的六个常见品牌。这些品牌通常来自爬取数据源，空库不存在；
+        /// 仅开发环境创建，来源标记为种子数据，同步任务不会覆盖。
+        /// </summary>
+        private static async Task EnsureDemoBrandsAsync(ApplicationDbContext context)
+        {
+            var required = new (string Code, string Name, BrandLevel Level)[]
+            {
+                ("SKF", "SKF", BrandLevel.InternationalPremium),
+                ("FAG", "FAG", BrandLevel.InternationalPremium),
+                ("NSK", "NSK", BrandLevel.InternationalPremium),
+                ("HRB", "HRB", BrandLevel.DomesticPremium),
+                ("ZWZ", "ZWZ", BrandLevel.DomesticPremium),
+                ("LYC", "LYC", BrandLevel.DomesticPremium),
+            };
+
+            var codes = required.Select(r => r.Code).ToArray();
+            var existing = await context.Brands
+                .Where(b => codes.Contains(b.Code))
+                .Select(b => b.Code)
+                .ToListAsync();
+
+            var added = false;
+            foreach (var (code, name, level) in required)
+            {
+                if (existing.Contains(code))
+                {
+                    continue;
+                }
+
+                var brand = new Brand(code, name, level);
+                brand.SetDataSource(DataSource.FromSeedData());
+                context.Brands.Add(brand);
+                added = true;
+            }
+
+            if (added)
+            {
+                await context.SaveChangesAsync();
+            }
+        }
+
+        /// <summary>
         /// 演示轴承与替代关系：依赖主数据里的品牌与类型，只在轴承表为空时写入，避免重复启动翻倍。
         /// </summary>
         private static async Task EnsureDemoBearingsAsync(ApplicationDbContext context, ILogger logger)
@@ -92,6 +134,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
             {
                 return;
             }
+
+            // 演示轴承依赖这六个常见品牌；它们来自爬取源、空库并不存在，这里按需补建（仅开发环境）
+            await EnsureDemoBrandsAsync(context);
 
             var brands = await context.Brands
                 .Where(b => new[] { "SKF", "FAG", "NSK", "HRB", "ZWZ", "LYC" }.Contains(b.Code))

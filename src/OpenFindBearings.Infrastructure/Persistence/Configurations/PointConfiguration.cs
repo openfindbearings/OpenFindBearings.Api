@@ -129,6 +129,10 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             builder.Property(l => l.Name).IsRequired().HasMaxLength(32);
             builder.Property(l => l.Enabled).IsRequired().HasDefaultValue(true);
             builder.Property(l => l.LevelUpBonus).IsRequired().HasDefaultValue(0);
+
+            // 改动说明（迁移收缩补齐）：档位序号必须唯一，原由迁移 20260927110754 建的
+            //   UX_PointLevels_Level 唯一索引未在模型里声明，收缩后新库会丢失该约束
+            builder.HasIndex(l => l.Level).IsUnique().HasDatabaseName("UX_PointLevels_Level");
         }
     }
 }

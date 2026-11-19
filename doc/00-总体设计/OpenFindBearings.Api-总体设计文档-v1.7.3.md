@@ -177,7 +177,7 @@ dotnet ef database update --project src/OpenFindBearings.Infrastructure \
 背景：55 个迁移里有 32 个夹带数据语句，其中 12 个是纯数据迁移（权限补丁、角色重排、等级文案、成就与积分参考数据、粉丝数回填、品牌档案回填等）。
 迁移历史越长，"给存量库补一次数据"就越依赖迁移顺序，且全新库无法区分"结构"与"数据"两类关注点。现已收缩为：
 
-1. **只有一条结构迁移** `20261119050313_InitialCreate`，由当前模型反向生成，不含任何 `migrationBuilder.Sql` 数据语句；
+1. **只有一条结构迁移** `20261119061103_InitialCreate`，由当前模型反向生成，不含任何 `migrationBuilder.Sql` 数据语句；
 2. **数据全部走 SeedData**，按 partial 文件分职责：`SeedData.Security`（权限/角色/绑定）、`SeedData.MasterData`（品牌/类型档案、粉丝数校准）、`SeedData.ReferenceData`（积分规则/段位/勋章/商城道具/商家任务）、`SeedData.Config`（系统配置键）、`SeedData.Demo`（仅 Development 的演示数据）；
 3. **每次启动幂等校验**：安全目录与主数据只补缺失项、不覆盖人工维护内容；参考数据脚本逐条 `WHERE NOT EXISTS`；不再存在"某表非空就整体跳过"的总开关；
 4. **新增功能遵循同一规矩**：结构变更写迁移；数据补丁写成 SeedData 里可重复执行的幂等函数，不再新增纯数据迁移。
@@ -186,11 +186,17 @@ dotnet ef database update --project src/OpenFindBearings.Infrastructure \
 
 ```sql
 INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-VALUES ('20261119050313_InitialCreate', '10.0.0');
+VALUES ('20261119061103_InitialCreate', '10.0.0');
 ```
 
 该行只影响 EF 的版本记录，不修改任何业务表；如需回退，删除该行即可恢复收缩前的判断。
 收缩前的 55 条迁移保留在 `pre-squash-migrations` 标签中，可按需查阅或恢复。
+
+**收缩后的结构校验结果（2026-11-19）**：用 `pre-squash-migrations` 标签生成旧迁移链、剥离数据语句后建库，与新 `InitialCreate` 建库做规范化对比（表、列、类型、可空性、默认值、索引、约束）。结论：
+
+1. 表、列、类型、可空性、索引、约束**全部一致**；唯一差异是 `MerchantDocuments` 沿用了历史名称（`PK_LicenseVerifications`、`FK_LicenseVerifications_*`），新库按表名生成 `PK_MerchantDocuments` 等，属纯命名差异。
+2. 9 个列在旧库有数据库默认值、新库没有：`MallItems.AuditState`、`MallOrders.ShipStatus`、`MerchantBearings.ReviewStatus`、`MerchantBearings.SaleState`、`MerchantDocuments.Type`、`Merchants.ApplicationMode`、`SourcingDemands.InvitedMerchantIds`、`SourcingResponses.IsCounted`、`Users.IsAnonymized`。这些默认值来自历史上 `AddColumn` 的回填参数，模型层刻意不声明（状态列设默认会让 EF 的 sentinel 语义失效，见 `MerchantBearingConfiguration` 注释）；业务写入一律经 EF 显式赋值，参考数据脚本也显式写列，因此不影响运行。
+3. 收缩过程顺带修复了旧链无法在空库跑通的问题：`20261010130000_BackfillAchievementProgress` 引用了晚于它创建的 `SaleState` 列。
 
 ### 9. 版本历史
 
@@ -205,4 +211,4 @@ VALUES ('20261119050313_InitialCreate', '10.0.0');
 | v1.7.0 | 2026-09-24 | 域模型补积分聚合（PointAccount/PointTransaction/PointGrantRule 三表，PointsService 唯一写入口，赚端 5 场景+扣分入口就位）；详见《11-积分体系设计 v1.0.0》。 |
 | v1.7.1 | 2026-11-12 | 迁移机制缺陷修复：查明手写迁移因缺 `[DbContext]` 被 EF 运行时静默忽略（粉丝数回填、Lv3 等级文案改名、成就进度回填三条从未执行），三条迁移补标注并适配当前 schema（`IsOnSale`→`SaleState`、`RewardPoints` 改 `DROP COLUMN IF EXISTS`）；`Program.cs` 新增迁移特性启动自检告警；第 8 节新增「手写迁移必须标 `[DbContext]`」硬规则；文档版本号与文件名对齐 |
 | v1.7.2 | 2026-11-12 | 品牌/类型基础档案补齐：新增迁移 `20261112120000_BackfillBrandAndTypeProfiles`，按线上真实编码回填 9 个已有品牌、补录 15 个基础品牌（12 国际 + 3 国内，`ON CONFLICT ("Code") DO NOTHING`）、写全 16 个轴承类型档案；修正旧迁移中 `SRB`（调心球）被误写成调心滚子的语义错配；第 8 节新增「按编码回填必须先核对线上真实编码」硬规则 |
-| v1.7.3 | 2026-11-19 | 迁移收缩：55 条历史迁移合并为单一 `20261119050313_InitialCreate`（纯结构、无数据语句），12 条纯数据迁移的内容统一迁入 SeedData（Security/MasterData/ReferenceData/Config 四个 partial，全部幂等）；种子改为分层幂等，删除「SystemConfigs 非空即整体跳过」判据，全新库开箱即有权限目录与 Admin 角色；第 8 节新增迁移收缩与存量库 baseline 规则 |
+| v1.7.3 | 2026-11-19 | 迁移收缩：55 条历史迁移合并为单一 `20261119061103_InitialCreate`（纯结构、无数据语句），12 条纯数据迁移的内容统一迁入 SeedData（Security/MasterData/ReferenceData/Config 四个 partial，全部幂等）；种子改为分层幂等，删除「SystemConfigs 非空即整体跳过」判据，全新库开箱即有权限目录与 Admin 角色；第 8 节新增迁移收缩与存量库 baseline 规则 |

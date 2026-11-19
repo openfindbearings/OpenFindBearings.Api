@@ -1706,6 +1706,12 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "UX_PointLevels_Level",
+                table: "PointLevels",
+                column: "Level",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "UX_PointRewardClaims_BizKey",
                 table: "PointRewardClaims",
                 column: "BizKey",

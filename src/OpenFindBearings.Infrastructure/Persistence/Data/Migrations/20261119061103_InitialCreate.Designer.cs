@@ -13,7 +13,7 @@ using OpenFindBearings.Infrastructure.Persistence.Data;
 namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20261119050313_InitialCreate")]
+    [Migration("20261119061103_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -2098,6 +2098,10 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Level")
+                        .IsUnique()
+                        .HasDatabaseName("UX_PointLevels_Level");
 
                     b.ToTable("PointLevels", (string)null);
                 });
