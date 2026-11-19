@@ -31,6 +31,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
 
                 await EnsureMasterDataAsync(context, logger);
 
+                // 参考数据：积分规则、段位、勋章、商城道具与商家任务，源自收缩前的数据迁移
+                await EnsureReferenceDataAsync(context, logger);
+
                 if (isDevelopment)
                 {
                     await EnsureDemoDataAsync(context, logger);
