@@ -2096,6 +2096,10 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Level")
+                        .IsUnique()
+                        .HasDatabaseName("UX_PointLevels_Level");
+
                     b.ToTable("PointLevels", (string)null);
                 });
 
