@@ -1,7 +1,8 @@
-﻿using OpenFindBearings.Domain.Abstractions;
+using OpenFindBearings.Domain.Abstractions;
 using OpenFindBearings.Domain.Entities;
 using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Events;
+using OpenFindBearings.Domain.Services;
 using OpenFindBearings.Domain.ValueObjects;
 
 namespace OpenFindBearings.Domain.Aggregates
@@ -27,6 +28,24 @@ namespace OpenFindBearings.Domain.Aggregates
         /// 英文名称（用于国际化展示）
         /// </summary>
         public string? EnglishName { get; private set; }
+
+        // 改动说明（2026-11-20 拼音检索）：名称与公司全称的检索键在写入时预计算并存列，
+        //   查询只做字符串匹配，避免每次搜索全表转换；三列均由 RebuildSearchKeys 统一维护。
+
+        /// <summary>
+        /// 全拼检索键（名称 + 公司全称，小写无分隔）
+        /// </summary>
+        public string? SearchPinyin { get; private set; }
+
+        /// <summary>
+        /// 首字母检索键（名称 + 公司全称，小写）
+        /// </summary>
+        public string? SearchInitials { get; private set; }
+
+        /// <summary>
+        /// 模糊归一全拼（zh→z、ch→c、sh→s、ang→an、eng→en、ing→in）
+        /// </summary>
+        public string? SearchPinyinFuzzy { get; private set; }
 
         /// <summary>
         /// 统一社会信用代码
@@ -223,6 +242,8 @@ namespace OpenFindBearings.Domain.Aggregates
             Name = name;
             Type = type;
             Contact = contact ?? throw new ArgumentNullException(nameof(contact));
+            // 改动说明（2026-11-20 拼音检索）：新建即生成检索键
+            RebuildSearchKeys();
             // 改动说明（v2.18.0 卡级重构）：初始档由"入驻商家"改为档位底"普通"（未认证即无牌级）
             // 改动说明（v2.19.0 有效期制）：Registered 改名 Ordinary，展示为"普通"
             Grade = MerchantGrade.Ordinary;
@@ -262,6 +283,8 @@ namespace OpenFindBearings.Domain.Aggregates
             BusinessScope = businessScope;
             LogoUrl = logoUrl;
             Website = website;
+            // 改动说明（2026-11-20 拼音检索）：公司名可能变化，检索键随之刷新
+            RebuildSearchKeys();
             UpdateTimestamp();
         }
 
@@ -283,8 +306,28 @@ namespace OpenFindBearings.Domain.Aggregates
                 throw new ArgumentException("商家名称不能为空", nameof(newName));
 
             Name = newName;
+            // 改动说明（2026-11-20 拼音检索）：改名后检索键必须同步，否则拼音搜不到新名称
+            RebuildSearchKeys();
             UpdateTimestamp();
         }
+
+        /// <summary>
+        /// 重算拼音检索键（全拼/首字母/模糊归一），名称或公司名变更时调用。
+        /// </summary>
+        private void RebuildSearchKeys()
+        {
+            var keys = PinyinSearchText.Build(Name, CompanyName);
+            SearchPinyin = keys.Pinyin;
+            SearchInitials = keys.Initials;
+            SearchPinyinFuzzy = keys.Fuzzy;
+        }
+
+        /// <summary>
+        /// 重算检索键（供历史数据回填使用）。
+        /// 改动说明（2026-11-20）：拼音列上线前的存量商户三列为空，由启动种子调用本方法补齐；
+        ///   名称未变化时重复调用结果一致，天然幂等。
+        /// </summary>
+        public void RefreshSearchKeys() => RebuildSearchKeys();
 
         /// <summary>
         /// 更新联系方式

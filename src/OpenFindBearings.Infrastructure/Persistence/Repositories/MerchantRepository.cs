@@ -2,6 +2,7 @@ using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using OpenFindBearings.Domain.Aggregates;
 using OpenFindBearings.Domain.Enums;
+using OpenFindBearings.Domain.Services;
 using OpenFindBearings.Domain.Repositories;
 using OpenFindBearings.Domain.Specifications;
 using OpenFindBearings.Infrastructure.Persistence.Data;
@@ -44,9 +45,17 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
                 query = query.Where(m => m.IsActive == searchParams.IsActive.Value);
 
             if (!string.IsNullOrWhiteSpace(searchParams.Keyword))
+            {
+                // 改动说明（2026-11-20 拼音检索）：除中文子串外，同时匹配预计算的全拼 /
+                //   首字母 / 模糊归一全拼；检索键存小写，输入先按同一口径归一
+                var normalized = PinyinSearchText.NormalizeQuery(searchParams.Keyword);
                 query = query.Where(m =>
                     m.Name.Contains(searchParams.Keyword) ||
-                    (m.CompanyName != null && m.CompanyName.Contains(searchParams.Keyword)));
+                    (m.CompanyName != null && m.CompanyName.Contains(searchParams.Keyword)) ||
+                    (m.SearchPinyin != null && m.SearchPinyin.Contains(normalized)) ||
+                    (m.SearchInitials != null && m.SearchInitials.Contains(normalized)) ||
+                    (m.SearchPinyinFuzzy != null && m.SearchPinyinFuzzy.Contains(normalized)));
+            }
 
             if (searchParams.Type.HasValue)
                 query = query.Where(m => m.Type == searchParams.Type);
@@ -154,9 +163,14 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
 
             if (!string.IsNullOrWhiteSpace(keyword))
             {
+                // 改动说明（2026-11-20 拼音检索）：认领/发现搜索同样支持全拼、首字母与模糊拼音
+                var normalized = PinyinSearchText.NormalizeQuery(keyword);
                 query = query.Where(m =>
                     m.Name.Contains(keyword) ||
-                    (m.CompanyName != null && m.CompanyName.Contains(keyword)));
+                    (m.CompanyName != null && m.CompanyName.Contains(keyword)) ||
+                    (m.SearchPinyin != null && m.SearchPinyin.Contains(normalized)) ||
+                    (m.SearchInitials != null && m.SearchInitials.Contains(normalized)) ||
+                    (m.SearchPinyinFuzzy != null && m.SearchPinyinFuzzy.Contains(normalized)));
             }
 
             var totalCount = await query.CountAsync(cancellationToken);

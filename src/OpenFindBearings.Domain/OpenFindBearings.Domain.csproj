@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -8,6 +8,8 @@
 
   <ItemGroup>
     <PackageReference Include="MediatR.Contracts" Version="2.0.1" />
+    <!-- 拼音检索键生成（商户名称全拼/首字母/模糊归一），写入时预计算 -->
+    <PackageReference Include="ToolGood.Words.Pinyin" Version="3.1.0.4" />
   </ItemGroup>
 
 </Project>

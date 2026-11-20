@@ -21,6 +21,22 @@
         public string Name { get; set; } = string.Empty;
 
         /// <summary>
+        /// 名称全拼检索键（小写，写入时预计算并存库）
+        /// 改动说明（2026-11-20 拼音检索）：与商户同口径落库三列，DTO 直接透出供前端过滤
+        /// </summary>
+        public string SearchPinyin { get; set; } = string.Empty;
+
+        /// <summary>
+        /// 名称首字母检索键（小写）
+        /// </summary>
+        public string SearchInitials { get; set; } = string.Empty;
+
+        /// <summary>
+        /// 模糊归一全拼（zh→z、ang→an 等）
+        /// </summary>
+        public string SearchPinyinFuzzy { get; set; } = string.Empty;
+
+        /// <summary>
         /// 所属国家
         /// </summary>
         public string? Country { get; set; }
