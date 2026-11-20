@@ -39,9 +39,12 @@ namespace OpenFindBearings.Application.DTOs
 
         /// <summary>
         /// 统一社会信用代码校验（v2.11.0 入驻三入口必填）：非空 + 18 位执照标准字符集
-        /// （数字与大写字母，剔除易混 I/O/Z/S/V）。返回错误提示语，通过时返回 null。
+        /// （数字与大写字母，剔除易混 I/O/Z/S/V）+ GB 32100 校验位。
+        /// 返回错误提示语，通过时返回 null。
         /// 改动说明：此前选填导致锁定后空值商户永远补不了、审核无法比对执照代码，
         ///   升必填；存量空值商户由 UpdateMerchant"一次性补录"通道放行。
+        /// 改动说明（2026-11-20）：补校验位校验——18 位里第 18 位由前 17 位按权重算出，
+        ///   纯本地即可拦住随手编造的号码，无需接入 OCR。
         /// </summary>
         public static string? ValidateCreditCode(string? code)
         {
@@ -51,7 +54,37 @@ namespace OpenFindBearings.Application.DTOs
             if (trimmed.Length != 18 ||
                 !System.Text.RegularExpressions.Regex.IsMatch(trimmed, @"^[0-9A-HJ-NP-RT-UWXY]{18}$"))
                 return "统一社会信用代码应为18位（营业执照上的数字与大写字母组合）";
+            if (!HasValidCreditCodeChecksum(trimmed))
+                return "统一社会信用代码校验位不正确，请核对营业执照上的号码";
             return null;
+        }
+
+        /// <summary>统一社会信用代码字符集（GB 32100，剔除 I/O/Z/S/V 后的 31 个字符）。</summary>
+        private const string CreditCodeCharset = "0123456789ABCDEFGHJKLMNPQRTUWXY";
+
+        /// <summary>前 17 位的加权因子（GB 32100 规定）。</summary>
+        private static readonly int[] CreditCodeWeights =
+            [1, 3, 9, 27, 19, 26, 16, 17, 20, 29, 25, 13, 8, 24, 10, 30, 28];
+
+        /// <summary>
+        /// 计算并比对第 18 位校验码：Σ(位值 × 权重) mod 31，再用 31 - 余数 取字符集下标（31 视为 0）。
+        /// </summary>
+        private static bool HasValidCreditCodeChecksum(string code)
+        {
+            var sum = 0;
+            for (var i = 0; i < 17; i++)
+            {
+                var index = CreditCodeCharset.IndexOf(code[i]);
+                if (index < 0)
+                {
+                    return false;
+                }
+
+                sum += index * CreditCodeWeights[i];
+            }
+
+            var checkIndex = (31 - sum % 31) % 31;
+            return CreditCodeCharset[checkIndex] == code[17];
         }
 
         /// <summary>
