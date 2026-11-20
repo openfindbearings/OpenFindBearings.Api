@@ -23,6 +23,16 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
             builder.Property(m => m.EnglishName)
                 .HasMaxLength(256);
 
+            // 改动说明（2026-11-20 拼音检索）：三列为写入时预计算的检索键，仅新增可空列，不动存量数据
+            builder.Property(m => m.SearchPinyin)
+                .HasMaxLength(512);
+
+            builder.Property(m => m.SearchInitials)
+                .HasMaxLength(256);
+
+            builder.Property(m => m.SearchPinyinFuzzy)
+                .HasMaxLength(512);
+
             builder.Property(m => m.Type)
                 .IsRequired();
 

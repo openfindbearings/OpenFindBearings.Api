@@ -295,6 +295,18 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                         .HasDefaultValue(0)
                         .HasColumnName("ProductCount");
 
+                    b.Property<string>("SearchInitials")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("SearchPinyin")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<string>("SearchPinyinFuzzy")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
                     b.Property<int>("Status")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
@@ -1102,6 +1114,18 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     b.Property<string>("ParentCompany")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<string>("SearchInitials")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("SearchPinyin")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<string>("SearchPinyinFuzzy")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
 
                     b.Property<string>("SuffixNotes")
                         .HasColumnType("text");

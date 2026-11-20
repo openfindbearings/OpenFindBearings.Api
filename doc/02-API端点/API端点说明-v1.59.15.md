@@ -1,10 +1,15 @@
-﻿# API 端点说明文档
+# API 端点说明文档
 
-**版本：** v1.59.14
-**日期：** 2026-11-11
-**上一版：** v1.59.13
+**版本：** v1.59.15
+**日期：** 2026-11-20
+**上一版：** v1.59.14
 **状态：** 与代码同步
 
+> v1.59.15 变更（商户/品牌拼音检索键，无新端点）：
+> 1. **新增拼音检索键**：`Merchants` 与 `Brands` 各新增三列可空字段 `SearchPinyin`（全拼）/ `SearchInitials`（首字母）/ `SearchPinyinFuzzy`（模糊归一全拼，zh→z、ch→c、sh→s、ang→an、eng→en、ing→in），写入时预计算并存库，查询只做字符串匹配。三列由同一生成器 `PinyinSearchText` 维护，商户名称/公司名、品牌名变更时自动重算。
+> 2. **入驻发现搜索支持拼音**：`GET /api/merchant/claimable?keyword=` 在原有中文子串之外，额外匹配全拼、首字母与模糊拼音（如 `lyzc`、`luoyang`、`luoyan` 均可命中「洛阳轴承集团…」）；`GET /api/admin/merchants` 的 `keyword` 同口径生效。
+> 3. **品牌 DTO 透出检索键**：`BrandDto` 新增 `searchPinyin` / `searchInitials` / `searchPinyinFuzzy`，供移动端品牌 Tab 在内存过滤时使用拼音匹配。
+> 4. **迁移 `AddSearchPinyinKeys`**：只加六列（Merchants 与 Brands 各三列），不含数据 SQL；历史行由启动种子幂等回填。
 > v1.59.14 变更（商家粉丝数修复与禁止自关注，无新端点）：
 > 1. **商家粉丝数恢复真实值**：关注与取关（含批量取消关注）在写入/删除 `UserMerchantFollows` 的同一事务内调整 `Merchants.FollowerCount`；`MerchantDto.FollowerCount` 与商家详情、Admin 商家列表、移动端店铺页同源。原实现只写连接表、从不更新该列，粉丝数恒为 0。
 > 2. **数据迁移 `BackfillMerchantFollowerCount`**：按 `UserMerchantFollows` 一次性重算既有商家的 `FollowerCount`，无关注记录的残留值清零。

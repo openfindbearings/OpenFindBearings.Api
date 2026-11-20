@@ -1,5 +1,6 @@
-﻿using OpenFindBearings.Domain.Abstractions;
+using OpenFindBearings.Domain.Abstractions;
 using OpenFindBearings.Domain.Enums;
+using OpenFindBearings.Domain.Services;
 using OpenFindBearings.Domain.ValueObjects;
 
 namespace OpenFindBearings.Domain.Entities
@@ -22,6 +23,24 @@ namespace OpenFindBearings.Domain.Entities
         /// 品牌的完整名称
         /// </summary>
         public string Name { get; private set; }
+
+        // 改动说明（2026-11-20 拼音检索）：与商户同一套方案——写入时预计算检索键并存列，
+        //   品牌名常为中文（瓦房店、哈尔滨、洛阳），前端过滤时可直接用拼音/首字母匹配。
+
+        /// <summary>
+        /// 名称全拼检索键（小写，无分隔）
+        /// </summary>
+        public string? SearchPinyin { get; private set; }
+
+        /// <summary>
+        /// 名称首字母检索键（小写）
+        /// </summary>
+        public string? SearchInitials { get; private set; }
+
+        /// <summary>
+        /// 模糊归一全拼（zh→z、ch→c、sh→s、ang→an、eng→en、ing→in）
+        /// </summary>
+        public string? SearchPinyinFuzzy { get; private set; }
 
         /// <summary>
         /// 品牌所属国家
@@ -87,6 +106,8 @@ namespace OpenFindBearings.Domain.Entities
             Code = code;
             Name = name;
             Level = level;
+            // 改动说明（2026-11-20 拼音检索）：新建即生成检索键
+            RebuildSearchKeys();
         }
 
         /// <summary>
@@ -117,8 +138,26 @@ namespace OpenFindBearings.Domain.Entities
         public void UpdateName(string name)
         {
             Name = name;
+            // 改动说明（2026-11-20 拼音检索）：改名后检索键同步刷新
+            RebuildSearchKeys();
             UpdateTimestamp();
         }
+
+        /// <summary>
+        /// 重算拼音检索键（全拼/首字母/模糊归一），品牌名变更时调用。
+        /// </summary>
+        private void RebuildSearchKeys()
+        {
+            var keys = PinyinSearchText.Build(Name);
+            SearchPinyin = keys.Pinyin;
+            SearchInitials = keys.Initials;
+            SearchPinyinFuzzy = keys.Fuzzy;
+        }
+
+        /// <summary>
+        /// 重算检索键（供历史数据回填使用），名称未变化时重复调用结果一致。
+        /// </summary>
+        public void RefreshSearchKeys() => RebuildSearchKeys();
 
         /// <summary>
         /// 设置数据来源

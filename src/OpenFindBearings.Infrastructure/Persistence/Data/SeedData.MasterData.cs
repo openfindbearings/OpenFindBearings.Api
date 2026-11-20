@@ -219,6 +219,43 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
             }
 
             await ReconcileMerchantFollowerCountsAsync(context, logger);
+
+            // 改动说明（2026-11-20 拼音检索）：商户与品牌的三列上线前创建的行检索键为空，此处幂等补齐
+            await BackfillSearchKeysAsync(context, logger);
+        }
+
+        /// <summary>
+        /// 回填拼音检索键：只处理全拼列为空的存量行（商户与品牌同一口径），逐条重算后保存。
+        /// </summary>
+        private static async Task BackfillSearchKeysAsync(ApplicationDbContext context, ILogger logger)
+        {
+            var merchants = await context.Merchants
+                .Where(m => m.SearchPinyin == null)
+                .ToListAsync();
+
+            var brands = await context.Brands
+                .Where(b => b.SearchPinyin == null)
+                .ToListAsync();
+
+            if (merchants.Count == 0 && brands.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var merchant in merchants)
+            {
+                merchant.RefreshSearchKeys();
+            }
+
+            foreach (var brand in brands)
+            {
+                brand.RefreshSearchKeys();
+            }
+
+            await context.SaveChangesAsync();
+            logger.LogInformation(
+                "拼音检索键已回填：商户 {MerchantRows} 行、品牌 {BrandRows} 行",
+                merchants.Count, brands.Count);
         }
 
         /// <summary>

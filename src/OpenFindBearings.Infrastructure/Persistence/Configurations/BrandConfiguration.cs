@@ -20,6 +20,16 @@ namespace OpenFindBearings.Infrastructure.Persistence.Configurations
                 .IsRequired()
                 .HasMaxLength(200);
 
+            // 改动说明（2026-11-20 拼音检索）：与商户同口径的三列，写入时预计算
+            builder.Property(b => b.SearchPinyin)
+                .HasMaxLength(512);
+
+            builder.Property(b => b.SearchInitials)
+                .HasMaxLength(256);
+
+            builder.Property(b => b.SearchPinyinFuzzy)
+                .HasMaxLength(512);
+
             builder.Property(b => b.Country)
                 .HasMaxLength(100);
 
