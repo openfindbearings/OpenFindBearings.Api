@@ -18,6 +18,12 @@ namespace OpenFindBearings.Application.Services
         /// <param name="contentType">MIME 类型</param>
         Task<string> UploadAsync(string key, byte[] content, string contentType, CancellationToken ct = default);
 
+        /// <summary>
+        /// 下载对象内容；不存在或出错返回 null（不抛）。
+        /// 分享海报等"生成一次、多次读取"的素材用它取缓存，避免经 HTTP 回环访问媒体服务。
+        /// </summary>
+        Task<byte[]?> DownloadAsync(string key, CancellationToken ct = default);
+
         /// <summary>删除对象；不存在或出错返回 false（不抛）</summary>
         Task<bool> DeleteAsync(string key, CancellationToken ct = default);
 
