@@ -9,7 +9,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
 {
     /// <summary>
     /// 开发环境演示数据：示例用户、示例轴承与替代关系。
-    /// 改动说明：演示数据只在 Development 且相关表为空时写入，供开源仓与闭源仓本机联调形成完整闭环；
+    /// 改动说明：演示数据只在 Development 且相关表为空时写入，供本机联调形成完整闭环；
     ///   生产与自部署环境不受影响，也不需要任何开关。
     /// </summary>
     public static partial class SeedData

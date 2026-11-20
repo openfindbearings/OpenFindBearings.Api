@@ -1,10 +1,15 @@
 # API 端点说明文档
 
-**版本：** v1.59.15
+**版本：** v1.59.16
 **日期：** 2026-11-20
-**上一版：** v1.59.14
+**上一版：** v1.59.15
 **状态：** 与代码同步
 
+> v1.59.16 变更（分享素材，+2 端点）：
+> 1. **新增分享素材端点**（匿名）：`GET /api/share/qr` 与 `GET /api/share/poster`。二维码只编码 H5 落地页链接；海报由后端合成 1080x1440 PNG，含平台主图/商家 Logo、名称、认证标识、在售与粉丝数、二维码，不放价格与商家清单。
+> 2. **海报落对象存储缓存**：键 `uploads/share/posters/{type}/{id}-{source}.png`，命中直接返回；`IObjectStorageService` 新增 `DownloadAsync` 以直接读缓存，避免经 HTTP 回环访问媒体服务。
+> 3. **新增配置 `Share:H5BaseUrl`**：服务端生成落地页链接的 H5 站点地址。
+> 4. **容器中文字体**：API 镜像安装 `fonts-noto-cjk`（SIL OFL 1.1），海报绘制使用 SkiaSharp。
 > v1.59.15 变更（商户/品牌拼音检索键，无新端点）：
 > 1. **新增拼音检索键**：`Merchants` 与 `Brands` 各新增三列可空字段 `SearchPinyin`（全拼）/ `SearchInitials`（首字母）/ `SearchPinyinFuzzy`（模糊归一全拼，zh→z、ch→c、sh→s、ang→an、eng→en、ing→in），写入时预计算并存库，查询只做字符串匹配。三列由同一生成器 `PinyinSearchText` 维护，商户名称/公司名、品牌名变更时自动重算。
 > 2. **入驻发现搜索支持拼音**：`GET /api/merchant/claimable?keyword=` 在原有中文子串之外，额外匹配全拼、首字母与模糊拼音（如 `lyzc`、`luoyang`、`luoyan` 均可命中「洛阳轴承集团…」）；`GET /api/admin/merchants` 的 `keyword` 同口径生效。
@@ -1029,3 +1034,28 @@ OpenFindBearings.Api（以下简称 API）共注册 **169** 个端点，按职�
 > 迁移：`AddBearingPartNumberLeads`（仅 `db_api` 建表 + 索引，不触碰 `db_sync`/`db_raw`/`db_identity`）。
 > 兼容性：新增端点与新增表，既有请求/响应字段不变；旧客户端邀请提交的"有货商家集合"仍全部通过校验。
 > 配套文档：《寻货功能设计 v1.10.0》《数据状态字段设计 v1.7.0》《通知消息体系设计 v1.4.3》《BFF API 端点说明 v1.8.13》《Admin 功能需求与后端服务映射 v1.49.0》。
+
+---
+
+## 本版增量（v1.59.16）：分享素材（+2 端点）
+
+**动机**：分享入口需要二维码与海报形态（名片、包装、展台物料）。素材生成依赖中文字体与图片合成，属平台素材能力，统一放 API，BFF 只做转发；产物落对象存储便于缓存与后续 CDN。
+
+### 新增端点（匿名）
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | /api/share/qr | `type=bearing\|merchant`、`id={guid}`、可选 `src`；返回二维码 PNG，内容为 `${Share:H5BaseUrl}/s/{type}/{id}`（轴承带 `view=supply`） |
+| GET | /api/share/poster | 同参数；返回海报 PNG（1080x1440），命中对象存储缓存直接返回 |
+
+- 来源白名单：`app` / `h5` / `weapp` / `qr` / `poster`，非法值分别回落 `qr` 与 `poster`
+- 海报元素：商家=Logo（缺省首字色块）+ 名称 + 认证标识 + 牌级 + 在售/粉丝数 + 二维码；轴承=平台主图 + `型号 · 品牌` + 类型与尺寸 + `N 家认证商家真实有货`（N>0 才显示）+ 二维码
+- 字体：容器内 `Noto Sans CJK SC`（SIL OFL 1.1），开发机回退雅黑/苹方
+
+### 配套变更
+
+| 位置 | 变更 |
+|---|---|
+| `IObjectStorageService` | 新增 `DownloadAsync(key)`，LocalFile 与 MinIO 两种实现同步补齐 |
+| 配置 | 新增 `Share:H5BaseUrl`（生产由 ConfigMap 注入，开发为 `http://localhost:10086`） |
+| Dockerfile | 基础镜像安装 `fonts-noto-cjk` |

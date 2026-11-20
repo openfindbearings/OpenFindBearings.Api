@@ -43,6 +43,27 @@ namespace OpenFindBearings.Infrastructure.Services.ObjectStorage
         }
 
         /// <inheritdoc />
+        public async Task<byte[]?> DownloadAsync(string key, CancellationToken ct = default)
+        {
+            try
+            {
+                using var response = await _s3.GetObjectAsync(_bucket, key, ct);
+                using var stream = new MemoryStream();
+                await response.ResponseStream.CopyToAsync(stream, ct);
+                return stream.ToArray();
+            }
+            catch (AmazonS3Exception ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "S3 下载失败: {Key}", key);
+                return null;
+            }
+        }
+
+        /// <inheritdoc />
         public async Task<bool> DeleteAsync(string key, CancellationToken ct = default)
         {
             try

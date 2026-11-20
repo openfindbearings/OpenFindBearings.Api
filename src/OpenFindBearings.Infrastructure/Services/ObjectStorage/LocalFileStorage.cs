@@ -29,6 +29,14 @@ namespace OpenFindBearings.Infrastructure.Services.ObjectStorage
         }
 
         /// <inheritdoc />
+        public async Task<byte[]?> DownloadAsync(string key, CancellationToken ct = default)
+        {
+            var fullPath = Path.Combine(_root, key);
+            if (!File.Exists(fullPath)) return null;
+            return await File.ReadAllBytesAsync(fullPath, ct);
+        }
+
+        /// <inheritdoc />
         public Task<bool> DeleteAsync(string key, CancellationToken ct = default)
         {
             var fullPath = Path.Combine(_root, key);

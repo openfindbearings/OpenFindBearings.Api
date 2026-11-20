@@ -16,6 +16,9 @@ namespace OpenFindBearings.Api.Extensions
             // 公共接口（无需认证）
             app.MapPublicEndpoints();
 
+            // 分享素材（二维码/海报，匿名；BFF 转发给移动端）
+            app.MapShareEndpoints();
+
             // 移动端接口（部分需要认证）
             app.MapMobileEndpoints();
 

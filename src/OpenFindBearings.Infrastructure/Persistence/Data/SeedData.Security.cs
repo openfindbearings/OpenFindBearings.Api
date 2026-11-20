@@ -8,7 +8,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
     /// 安全目录种子：权限点、平台角色与角色权限绑定。
     /// 改动说明：这些数据原先只在种子主流程里创建，被 "SystemConfigs 非空即跳过" 的判据连坐，
     ///   全新库启动后既没有 Admin 角色也没有任意一条权限绑定，Admin 后台所有端点返回 403。
-    ///   现改为每次启动幂等校验：只补缺失项，绝不删除已有绑定（闭源扩展的同步权限依赖此行为）。
+    ///   现改为每次启动幂等校验：只补缺失项，绝不删除已有绑定（其它模块补充的权限与绑定依赖此行为）。
     /// </summary>
     public static partial class SeedData
     {
@@ -87,7 +87,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
 
         /// <summary>
         /// 幂等补全权限点、角色与角色权限绑定。
-        /// 只新增缺失项，不删除已有行：闭源扩展在迁移里补的同步权限不会在下次启动时被清掉。
+        /// 只新增缺失项，不删除已有行：其它模块补充的权限不会在下次启动时被清掉。
         /// </summary>
         private static async Task EnsureSecurityCatalogAsync(ApplicationDbContext context, ILogger logger)
         {
