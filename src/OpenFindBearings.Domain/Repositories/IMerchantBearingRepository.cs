@@ -14,6 +14,12 @@ namespace OpenFindBearings.Domain.Repositories
         /// 根据ID获取关联
         /// </summary>
         Task<MerchantBearing?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+        /// <summary>
+        /// 商城商品详情（v1.59.16）：按商品 Id 取公域可见的单条货源。
+        /// 口径与货源流一致——商品有效且审核通过、出售中，商家有效且已认证；
+        /// 不满足（下架/未认证/停用）一律返回 null，避免详情页绕过列表口径。
+        /// </summary>
+        Task<MerchantBearing?> GetMallItemAsync(Guid id, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// 根据轴承ID获取关联列表

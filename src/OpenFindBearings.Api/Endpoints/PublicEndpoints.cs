@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using OpenFindBearings.Api.Extensions;
 using OpenFindBearings.Api.Helpers;
@@ -11,6 +11,7 @@ using OpenFindBearings.Application.Queries.BearingTypes.GetAllBearingTypes;
 using OpenFindBearings.Application.Queries.Brands.GetAllBrands;
 using OpenFindBearings.Application.Queries.Follows.CheckMerchantFollow;
 using OpenFindBearings.Application.Queries.MerchantBearings.GetMallFeed;
+using OpenFindBearings.Application.Queries.MerchantBearings.GetMallItem;
 using OpenFindBearings.Application.Queries.MerchantBearings.GetMerchantBearingsByMerchant;
 using OpenFindBearings.Application.Queries.MerchantBearings.GetMerchantsByBearing;
 using OpenFindBearings.Application.Queries.Merchants.GetMerchant;
@@ -132,6 +133,27 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("GetMallFeed")
             .WithSummary("商城货源流")
             .WithDescription("全站在售货源分页，支持关键词/品牌/类型/尺寸/类别过滤与排序");
+
+            /// <summary>
+            /// 商城商品详情（v1.59.16）
+            /// 商家 x 商品维度的单品详情，供商城卡片点开的商品页使用；匿名可访问。
+            /// 可见口径与货源流一致：商品审核通过且出售中、商家有效且已认证，否则 404。
+            /// </summary>
+            group.MapGet("/mall/items/{id:guid}", async (
+                Guid id,
+                IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                var detail = await mediator.Send(new GetMallItemQuery(id));
+                if (detail is null)
+                {
+                    return Results.NotFound(new { message = "商品不存在或已下架" });
+                }
+                return ApiResponseHelper.Ok(detail, httpContext: httpContext);
+            })
+            .WithName("GetMallItem")
+            .WithSummary("商城商品详情")
+            .WithDescription("商家 x 商品维度单品详情，含商家摘要、型号/品牌描述与商家实拍图");
 
             /// <summary>
             /// 轴承详情
