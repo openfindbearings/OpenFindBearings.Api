@@ -296,6 +296,30 @@ namespace OpenFindBearings.Infrastructure.Persistence.Repositories
         /// 商城货源流分页搜索（v2.14.0 商城导购）：以在售关联为行，DB 级过滤/排序/分页。
         /// 不指定商家/轴承即"全站在售货源"；关键词匹配型号/旧代号/描述/类型名/品牌名。
         /// </summary>
+        /// <summary>
+        /// 商城商品详情（v1.59.16）：单条货源按列表同口径取数，供商品详情页。
+        /// 口径：商品有效且审核通过、出售中，商家有效且已认证；不满足返回 null。
+        /// </summary>
+        public async Task<MerchantBearing?> GetMallItemAsync(Guid id, CancellationToken cancellationToken = default)
+        {
+            return await _context.MerchantBearings
+                .Include(mb => mb.Merchant)
+                .Include(mb => mb.Bearing)
+                    .ThenInclude(b => b.Brand)
+                .Include(mb => mb.Bearing)
+                    .ThenInclude(b => b.BearingTypeNavigation)
+                .AsNoTracking()
+                .Where(mb => mb.Id == id
+                    && mb.IsActive
+                    && mb.ReviewStatus == ListingReviewStatus.Approved
+                    && mb.SaleState == SaleState.OnSale
+                    && mb.Merchant != null
+                    && mb.Merchant.IsActive
+                    && mb.Merchant.Status == MerchantStatus.Active
+                    && mb.Merchant.IsVerified)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+
         public async Task<PagedResult<MerchantBearing>> SearchMallFeedAsync(
             MallFeedSearchParams p, CancellationToken cancellationToken = default)
         {
