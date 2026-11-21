@@ -1,4 +1,4 @@
-﻿using OpenFindBearings.Domain.Abstractions;
+using OpenFindBearings.Domain.Abstractions;
 using OpenFindBearings.Domain.Aggregates;
 
 namespace OpenFindBearings.Domain.Entities
@@ -44,6 +44,11 @@ namespace OpenFindBearings.Domain.Entities
         public string? PreferredCity { get; private set; }
 
         /// <summary>
+        /// 默认商户 ID（v1.59.17）：冷启动与商户 Tab 直达的商户；须为用户在职成员关系
+        /// </summary>
+        public Guid? DefaultMerchantId { get; private set; }
+
+        /// <summary>
         /// 是否接收邮件通知
         /// </summary>
         public bool EmailNotificationEnabled { get; private set; } = true;
@@ -67,6 +72,15 @@ namespace OpenFindBearings.Domain.Entities
         public UserPreference(Guid userId)
         {
             UserId = userId;
+        }
+
+        /// <summary>
+        /// 设置默认商户（null 表示清除）；调用方负责校验成员关系
+        /// </summary>
+        public void SetDefaultMerchant(Guid? merchantId)
+        {
+            DefaultMerchantId = merchantId;
+            UpdateTimestamp();
         }
 
         /// <summary>

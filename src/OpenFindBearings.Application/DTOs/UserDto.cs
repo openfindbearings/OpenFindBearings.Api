@@ -1,4 +1,4 @@
-﻿using OpenFindBearings.Domain.Enums;
+using OpenFindBearings.Domain.Enums;
 
 namespace OpenFindBearings.Application.DTOs
 {
@@ -61,7 +61,10 @@ namespace OpenFindBearings.Application.DTOs
         /// <summary>
         /// 收藏数量
         /// </summary>
-        public int FavoriteCount { get; set; }
+        /// <summary>默认商户 Id（v1.59.17）：商户 Tab 直达与冷启动优先级使用，未设置为 null</summary>
+    public Guid? DefaultMerchantId { get; set; }
+
+    public int FavoriteCount { get; set; }
 
         /// <summary>
         /// 关注数量

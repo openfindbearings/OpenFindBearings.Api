@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.DTOs;
 using OpenFindBearings.Application.Extensions;
@@ -17,6 +17,7 @@ namespace OpenFindBearings.Application.Queries.Queries
         private readonly IUserBearingFavoriteRepository _favoriteRepository;
         private readonly IUserMerchantFollowRepository _followRepository;
         private readonly ICorrectionRequestRepository _correctionRepository;
+        private readonly IUserPreferenceRepository _userPreferenceRepository;
         private readonly ILogger<GetUserProfileQueryHandler> _logger;
 
         public GetUserProfileQueryHandler(
@@ -25,6 +26,7 @@ namespace OpenFindBearings.Application.Queries.Queries
             IUserBearingFavoriteRepository favoriteRepository,
             IUserMerchantFollowRepository followRepository,
             ICorrectionRequestRepository correctionRepository,
+            IUserPreferenceRepository userPreferenceRepository,
             ILogger<GetUserProfileQueryHandler> logger)
         {
             _userRepository = userRepository;
@@ -32,6 +34,7 @@ namespace OpenFindBearings.Application.Queries.Queries
             _favoriteRepository = favoriteRepository;
             _followRepository = followRepository;
             _correctionRepository = correctionRepository;
+            _userPreferenceRepository = userPreferenceRepository;
             _logger = logger;
         }
 
@@ -65,6 +68,9 @@ namespace OpenFindBearings.Application.Queries.Queries
             dto.FavoriteCount = favoriteCount;
             dto.FollowCount = followCount;
             dto.CorrectionCount = corrections.Count;
+            // 改动说明（v1.59.17）：下发默认商户，供移动端商户 Tab 直达与多设备一致
+            var preference = await _userPreferenceRepository.GetByUserIdAsync(user.Id, cancellationToken);
+            dto.DefaultMerchantId = preference?.DefaultMerchantId;
             dto.UserType = user.IsGuest ? "Guest" : (user.IsAdmin ? "Admin" : (members.Count > 0 ? "MerchantStaff" : "Individual"));
 
             return dto;
