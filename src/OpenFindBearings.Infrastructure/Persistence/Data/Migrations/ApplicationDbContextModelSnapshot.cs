@@ -2919,6 +2919,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid?>("DefaultMerchantId")
+                        .HasColumnType("uuid");
+
                     b.Property<bool>("EmailNotificationEnabled")
                         .HasColumnType("boolean");
 

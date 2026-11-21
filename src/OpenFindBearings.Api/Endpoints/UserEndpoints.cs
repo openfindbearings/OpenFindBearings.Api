@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using OpenFindBearings.Application.Commands.UserData;
 using Microsoft.AspNetCore.Mvc;
 using OpenFindBearings.Api.Helpers;
@@ -17,6 +17,7 @@ using OpenFindBearings.Application.Commands.History.RecordBearingView;
 using OpenFindBearings.Application.Commands.History.RecordMerchantView;
 using OpenFindBearings.Application.Commands.Feedback.SubmitFeedback;
 using OpenFindBearings.Application.Commands.Users.UpdateUserProfile;
+using OpenFindBearings.Application.Commands.Users.SetDefaultMerchant;
 using OpenFindBearings.Application.Commands.Users.DeactivateUser;
 using OpenFindBearings.Application.Queries.Corrections.GetCorrectableFields;
 using OpenFindBearings.Application.Queries.Corrections.GetMyCorrectionDetail;
@@ -177,6 +178,32 @@ namespace OpenFindBearings.Api.Endpoints
             .WithName("DeactivateUser")
             .WithSummary("注销当前账户")
             .WithDescription("注销账户：需先转让或删除所任唯一管理员的商户；进入 30 天冷静期，期满数据匿名化");
+            /// <summary>
+            /// 设置默认商户（v1.59.17）
+            /// 决定移动端商户 Tab 直达与冷启动优先进入的商户；只能设置自己为在职成员的商户。
+            /// </summary>
+            group.MapPut("/default-merchant", async (
+                SetDefaultMerchantRequest request,
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMediator mediator,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                try
+                {
+                    await mediator.Send(new SetDefaultMerchantCommand(currentUser.UserId.Value, request.MerchantId));
+                    return ApiResponseHelper.Ok(new { defaultMerchantId = request.MerchantId }, httpContext: httpContext);
+                }
+                catch (InvalidOperationException ex)
+                {
+                    return ApiResponseHelper.BadRequest(ex.Message, httpContext: httpContext);
+                }
+            })
+            .WithName("SetDefaultMerchant")
+            .WithSummary("设置默认商户")
+            .WithDescription("只能设置自己为在职成员的商户；结果通过 GET /api/me/profile 的 defaultMerchantId 下发");
             #endregion
 
             // ============ 1.2 轴承收藏 ============
@@ -924,4 +951,7 @@ namespace OpenFindBearings.Api.Endpoints
 
     /// <summary>批量删除历史请求（轴承/商家两组目标 ID，v2.12.0 列表多选）</summary>
     public record BatchHistoryDeleteRequest(List<Guid>? BearingIds, List<Guid>? MerchantIds);
+
+    /// <summary>设置默认商户请求体（v1.59.17）：仅需商户 Id，用户身份取自令牌</summary>
+    public record SetDefaultMerchantRequest(Guid MerchantId);
 }
