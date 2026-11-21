@@ -66,7 +66,9 @@ public static class ShareEndpoints
             }
 
             var source = NormalizeSource(src) ?? "poster";
-            var key = $"uploads/share/posters/{normalizedType}/{id}-{source}.png";
+            // 改动说明（v1.59.17）：缓存键不再带 src——来源只用于统计，不影响图片内容；
+            // 带 src 会让同一对象从 App/二维码/海报不同入口各存一份，白占存储。
+            var key = $"uploads/share/posters/{normalizedType}/{id}.png";
             if (await storage.ExistsAsync(key, ct))
             {
                 var cached = await storage.DownloadAsync(key, ct);
