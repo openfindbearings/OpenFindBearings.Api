@@ -42,8 +42,10 @@ bld/
 
 # Visual Studio 2015/2017 cache/options directory
 .vs/
+# 运行期生成的图片（分享海报、轴承图上传等）不入库
 # Uncomment if you have tasks that create the project's static files in wwwroot
 #wwwroot/
+src/OpenFindBearings.Api/wwwroot/uploads/
 
 # Visual Studio 2017 auto generated files
 Generated\ Files/
