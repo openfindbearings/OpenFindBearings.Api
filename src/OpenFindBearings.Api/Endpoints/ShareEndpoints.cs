@@ -169,30 +169,31 @@ public static class ShareEndpoints
         var secondary = new SKColor(0x47, 0x55, 0x69);
         var tertiary = new SKColor(0x64, 0x74, 0x8B);
 
-        DrawCenteredText(canvas, detail.Name, bold, 60, primary, 380, 900);
+        // 改动说明（v1.4.32）：logo 与名称间距偏小，整体下移 30px 并把后续元素同步下移
+        DrawCenteredText(canvas, detail.Name, bold, 60, primary, 410, 900);
         if (!string.IsNullOrWhiteSpace(detail.CompanyName) && detail.CompanyName != detail.Name)
         {
-            DrawCenteredText(canvas, detail.CompanyName!, regular, 32, secondary, 440, 900);
+            DrawCenteredText(canvas, detail.CompanyName!, regular, 32, secondary, 470, 900);
         }
 
-        DrawBadge(canvas, detail.IsVerified ? "认证商家" : "轴承商家", regular, 520);
+        DrawBadge(canvas, detail.IsVerified ? "认证商家" : "轴承商家", regular, 550);
 
         if (!string.IsNullOrWhiteSpace(detail.GradeDisplay))
         {
-            DrawCenteredText(canvas, detail.GradeDisplay!, regular, 30, secondary, 600, 900);
+            DrawCenteredText(canvas, detail.GradeDisplay!, regular, 30, secondary, 630, 900);
         }
 
-        DrawCenteredText(canvas, $"在售 {detail.ProductCount} 款 · 粉丝 {detail.FollowerCount}", regular, 30, tertiary, 660, 900);
+        DrawCenteredText(canvas, $"在售 {detail.ProductCount} 款 · 粉丝 {detail.FollowerCount}", regular, 30, tertiary, 690, 900);
 
         using (var divider = new SKPaint { Color = new SKColor(0xE2, 0xE8, 0xF0), StrokeWidth = 2, IsAntialias = true })
         {
-            canvas.DrawLine(120, 730, PosterWidth - 120, 730, divider);
+            canvas.DrawLine(120, 755, PosterWidth - 120, 755, divider);
         }
 
-        DrawQr(canvas, qrPng, (PosterWidth - 340) / 2, 790, 340);
-        DrawCenteredText(canvas, "扫码进入店铺", regular, 34, primary, 1200, 900);
-        DrawCenteredText(canvas, PlatformName, bold, 30, secondary, 1280, 900);
-        DrawCenteredText(canvas, "更多认证商家与真实货源", regular, 26, tertiary, 1330, 900);
+        DrawQr(canvas, qrPng, (PosterWidth - 340) / 2, 805, 340);
+        DrawCenteredText(canvas, "扫码进入店铺", regular, 34, primary, 1215, 900);
+        DrawCenteredText(canvas, PlatformName, bold, 30, secondary, 1295, 900);
+        DrawCenteredText(canvas, "更多认证商家与真实货源", regular, 26, tertiary, 1345, 900);
 
         return EncodePng(surface);
     }

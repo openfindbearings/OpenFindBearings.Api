@@ -1063,3 +1063,5 @@ OpenFindBearings.Api（以下简称 API）共注册 **169** 个端点，按职�
 | `IObjectStorageService` | 新增 `DownloadAsync(key)`，LocalFile 与 MinIO 两种实现同步补齐 |
 | 配置 | 新增 `Share:H5BaseUrl`（生产由 ConfigMap 注入，开发为 `http://localhost:10086`） |
 | Dockerfile | 基础镜像安装 `fonts-noto-cjk` |
+
+> v1.59.19 变更（海报排版）：商家海报中 Logo 与名称间距过小，名称及后续元素整体下移 30px；分隔线、二维码、底部文案同步下移，不改接口参数与缓存键。
