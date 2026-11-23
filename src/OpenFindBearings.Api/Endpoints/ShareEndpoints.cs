@@ -5,6 +5,7 @@ using OpenFindBearings.Application.Queries.Bearings.GetBearingQuery;
 using OpenFindBearings.Application.Queries.MerchantBearings.GetMerchantsByBearing;
 using OpenFindBearings.Application.Queries.Merchants.GetMerchant;
 using OpenFindBearings.Application.Services;
+using OpenFindBearings.Domain.Repositories;
 using QRCoder;
 using SkiaSharp;
 
@@ -21,16 +22,8 @@ public static class ShareEndpoints
     private const int PosterWidth = 1080;
     private const int PosterHeight = 1440;
 
-    /// <summary>海报底部平台名（扩展点可替换品牌口径）。</summary>
-    /// <summary>平台名兜底值：海报底部署名，可用 Branding:PlatformName 配置覆盖</summary>
+    /// <summary>平台名兜底值：海报落款，优先读系统配置 Site.PlatformName</summary>
     private const string DefaultPlatformName = "OpenFindBearings";
-
-    /// <summary>读取平台名（Branding:PlatformName，缺省回退 DefaultPlatformName）</summary>
-    private static string PlatformNameOf(IConfiguration config)
-    {
-        var name = config["Branding:PlatformName"];
-        return string.IsNullOrWhiteSpace(name) ? DefaultPlatformName : name.Trim();
-    }
 
     /// <summary>
     /// 注册分享素材端点：GET /api/share/qr 与 GET /api/share/poster（均匿名）。
@@ -65,6 +58,7 @@ public static class ShareEndpoints
             IMediator mediator,
             IObjectStorageService storage,
             IConfiguration config,
+            ISystemConfigRepository configs,
             CancellationToken ct) =>
         {
             var normalizedType = NormalizeType(type);
@@ -88,9 +82,12 @@ public static class ShareEndpoints
 
             var payload = LandingUrl(config, normalizedType, id, source);
             var qrPng = RenderQrPng(payload, 10);
+            // 改动说明（v1.59.21）：平台名改读系统配置 Site.PlatformName（Admin 系统配置页可改），代码只留兜底值
+            var platformName = (await configs.GetValueAsync<string>("Site.PlatformName", null))?.Trim();
+            if (string.IsNullOrWhiteSpace(platformName)) platformName = DefaultPlatformName;
             var png = normalizedType == "merchant"
-                ? await RenderMerchantPosterAsync(id, qrPng, mediator, storage, ct)
-                : await RenderBearingPosterAsync(id, qrPng, mediator, storage, ct);
+                ? await RenderMerchantPosterAsync(id, qrPng, platformName, mediator, storage, ct)
+                : await RenderBearingPosterAsync(id, qrPng, platformName, mediator, storage, ct);
 
             if (png is null)
             {
@@ -152,6 +149,7 @@ public static class ShareEndpoints
     private static async Task<byte[]?> RenderMerchantPosterAsync(
         Guid id,
         byte[] qrPng,
+        string platformName,
         IMediator mediator,
         IObjectStorageService storage,
         CancellationToken ct)
@@ -213,6 +211,7 @@ public static class ShareEndpoints
     private static async Task<byte[]?> RenderBearingPosterAsync(
         Guid id,
         byte[] qrPng,
+        string platformName,
         IMediator mediator,
         IObjectStorageService storage,
         CancellationToken ct)

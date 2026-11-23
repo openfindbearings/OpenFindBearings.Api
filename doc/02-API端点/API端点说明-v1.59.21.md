@@ -1069,3 +1069,7 @@ OpenFindBearings.Api（以下简称 API）共注册 **169** 个端点，按职�
 ## v1.59.20
 
 - 海报底部平台名改读配置 Branding:PlatformName（缺省 OpenFindBearings）：原为代码常量，开源/闭源共用一份镜像时无法按站点改署名。
+
+## v1.59.21
+
+- 海报落款平台名改读系统配置 Site.PlatformName（Admin 系统配置页可改，默认 OpenFindBearings）；撤销上一版读 Branding:PlatformName 环境变量的做法，避免运维改 ConfigMap。

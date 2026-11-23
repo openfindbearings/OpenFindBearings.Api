@@ -18,6 +18,7 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
             // 站点设置，供移动端 /api/mobile/config 与 Admin 页脚消费
             ("SiteName", "OpenFindBearings", "Site", "网站名称", "string", true),
             ("SiteDescription", "轴承信息平台", "Site", "网站描述", "string", true),
+            ("Site.PlatformName", "OpenFindBearings", "Site", "平台名称（海报落款等对外展示）", "string", true),
             ("Site.BeiAn", "", "Site", "网站备案号（Admin 页脚与 H5 端关于页）", "string", true),
             ("Site.CustomerService", "", "Site", "客服电话（全端共用：app 设置页拨打与法务文本）", "string", true),
 
@@ -39,9 +40,9 @@ namespace OpenFindBearings.Infrastructure.Persistence.Data
             ("Mobile.AppVersion", "v1.0.0-rc.1", "Mobile", "移动端最新版本号（SemVer 带点 prerelease）", "string", true),
             ("Mobile.MinVersion", "v1.0.0-rc.1", "Mobile", "最低支持版本（低于此值且开启强更时强制更新）", "string", true),
             ("Mobile.ForceUpdate", "false", "Mobile", "强制更新开关", "bool", true),
-            ("Mobile.DownloadUrl", "https://<your-bff-domain>/dl/", "Mobile", "APK 下载目录（以/结尾，客户端按 app-v版本-ABI.apk 拼文件名）", "string", true),
+            ("Mobile.DownloadUrl", "https://bff.515813.xyz/dl/", "Mobile", "APK 下载目录（以/结尾，客户端按 app-v版本-ABI.apk 拼文件名）", "string", true),
             ("Mobile.UpdateMessage", "发现新版本，建议更新", "Mobile", "更新弹窗说明文案", "string", true),
-            ("Mobile.MediaBaseUrl", "https://<your-bff-domain>/media", "Mobile", "媒体资源公网 base（末尾无斜杠）", "string", true),
+            ("Mobile.MediaBaseUrl", "https://bff.515813.xyz/media", "Mobile", "媒体资源公网 base（末尾无斜杠）", "string", true),
             ("Mobile.BeiAnApp", "", "Mobile", "App 备案号（RN 端关于页展示）", "string", true),
             ("Mobile.BeiAnMini", "", "Mobile", "小程序备案号（微信端关于页展示）", "string", true),
 
