@@ -1065,3 +1065,7 @@ OpenFindBearings.Api（以下简称 API）共注册 **169** 个端点，按职�
 | Dockerfile | 基础镜像安装 `fonts-noto-cjk` |
 
 > v1.59.19 变更（海报排版）：商家海报中 Logo 与名称间距过小，名称及后续元素整体下移 30px；分隔线、二维码、底部文案同步下移，不改接口参数与缓存键。
+
+## v1.59.20
+
+- 海报底部平台名改读配置 Branding:PlatformName（缺省 OpenFindBearings）：原为代码常量，开源/闭源共用一份镜像时无法按站点改署名。
