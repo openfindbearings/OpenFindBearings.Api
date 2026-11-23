@@ -17,6 +17,8 @@ data:
   Logging__LogLevel__Microsoft_EntityFrameworkCore_Database_Command: "Error"
   AllowedHosts: "*"
   # 分享素材（v1.59.16）：二维码与海报编码的 H5 落地页域名
+  # 海报署名，按站点自填（留空则显示 OpenFindBearings）
+  Branding__PlatformName: <your-platform-name>
   Share__H5BaseUrl: "https://<your-h5-domain>"
   AllowedOrigins__0: "https://<your-site-domain>"
   AllowedOrigins__1: "https://<your-site-domain>"

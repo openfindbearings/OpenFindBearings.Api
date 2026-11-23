@@ -22,7 +22,15 @@ public static class ShareEndpoints
     private const int PosterHeight = 1440;
 
     /// <summary>海报底部平台名（扩展点可替换品牌口径）。</summary>
-    private const string PlatformName = "OpenFindBearings";
+    /// <summary>平台名兜底值：海报底部署名，可用 Branding:PlatformName 配置覆盖</summary>
+    private const string DefaultPlatformName = "OpenFindBearings";
+
+    /// <summary>读取平台名（Branding:PlatformName，缺省回退 DefaultPlatformName）</summary>
+    private static string PlatformNameOf(IConfiguration config)
+    {
+        var name = config["Branding:PlatformName"];
+        return string.IsNullOrWhiteSpace(name) ? DefaultPlatformName : name.Trim();
+    }
 
     /// <summary>
     /// 注册分享素材端点：GET /api/share/qr 与 GET /api/share/poster（均匿名）。
@@ -192,7 +200,7 @@ public static class ShareEndpoints
 
         DrawQr(canvas, qrPng, (PosterWidth - 340) / 2, 805, 340);
         DrawCenteredText(canvas, "扫码进入店铺", regular, 34, primary, 1215, 900);
-        DrawCenteredText(canvas, PlatformName, bold, 30, secondary, 1295, 900);
+        DrawCenteredText(canvas, platformName, bold, 30, secondary, 1295, 900);
         DrawCenteredText(canvas, "更多认证商家与真实货源", regular, 26, tertiary, 1345, 900);
 
         return EncodePng(surface);
@@ -259,7 +267,7 @@ public static class ShareEndpoints
 
         DrawQr(canvas, qrPng, PosterWidth - 340, 1090, 260);
         DrawText(canvas, "扫码查看在售商家", regular, 28, secondary, 80, 1200, 600);
-        DrawText(canvas, PlatformName, bold, 30, primary, 80, 1290, 600);
+        DrawText(canvas, platformName, bold, 30, primary, 80, 1290, 600);
         DrawText(canvas, "认证商家 · 真实货源", regular, 26, tertiary, 80, 1340, 600);
 
         return EncodePng(surface);
