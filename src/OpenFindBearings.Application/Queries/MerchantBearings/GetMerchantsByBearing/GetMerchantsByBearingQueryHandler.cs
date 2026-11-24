@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenFindBearings.Application.DTOs;
 using OpenFindBearings.Application.Extensions;
@@ -61,6 +61,10 @@ public class GetMerchantsByBearingQueryHandler : IRequestHandler<GetMerchantsByB
                         MerchantId = g.Key,
                         MerchantName = best.Merchant!.Name,
                         Price = best.PriceDescription,
+                        // 改动说明（v1.59.22 对比视图）：透出库存/起订量/报价更新时间，供型号详情按列并列展示
+                        StockDescription = best.StockDescription,
+                        MinOrderDescription = best.MinOrderDescription,
+                        PriceUpdatedAt = best.PriceUpdatedAt,
                         SaleState = best.SaleState,
                         RestockEta = best.RestockEta,
                         // 改动说明（v1.6.0 数据可信联动）：透出认证标记——行动门"询价只对认证商家开放"的判定依据
@@ -173,4 +177,13 @@ public class BearingMerchantDto
     /// 非互联网来源商家恒为 null（认证商家号码在寻货撮合达成后互给）
     /// </summary>
     public string? ContactPhone { get; set; }
+
+    /// <summary>库存描述原文（v1.59.22）：如「现货」「期货 30 天」，未填写为 null</summary>
+    public string? StockDescription { get; set; }
+
+    /// <summary>最小起订量原文（v1.59.22）：如「10 套起订」，未填写为 null</summary>
+    public string? MinOrderDescription { get; set; }
+
+    /// <summary>报价最后变更时间（v1.59.22）：仅在报价文本变化时刷新，null 表示从未改过报价</summary>
+    public DateTime? PriceUpdatedAt { get; set; }
 }
