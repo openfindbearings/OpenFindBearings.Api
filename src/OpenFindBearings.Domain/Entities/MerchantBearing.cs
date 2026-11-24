@@ -1,4 +1,4 @@
-﻿using OpenFindBearings.Domain.Abstractions;
+using OpenFindBearings.Domain.Abstractions;
 using OpenFindBearings.Domain.Aggregates;
 using OpenFindBearings.Domain.Enums;
 using OpenFindBearings.Domain.Events;
@@ -51,6 +51,12 @@ namespace OpenFindBearings.Domain.Entities
         /// 当PriceDescription为"电议"时可设为null
         /// </summary>
         public decimal? NumericPrice { get; private set; }
+
+        /// <summary>
+        /// 报价最后变更时间（v1.59.22）：只在价格描述实际变化时刷新，供前端展示「报价更新于」；
+        /// 与 UpdatedAt 区分——改库存/备注不会污染报价时间。
+        /// </summary>
+        public DateTime? PriceUpdatedAt { get; private set; }
 
         /// <summary>
         /// 库存描述（如 "现货"、"期货"、"需预订"）
@@ -289,6 +295,11 @@ namespace OpenFindBearings.Domain.Entities
         /// <param name="visibility">价格可见性</param>
         public void SetPrice(string? priceDescription, decimal? numericPrice = null, PriceVisibility visibility = PriceVisibility.Public)
         {
+            // 改动说明（v1.59.22）：仅当报价文本实际变化时刷新 PriceUpdatedAt，避免库存/备注修改带动报价时间
+            if (!string.Equals(PriceDescription, priceDescription, StringComparison.Ordinal))
+            {
+                PriceUpdatedAt = DateTime.UtcNow;
+            }
             PriceDescription = priceDescription;
             NumericPrice = numericPrice;
             PriceVisibility = visibility;

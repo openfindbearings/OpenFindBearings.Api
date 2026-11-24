@@ -1073,3 +1073,6 @@ OpenFindBearings.Api（以下简称 API）共注册 **169** 个端点，按职�
 ## v1.59.21
 
 - 海报落款平台名改读系统配置 Site.PlatformName（Admin 系统配置页可改，默认 OpenFindBearings）；撤销上一版读 Branding:PlatformName 环境变量的做法，避免运维改 ConfigMap。
+## v1.59.22
+
+- `GET /api/bearings/{id}/merchants` 的商家项新增 `stockDescription`、`minOrderDescription`、`priceUpdatedAt`（迁移 `AddMerchantBearingPriceUpdatedAt` 纯加可空列）。`priceUpdatedAt` 仅在报价文本实际变化时刷新，供型号详情展示「报价更新于」，与 `updatedAt`（任意字段变更）区分。
