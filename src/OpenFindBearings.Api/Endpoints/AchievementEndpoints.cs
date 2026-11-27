@@ -41,6 +41,32 @@ namespace OpenFindBearings.Api.Endpoints
             /// <summary>
             /// 我的已解锁徽章排（个人资料页横向徽章条数据源）
             /// </summary>
+            /// <summary>
+            /// 商户成就墙（v2.16.4）：商家维度全目录 + 本店进度，仅本店在职成员可读。
+            /// 与公开的 /api/merchants/{id}/achievements 区分：后者只返回已解锁，作为对外信任信号
+            /// </summary>
+            group.MapGet("/achievements/merchant-wall", async (
+                [FromQuery] Guid merchantId,
+                [FromServices] ICurrentUserService currentUser,
+                [FromServices] IMerchantMemberRepository memberRepository,
+                [FromServices] IAchievementService achievementService,
+                HttpContext httpContext) =>
+            {
+                if (!currentUser.UserId.HasValue)
+                    return ApiResponseHelper.Unauthorized(httpContext: httpContext);
+
+                // 只有本店在职成员能看全目录（含未解锁），避免被外部推断经营进度
+                var member = await memberRepository.GetActiveByUserAndMerchantAsync(currentUser.UserId.Value, merchantId);
+                if (member is null)
+                    return ApiResponseHelper.Forbidden("只能查看自己任职的商家成就", httpContext: httpContext);
+
+                var view = await achievementService.GetMerchantWallAsync(merchantId);
+                return ApiResponseHelper.Ok(view, httpContext: httpContext);
+            })
+            .WithName("GetMerchantAchievementWall")
+            .WithSummary("商户成就墙")
+            .WithDescription("商家维度全目录 + 本店进度（仅本店在职成员）");
+
             group.MapGet("/me/achievements", async (
                 [FromServices] ICurrentUserService currentUser,
                 [FromServices] IAchievementService achievementService,

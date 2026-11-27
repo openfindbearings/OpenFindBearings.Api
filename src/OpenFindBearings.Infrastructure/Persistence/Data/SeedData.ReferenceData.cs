@@ -198,7 +198,7 @@ FROM (VALUES
     ('sourcing_selected_10','金牌红娘','累计 10 次应答被选定','medal',1,'一拍即合','sourcing_selected',10,60,'金牌红娘',false,false),
     ('merchant_first_listing','开张大吉','首件商品上架在售','store',2,'经营有方','listing_count',1,20,NULL,false,false),
     ('merchant_listing_20','货架满满','在售商品达 20 件','boxes',2,'经营有方','listing_count',20,50,NULL,false,false),
-    ('merchant_verified','认证商家','通过平台资质认证','badge-check',2,'经营有方','merchant_verified',1,40,'认证商家',false,false),
+    ('merchant_verified','认证商家','通过平台资质认证','badge-check',2,'经营有方','merchant_verified',1,40,NULL,false,false),
     ('merchant_selected_first','首单中选','应答首次被发布人选定','handshake',2,'经营有方','merchant_selected',1,20,NULL,false,false),
     ('merchant_selected_10','金牌供应商','累计 10 次应答被选定','trophy',2,'经营有方','merchant_selected',10,60,NULL,true,false)
 ) AS v("Key", "Name", "Description", "Icon", "Scope", "Category", "MetricKey", "Target", "Meta", "Title", "Rare", "Hidden")

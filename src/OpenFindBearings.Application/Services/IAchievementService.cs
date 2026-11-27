@@ -42,7 +42,13 @@ namespace OpenFindBearings.Application.Services
         /// <summary>个人已解锁徽章排（资料页/徽章条）</summary>
         Task<AchievementWallView> GetMyAsync(Guid userId, CancellationToken cancellationToken = default);
 
-        /// <summary>商户徽章排（商户详情/卡片，B2B 信任信号）</summary>
+        /// <summary>商户徽章排（商户详情/卡片，B2B 信任信号；仅已解锁）</summary>
         Task<AchievementWallView> GetMerchantAsync(Guid merchantId, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 商户成就墙（v2.16.4）：商家维度全目录 + 该商户进度，仅供本店在职成员查看。
+        /// 与 GetMerchantAsync 的区别：包含未解锁项，用于商家勋章页展示"还差什么、怎么获得"
+        /// </summary>
+        Task<AchievementWallView> GetMerchantWallAsync(Guid merchantId, CancellationToken cancellationToken = default);
     }
 }

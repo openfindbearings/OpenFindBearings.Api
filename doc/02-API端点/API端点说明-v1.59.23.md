@@ -1,8 +1,8 @@
 # API 端点说明文档
 
-**版本：** v1.59.18
-**日期：** 2026-11-20
-**上一版：** v1.59.15
+**版本：** v1.59.23
+**日期：** 2026-11-27
+**上一版：** v1.59.22
 **状态：** 与代码同步
 
 > v1.59.18 变更（默认商户，+1 端点）：`Users` 偏好在 `UserPreferences` 新增可空 `DefaultMerchantId`（迁移 `AddDefaultMerchantPreference`）；新增 `PUT /api/me/default-merchant`，仅允许把「自己为在职成员」的商户设为默认，否则 400；`GET /api/me/profile` 的 `defaultMerchantId` 下发当前默认。
@@ -144,6 +144,7 @@
 
 | 版本 | 日期 | 变更说明 |
 |------|------|----------|
+| v1.59.23 | 2026-11-27 | 新增 `GET /api/achievements/merchant-wall?merchantId=`（商家维度全目录+本店进度，仅本店在职成员；商家勋章页 N/M 与未解锁项数据源）；`/api/merchants/{id}/achievements` 说明补「仅已解锁」。顺带清掉 `merchant_verified` 的重复称号（认证只由 IsVerified 表达） |
 | v1.59.12 | 2026-11-06 | **商品批量维护（+1 端点）**：新增 `POST /api/merchant/bearings/batch`（上架/下架/补货/按百分比改价/删除，单次 ≤100 件，逐件返回成功或跳过原因）；批量改价只处理可解析为价格的文本（带 `¥`/`￥`/`元`/`块` 或纯数字），`电议`/`面议` 跳过；修复 `PUT /api/merchant/bearings/{id}` 改价后数值价不重算；删除已下线端点与外部导入流程的陈旧描述 |
 | v1.59.10 | 2026-11-04 | **管理端商家认证筛选修正（无新端点）**：`GET /api/admin/merchants` 的 `verifiedOnly` 改双向过滤（`true` 仅已认证、`false` 仅未认证、不传不限）；原实现只在 `true` 时过滤，`false` 等于不过滤，导致 Admin「未认证」页签混入已认证商家 |
 | v1.59.9 | 2026-11-04 | **健康检查去跨服务依赖（无新端点）**：`/health` 移除探测 Identity 的 `external_api`（该检查卡住会让 API 探针超时并被 liveness 杀进程，形成重启连锁）；探针分层为 startup/liveness→`/health/live`、readiness→`/health`，端点集合不变 |
@@ -655,7 +656,8 @@ OpenFindBearings.Api（以下简称 API）共注册 **169** 个端点，按职�
 |---|---|---|
 | GET | /api/achievements/wall | 成就墙（定义+本人解锁态与进度） |
 | GET | /api/achievements/me | 我的已解锁徽章排 |
-| GET | /api/achievements/merchants/{id} | 商户徽章排（商户详情信任信号） |
+| GET | /api/achievements/merchants/{id} | 商户徽章排（商户详情信任信号，仅已解锁） |
+| GET | /api/achievements/merchant-wall?merchantId= | 商户成就墙（商家维度全目录+本店进度，仅本店在职成员；v1.59.23） |
 | GET | /api/admin/achievements | Admin 成就目录全量（system.manage） |
 | PUT | /api/admin/achievements/{id} | Admin 编辑成就（分值/阈值/称号/启停，system.manage） |
 
