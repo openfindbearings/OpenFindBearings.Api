@@ -110,7 +110,7 @@ UPDATE "PointGrantRules" SET "DoubleChance" = 10, "LegendChance" = 2, "UpdatedAt
                 WHERE "GrantType" = 'daily_checkin';
 
                 INSERT INTO "AchievementDefinitions" ("Id", "Key", "Name", "Description", "Icon", "ImageKey", "Scope", "Category", "MetricKey", "ProgressTarget", "MetaPoints", "TitleReward", "Rare", "Hidden", "IsLimited", "LimitedOrdinal", "Enabled", "CreatedAt", "UpdatedAt", "IsActive")
-                SELECT gen_random_uuid(), 'founder_elder', '创站元老', '平台前 100 位注册用户专属徽章，窗口已关闭，绝版不返场', 'medal', NULL, 1, '元老', 'founder_ordinal', 1, 60, '创站元老', true, true, true, 100, true, now(), now(), true
+                SELECT gen_random_uuid(), 'founder_elder', '创站元老', '平台前 100 位注册用户专属徽章，窗口已关闭，绝版不返场', 'medal', NULL, 1, '创站元老', 'founder_ordinal', 1, 60, '创站元老', true, true, true, 100, true, now(), now(), true
                 WHERE NOT EXISTS (SELECT 1 FROM "AchievementDefinitions" WHERE "Key" = 'founder_elder');
 
 -- ===== rules.术语收敛 =====
@@ -196,11 +196,11 @@ FROM (VALUES
     ('checkin_total_30','签到达人','累计签到 30 次','check',1,'细水长流','checkin_total',30,20,NULL,false,false),
     ('sourcing_selected_first','伯乐','应答首次被发布人选定','handshake',1,'一拍即合','sourcing_selected',1,20,NULL,false,false),
     ('sourcing_selected_10','金牌红娘','累计 10 次应答被选定','medal',1,'一拍即合','sourcing_selected',10,60,'金牌红娘',false,false),
-    ('merchant_first_listing','开张大吉','首件商品上架在售','store',2,'商户','listing_count',1,20,NULL,false,false),
-    ('merchant_listing_20','货架满满','在售商品达 20 件','boxes',2,'商户','listing_count',20,50,NULL,false,false),
-    ('merchant_verified','认证商家','通过平台资质认证','badge-check',2,'商户','merchant_verified',1,40,'认证商家',false,false),
-    ('merchant_selected_first','首单中选','应答首次被发布人选定','handshake',2,'商户','merchant_selected',1,20,NULL,false,false),
-    ('merchant_selected_10','金牌供应商','累计 10 次应答被选定','trophy',2,'商户','merchant_selected',10,60,NULL,true,false)
+    ('merchant_first_listing','开张大吉','首件商品上架在售','store',2,'经营有方','listing_count',1,20,NULL,false,false),
+    ('merchant_listing_20','货架满满','在售商品达 20 件','boxes',2,'经营有方','listing_count',20,50,NULL,false,false),
+    ('merchant_verified','认证商家','通过平台资质认证','badge-check',2,'经营有方','merchant_verified',1,40,'认证商家',false,false),
+    ('merchant_selected_first','首单中选','应答首次被发布人选定','handshake',2,'经营有方','merchant_selected',1,20,NULL,false,false),
+    ('merchant_selected_10','金牌供应商','累计 10 次应答被选定','trophy',2,'经营有方','merchant_selected',10,60,NULL,true,false)
 ) AS v("Key", "Name", "Description", "Icon", "Scope", "Category", "MetricKey", "Target", "Meta", "Title", "Rare", "Hidden")
 WHERE NOT EXISTS (SELECT 1 FROM "AchievementDefinitions" a WHERE a."Key" = v."Key");
 
@@ -222,7 +222,7 @@ UPDATE "PointGrantRules" SET "DoubleChance" = 10, "LegendChance" = 2, "UpdatedAt
                 WHERE "GrantType" = 'daily_checkin';
 
                 INSERT INTO "AchievementDefinitions" ("Id", "Key", "Name", "Description", "Icon", "ImageKey", "Scope", "Category", "MetricKey", "ProgressTarget", "MetaPoints", "TitleReward", "Rare", "Hidden", "IsLimited", "LimitedOrdinal", "Enabled", "CreatedAt", "UpdatedAt", "IsActive")
-SELECT gen_random_uuid(), 'founder_elder', '创站元老', '平台前 100 位注册用户专属徽章，窗口已关闭，绝版不返场', 'medal', NULL, 1, '元老', 'founder_ordinal', 1, 60, '创站元老', true, true, true, 100, true, now(), now(), true
+SELECT gen_random_uuid(), 'founder_elder', '创站元老', '平台前 100 位注册用户专属徽章，窗口已关闭，绝版不返场', 'medal', NULL, 1, '创站元老', 'founder_ordinal', 1, 60, '创站元老', true, true, true, 100, true, now(), now(), true
                 WHERE NOT EXISTS (SELECT 1 FROM "AchievementDefinitions" WHERE "Key" = 'founder_elder');
 
 -- ===== mall.商品置顶卡 =====
