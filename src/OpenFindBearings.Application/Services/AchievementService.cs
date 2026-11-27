@@ -136,10 +136,16 @@ namespace OpenFindBearings.Application.Services
             return await BuildViewAsync(AchievementScope.Personal, userId, wall: false, cancellationToken);
         }
 
-        /// <summary>商户徽章排</summary>
+        /// <summary>商户徽章排（仅已解锁，公开页信任信号）</summary>
         public async Task<AchievementWallView> GetMerchantAsync(Guid merchantId, CancellationToken cancellationToken = default)
         {
             return await BuildViewAsync(AchievementScope.Merchant, merchantId, wall: false, cancellationToken);
+        }
+
+        /// <summary>商户成就墙（全目录 + 进度，仅本店在职成员可读；v2.16.4）</summary>
+        public async Task<AchievementWallView> GetMerchantWallAsync(Guid merchantId, CancellationToken cancellationToken = default)
+        {
+            return await BuildViewAsync(AchievementScope.Merchant, merchantId, wall: true, cancellationToken);
         }
 
         /// <summary>
